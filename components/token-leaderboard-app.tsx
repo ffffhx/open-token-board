@@ -427,7 +427,7 @@ export function TokenLeaderboardApp({
   }
 
   const leaderboardPanel = (
-    <section id="token-leaderboard-rankings" className="min-w-0 overflow-hidden rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] shadow-[0_20px_70px_-60px_rgba(28,25,23,0.65)]">
+    <section id="token-leaderboard-rankings" className="min-w-0 overflow-hidden rounded-lg border border-stone-950/10 bg-white shadow-sm">
       <PanelHeader
         title="排行榜"
         meta={isDataLoading ? <LoadingInline label="loading" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
@@ -453,7 +453,7 @@ export function TokenLeaderboardApp({
       </div>
       <div className="hidden overflow-x-auto sm:block">
         <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[960px]" : "min-w-[720px]"}`}>
-          <thead className="bg-[#f3ede0] text-xs font-semibold uppercase tracking-[0.08em] text-stone-500">
+          <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
               <th className="px-4 py-3">排名</th>
               <th className="px-4 py-3">用户</th>
@@ -483,7 +483,7 @@ export function TokenLeaderboardApp({
   );
 
   const sharePanel = (
-    <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#f5efe4] p-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.6)]">
+    <section className="rounded-lg border border-stone-950/10 bg-slate-50 p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{selectedMetricLabel}份额</h2>
         <span className="font-mono text-xs text-stone-500">
@@ -499,7 +499,7 @@ export function TokenLeaderboardApp({
   );
 
   const dataEntryPanel = (
-    <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] p-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.6)]">
+    <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">加入榜单</h2>
@@ -511,19 +511,19 @@ export function TokenLeaderboardApp({
       </div>
       <div className="mt-4 space-y-3">
         {normalizedApiBaseUrl ? (
-          <div className="rounded-xl border border-[#26745e]/25 bg-[#eaf5ef] p-3 text-xs text-[#163d33]">
+          <div className="rounded-lg border border-blue-600/25 bg-blue-50 p-3 text-xs text-blue-900">
             <div className="flex items-center justify-between gap-2">
               <p className="font-semibold">自动上报</p>
               <span className="rounded-full bg-white/80 px-2 py-0.5 font-mono text-[11px]">live</span>
             </div>
-            <p className="mt-2 text-[#26745e]">
+            <p className="mt-2 text-blue-600">
               {viewer?.authenticated
                 ? `当前账号 @${viewer.user?.githubLogin || viewer.user?.displayName}`
                 : "GitHub 登录 + npx agent，从你的电脑上报"}
             </p>
           </div>
         ) : (
-          <div className="rounded-xl border border-[#c05c38]/25 bg-[#fff0e9] p-3 text-xs text-[#7b2f1d]">
+          <div className="rounded-lg border border-red-600/25 bg-red-50 p-3 text-xs text-red-900">
             <p className="font-semibold">等待 Token Board 后端</p>
             <p className="mt-2">页面已关闭静态 JSON、本地缓存和手动导入，只会读取自动上报服务。</p>
           </div>
@@ -532,7 +532,7 @@ export function TokenLeaderboardApp({
           <button
             type="button"
             onClick={openInstallGuide}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#11130f] px-3 text-sm font-semibold text-white transition hover:bg-[#26745e]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             <Icon name="guide" />
             使用安装指南
@@ -540,7 +540,7 @@ export function TokenLeaderboardApp({
           <button
             type="button"
             onClick={() => void copyCommand(NPX_STATUS_COMMAND, "状态检查命令")}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-[#26745e]/40 hover:bg-[#eef7f2]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-blue-600/40 hover:bg-blue-50"
           >
             <Icon name="refresh" />
             复制状态检查命令
@@ -549,14 +549,14 @@ export function TokenLeaderboardApp({
             <button
               type="button"
               onClick={loginWithGitHub}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-[#26745e]/40 hover:bg-[#eef7f2]"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-blue-600/40 hover:bg-blue-50"
             >
               <Icon name="github" />
               GitHub 登录
             </button>
           ) : null}
         </div>
-        <p className="min-h-5 rounded-lg bg-[#f5efe4] px-3 py-2 text-xs text-stone-600" aria-live="polite">
+        <p className="min-h-5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-stone-600" aria-live="polite">
           {isDataLoading ? <LoadingInline label={statusMessage} /> : statusMessage}
         </p>
       </div>
@@ -564,30 +564,29 @@ export function TokenLeaderboardApp({
   );
 
   return (
-    <main className="min-w-0 font-sans text-stone-950">
-      <div className="space-y-5">
-        <header className="relative overflow-hidden rounded-[1.25rem] border border-stone-950/15 bg-[#11130f] px-5 py-4 text-[#f8f1e5] shadow-[0_28px_90px_-62px_rgba(17,19,15,0.85)] sm:px-6 lg:px-7">
-          <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(135deg,rgba(241,196,92,0.16)_0_1px,transparent_1px_24px),linear-gradient(90deg,rgba(255,255,255,0.07),transparent_42%)]" />
-          <div className="relative space-y-4">
+    <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8">
+      <div className="space-y-4">
+        <header className="overflow-hidden rounded-lg border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 lg:px-7">
+          <div className="space-y-5">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-[#f1c45c]/35 bg-[#f1c45c]/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-[#f1c45c]">
+                  <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
                     Open Token Board
                   </span>
-                  <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 text-xs font-semibold text-white/78">
-                    {isDataLoading ? <LoadingInline label={sourceLabel} tone="light" /> : sourceLabel}
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {isDataLoading ? <LoadingInline label={sourceLabel} /> : sourceLabel}
                   </span>
-                  <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 font-mono text-xs text-white/70">
+                  <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-mono text-xs text-slate-500">
                     {ROLLING_RANGE_LABELS[range]}
                   </span>
                 </div>
-                <h1 className="mt-3 text-3xl font-semibold leading-tight text-white sm:text-4xl">
+                <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
                   朋友间的 Token 排行榜
                 </h1>
-                <p className="mt-2 text-sm leading-6 text-white/68">
+                <p className="mt-2 text-sm leading-6 text-slate-500">
                   {isDataLoading
-                    ? <LoadingInline label="正在加载真实用户数据" tone="light" />
+                    ? <LoadingInline label="正在加载真实用户数据" />
                     : `${formatShortDate(summary.startAt)} - ${formatShortDate(summary.endAt)} · Asia/Shanghai`}
                 </p>
               </div>
@@ -611,7 +610,7 @@ export function TokenLeaderboardApp({
                   <button
                     type="button"
                     onClick={openInstallGuide}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#f8f1e5] px-4 text-sm font-semibold text-[#11130f] transition hover:bg-[#ffe2a8]"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
                   >
                     <Icon name="guide" />
                     使用安装指南
@@ -620,7 +619,7 @@ export function TokenLeaderboardApp({
                     <button
                       type="button"
                       onClick={loginWithGitHub}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                     >
                       <Icon name="github" />
                       GitHub 登录
@@ -629,7 +628,7 @@ export function TokenLeaderboardApp({
                     <button
                       type="button"
                       onClick={retryDataLoad}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-semibold text-white transition hover:bg-white/15"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                     >
                       <Icon name="refresh" />
                       刷新榜单
@@ -639,21 +638,21 @@ export function TokenLeaderboardApp({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 border-t border-white/10 pt-4 sm:gap-3">
+            <div className="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
               <HeroSignal
                 label="当前榜首"
-                value={isDataLoading ? <LoadingInline label="Loading" tone="light" spinnerClassName="size-5" /> : leader?.displayName ?? "--"}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" tone="light" /> : leaderMeta}
+                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : leader?.displayName ?? "--"}
+                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : leaderMeta}
               />
               <HeroSignal
                 label="当前区间记录"
-                value={isDataLoading ? <LoadingInline label="Loading" tone="light" spinnerClassName="size-5" /> : rangeRecordCountLabel}
-                meta={isDataLoading ? <LoadingInline label="Loading" tone="light" /> : `${ROLLING_RANGE_LABELS[range]}`}
+                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : rangeRecordCountLabel}
+                meta={isDataLoading ? <LoadingInline label="Loading" /> : `${ROLLING_RANGE_LABELS[range]}`}
               />
               <HeroSignal
                 label="高频组合"
-                value={isDataLoading ? <LoadingInline label="Loading" tone="light" spinnerClassName="size-5" /> : topModelLabel}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" tone="light" /> : topToolLabel}
+                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : topModelLabel}
+                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : topToolLabel}
               />
             </div>
             <TrustEvidenceBar
@@ -711,7 +710,7 @@ export function TokenLeaderboardApp({
             />
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.82fr)]">
-              <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] p-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.6)]">
+              <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-base font-semibold">Token 趋势</h2>
                   <p className="font-mono text-xs text-stone-500">
@@ -719,7 +718,7 @@ export function TokenLeaderboardApp({
                   </p>
                 </div>
                 <div
-                  className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(8px,1fr))] items-end gap-1 rounded-xl border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-3 pb-3 pt-5"
+                  className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(8px,1fr))] items-end gap-1 rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-3 pb-3 pt-5"
                   aria-label="Token 趋势"
                 >
                   <DailyTokenTrendChart
@@ -755,7 +754,7 @@ export function TokenLeaderboardApp({
           <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
             {dataEntryPanel}
 
-            <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] p-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.6)]">
+            <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
               <h2 className="text-base font-semibold">统计口径</h2>
               <div className="mt-3 space-y-2 text-xs leading-5 text-stone-600">
                 <p>
@@ -835,10 +834,10 @@ function AccountUsagePanel({
 
   if (apiEnabled && viewer && !viewer.authenticated) {
     return (
-      <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] px-5 py-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.55)] sm:px-6">
+      <section className="rounded-lg border border-stone-950/10 bg-white px-5 py-4 shadow-sm sm:px-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#26745e]">GitHub Account</p>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-600">GitHub Account</p>
             <h2 className="mt-1 text-lg font-semibold text-stone-950">登录后展开我的 Token 消耗</h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-stone-600">
               个人视图会按当前 GitHub 账号展示排名、项目、缓存命中率和活跃分布；公共排行榜不需要登录也能查看。
@@ -847,7 +846,7 @@ function AccountUsagePanel({
           <button
             type="button"
             onClick={onLogin}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#11130f] px-4 text-sm font-semibold text-white transition hover:bg-[#26745e]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             <Icon name="github" />
             GitHub 登录
@@ -858,19 +857,19 @@ function AccountUsagePanel({
   }
 
   return (
-    <section className="overflow-hidden rounded-[1.25rem] border border-[#22342b] bg-[#080b09] text-[#f7f4ec] shadow-[0_28px_90px_-68px_rgba(8,11,9,0.95)]">
-      <div className="border-b border-white/10 px-5 py-4 sm:px-6">
+    <section className="overflow-hidden rounded-lg border border-slate-200 bg-white text-slate-950 shadow-sm">
+      <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-[#7be3a0]">GitHub Account</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight">我的 Token 消耗</h2>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-600">GitHub Account</p>
+            <h2 className="mt-1 text-2xl font-semibold">我的 Token 消耗</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-white/12 bg-white/8 px-3 py-1 font-mono text-xs text-white/72">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-600">
               {range}
             </span>
             {viewer?.authenticated ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-[#7be3a0]/25 bg-[#123127] px-3 py-1 text-sm font-semibold text-[#bdf5cc]">
+              <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
                 {viewer.user?.avatarUrl ? (
                   <img
                     alt=""
@@ -896,14 +895,14 @@ function AccountUsagePanel({
         <div className="grid gap-4 px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
           <div>
             <p className="text-lg font-semibold">登录后查看自己的 GitHub 消耗</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/58">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
               这里会只展示当前 GitHub 账号通过 agent 上报的 Token、费用、模型、项目和活跃分布。
             </p>
           </div>
           <button
             type="button"
             onClick={onLogin}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#f7f4ec] px-4 text-sm font-semibold text-[#080b09] transition hover:bg-[#ffe2a8]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             <Icon name="github" />
             GitHub 登录
@@ -920,34 +919,34 @@ function AccountUsagePanel({
         />
       ) : (
         <div className="space-y-5 px-5 py-5 sm:px-6">
-          <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/6 p-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+          <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
             <div className="flex items-center gap-4">
               {viewer.user?.avatarUrl ? (
                 <img
                   alt=""
-                  className="size-12 rounded-2xl border border-white/15"
+                  className="size-12 rounded-lg border border-slate-200"
                   src={viewer.user.avatarUrl}
                 />
               ) : (
                 <Avatar name={user.displayName} index={user.rank || 0} />
               )}
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-white/45">我的排名（按总消耗，{range}）</p>
+                <p className="text-xs font-semibold text-slate-500">我的排名（按总消耗，{range}）</p>
                 <p className="mt-1 truncate font-mono text-3xl font-semibold">
                   #{dashboardProfile.rank ?? "--"}
-                  <span className="ml-2 text-base text-white/42">/ {formatNumber(dashboardProfile.totalUsers)}</span>
+                  <span className="ml-2 text-base text-slate-400">/ {formatNumber(dashboardProfile.totalUsers)}</span>
                 </p>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 text-right">
               <div>
-                <p className="text-xs text-white/42">超过</p>
-                <p className="mt-1 font-mono text-xl font-semibold text-[#bdf5cc]">
+                <p className="text-xs text-slate-500">超过</p>
+                <p className="mt-1 font-mono text-xl font-semibold text-blue-700">
                   {dashboardProfile.percentile === null ? "--" : formatPercent(dashboardProfile.percentile)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-white/42">排名变化</p>
+                <p className="text-xs text-slate-500">排名变化</p>
                 <p className={`mt-1 font-mono text-xl font-semibold ${rankDeltaTone(dashboardProfile.rankDelta)}`}>
                   {formatRankDelta(dashboardProfile.rankDelta)}
                 </p>
@@ -1083,7 +1082,7 @@ function AccountUsagePanel({
                 meta: formatUsd(item.costUsd),
                 share: item.share,
               }))}
-              barColor="#6ea3ff"
+              barColor="#2563eb"
             />
             <AccountBreakdownPanel
               title="工具分布"
@@ -1094,7 +1093,7 @@ function AccountUsagePanel({
                 meta: `${formatNumber(item.sessions)} 会话`,
                 share: item.share,
               }))}
-              barColor="#f1c45c"
+              barColor="#d97706"
             />
             <AccountProjectList projects={dashboardProfile.projects} />
           </div>
@@ -1142,15 +1141,15 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
   ];
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">当前用户配置</h3>
-          <p className="mt-1 text-xs leading-5 text-white/42">
+          <p className="mt-1 text-xs leading-5 text-slate-500">
             只同步 Codex 配置白名单，不上传项目路径、hook、MCP 或通知命令。
           </p>
         </div>
-        <span className="w-fit rounded-full border border-white/10 bg-black/16 px-3 py-1 font-mono text-xs text-white/52">
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
           {config ? `同步 ${formatShortDate(config.updatedAt)}` : "等待 agent 同步"}
         </span>
       </div>
@@ -1158,28 +1157,28 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
       {config ? (
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {items.map((item) => (
-            <div key={item.label} className="min-h-24 rounded-xl border border-white/8 bg-black/16 p-3">
-              <p className="text-xs font-semibold text-white/40">{item.label}</p>
-              <p className="mt-2 truncate font-mono text-xl font-semibold text-[#bdf5cc]" title={item.value}>
+            <div key={item.label} className="min-h-24 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-semibold text-slate-500">{item.label}</p>
+              <p className="mt-2 truncate font-mono text-xl font-semibold text-slate-950" title={item.value}>
                 {item.value}
               </p>
-              <p className="mt-2 truncate text-xs text-white/38" title={item.meta}>
+              <p className="mt-2 truncate text-xs text-slate-500" title={item.meta}>
                 {item.meta}
               </p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-4 rounded-xl border border-white/10 bg-black/16 px-3 py-4 text-center text-sm text-white/45">
+        <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
           旧版本 agent 还没有同步配置；重新运行安装命令或等下一次新版 agent 上报后会显示。
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-white/45">
-        <span className="rounded-full border border-white/10 bg-black/16 px-2.5 py-1">
+      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
           agent {config?.agent?.version || "--"}
         </span>
-        <span className="rounded-full border border-white/10 bg-black/16 px-2.5 py-1">
+        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
           {config?.agent?.platform || "platform --"}
         </span>
       </div>
@@ -1191,7 +1190,7 @@ function AccountEmptyState({ title, description }: { title: string; description:
   return (
     <div className="px-5 py-8 text-center sm:px-6">
       <p className="text-lg font-semibold">{title}</p>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-white/54">{description}</p>
+      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
     </div>
   );
 }
@@ -1199,13 +1198,13 @@ function AccountEmptyState({ title, description }: { title: string; description:
 function AccountLoadingState() {
   return (
     <div className="space-y-5 px-5 py-5 sm:px-6">
-      <div className="flex min-h-24 items-center justify-center rounded-2xl border border-white/10 bg-white/6">
-        <LoadingInline label="正在加载个人消耗" tone="light" spinnerClassName="size-7" />
+      <div className="flex min-h-24 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+        <LoadingInline label="正在加载个人消耗" spinnerClassName="size-7" />
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 9 }, (_, index) => (
-          <div key={index} className="flex h-28 items-center justify-center rounded-xl border border-white/10 bg-white/6">
-            <LoadingSpinner className="size-5" tone="light" />
+          <div key={index} className="flex h-28 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
+            <LoadingSpinner className="size-5" />
           </div>
         ))}
       </div>
@@ -1233,38 +1232,38 @@ function AccountStatCard({
 }) {
   const tooltipId = useId();
   const tones = {
-    blue: "border-[#6ea3ff]/24 bg-[#102034] text-[#d9e8ff]",
-    gold: "border-[#f1c45c]/24 bg-[#2e2512] text-[#ffe2a8]",
-    green: "border-[#7be3a0]/24 bg-[#10291f] text-[#bdf5cc]",
-    ink: "border-white/12 bg-white/8 text-white",
-    rose: "border-[#ff9b7c]/24 bg-[#321811] text-[#ffd4c6]",
+    blue: "border-blue-200 bg-blue-50 text-blue-900",
+    gold: "border-amber-200 bg-amber-50 text-amber-900",
+    green: "border-emerald-200 bg-emerald-50 text-emerald-900",
+    ink: "border-slate-200 bg-slate-50 text-slate-950",
+    rose: "border-rose-200 bg-rose-50 text-rose-900",
   };
 
   return (
     <div
-      className={`group/stat relative min-h-28 rounded-xl border p-4 outline-none transition duration-150 hover:-translate-y-0.5 hover:border-white/24 focus-visible:-translate-y-0.5 focus-visible:border-white/32 focus-visible:ring-2 focus-visible:ring-white/18 ${tones[tone]}`}
+      className={`group/stat relative min-h-28 rounded-lg border p-4 outline-none transition duration-150 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-sm focus-visible:-translate-y-0.5 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100 ${tones[tone]}`}
       tabIndex={tooltip ? 0 : undefined}
       aria-describedby={tooltip ? tooltipId : undefined}
     >
-      <p className="text-xs font-semibold text-white/45">{label}</p>
+      <p className="text-xs font-semibold text-slate-500">{label}</p>
       <p className="mt-3 truncate font-mono text-2xl font-semibold leading-none" title={value}>
         {value}
       </p>
-      <p className="mt-3 truncate text-xs text-white/42" title={meta}>
+      <p className="mt-3 truncate text-xs text-slate-500" title={meta}>
         {meta}
       </p>
       {tooltip ? (
         <div
           id={tooltipId}
           role="tooltip"
-          className="pointer-events-none absolute inset-x-3 bottom-[calc(100%-0.35rem)] z-40 rounded-xl border border-white/14 bg-[#080b09]/96 p-3 text-left text-[#f7f4ec] opacity-0 shadow-[0_24px_70px_-34px_rgba(0,0,0,0.9)] backdrop-blur-xl transition duration-150 group-hover/stat:translate-y-[-0.25rem] group-hover/stat:opacity-100 group-focus-visible/stat:translate-y-[-0.25rem] group-focus-visible/stat:opacity-100"
+          className="pointer-events-none absolute inset-x-3 bottom-[calc(100%-0.35rem)] z-40 rounded-lg border border-slate-200 bg-white p-3 text-left text-slate-950 opacity-0 shadow-lg backdrop-blur-xl transition duration-150 group-hover/stat:translate-y-[-0.25rem] group-hover/stat:opacity-100 group-focus-visible/stat:translate-y-[-0.25rem] group-focus-visible/stat:opacity-100"
         >
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7be3a0]">{tooltip.title}</p>
-          <p className="mt-1.5 text-xs leading-5 text-white/72">{tooltip.description}</p>
-          <p className="mt-2 rounded-lg border border-white/8 bg-white/6 px-2 py-1.5 font-mono text-[11px] leading-4 text-white/70">
+          <p className="font-mono text-[10px] font-semibold uppercase text-blue-600">{tooltip.title}</p>
+          <p className="mt-1.5 text-xs leading-5 text-slate-600">{tooltip.description}</p>
+          <p className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 font-mono text-[11px] leading-4 text-slate-700">
             {tooltip.formula}
           </p>
-          <p className="mt-2 text-[11px] leading-4 text-white/46">{tooltip.detail}</p>
+          <p className="mt-2 text-[11px] leading-4 text-slate-500">{tooltip.detail}</p>
         </div>
       ) : null}
     </div>
@@ -1275,17 +1274,17 @@ function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"]
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-semibold">每日趋势</h3>
-        <span className="font-mono text-xs text-white/45">峰值 {formatTokens(maxTokens)}</span>
+        <span className="font-mono text-xs text-slate-500">峰值 {formatTokens(maxTokens)}</span>
       </div>
-      <div className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(5px,1fr))] items-end gap-1 rounded-xl border border-white/8 bg-black/18 px-3 pb-3 pt-5">
+      <div className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(5px,1fr))] items-end gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 pb-3 pt-5">
         {daily.map((point, index) => (
           <div key={point.date} className="flex h-full items-end">
             <div
               className={`w-full rounded-t-[3px] transition hover:translate-y-[-2px] ${
-                index === daily.length - 1 ? "bg-[#f1c45c]" : "bg-[#43d184] hover:bg-[#7be3a0]"
+                index === daily.length - 1 ? "bg-amber-500" : "bg-blue-600 hover:bg-blue-500"
               }`}
               style={{ height: `${Math.max(2, (point.tokens / maxTokens) * 100)}%` }}
               title={`${point.date} ${formatTokens(point.tokens)}`}
@@ -1293,7 +1292,7 @@ function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"]
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between font-mono text-xs text-white/38">
+      <div className="mt-2 flex justify-between font-mono text-xs text-slate-500">
         <span>{daily[0]?.date.slice(5) ?? "--"}</span>
         <span>{daily.at(-1)?.date.slice(5) ?? "--"}</span>
       </div>
@@ -1307,15 +1306,15 @@ function AccountHeatmap({ heatmap }: { heatmap: TokenAccountUsageProfile["heatma
   const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-semibold">分时活跃</h3>
-        <span className="font-mono text-xs text-white/45">少 → 多</span>
+        <span className="font-mono text-xs text-slate-500">少 → 多</span>
       </div>
       <div className="mt-4 overflow-x-auto">
         <div className="min-w-[38rem]">
           <div
-            className="grid gap-1 text-[10px] text-white/38"
+            className="grid gap-1 text-[10px] text-slate-500"
             style={{ gridTemplateColumns: "2.5rem repeat(24, minmax(0, 1fr))" }}
           >
             <span />
@@ -1334,7 +1333,7 @@ function AccountHeatmap({ heatmap }: { heatmap: TokenAccountUsageProfile["heatma
                   return (
                     <span
                       key={`${weekday}:${hour}`}
-                      className="h-4 rounded-[4px] border border-white/5"
+                      className="h-4 rounded-[4px] border border-white/70"
                       style={{ backgroundColor: heatColor(intensity) }}
                       title={`${weekday} ${String(hour).padStart(2, "0")}:00 ${formatTokens(cell?.tokens ?? 0)}`}
                     />
@@ -1361,32 +1360,32 @@ function AccountBreakdownPanel({
   title: string;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-semibold">{title}</h3>
-        <span className="font-mono text-xs text-white/45">{meta}</span>
+        <span className="font-mono text-xs text-slate-500">{meta}</span>
       </div>
       <div className="mt-4 space-y-3">
         {items.length ? (
           items.slice(0, 8).map((item) => (
             <div key={item.name}>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <p className="truncate font-medium text-white/86">{item.name}</p>
-                <p className="shrink-0 font-mono text-white/62">{formatTokens(item.value)}</p>
+                <p className="truncate font-medium text-slate-800">{item.name}</p>
+                <p className="shrink-0 font-mono text-slate-500">{formatTokens(item.value)}</p>
               </div>
               <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-3">
-                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                   <div
                     className="h-full rounded-full"
                     style={{ width: `${Math.max(2, item.share * 100)}%`, backgroundColor: barColor }}
                   />
                 </div>
-                <p className="truncate text-right text-xs text-white/42">{item.meta}</p>
+                <p className="truncate text-right text-xs text-slate-500">{item.meta}</p>
               </div>
             </div>
           ))
         ) : (
-          <p className="rounded-xl border border-white/10 bg-black/16 px-3 py-4 text-center text-sm text-white/45">暂无数据</p>
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无数据</p>
         )}
       </div>
     </section>
@@ -1395,41 +1394,41 @@ function AccountBreakdownPanel({
 
 function AccountProjectList({ projects }: { projects: TokenAccountUsageProfile["projects"] }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-base font-semibold">项目分布</h3>
-        <span className="font-mono text-xs text-white/45">{projects.length} 个项目</span>
+        <span className="font-mono text-xs text-slate-500">{projects.length} 个项目</span>
       </div>
       <div className="mt-4 space-y-3">
         {projects.length ? (
           projects.slice(0, 8).map((project) => (
-            <div key={project.name} className="rounded-xl border border-white/8 bg-black/16 p-3">
+            <div key={project.name} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-white/88">{project.name}</p>
-                  <p className="mt-1 text-xs text-white/42">
+                  <p className="truncate text-sm font-semibold text-slate-800">{project.name}</p>
+                  <p className="mt-1 text-xs text-slate-500">
                     {formatNumber(project.activeDays)}d · {formatNumber(project.models)} models
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-mono text-sm font-semibold text-[#bdf5cc]" title={formatTokens(project.tokens)}>
+                  <p className="font-mono text-sm font-semibold text-blue-700" title={formatTokens(project.tokens)}>
                     {formatTokens(project.tokens)}
                   </p>
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] items-center gap-3">
-                <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                   <div
-                    className="h-full rounded-full bg-[#7be3a0]"
+                    className="h-full rounded-full bg-blue-600"
                     style={{ width: `${Math.max(2, project.share * 100)}%` }}
                   />
                 </div>
-                <p className="text-right font-mono text-xs text-white/42">{formatUsd(project.costUsd)}</p>
+                <p className="text-right font-mono text-xs text-slate-500">{formatUsd(project.costUsd)}</p>
               </div>
             </div>
           ))
         ) : (
-          <p className="rounded-xl border border-white/10 bg-black/16 px-3 py-4 text-center text-sm text-white/45">暂无数据</p>
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无数据</p>
         )}
       </div>
     </section>
@@ -1441,13 +1440,13 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
   const maxTokens = Math.max(1, ...sortedSessions.map((session) => session.tokens));
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/6 p-4">
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Session 明细</h3>
-          <p className="mt-1 text-xs leading-5 text-white/42">按 session 聚合，优先展示本地提取的短标题</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">按 session 聚合，优先展示本地提取的短标题</p>
         </div>
-        <span className="w-fit rounded-full border border-white/10 bg-black/16 px-3 py-1 font-mono text-xs text-white/52">
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
           {formatNumber(sortedSessions.length)} sessions · 按 token 降序
         </span>
       </div>
@@ -1455,17 +1454,17 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
       {sortedSessions.length ? (
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[58rem] table-fixed border-separate border-spacing-0 text-left text-sm">
-            <thead className="text-xs text-white/38">
+            <thead className="text-xs text-slate-500">
               <tr>
-                <th className="w-[16rem] border-b border-white/10 px-3 py-2 font-semibold">Session</th>
-                <th className="w-[10rem] border-b border-white/10 px-3 py-2 text-right font-semibold" aria-sort="descending">
+                <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">Session</th>
+                <th className="w-[10rem] border-b border-slate-200 px-3 py-2 text-right font-semibold" aria-sort="descending">
                   总 token ↓
                 </th>
-                <th className="w-[12rem] border-b border-white/10 px-3 py-2 font-semibold">模型</th>
-                <th className="w-[10rem] border-b border-white/10 px-3 py-2 font-semibold">工具</th>
-                <th className="w-[11rem] border-b border-white/10 px-3 py-2 font-semibold">项目</th>
-                <th className="w-[9rem] border-b border-white/10 px-3 py-2 font-semibold">开始时间</th>
-                <th className="w-[9rem] border-b border-white/10 px-3 py-2 font-semibold">结束时间</th>
+                <th className="w-[12rem] border-b border-slate-200 px-3 py-2 font-semibold">模型</th>
+                <th className="w-[10rem] border-b border-slate-200 px-3 py-2 font-semibold">工具</th>
+                <th className="w-[11rem] border-b border-slate-200 px-3 py-2 font-semibold">项目</th>
+                <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">开始时间</th>
+                <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">结束时间</th>
               </tr>
             </thead>
             <tbody>
@@ -1475,40 +1474,40 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
 
                 return (
                   <tr key={session.id} className="group">
-                    <td className="border-b border-white/8 px-3 py-3 align-top">
+                    <td className="border-b border-slate-100 px-3 py-3 align-top">
                       <p
-                        className={`truncate text-sm font-semibold ${hasTitle ? "text-[#dffbe8]" : "font-mono text-xs text-[#bdf5cc]"}`}
+                        className={`truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
                         title={hasTitle ? session.title : session.id}
                       >
                         {title}
                       </p>
-                      <p className="mt-1 text-xs text-white/36">
+                      <p className="mt-1 text-xs text-slate-500">
                         {formatNumber(session.records)} records · {formatUsd(session.costUsd)}
                         {hasTitle ? ` · ${formatSessionLabel(session.id)}` : ""}
                       </p>
                     </td>
-                  <td className="border-b border-white/8 px-3 py-3 text-right align-top">
-                    <p className="font-mono text-base font-semibold text-[#ffe2a8]">{formatTokens(session.tokens)}</p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                  <td className="border-b border-slate-100 px-3 py-3 text-right align-top">
+                    <p className="font-mono text-base font-semibold text-blue-700">{formatTokens(session.tokens)}</p>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
                       <div
-                        className="h-full rounded-full bg-[#7be3a0]"
+                        className="h-full rounded-full bg-blue-600"
                         style={{ width: `${Math.max(2, (session.tokens / maxTokens) * 100)}%` }}
                       />
                     </div>
                   </td>
-                  <td className="border-b border-white/8 px-3 py-3 align-top">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top">
                     <SessionDimension value={session.model} count={session.models} label="models" />
                   </td>
-                  <td className="border-b border-white/8 px-3 py-3 align-top">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top">
                     <SessionDimension value={session.tool} count={session.tools} label="tools" />
                   </td>
-                  <td className="border-b border-white/8 px-3 py-3 align-top">
+                  <td className="border-b border-slate-100 px-3 py-3 align-top">
                     <SessionDimension value={session.project} count={session.projects} label="projects" />
                   </td>
-                  <td className="border-b border-white/8 px-3 py-3 align-top font-mono text-xs text-white/62" title={session.startAt}>
+                  <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.startAt}>
                     {formatShortDate(session.startAt)}
                   </td>
-                  <td className="border-b border-white/8 px-3 py-3 align-top font-mono text-xs text-white/62" title={session.endAt}>
+                  <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.endAt}>
                     {formatShortDate(session.endAt)}
                   </td>
                 </tr>
@@ -1518,7 +1517,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
           </table>
         </div>
       ) : (
-        <p className="mt-4 rounded-xl border border-white/10 bg-black/16 px-3 py-4 text-center text-sm text-white/45">暂无 session 数据</p>
+        <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无 session 数据</p>
       )}
     </section>
   );
@@ -1527,10 +1526,10 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
 function SessionDimension({ count, label, value }: { count: number; label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className="truncate text-sm font-medium text-white/82" title={value}>
+      <p className="truncate text-sm font-medium text-slate-800" title={value}>
         {value || "unknown"}
       </p>
-      {count > 1 ? <p className="mt-1 text-xs text-white/36">+{formatNumber(count - 1)} {label}</p> : null}
+      {count > 1 ? <p className="mt-1 text-xs text-slate-500">+{formatNumber(count - 1)} {label}</p> : null}
     </div>
   );
 }
@@ -1542,15 +1541,15 @@ function Toast({ toast }: { toast: ToastState | null }) {
 
   const tone =
     toast.tone === "error"
-      ? "border-[#c05c38]/40 bg-[#fff0e9] text-[#7b2f1d] shadow-[0_24px_70px_-36px_rgba(192,92,56,0.8)] ring-[#c05c38]/10"
-      : "border-[#26745e]/40 bg-[#eaf5ef] text-[#163d33] shadow-[0_24px_70px_-36px_rgba(38,116,94,0.8)] ring-[#26745e]/10";
+      ? "border-red-600/40 bg-red-50 text-red-900 shadow-sm ring-red-600/10"
+      : "border-blue-600/40 bg-blue-50 text-blue-900 shadow-sm ring-blue-600/10";
 
   return (
     <div
       key={toast.id}
       role="status"
       aria-live="polite"
-      className={`pointer-events-none fixed left-1/2 top-1/2 z-[100] flex min-h-12 min-w-[11rem] max-w-[min(15rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl border px-4 py-3 text-center text-sm font-semibold leading-5 ring-4 backdrop-blur-xl ${tone}`}
+      className={`pointer-events-none fixed left-1/2 top-1/2 z-[100] flex min-h-12 min-w-[11rem] max-w-[min(15rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg border px-4 py-3 text-center text-sm font-semibold leading-5 ring-4 backdrop-blur-xl ${tone}`}
     >
       {toast.message}
     </div>
@@ -1597,7 +1596,7 @@ function InstallGuideDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-[#11130f]/45 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -1608,7 +1607,7 @@ function InstallGuideDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="token-board-install-guide-title"
-        className="flex h-[min(42rem,calc(100vh-2rem))] w-[min(52rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border-2 border-[#26745e]/55 bg-[#fbf7ef] shadow-[0_34px_120px_-48px_rgba(17,19,15,0.85)]"
+        className="flex h-[min(42rem,calc(100vh-2rem))] w-[min(52rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-lg border-2 border-blue-600/55 bg-white shadow-sm"
       >
         <div className="shrink-0 border-b border-stone-950/8 px-5 pb-4 pt-5 sm:px-7">
           <div className="flex items-center gap-2">
@@ -1619,7 +1618,7 @@ function InstallGuideDialog({
                   type="button"
                   onClick={() => onStepChange(index)}
                   className={`h-1.5 rounded-full transition ${
-                    index <= stepIndex ? "bg-[#26745e]" : "bg-stone-950/8 hover:bg-stone-950/16"
+                    index <= stepIndex ? "bg-blue-600" : "bg-stone-950/8 hover:bg-stone-950/16"
                   }`}
                   aria-label={`查看${item.title}`}
                   aria-current={index === stepIndex ? "step" : undefined}
@@ -1638,7 +1637,7 @@ function InstallGuideDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-7 sm:py-7">
-          <div className="mb-5 rounded-2xl border border-stone-950/10 bg-white/70 p-2">
+          <div className="mb-5 rounded-lg border border-stone-950/10 bg-white/70 p-2">
             <div className="grid grid-cols-2 gap-1" role="radiogroup" aria-label="选择安装系统">
               {(Object.keys(INSTALL_GUIDES) as InstallGuidePlatform[]).map((item) => {
                 const selected = item === platform;
@@ -1650,9 +1649,9 @@ function InstallGuideDialog({
                     role="radio"
                     aria-checked={selected}
                     onClick={() => onPlatformChange(item)}
-                    className={`min-h-10 rounded-xl px-3 text-sm font-semibold transition ${
+                    className={`min-h-10 rounded-lg px-3 text-sm font-semibold transition ${
                       selected
-                        ? "bg-[#11130f] text-[#f8f1e5] shadow-[0_14px_36px_-28px_rgba(17,19,15,0.8)]"
+                        ? "bg-slate-950 text-white shadow-sm"
                         : "text-stone-500 hover:bg-stone-950/6 hover:text-stone-900"
                     }`}
                   >
@@ -1665,11 +1664,11 @@ function InstallGuideDialog({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-[3.5rem_minmax(0,1fr)]">
-            <div className="flex size-12 items-center justify-center rounded-2xl border border-[#26745e]/25 bg-[#eaf5ef] text-[#26745e] shadow-[0_16px_42px_-28px_rgba(38,116,94,0.8)]">
+            <div className="flex size-12 items-center justify-center rounded-lg border border-blue-600/25 bg-blue-50 text-blue-600 shadow-sm">
               <Icon name={step.command ? "terminal" : "refresh"} />
             </div>
             <div className="min-w-0">
-              <p className="font-mono text-xs font-semibold uppercase tracking-[0.16em] text-[#26745e]">
+              <p className="font-mono text-xs font-semibold uppercase text-blue-600">
                 {step.eyebrow} / {steps.length}
               </p>
               <h2 id="token-board-install-guide-title" className="mt-2 text-2xl font-semibold leading-tight text-stone-950 sm:text-3xl">
@@ -1682,7 +1681,7 @@ function InstallGuideDialog({
           </div>
 
           {step.command ? (
-            <div className="mt-5 overflow-hidden rounded-2xl bg-[#111827] text-white shadow-[0_24px_70px_-48px_rgba(17,24,39,0.9)]">
+            <div className="mt-5 overflow-hidden rounded-lg bg-slate-950 text-white shadow-sm">
               <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
                 <span className="font-mono text-xs text-white/52">{step.commandLabel}</span>
                 <button
@@ -1694,17 +1693,17 @@ function InstallGuideDialog({
                   复制命令
                 </button>
               </div>
-              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all px-4 py-4 font-mono text-sm leading-7 text-[#f8f1e5] sm:text-base">
-                <span className="mr-3 select-none text-[#7be3a0]">&gt;_</span>
+              <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all px-4 py-4 font-mono text-sm leading-7 text-white sm:text-base">
+                <span className="mr-3 select-none text-blue-300">&gt;_</span>
                 {step.command}
               </pre>
             </div>
           ) : (
-            <div className="mt-5 rounded-2xl border border-[#26745e]/20 bg-[#eaf5ef] p-4 text-sm leading-6 text-[#163d33]">
-              <p className="font-semibold text-[#26745e]">完成后你可以：</p>
+            <div className="mt-5 rounded-lg border border-blue-600/20 bg-blue-50 p-4 text-sm leading-6 text-blue-900">
+              <p className="font-semibold text-blue-600">完成后你可以：</p>
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {["刷新榜单", "切换时间范围", "查看个人消耗"].map((item) => (
-                  <span key={item} className="rounded-xl border border-white/70 bg-white/70 px-3 py-2 text-center font-semibold">
+                  <span key={item} className="rounded-lg border border-white/70 bg-white/70 px-3 py-2 text-center font-semibold">
                     {item}
                   </span>
                 ))}
@@ -1713,12 +1712,12 @@ function InstallGuideDialog({
           )}
 
           {canLogin && stepIndex === 0 ? (
-            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-stone-950/10 bg-white/70 p-3 text-sm text-stone-600 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mt-4 flex flex-col gap-3 rounded-lg border border-stone-950/10 bg-white/70 p-3 text-sm text-stone-600 sm:flex-row sm:items-center sm:justify-between">
               <p>还没登录页面的话，可以先完成 GitHub 登录；安装命令也会在终端里引导授权。</p>
               <button
                 type="button"
                 onClick={onLogin}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-stone-950/12 bg-white px-3 font-semibold text-stone-800 transition hover:border-[#26745e]/35 hover:bg-[#eef7f2]"
+                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-stone-950/12 bg-white px-3 font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
               >
                 <Icon name="github" />
                 GitHub 登录
@@ -1726,12 +1725,12 @@ function InstallGuideDialog({
             </div>
           ) : null}
 
-          <p className="mt-4 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-6 text-stone-600">
+          <p className="mt-4 rounded-lg bg-white/70 px-4 py-3 text-sm leading-6 text-stone-600">
             {step.note}
           </p>
 
           {isLastStep ? (
-            <div className="mt-4 rounded-2xl border border-stone-950/10 bg-white/70 p-4">
+            <div className="mt-4 rounded-lg border border-stone-950/10 bg-white/70 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <p className="text-sm font-semibold text-stone-950">以后不想同步时</p>
@@ -1740,14 +1739,14 @@ function InstallGuideDialog({
                 <button
                   type="button"
                   onClick={() => onCopy(guide.uninstall.command, guide.uninstall.commandLabel)}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-800 transition hover:border-[#26745e]/35 hover:bg-[#eef7f2]"
+                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
                 >
                   <Icon name="download" />
                   复制卸载命令
                 </button>
               </div>
-              <pre className="mt-3 max-h-24 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-[#111827] px-3 py-3 font-mono text-xs leading-5 text-[#f8f1e5]">
-                <span className="mr-2 select-none text-[#7be3a0]">&gt;_</span>
+              <pre className="mt-3 max-h-24 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-950 px-3 py-3 font-mono text-xs leading-5 text-white">
+                <span className="mr-2 select-none text-blue-300">&gt;_</span>
                 {guide.uninstall.command}
               </pre>
               <p className="mt-3 text-xs leading-5 text-stone-500">{guide.uninstall.note}</p>
@@ -1759,7 +1758,7 @@ function InstallGuideDialog({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-stone-500 transition hover:bg-stone-950/6 hover:text-stone-900"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-stone-500 transition hover:bg-stone-950/6 hover:text-stone-900"
           >
             跳过
           </button>
@@ -1768,14 +1767,14 @@ function InstallGuideDialog({
               type="button"
               onClick={() => onStepChange(Math.max(0, stepIndex - 1))}
               disabled={isFirstStep}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-stone-950/12 bg-white px-5 text-sm font-semibold text-stone-800 transition hover:border-[#26745e]/35 hover:bg-[#eef7f2] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-950/12 disabled:hover:bg-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-stone-950/12 bg-white px-5 text-sm font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-stone-950/12 disabled:hover:bg-white"
             >
               上一步
             </button>
             <button
               type="button"
               onClick={isLastStep ? completeGuide : () => onStepChange(Math.min(steps.length - 1, stepIndex + 1))}
-              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#26745e] px-5 text-sm font-semibold text-white shadow-[0_18px_45px_-28px_rgba(38,116,94,0.9)] transition hover:bg-[#1f604f]"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800"
             >
               {isLastStep ? "完成并刷新" : "下一步"}
             </button>
@@ -1796,8 +1795,8 @@ function LoadingSpinner({
   tone?: LoadingTone;
 }) {
   const tones = {
-    dark: "border-stone-950/15 border-t-[#26745e]",
-    light: "border-white/18 border-t-[#f1c45c]",
+    dark: "border-slate-950/15 border-t-blue-600",
+    light: "border-white/25 border-t-white",
   };
 
   return (
@@ -1829,9 +1828,9 @@ function LoadingInline({
 
 function InsightStrip({ loading, text }: { loading: boolean; text: string }) {
   return (
-    <section className="rounded-[1.15rem] border border-stone-950/10 bg-[#fffdfa] px-4 py-3 shadow-[0_18px_55px_-52px_rgba(28,25,23,0.58)]">
+    <section className="rounded-lg border border-stone-950/10 bg-white px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <span className="w-fit rounded-full bg-[#11130f] px-2.5 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-[#f8f1e5]">
+        <span className="w-fit rounded-full bg-slate-950 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase text-white">
           自动洞察
         </span>
         <p className="text-sm leading-6 text-stone-700">
@@ -1883,15 +1882,15 @@ function TrustEvidenceBar({
         ];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/7 p-3">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="flex flex-wrap gap-2">
         {evidence.map((item) => (
-          <span key={item.label} className="rounded-full border border-white/10 bg-black/16 px-2.5 py-1 font-mono text-[11px] text-white/70">
-            {item.loading ? <LoadingInline label={item.label} tone="light" /> : item.label}
+          <span key={item.label} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-600">
+            {item.loading ? <LoadingInline label={item.label} /> : item.label}
           </span>
         ))}
       </div>
-      <p className="mt-2 hidden text-xs leading-5 text-white/48 sm:block">
+      <p className="mt-2 hidden text-xs leading-5 text-slate-500 sm:block">
         {apiBaseUrl ? "本页只读取自动上报服务。" : "Token Board API 未配置，页面不会回退到静态或本地数据。"}
         只展示 token、模型、工具、项目 basename 与会话短标题；费用为公开模型单价估算，不代表实际账单。
       </p>
@@ -1920,9 +1919,9 @@ function EfficiencyStrip({
   ];
 
   return (
-    <section className="grid gap-2 rounded-[1.15rem] border border-stone-950/10 bg-[#fffdfa] p-3 shadow-[0_18px_55px_-52px_rgba(28,25,23,0.58)] sm:grid-cols-2 xl:grid-cols-4">
+    <section className="grid gap-2 rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <div key={item.label} className="rounded-xl border border-stone-950/8 bg-[#f8f2e8] px-3 py-3">
+        <div key={item.label} className="rounded-lg border border-stone-950/8 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-stone-500">{item.label}</p>
           <p className="mt-2 font-mono text-xl font-semibold text-stone-950">
             {loading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : item.value}
@@ -1949,7 +1948,7 @@ function SegmentedControl({
 }) {
   return (
     <div
-      className="grid w-full rounded-xl border border-white/15 bg-white/10 p-1"
+      className="grid w-full rounded-lg border border-slate-200 bg-slate-100 p-1"
       role="radiogroup"
       aria-label={label}
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
@@ -1966,10 +1965,10 @@ function SegmentedControl({
           onClick={() => onChange(item.key)}
           className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition ${
             value === item.key
-              ? "bg-[#f8f1e5] text-[#11130f] shadow-[0_10px_24px_-20px_rgba(255,255,255,0.7)]"
+              ? "bg-white text-slate-950 shadow-sm"
               : item.disabled
-                ? "cursor-not-allowed text-white/28"
-                : "text-white/72 hover:bg-white/10 hover:text-white"
+                ? "cursor-not-allowed text-slate-400"
+                : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
           }`}
         >
           {item.label}
@@ -1991,16 +1990,16 @@ function StatTile({
   tone: "ink" | "mint" | "blue" | "gold";
 }) {
   const tones = {
-    ink: "border-[#11130f] bg-[#11130f] text-white",
-    mint: "border-[#26745e]/20 bg-[#eaf5ef] text-[#163d33]",
-    blue: "border-[#2f6387]/18 bg-[#e9f1f4] text-[#183447]",
-    gold: "border-[#b06a2c]/18 bg-[#fff2d6] text-[#5a3419]",
+    ink: "border-slate-950 bg-slate-950 text-white",
+    mint: "border-blue-600/20 bg-blue-50 text-blue-900",
+    blue: "border-sky-600/18 bg-sky-50 text-sky-900",
+    gold: "border-amber-600/18 bg-amber-50 text-amber-900",
   };
 
   return (
-    <div className={`min-h-32 rounded-[1.15rem] border p-4 shadow-[0_18px_55px_-50px_rgba(28,25,23,0.7)] ${tones[tone]}`}>
+    <div className={`min-h-32 rounded-lg border p-4 shadow-sm ${tones[tone]}`}>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-65">{label}</p>
+        <p className="text-xs font-semibold uppercase opacity-65">{label}</p>
         <span className="mt-0.5 size-2 rounded-full bg-current opacity-55" />
       </div>
       <p className="mt-5 font-mono text-3xl font-semibold leading-none sm:text-4xl" title={typeof value === "string" ? value : undefined}>{value}</p>
@@ -2011,10 +2010,10 @@ function StatTile({
 
 function HeroSignal({ label, value, meta }: { label: string; value: ReactNode; meta: ReactNode }) {
   return (
-    <div className="min-w-0 border-l border-white/12 pl-3 sm:pl-4">
-      <p className="truncate text-[11px] font-semibold uppercase tracking-[0.1em] text-white/42 sm:text-xs sm:tracking-[0.14em]">{label}</p>
-      <p className="mt-2 truncate text-base font-semibold text-white sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
-      <p className="mt-1 truncate font-mono text-[11px] text-[#f1c45c] sm:text-xs" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
+    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+      <p className="truncate text-[11px] font-semibold uppercase text-slate-500 sm:text-xs">{label}</p>
+      <p className="mt-2 truncate text-base font-semibold text-slate-950 sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
+      <p className="mt-1 truncate font-mono text-[11px] text-blue-600 sm:text-xs" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
     </div>
   );
 }
@@ -2088,38 +2087,38 @@ function DailyTokenTrendBar({
         type="button"
         aria-describedby={tooltipId}
         aria-label={exactLabel}
-        className="group/trend relative flex h-full w-full cursor-crosshair appearance-none items-end rounded-t-[3px] border-0 bg-transparent px-0 pb-0 pt-20 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-[#26745e]/35 focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdfa]"
+        className="group/trend relative flex h-full w-full cursor-crosshair appearance-none items-end rounded-t-[3px] border-0 bg-transparent px-0 pb-0 pt-20 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-blue-600/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
         data-token-trend-point={point.date}
       >
         <span
           aria-hidden="true"
           className={`block w-full rounded-t-[3px] transition duration-200 group-hover/trend:translate-y-[-2px] group-focus-visible/trend:translate-y-[-2px] ${
             isLatest
-              ? "bg-[#c05c38] group-hover/trend:bg-[#d16a45] group-focus-visible/trend:bg-[#d16a45]"
-              : "bg-[#172018] group-hover/trend:bg-[#26745e] group-focus-visible/trend:bg-[#26745e]"
+              ? "bg-red-600 group-hover/trend:bg-red-500 group-focus-visible/trend:bg-red-500"
+              : "bg-blue-600 group-hover/trend:bg-blue-600 group-focus-visible/trend:bg-blue-600"
           }`}
           style={{ height: barHeight }}
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-1/2 z-10 -translate-x-1/2 border-l border-dashed border-[#26745e]/45 opacity-0 transition group-hover/trend:opacity-100 group-focus-visible/trend:opacity-100"
+          className="pointer-events-none absolute bottom-0 left-1/2 z-10 -translate-x-1/2 border-l border-dashed border-blue-600/45 opacity-0 transition group-hover/trend:opacity-100 group-focus-visible/trend:opacity-100"
           style={{ height: barHeight }}
         />
         <span
           id={tooltipId}
           role="tooltip"
-          className={`pointer-events-none absolute top-2 z-30 min-w-[7.5rem] max-w-[10rem] rounded-xl border border-[#26745e]/18 bg-[#fffdfa]/98 px-3 py-2 text-stone-950 opacity-0 shadow-[0_18px_45px_-26px_rgba(38,116,94,0.75)] backdrop-blur transition duration-150 group-hover/trend:translate-y-[-0.2rem] group-hover/trend:opacity-100 group-focus-visible/trend:translate-y-[-0.2rem] group-focus-visible/trend:opacity-100 ${tooltipAlignClass}`}
+          className={`pointer-events-none absolute top-2 z-30 min-w-[7.5rem] max-w-[10rem] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-0 shadow-sm backdrop-blur transition duration-150 group-hover/trend:translate-y-[-0.2rem] group-hover/trend:opacity-100 group-focus-visible/trend:translate-y-[-0.2rem] group-focus-visible/trend:opacity-100 ${tooltipAlignClass}`}
           data-token-trend-tooltip-placement="top-rail"
           data-token-trend-tooltip={point.date}
         >
-          <span className="block font-mono text-[10px] font-semibold text-[#26745e]">{point.date}</span>
+          <span className="block font-mono text-[10px] font-semibold text-blue-600">{point.date}</span>
           <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">{formatTokens(point.tokens)}</span>
           <span className="mt-1 block truncate font-mono text-[10px] text-stone-500" title={exactTokens}>
             {exactTokens}
           </span>
           <span
             aria-hidden="true"
-            className={`absolute top-full size-2 rotate-45 border-b border-r border-[#26745e]/18 bg-[#fffdfa] ${tooltipArrowClass}`}
+            className={`absolute top-full size-2 rotate-45 border-b border-r border-blue-600/18 bg-white ${tooltipArrowClass}`}
           />
         </span>
       </button>
@@ -2134,7 +2133,7 @@ function PanelHeader({ title, meta, action }: { title: string; meta: ReactNode; 
         <h2 className="text-base font-semibold">{title}</h2>
         <p className="mt-0.5 font-mono text-xs text-stone-500">{meta}</p>
       </div>
-      <span className="w-fit rounded-full border border-stone-950/10 bg-[#f5efe4] px-3 py-1 font-mono text-xs text-stone-600">
+      <span className="w-fit rounded-full border border-stone-950/10 bg-slate-50 px-3 py-1 font-mono text-xs text-stone-600">
         {action}
       </span>
     </div>
@@ -2155,7 +2154,7 @@ function SortableColumnHeader({
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
           active
-            ? "bg-[#11130f] text-[#f8f1e5]"
+            ? "bg-slate-950 text-white"
             : "text-stone-500"
         }`}
         title={active ? "当前按此列降序排列" : undefined}
@@ -2182,10 +2181,10 @@ function LeaderboardMobileCard({
   const daily = normalizeDailyUsageSeries(user.daily);
 
   return (
-    <article className="rounded-2xl border border-stone-950/10 bg-white p-3 shadow-[0_14px_42px_-36px_rgba(28,25,23,0.65)]">
+    <article className="rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="rounded-full border border-[#b06a2c]/25 bg-[#fff2d6] px-2.5 py-1 font-mono text-xs font-semibold text-[#5a3419]">
+          <span className="rounded-full border border-amber-600/25 bg-amber-50 px-2.5 py-1 font-mono text-xs font-semibold text-amber-900">
             #{user.rank}
           </span>
           <Avatar name={user.displayName} index={user.rank} />
@@ -2199,13 +2198,13 @@ function LeaderboardMobileCard({
           <p className="text-xs text-stone-500">{metricLabel} ↓</p>
         </div>
       </div>
-      <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-stone-950/8 bg-[#f8f2e8] p-2 text-xs">
+      <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-stone-950/8 bg-slate-50 p-2 text-xs">
         <MetricMini label="总消耗" value={formatTokens(consumptionTokens)} />
         <MetricMini label="费用" value={formatUsd(user.costUsd)} />
         <MetricMini label="会话" value={formatNumber(user.sessions)} />
       </div>
       {showDailyTrend ? (
-        <div className="mt-3 rounded-xl border border-stone-950/8 bg-[#fffdfa] px-3 py-2">
+        <div className="mt-3 rounded-lg border border-stone-950/8 bg-white px-3 py-2">
           <DailyUsageSparkline
             daily={daily}
             label={`${user.displayName} 每日用量`}
@@ -2214,7 +2213,7 @@ function LeaderboardMobileCard({
         </div>
       ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-        <span className="rounded-md border border-stone-950/10 bg-[#f5efe4] px-2 py-1 font-semibold text-stone-700">
+        <span className="rounded-md border border-stone-950/10 bg-slate-50 px-2 py-1 font-semibold text-stone-700">
           {user.topModel}
         </span>
         <span>{formatNumber(user.records)} records</span>
@@ -2294,14 +2293,14 @@ function DailyUsageSparkline({
       <div
         className={`mt-1 h-12 overflow-hidden rounded-lg border px-2.5 py-1.5 transition-colors ${
           activePoint
-            ? "border-[#26745e]/25 bg-[#fffdfa] shadow-[0_12px_34px_-28px_rgba(38,116,94,0.75)]"
+            ? "border-blue-600/25 bg-white shadow-sm"
             : "border-transparent bg-transparent"
         }`}
         role={activePoint ? "tooltip" : undefined}
       >
         {activePoint ? (
           <>
-            <p className="font-mono text-[10px] font-semibold text-[#26745e]">{activePoint.date}</p>
+            <p className="font-mono text-[10px] font-semibold text-blue-600">{activePoint.date}</p>
             <p className="mt-0.5 truncate whitespace-nowrap font-mono text-xs font-semibold text-stone-950" title={exactActiveLabel}>
               {exactActiveLabel}
             </p>
@@ -2323,11 +2322,11 @@ function DailyUsageSparkline({
         >
           <defs>
             <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#26745e" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#26745e" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
             </linearGradient>
           </defs>
-          <line x1={paddingX} x2={width - paddingX} y1={height - paddingY} y2={height - paddingY} stroke="#e2d6c5" strokeWidth="1" />
+          <line x1={paddingX} x2={width - paddingX} y1={height - paddingY} y2={height - paddingY} stroke="#cbd5e1" strokeWidth="1" />
           {areaPath ? (
             <path d={areaPath} fill={`url(#${gradientId})`} />
           ) : null}
@@ -2335,7 +2334,7 @@ function DailyUsageSparkline({
             <path
               d={path}
               fill="none"
-              stroke="#26745e"
+              stroke="#2563eb"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="3"
@@ -2348,7 +2347,7 @@ function DailyUsageSparkline({
               x2={activePoint.x}
               y1={paddingY}
               y2={height - paddingY}
-              stroke="#26745e"
+              stroke="#2563eb"
               strokeDasharray="3 3"
               strokeOpacity="0.5"
               strokeWidth="1"
@@ -2386,12 +2385,12 @@ function DailyUsageSparkline({
             const isHovered = hoveredPointIndex === index;
             const isLatest = index === points.length - 1;
             const dotSize = isHovered ? "size-[9px]" : isLatest ? "size-2" : "size-[7px]";
-            const dotFill = isHovered ? "bg-[#26745e]" : isLatest ? "bg-[#c05c38]" : "bg-[#fffdfa]";
+            const dotFill = isHovered ? "bg-blue-600" : isLatest ? "bg-red-600" : "bg-white";
 
             return (
               <span
                 key={`${point.date}:dot`}
-                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#26745e] ${dotSize} ${dotFill}`}
+                className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-600 ${dotSize} ${dotFill}`}
                 style={{
                   left: `${(point.x / width) * 100}%`,
                   top: `${(point.y / height) * 100}%`,
@@ -2414,15 +2413,15 @@ function LeaderboardRow({ showDailyTrend, user }: { showDailyTrend: boolean; use
   const daily = normalizeDailyUsageSeries(user.daily);
   const rankTone =
     user.rank === 1
-      ? "border-[#b06a2c]/30 bg-[#fff2d6] text-[#5a3419]"
+      ? "border-amber-600/30 bg-amber-50 text-amber-900"
       : user.rank === 2
-        ? "border-[#2f6387]/20 bg-[#e9f1f4] text-[#183447]"
+        ? "border-sky-600/20 bg-sky-50 text-sky-900"
         : user.rank === 3
-          ? "border-[#26745e]/20 bg-[#eaf5ef] text-[#163d33]"
+          ? "border-blue-600/20 bg-blue-50 text-blue-900"
           : "border-stone-950/10 bg-white text-stone-500";
 
   return (
-    <tr className="transition hover:bg-[#f8f2e8]">
+    <tr className="transition hover:bg-slate-50">
       <td className="px-4 py-3">
         <span className={`inline-flex min-w-10 justify-center rounded-full border px-2 py-1 font-mono text-xs font-semibold ${rankTone}`}>
           #{user.rank}
@@ -2447,12 +2446,12 @@ function LeaderboardRow({ showDailyTrend, user }: { showDailyTrend: boolean; use
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-stone-950/10 bg-[#f5efe4] px-2 py-1 text-xs font-semibold text-stone-700">
+          <span className="rounded-md border border-stone-950/10 bg-slate-50 px-2 py-1 text-xs font-semibold text-stone-700">
             {user.topModel}
           </span>
           {user.deltaTokens !== null ? (
             <span
-              className={`font-mono text-xs font-semibold ${user.deltaTokens >= 0 ? "text-[#26745e]" : "text-[#c05c38]"}`}
+              className={`font-mono text-xs font-semibold ${user.deltaTokens >= 0 ? "text-blue-600" : "text-red-600"}`}
               title="较上一周期 Token 变化"
             >
               {formatSignedPercent(user.deltaTokens)}
@@ -2471,7 +2470,7 @@ function LeaderboardRow({ showDailyTrend, user }: { showDailyTrend: boolean; use
 
 function MobileLeaderboardLoading({ slow }: { slow: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-stone-950/8 bg-[#f8f2e8] p-6 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-stone-950/8 bg-slate-50 p-6 text-center">
       <LoadingSpinner className="size-7" />
       <div>
         <p className="font-semibold text-stone-950">{slow ? "数据加载较慢" : "Loading 真实用户数据"}</p>
@@ -2487,7 +2486,7 @@ function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: number; slo
   return (
     <tr>
       <td colSpan={columnCount} className="px-4 py-12">
-        <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-stone-950/8 bg-[#f8f2e8] p-6 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-stone-950/8 bg-slate-50 p-6 text-center">
           <LoadingSpinner className="size-7" />
           <div>
             <p className="font-semibold text-stone-950">{slow ? "数据加载较慢" : "Loading 真实用户数据"}</p>
@@ -2503,13 +2502,13 @@ function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: number; slo
 
 function LeaderboardErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <div className="rounded-xl border border-[#c05c38]/20 bg-[#fff0e9] p-5 text-center">
-      <p className="font-semibold text-[#7b2f1d]">真实用户数据读取失败</p>
-      <p className="mt-1 text-xs text-[#7b2f1d]/72">{error || "请稍后再试"}</p>
+    <div className="rounded-lg border border-red-600/20 bg-red-50 p-5 text-center">
+      <p className="font-semibold text-red-900">真实用户数据读取失败</p>
+      <p className="mt-1 text-xs text-red-900/72">{error || "请稍后再试"}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-4 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-[#11130f] px-3 text-sm font-semibold text-white transition hover:bg-[#26745e]"
+        className="mt-4 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-600"
       >
         <Icon name="refresh" />
         重试
@@ -2530,7 +2529,7 @@ function LeaderboardErrorRow({ columnCount, error, onRetry }: { columnCount: num
 
 function LeaderboardEmptyState() {
   return (
-    <div className="rounded-xl border border-stone-950/8 bg-[#f8f2e8] px-4 py-8 text-center text-sm text-stone-500">
+    <div className="rounded-lg border border-stone-950/8 bg-slate-50 px-4 py-8 text-center text-sm text-stone-500">
       暂无真实用户数据，可以切换时间范围或运行 agent 上报本机记录。
     </div>
   );
@@ -2560,7 +2559,7 @@ function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; total: nu
         </div>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/80 shadow-inner">
           <div
-            className="h-full rounded-full bg-[#26745e]"
+            className="h-full rounded-full bg-blue-600"
             style={{ width: `${Math.max(2, share * 100)}%` }}
           />
         </div>
@@ -2575,7 +2574,7 @@ function ShareLoadingRows() {
     <>
       {Array.from({ length: 5 }, (_, index) => (
         <div key={index} className="grid grid-cols-[2.25rem_minmax(0,1fr)_5rem] items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-xl bg-white/80">
+          <span className="flex size-9 items-center justify-center rounded-lg bg-white/80">
             <LoadingSpinner className="size-4" />
           </span>
           <div className="space-y-2">
@@ -2600,7 +2599,7 @@ function TrendLoadingBars() {
 }
 
 function EmptyPanelMessage() {
-  return <p className="rounded-xl border border-stone-950/8 bg-white/60 px-3 py-4 text-center text-sm text-stone-500">暂无真实数据</p>;
+  return <p className="rounded-lg border border-stone-950/8 bg-white/60 px-3 py-4 text-center text-sm text-stone-500">暂无真实数据</p>;
 }
 
 function BreakdownPanel({
@@ -2613,7 +2612,7 @@ function BreakdownPanel({
   loading?: boolean;
 }) {
   return (
-    <section className="rounded-[1.25rem] border border-stone-950/10 bg-[#fffdfa] p-4 shadow-[0_18px_65px_-58px_rgba(28,25,23,0.6)]">
+    <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{title}</h2>
         <span className="font-mono text-xs text-stone-500">
@@ -2628,8 +2627,8 @@ function BreakdownPanel({
               <p className="shrink-0 font-mono text-stone-500">{formatTokens(item.value)}</p>
             </div>
             <div className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-3">
-              <div className="h-2 overflow-hidden rounded-full bg-[#f0e6d7]">
-                <div className="h-full rounded-full bg-[#2f6387]" style={{ width: `${Math.max(2, item.share * 100)}%` }} />
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max(2, item.share * 100)}%` }} />
               </div>
               <p className="truncate text-right text-xs text-stone-500">{item.meta}</p>
             </div>
@@ -2678,14 +2677,14 @@ function GitHubAuthControl({
   if (viewer.authenticated) {
     return (
       <div className="flex w-full items-center gap-2 xl:w-auto">
-        <span className="inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white xl:flex-none">
+        <span className="inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 xl:flex-none">
           <Icon name="github" />
           <span className="truncate">@{viewer.user?.githubLogin || viewer.user?.displayName || "GitHub"}</span>
         </span>
         <button
           type="button"
           onClick={onLogout}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl border border-[#ff9b7c]/25 bg-[#ff9b7c]/10 px-3 text-sm font-semibold text-[#ffd4c6] transition hover:border-[#ff9b7c]/45 hover:bg-[#ff9b7c]/18"
+          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
           title="退出 GitHub 登录"
         >
           <Icon name="logout" />
@@ -2700,16 +2699,16 @@ function GitHubAuthControl({
 
 function Avatar({ name, index }: { name: string; index: number }) {
   const tones = [
-    "bg-[#eaf5ef] text-[#163d33] ring-[#26745e]/20",
-    "bg-[#e9f1f4] text-[#183447] ring-[#2f6387]/20",
-    "bg-[#fff2d6] text-[#5a3419] ring-[#b06a2c]/20",
-    "bg-[#f7e4dc] text-[#7b2f1d] ring-[#c05c38]/20",
-    "bg-[#ede7d9] text-stone-700 ring-stone-950/10",
+    "bg-blue-50 text-blue-900 ring-blue-600/20",
+    "bg-sky-50 text-sky-900 ring-sky-600/20",
+    "bg-amber-50 text-amber-900 ring-amber-600/20",
+    "bg-rose-50 text-red-900 ring-red-600/20",
+    "bg-slate-100 text-stone-700 ring-stone-950/10",
   ];
 
   return (
     <span
-      className={`flex size-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold ring-1 ${tones[index % tones.length]}`}
+      className={`flex size-9 shrink-0 items-center justify-center rounded-lg text-sm font-bold ring-1 ${tones[index % tones.length]}`}
       aria-hidden="true"
     >
       {name.trim().slice(0, 1).toUpperCase() || "U"}
@@ -2980,34 +2979,34 @@ function formatRankDelta(value: number | null) {
 
 function rankDeltaTone(value: number | null) {
   if (value === null || value === 0) {
-    return "text-white/52";
+    return "text-slate-500";
   }
 
-  return value > 0 ? "text-[#bdf5cc]" : "text-[#ffb39d]";
+  return value > 0 ? "text-emerald-600" : "text-red-600";
 }
 
 function heatColor(intensity: number) {
   if (intensity <= 0) {
-    return "rgba(255,255,255,0.06)";
+    return "#f1f5f9";
   }
 
   if (intensity < 0.18) {
-    return "#123127";
+    return "#dbeafe";
   }
 
   if (intensity < 0.38) {
-    return "#1f684b";
+    return "#bfdbfe";
   }
 
   if (intensity < 0.62) {
-    return "#2ca965";
+    return "#93c5fd";
   }
 
   if (intensity < 0.82) {
-    return "#43d184";
+    return "#60a5fa";
   }
 
-  return "#bdf5cc";
+  return "#2563eb";
 }
 
 function formatShortDate(value: string) {
