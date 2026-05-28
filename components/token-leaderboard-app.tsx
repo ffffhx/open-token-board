@@ -11,7 +11,7 @@ import {
   type TokenAccountUsageProfile,
   type TokenLeaderboardSummary,
   type TokenLeaderboardUser,
-} from "@/lib/token-leaderboard";
+} from "@open-token-board/core";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
 
 const RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
@@ -31,7 +31,7 @@ const DATA_LOAD_SLOW_MS = 10_000;
 const TOAST_DISMISS_MS = 1_800;
 
 const TOKEN_BOARD_AGENT_VERSION = "0.4.11";
-const NPX_PACKAGE_URL = `https://ffffhx.github.io/garden-lab/token-board-agent.tgz?v=${TOKEN_BOARD_AGENT_VERSION}`;
+const NPX_PACKAGE_URL = `https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=${TOKEN_BOARD_AGENT_VERSION}`;
 const NPX_INSTALL_COMMAND =
   `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent install`;
 const NPX_STATUS_COMMAND =

@@ -1,0 +1,17 @@
+{
+  "name": "@open-token-board/service",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "token:server": "tsx --tsconfig ../../apps/token-board-api/tsconfig.json ../../apps/token-board-api/src/server.ts",
+    "token:migrate-json": "tsx --tsconfig ../../apps/token-board-api/tsconfig.json ../../apps/token-board-api/src/server.ts migrate-json",
+    "docker:start": "tsx --tsconfig ../../apps/token-board-api/tsconfig.json ../../apps/token-board-api/src/server.ts",
+    "typecheck": "tsc --noEmit --project ../../apps/token-board-api/tsconfig.json"
+  },
+  "dependencies": {
+    "@open-token-board/core": "workspace:*",
+    "pg": "^8.20.0",
+    "tsx": "4.21.0",
+    "typescript": "5.8.3"
+  }
+}

@@ -1,0 +1,527 @@
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import {
+  createIngestPayload,
+  sanitizeIngestEvents,
+  type TokenBoardPrivacyOptions,
+  type TokenBoardUploadUser,
+} from "@open-token-board/core/automation";
+import {
+  collectLocalTokenUsage,
+  collectTokenBoardUserConfig,
+  type TokenUsageCollectorConfig,
+} from "@open-token-board/core/collector";
+import type { TokenBoardUserConfig } from "@open-token-board/core";
+
+type AgentConfig = TokenUsageCollectorConfig & {
+  apiUrl: string;
+  agentToken?: string;
+  uploadToken?: string;
+  intervalMs: number;
+  stateFile: string;
+  privacy: TokenBoardPrivacyOptions;
+};
+
+type AgentState = {
+  apiUrl?: string;
+  userId?: string;
+  uploadedIds?: string[];
+  lastUploadedAt?: string;
+};
+
+const DEFAULT_CONFIG_FILE = path.join(os.homedir(), ".token-board-agent.json");
+const DEFAULT_STATE_FILE = path.join(os.homedir(), ".token-board-agent-state.json");
+const AGENT_VERSION = "0.1.0";
+const INGEST_BATCH_SIZE = 1000;
+
+async function main() {
+  const command = process.argv[2] || "upload";
+
+  if (command === "help" || command === "--help" || command === "-h") {
+    printHelp();
+    return;
+  }
+
+  if (command === "init") {
+    await initConfig();
+    return;
+  }
+
+  if (command === "login") {
+    await loginWithGitHub();
+    return;
+  }
+
+  if (command === "sync") {
+    await syncOnce();
+    return;
+  }
+
+  if (command === "watch") {
+    const config = await loadOrLoginConfig();
+    await watch(config);
+    return;
+  }
+
+  const config = await loadAgentConfig();
+
+  if (command === "collect") {
+    const events = await collectAndSanitize(config);
+    const userConfig = await collectCurrentUserConfig();
+    console.log(JSON.stringify(createIngestPayload(events, clientInfo(), userConfig), null, 2));
+    return;
+  }
+
+  if (command === "upload") {
+    await uploadOnce(config);
+    return;
+  }
+
+  if (command === "resync") {
+    await uploadOnce(config, { force: true });
+    return;
+  }
+
+  printHelp();
+  process.exitCode = 1;
+}
+
+export async function uploadOnce(config: AgentConfig, options: { force?: boolean } = {}) {
+  const state = await readState(config.stateFile);
+  const force = options.force === true || process.env.TOKEN_BOARD_FORCE_RESYNC === "1";
+  const stateMatches = uploadStateMatchesConfig(state, config);
+  const uploadedIds = force || !stateMatches ? new Set<string>() : new Set(state.uploadedIds || []);
+  const events = (await collectAndSanitize(config)).filter((event) => !uploadedIds.has(event.id));
+  const userConfig = await collectCurrentUserConfig();
+
+  if (!events.length) {
+    if (userConfig) {
+      await postIngest(config, [], userConfig);
+    }
+    console.log(force ? "No token usage events collected for resync." : "No new token usage events to upload.");
+    return { accepted: 0, duplicates: 0, records: 0 };
+  }
+
+  const batches = chunkEvents(events, INGEST_BATCH_SIZE);
+  const result = { accepted: 0, duplicates: 0, records: 0 };
+
+  for (const batch of batches) {
+    const batchResult = await postIngest(config, batch, userConfig);
+    result.accepted += batchResult.accepted;
+    result.duplicates += batchResult.duplicates;
+    result.records = batchResult.records;
+  }
+
+  if (result.accepted > 0 || result.duplicates > 0) {
+    await writeState(config.stateFile, {
+      apiUrl: config.apiUrl,
+      userId: config.userId || "local",
+      uploadedIds: [...new Set([...uploadedIds, ...events.map((event) => event.id)])].slice(-50_000),
+      lastUploadedAt: new Date().toISOString(),
+    });
+  }
+
+  console.log(
+    `${force ? "Resynced" : "Uploaded"} ${events.length} events in ${batches.length} batches. accepted=${result.accepted} duplicates=${result.duplicates} records=${result.records}`
+  );
+
+  return result;
+}
+
+function uploadStateMatchesConfig(state: AgentState, config: AgentConfig) {
+  const stateApiUrl = state.apiUrl?.replace(/\/+$/, "") || "";
+  const stateUserId = state.userId || "";
+  const configUserId = config.userId || "local";
+
+  return (!stateApiUrl || stateApiUrl === config.apiUrl) && (!stateUserId || stateUserId === configUserId);
+}
+
+export async function collectAndSanitize(config: AgentConfig) {
+  const rawEvents = await collectLocalTokenUsage(config);
+  const user: TokenBoardUploadUser = {
+    userId: config.userId || "local",
+    displayName: config.displayName || config.userId || os.userInfo().username || "Local User",
+    team: config.team || "Friends",
+    uploadToken: config.uploadToken || config.agentToken,
+  };
+  const sanitized = sanitizeIngestEvents(rawEvents, user, config.privacy);
+
+  if (sanitized.errors.length) {
+    console.warn(`Skipped ${sanitized.errors.length} events: ${sanitized.errors.slice(0, 3).join("; ")}`);
+  }
+
+  return sanitized.entries;
+}
+
+export async function loadAgentConfig(): Promise<AgentConfig> {
+  const fileConfig = await readConfigFile(process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE);
+  const usagePaths = readListEnv("TOKEN_BOARD_USAGE_PATHS") || readStringArray(fileConfig.usagePaths);
+  const apiUrl = readStringEnv("TOKEN_BOARD_API_URL") || readString(fileConfig.apiUrl) || "http://127.0.0.1:8787";
+  const uploadToken = readStringEnv("TOKEN_BOARD_UPLOAD_TOKEN") || readString(fileConfig.uploadToken);
+  const agentToken = readStringEnv("TOKEN_BOARD_AGENT_TOKEN") || readString(fileConfig.agentToken);
+
+  if (!agentToken && !uploadToken) {
+    throw new Error("Run `token-board-agent login` first, or set TOKEN_BOARD_UPLOAD_TOKEN for legacy mode.");
+  }
+
+  return {
+    apiUrl: apiUrl.replace(/\/+$/, ""),
+    agentToken,
+    uploadToken,
+    userId: readStringEnv("TOKEN_BOARD_USER_ID") || readString(fileConfig.userId) || os.userInfo().username,
+    displayName:
+      readStringEnv("TOKEN_BOARD_DISPLAY_NAME") || readString(fileConfig.displayName) || os.userInfo().username,
+    team: readStringEnv("TOKEN_BOARD_TEAM") || readString(fileConfig.team) || "Friends",
+    usagePaths,
+    includeDefaultSources: readBooleanEnv("TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES", readBoolean(fileConfig.includeDefaultSources, true)),
+    sinceHours: readNumberEnv("TOKEN_BOARD_SINCE_HOURS", readNumber(fileConfig.sinceHours, 24 * 30)),
+    maxFiles: readNumberEnv("TOKEN_BOARD_MAX_FILES", readNumber(fileConfig.maxFiles, 800)),
+    maxFileBytes: readNumberEnv("TOKEN_BOARD_MAX_FILE_BYTES", readNumber(fileConfig.maxFileBytes, 5 * 1024 * 1024)),
+    intervalMs: readNumberEnv("TOKEN_BOARD_INTERVAL_MS", readNumber(fileConfig.intervalMs, 5 * 60 * 1000)),
+    stateFile: readStringEnv("TOKEN_BOARD_AGENT_STATE_FILE") || readString(fileConfig.stateFile) || DEFAULT_STATE_FILE,
+    privacy: {
+      projectMode: readProjectMode(readStringEnv("TOKEN_BOARD_PROJECT_MODE") || readNestedString(fileConfig, "privacy", "projectMode")),
+      includeModel: readBooleanEnv(
+        "TOKEN_BOARD_INCLUDE_MODEL",
+        readNestedBoolean(fileConfig, "privacy", "includeModel", true)
+      ),
+      includeSource: readBooleanEnv(
+        "TOKEN_BOARD_INCLUDE_SOURCE",
+        readNestedBoolean(fileConfig, "privacy", "includeSource", true)
+      ),
+      hashSessionId: readBooleanEnv(
+        "TOKEN_BOARD_HASH_SESSION_ID",
+        readNestedBoolean(fileConfig, "privacy", "hashSessionId", true)
+      ),
+      includeSessionTitle: readBooleanEnv(
+        "TOKEN_BOARD_INCLUDE_SESSION_TITLE",
+        readNestedBoolean(fileConfig, "privacy", "includeSessionTitle", true)
+      ),
+      maxEventAgeDays: readNumberEnv(
+        "TOKEN_BOARD_MAX_EVENT_AGE_DAYS",
+        readNestedNumber(fileConfig, "privacy", "maxEventAgeDays", 120)
+      ),
+    },
+  };
+}
+
+async function syncOnce() {
+  const config = await loadOrLoginConfig();
+
+  await uploadOnce(config);
+
+  const leaderboardUrl = readStringEnv("TOKEN_BOARD_LEADERBOARD_URL");
+
+  if (leaderboardUrl) {
+    console.log(`Open leaderboard: ${leaderboardUrl}`);
+  }
+}
+
+async function loadOrLoginConfig() {
+  try {
+    return await loadAgentConfig();
+  } catch (error) {
+    if (!isMissingAgentTokenError(error)) {
+      throw error;
+    }
+
+    console.log("No saved GitHub agent session found. Starting login first.");
+    await loginWithGitHub();
+    return loadAgentConfig();
+  }
+}
+
+async function watch(config: AgentConfig) {
+  console.log(`Token usage agent watching every ${Math.round(config.intervalMs / 1000)}s.`);
+
+  while (true) {
+    try {
+      await uploadOnce(config);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : error);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, config.intervalMs));
+  }
+}
+
+async function postIngest(
+  config: AgentConfig,
+  events: Awaited<ReturnType<typeof collectAndSanitize>>,
+  userConfig?: TokenBoardUserConfig | null
+) {
+  const bearerToken = config.agentToken || config.uploadToken;
+
+  if (!bearerToken) {
+    throw new Error("Missing agent token. Run `token-board-agent login`.");
+  }
+
+  const response = await fetch(`${config.apiUrl}/api/usage/ingest`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(createIngestPayload(events, clientInfo(), userConfig)),
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(payload.error || `Upload failed with HTTP ${response.status}`);
+  }
+
+  return payload as { accepted: number; duplicates: number; records: number };
+}
+
+function chunkEvents<T>(events: T[], size: number) {
+  const chunks: T[][] = [];
+
+  for (let index = 0; index < events.length; index += size) {
+    chunks.push(events.slice(index, index + size));
+  }
+
+  return chunks;
+}
+
+async function loginWithGitHub() {
+  const configPath = process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE;
+  const fileConfig = await readConfigFile(configPath);
+  const apiUrl = (readStringEnv("TOKEN_BOARD_API_URL") || readString(fileConfig.apiUrl) || "http://127.0.0.1:8787").replace(
+    /\/+$/,
+    ""
+  );
+  const start = await postJson(`${apiUrl}/api/auth/device/start`, {});
+
+  console.log("Open GitHub device login and enter the code:");
+  console.log(`  ${start.verificationUri}`);
+  console.log(`  ${start.userCode}`);
+
+  const expiresAt = Date.now() + Number(start.expiresIn || 900) * 1000;
+  let intervalMs = Number(start.interval || 5) * 1000;
+
+  while (Date.now() < expiresAt) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const poll = await postJson(`${apiUrl}/api/auth/device/poll`, { deviceCode: start.deviceCode });
+
+    if (poll.status === "authorized" && poll.token) {
+      const nextConfig = {
+        ...fileConfig,
+        apiUrl,
+        agentToken: poll.token,
+        userId: poll.user?.userId || fileConfig.userId || os.userInfo().username,
+        displayName: poll.user?.displayName || fileConfig.displayName || os.userInfo().username,
+        team: poll.user?.team || fileConfig.team || "GitHub",
+        intervalMs: readNumber(fileConfig.intervalMs, 300000),
+        includeDefaultSources: readBoolean(fileConfig.includeDefaultSources, true),
+        usagePaths: readStringArray(fileConfig.usagePaths) || [],
+        privacy:
+          fileConfig.privacy && typeof fileConfig.privacy === "object"
+            ? fileConfig.privacy
+            : {
+                projectMode: "basename",
+                includeModel: true,
+                includeSource: true,
+                hashSessionId: true,
+                maxEventAgeDays: 120,
+              },
+      };
+
+      delete (nextConfig as { uploadToken?: unknown }).uploadToken;
+      await fs.mkdir(path.dirname(configPath), { recursive: true });
+      await fs.writeFile(configPath, `${JSON.stringify(nextConfig, null, 2)}\n`, { mode: 0o600 });
+      console.log(`Logged in as ${poll.user?.githubLogin || poll.user?.displayName || "GitHub user"}.`);
+      console.log(`Saved agent session to ${configPath}`);
+      return;
+    }
+
+    if (poll.status === "slow_down") {
+      intervalMs += 5000;
+    } else if (poll.status !== "authorization_pending") {
+      throw new Error(poll.errorDescription || poll.error || poll.status || "GitHub device login failed");
+    }
+  }
+
+  throw new Error("GitHub device login expired. Run `token-board-agent login` again.");
+}
+
+async function initConfig() {
+  const filePath = process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE;
+
+  try {
+    await fs.access(filePath);
+    console.log(`Config already exists: ${filePath}`);
+    return;
+  } catch {
+    // Create below.
+  }
+
+  const template = {
+    apiUrl: "http://127.0.0.1:8787",
+    userId: os.userInfo().username,
+    displayName: os.userInfo().username,
+    team: "Friends",
+    intervalMs: 300000,
+    includeDefaultSources: true,
+    usagePaths: [] as string[],
+    privacy: {
+      projectMode: "basename",
+      includeModel: true,
+      includeSource: true,
+      hashSessionId: true,
+      maxEventAgeDays: 120,
+    },
+  };
+
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(template, null, 2)}\n`, { mode: 0o600 });
+  console.log(`Created ${filePath}`);
+}
+
+async function readConfigFile(filePath: string) {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8")) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+async function readState(filePath: string): Promise<AgentState> {
+  try {
+    return JSON.parse(await fs.readFile(filePath, "utf8")) as AgentState;
+  } catch {
+    return {};
+  }
+}
+
+async function writeState(filePath: string, state: AgentState) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
+}
+
+function clientInfo() {
+  return {
+    name: "token-usage-agent",
+    version: AGENT_VERSION,
+    hostId: os.hostname(),
+    platform: os.platform(),
+  };
+}
+
+function collectCurrentUserConfig() {
+  return collectTokenBoardUserConfig({
+    agentName: "token-usage-agent",
+    agentVersion: AGENT_VERSION,
+  });
+}
+
+function printHelp() {
+  console.log(`Usage:
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent install
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent status
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent uninstall
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent login
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent upload
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent resync
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent replace
+  npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent watch
+
+Local repo equivalents:
+  pnpm token:agent init
+  pnpm token:agent login
+  pnpm token:agent sync
+  pnpm token:agent collect
+  pnpm token:agent upload
+  pnpm token:agent resync
+  pnpm token:agent watch`);
+}
+
+async function postJson(url: string, body: unknown) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+
+  if (!response.ok) {
+    throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
+  }
+
+  return payload as Record<string, any>;
+}
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : "";
+}
+
+function readStringEnv(name: string) {
+  return readString(process.env[name]);
+}
+
+function isMissingAgentTokenError(error: unknown) {
+  return error instanceof Error && error.message.includes("token-board-agent login");
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value) ? value.flatMap((item) => (typeof item === "string" ? [item] : [])) : undefined;
+}
+
+function readListEnv(name: string) {
+  const value = process.env[name];
+  return value?.trim() ? value.split(",").map((item) => item.trim()).filter(Boolean) : undefined;
+}
+
+function readBoolean(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function readBooleanEnv(name: string, fallback: boolean) {
+  const value = process.env[name];
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return fallback;
+}
+
+function readNumber(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function readNumberEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function readNestedString(record: Record<string, unknown>, parent: string, key: string) {
+  const value = record[parent];
+  return value && typeof value === "object" ? readString((value as Record<string, unknown>)[key]) : "";
+}
+
+function readNestedBoolean(record: Record<string, unknown>, parent: string, key: string, fallback: boolean) {
+  const value = record[parent];
+  return value && typeof value === "object" ? readBoolean((value as Record<string, unknown>)[key], fallback) : fallback;
+}
+
+function readNestedNumber(record: Record<string, unknown>, parent: string, key: string, fallback: number) {
+  const value = record[parent];
+  return value && typeof value === "object" ? readNumber((value as Record<string, unknown>)[key], fallback) : fallback;
+}
+
+function readProjectMode(value: string): TokenBoardPrivacyOptions["projectMode"] {
+  return value === "hash" || value === "none" ? value : "basename";
+}
+
+void main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
+});

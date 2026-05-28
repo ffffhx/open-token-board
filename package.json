@@ -5,11 +5,21 @@
   "packageManager": "pnpm@10.20.0",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "pnpm pack:agent && next build",
     "start": "next start",
-    "test": "tsc --noEmit"
+    "test": "pnpm typecheck && pnpm agent:help",
+    "typecheck": "tsc --noEmit && pnpm --filter @open-token-board/core typecheck && pnpm --filter @open-token-board/api typecheck",
+    "pack:agent": "node scripts/pack-agent.mjs",
+    "agent:help": "node tools/token-board-agent-npx/bin/token-board-agent.mjs help",
+    "token:server": "pnpm --filter @open-token-board/api token:server",
+    "selection:server": "pnpm --filter @open-token-board/api selection:server",
+    "token:migrate-json": "pnpm --filter @open-token-board/api token:migrate-json",
+    "token:agent": "pnpm --filter @open-token-board/api token:agent",
+    "token:agent:watch": "pnpm --filter @open-token-board/api token:agent:watch",
+    "token:service": "pnpm --filter @open-token-board/service token:server"
   },
   "dependencies": {
+    "@open-token-board/core": "workspace:*",
     "next": "^15.3.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

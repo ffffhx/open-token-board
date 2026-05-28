@@ -1,0 +1,27 @@
+{
+  "name": "@open-token-board/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./auth": "./src/token-board-auth.ts",
+    "./automation": "./src/token-board-automation.ts",
+    "./collector": "./src/token-usage-collector.ts",
+    "./leaderboard": "./src/token-leaderboard.ts",
+    "./selection-explainer": "./src/selection-explainer.ts",
+    "./snapshot": "./src/token-usage-snapshot.ts",
+    "./snapshot-share-storage": "./src/snapshot-share-storage.ts",
+    "./storage": "./src/token-board-storage.ts"
+  },
+  "dependencies": {
+    "pg": "^8.20.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.8.3"
+  }
+}

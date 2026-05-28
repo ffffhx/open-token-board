@@ -1,0 +1,15 @@
+{
+  "name": "token-board-agent",
+  "version": "0.4.11",
+  "description": "Standalone token leaderboard local usage uploader.",
+  "bin": {
+    "token-board-agent": "./bin/token-board-agent.mjs"
+  },
+  "files": [
+    "bin"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

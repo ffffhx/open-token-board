@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${TOKEN_BOARD_POSTGRES_DB:-token_board}
+      POSTGRES_USER: ${TOKEN_BOARD_POSTGRES_USER:-token_board}
+      POSTGRES_PASSWORD: ${TOKEN_BOARD_POSTGRES_PASSWORD:?set TOKEN_BOARD_POSTGRES_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TOKEN_BOARD_POSTGRES_USER:-token_board} -d ${TOKEN_BOARD_POSTGRES_DB:-token_board}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  token-board:
+    image: token-board-service:latest
+    build:
+      context: ../..
+      dockerfile: deploy/token-board/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      TOKEN_BOARD_DATABASE_URL: "postgresql://${TOKEN_BOARD_POSTGRES_USER:-token_board}:${TOKEN_BOARD_POSTGRES_PASSWORD}@postgres:5432/${TOKEN_BOARD_POSTGRES_DB:-token_board}"
+    ports:
+      - "127.0.0.1:8789:8789"
+    volumes:
+      - ./data:/data
+
+volumes:
+  postgres-data:
