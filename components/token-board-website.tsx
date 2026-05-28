@@ -1,5 +1,14 @@
 import Link from "next/link";
 
+const TOKEN_BOARD_AGENT_VERSION = "0.4.11";
+const NPX_PACKAGE_URL = `https://ffffhx.github.io/garden-lab/token-board-agent.tgz?v=${TOKEN_BOARD_AGENT_VERSION}`;
+const NPX_INSTALL_COMMAND =
+  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent install`;
+const NPX_STATUS_COMMAND =
+  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent status`;
+const NPX_UNINSTALL_COMMAND =
+  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent uninstall`;
+
 const capabilityCards = [
   {
     title: "朋友排行榜",
@@ -21,18 +30,24 @@ const capabilityCards = [
 const workflowSteps = [
   {
     eyebrow: "01",
-    title: "安装 agent",
-    body: "在常用开发机运行一条 npx 命令，完成 GitHub 授权并注册后台同步任务。",
+    title: "安装并完成授权",
+    body: "在你平时使用 Codex、Claude Code、Cursor 或 Trae 的电脑终端里运行安装命令。首次执行会引导 GitHub 授权，并注册后台同步任务。",
+    command: NPX_INSTALL_COMMAND,
+    commandLabel: "安装命令",
   },
   {
     eyebrow: "02",
-    title: "等待同步",
-    body: "agent 每 5 分钟上传一次 token 记录，只包含统计字段和必要的匿名会话信息。",
+    title: "检查同步状态",
+    body: "安装完成后运行状态命令，确认配置文件、后台任务和最近一次上报结果是否正常。后台任务默认每 5 分钟同步一次。",
+    command: NPX_STATUS_COMMAND,
+    commandLabel: "状态检查命令",
   },
   {
     eyebrow: "03",
-    title: "刷新榜单",
-    body: "回到网页切换时间窗口，查看排名、趋势、模型消耗和个人效率指标。",
+    title: "打开榜单并刷新",
+    body: "回到榜单页面刷新，或切换时间窗口查看自己的记录。如果以后不想继续同步，可以运行卸载命令。",
+    command: NPX_UNINSTALL_COMMAND,
+    commandLabel: "卸载命令",
   },
 ];
 
@@ -70,24 +85,38 @@ export function TokenBoardWebsite() {
       </section>
 
       <section id="workflow" className="px-4 py-14 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
-          <div>
-            <p className="font-mono text-xs font-semibold uppercase text-blue-600">3 steps</p>
-            <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">从安装到上榜，不打断开发流</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              官网负责说明价值和隐私边界，实际榜单继续放在独立的 `/board/` 页面里，方便收藏和分享。
-            </p>
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="font-mono text-xs font-semibold uppercase text-blue-600">3 steps</p>
+              <h2 className="mt-3 text-2xl font-semibold sm:text-3xl">使用流程：安装、检查、刷新榜单</h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                不需要手动整理日志。复制下面的命令在本机执行，等 agent 完成同步后进入 `/board/` 就能看到数据。
+              </p>
+            </div>
+            <Link
+              href="/board"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              打开榜单
+            </Link>
           </div>
 
-          <div className="grid gap-3">
+          <div className="mt-8 grid gap-4">
             {workflowSteps.map((step) => (
-              <article key={step.title} className="grid gap-4 rounded-lg border border-slate-200 bg-white p-5 sm:grid-cols-[3rem_minmax(0,1fr)]">
-                <div className="flex size-12 items-center justify-center rounded-lg bg-blue-600 font-mono text-sm font-semibold text-white">
+              <article key={step.title} className="grid gap-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:grid-cols-[3.5rem_minmax(0,1fr)] sm:p-6">
+                <div className="flex size-14 items-center justify-center rounded-lg bg-blue-600 font-mono text-base font-semibold text-white">
                   {step.eyebrow}
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold">{step.title}</h3>
+                <div className="min-w-0">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <h3 className="text-base font-semibold">{step.title}</h3>
+                    <span className="font-mono text-xs text-blue-600">{step.commandLabel}</span>
+                  </div>
                   <p className="mt-2 text-sm leading-6 text-slate-600">{step.body}</p>
+                  <pre className="mt-4 rounded-lg bg-slate-950 px-4 py-3 font-mono text-xs leading-6 text-slate-100">
+                    <code className="block whitespace-pre-wrap break-all">{step.command}</code>
+                  </pre>
                 </div>
               </article>
             ))}
@@ -115,29 +144,6 @@ export function TokenBoardWebsite() {
         </div>
       </section>
 
-      <section className="bg-white px-4 py-12 sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-5 rounded-lg border border-slate-200 bg-slate-50 p-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-mono text-xs font-semibold uppercase text-blue-600">Open Token Board</p>
-            <h2 className="mt-2 text-xl font-semibold">先看官网，再进榜单。</h2>
-            <p className="mt-2 text-sm text-slate-600">保留原来的排行榜功能，同时补上对外介绍入口。</p>
-          </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Link
-              href="/board"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              打开榜单
-            </Link>
-            <a
-              href="https://github.com/ffffhx/open-token-board"
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-            >
-              查看源码
-            </a>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }
@@ -186,7 +192,7 @@ function HeroSection() {
               href="#workflow"
               className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
             >
-              了解安装流程
+              了解使用流程
             </a>
           </div>
         </div>
