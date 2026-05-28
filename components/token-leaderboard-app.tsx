@@ -12,6 +12,7 @@ import {
   type TokenLeaderboardSummary,
   type TokenLeaderboardUser,
 } from "@/lib/token-leaderboard";
+import { TokenBoardLogoMark } from "@/components/token-board-logo";
 
 const RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const ROLLING_RANGE_LABELS: Record<TokenBoardRange, string> = {
@@ -571,7 +572,8 @@ export function TokenLeaderboardApp({
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase text-blue-700">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 py-1 pl-1.5 pr-3 text-xs font-semibold uppercase text-blue-700">
+                    <TokenBoardLogoMark className="size-4 shrink-0" decorative />
                     Open Token Board
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
