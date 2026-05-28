@@ -8,12 +8,12 @@
 
 ## Workspace
 
-- `app` / `components`：Next.js 静态站点和榜单 UI
+- `apps/web`：Next.js 静态站点和榜单 UI
 - `apps/token-board-api`：Token Board API、GitHub OAuth、Device Flow、上传和查询接口
 - `packages/token-board-core`：排行榜聚合、采集清洗、鉴权、存储和共享模型
 - `deploy/token-board`：PostgreSQL + API 的 Docker Compose 部署包
 - `tools/token-board-agent-npx`：给朋友安装的轻量 `npx` agent
-- `scripts/pack-agent.mjs`：把 agent 打包为 `public/token-board-agent.tgz`，由 Pages 一起发布
+- `scripts/pack-agent.mjs`：把 agent 打包为 `apps/web/public/token-board-agent.tgz`，由 Pages 一起发布
 
 ## Local Development
 
@@ -52,4 +52,4 @@ docker compose up -d --build
 
 ## Deploy
 
-GitHub Pages 由 `.github/workflows/deploy.yml` 在 `main` 推送后自动部署。构建会先生成 `public/token-board-agent.tgz`，所以站点和 agent 包使用同一个 Pages 发布入口。
+GitHub Pages 由 `.github/workflows/deploy.yml` 在 `main` 推送后自动部署。构建会先生成 `apps/web/public/token-board-agent.tgz`，所以站点和 agent 包使用同一个 Pages 发布入口。

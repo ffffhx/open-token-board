@@ -4,11 +4,11 @@
   "private": true,
   "packageManager": "pnpm@10.20.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "pnpm pack:agent && next build",
-    "start": "next start",
+    "dev": "pnpm --filter @open-token-board/web dev",
+    "build": "pnpm pack:agent && pnpm --filter @open-token-board/web build",
+    "start": "pnpm --filter @open-token-board/web start",
     "test": "pnpm typecheck && pnpm agent:help",
-    "typecheck": "tsc --noEmit && pnpm --filter @open-token-board/core typecheck && pnpm --filter @open-token-board/api typecheck",
+    "typecheck": "pnpm -r --if-present typecheck",
     "pack:agent": "node scripts/pack-agent.mjs",
     "agent:help": "node tools/token-board-agent-npx/bin/token-board-agent.mjs help",
     "token:server": "pnpm --filter @open-token-board/api token:server",
@@ -17,20 +17,5 @@
     "token:agent": "pnpm --filter @open-token-board/api token:agent",
     "token:agent:watch": "pnpm --filter @open-token-board/api token:agent:watch",
     "token:service": "pnpm --filter @open-token-board/service token:server"
-  },
-  "dependencies": {
-    "@open-token-board/core": "workspace:*",
-    "next": "^15.3.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.7",
-    "@types/node": "^22.15.3",
-    "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2",
-    "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.7",
-    "typescript": "^5.8.3"
   }
 }

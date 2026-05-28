@@ -6,11 +6,35 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  apps/token-board-api:
     dependencies:
       '@open-token-board/core':
         specifier: workspace:*
-        version: link:packages/token-board-core
+        version: link:../../packages/token-board-core
+      pg:
+        specifier: ^8.20.0
+        version: 8.21.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+    devDependencies:
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.19.19
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+
+  apps/web:
+    dependencies:
+      '@open-token-board/core':
+        specifier: workspace:*
+        version: link:../../packages/token-board-core
       next:
         specifier: ^15.3.0
         version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -41,29 +65,7 @@ importers:
         version: 4.3.0
       typescript:
         specifier: ^5.8.3
-        version: 5.9.3
-
-  apps/token-board-api:
-    dependencies:
-      '@open-token-board/core':
-        specifier: workspace:*
-        version: link:../../packages/token-board-core
-      pg:
-        specifier: ^8.20.0
-        version: 8.21.0
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
-      typescript:
-        specifier: ^5.8.3
         version: 5.8.3
-    devDependencies:
-      '@types/node':
-        specifier: ^22.15.3
-        version: 22.19.19
-      '@types/pg':
-        specifier: ^8.20.0
-        version: 8.20.0
 
   deploy/token-board:
     dependencies:
@@ -859,11 +861,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@5.9.3:
-    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
-    engines: {node: '>=14.17'}
-    hasBin: true
-
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
@@ -1450,8 +1447,6 @@ snapshots:
       fsevents: 2.3.3
 
   typescript@5.8.3: {}
-
-  typescript@5.9.3: {}
 
   undici-types@6.21.0: {}
 

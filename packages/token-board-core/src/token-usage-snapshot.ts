@@ -88,15 +88,26 @@ export const EMPTY_TOKEN_USAGE_SNAPSHOT: TokenUsageSnapshot = {
 const TIMEZONE = "Asia/Shanghai";
 const TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000;
 
-export function getTokenUsageSnapshot() {
-  const filePath = path.join(process.cwd(), "public", "stats", "token-usage.json");
+export function getTokenUsageSnapshot(filePath = getDefaultTokenUsageSnapshotFile()) {
+  const resolvedFilePath = path.resolve(filePath);
 
   try {
-    const content = fs.readFileSync(filePath, "utf8");
+    const content = fs.readFileSync(resolvedFilePath, "utf8");
     return normalizeTokenUsageSnapshot(JSON.parse(content));
   } catch {
     return EMPTY_TOKEN_USAGE_SNAPSHOT;
   }
+}
+
+function getDefaultTokenUsageSnapshotFile() {
+  const explicitFile = process.env.TOKEN_BOARD_USAGE_STATS_FILE?.trim();
+
+  if (explicitFile) {
+    return explicitFile;
+  }
+
+  const publicDir = process.env.TOKEN_BOARD_PUBLIC_DIR?.trim() || path.join(process.cwd(), "public");
+  return path.join(publicDir, "stats", "token-usage.json");
 }
 
 export function buildTokenUsageSnapshotFromEvents(

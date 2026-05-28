@@ -4,7 +4,7 @@ import path from "node:path";
 
 const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
 const packageDir = path.join(rootDir, "tools", "token-board-agent-npx");
-const publicDir = path.join(rootDir, "public");
+const publicDir = path.join(rootDir, "apps", "web", "public");
 const outputFile = path.join(publicDir, "token-board-agent.tgz");
 
 await fs.mkdir(publicDir, { recursive: true });
