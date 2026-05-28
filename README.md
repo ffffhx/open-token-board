@@ -4,7 +4,7 @@
 
 - Website: <https://ffffhx.github.io/open-token-board/>
 - API: <https://8-218-149-148.anyip.dev/token-board>
-- Agent package: <https://ffffhx.github.io/open-token-board/token-board-agent.tgz>
+- Agent package: <https://www.npmjs.com/package/token-board-agent>
 
 ## Workspace
 
@@ -37,7 +37,7 @@ pnpm pack:agent
 本地安装命令示例：
 
 ```bash
-npx --yes --package https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=0.4.11 -- token-board-agent install
+npx --yes token-board-agent install
 ```
 
 ## Deploy Backend

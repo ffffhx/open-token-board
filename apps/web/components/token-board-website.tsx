@@ -2,14 +2,9 @@ import Link from "next/link";
 
 import { TokenBoardLogo } from "@/components/token-board-logo";
 
-const TOKEN_BOARD_AGENT_VERSION = "0.4.11";
-const NPX_PACKAGE_URL = `https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=${TOKEN_BOARD_AGENT_VERSION}`;
-const NPX_INSTALL_COMMAND =
-  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent install`;
-const NPX_STATUS_COMMAND =
-  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent status`;
-const NPX_UNINSTALL_COMMAND =
-  `npx --yes --package ${NPX_PACKAGE_URL} -- token-board-agent uninstall`;
+const NPX_INSTALL_COMMAND = "npx --yes token-board-agent install";
+const NPX_STATUS_COMMAND = "npx --yes token-board-agent status";
+const NPX_UNINSTALL_COMMAND = "npx --yes token-board-agent uninstall";
 
 const capabilityCards = [
   {

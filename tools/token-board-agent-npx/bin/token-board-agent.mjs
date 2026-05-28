@@ -19,9 +19,10 @@ const MAX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILE_BYTES
 const MAX_CODEX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_CODEX_FILE_BYTES, 256 * 1024 * 1024);
 const BATCH_SIZE = 1000;
 const VERSION = "0.4.11";
+const PACKAGE_NAME = "token-board-agent";
+const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
 const MAX_INVALID_USAGE_WARNINGS = 5;
-const PACKAGE_URL = `https://ffffhx.github.io/open-token-board/token-board-agent.tgz?v=${VERSION}`;
 const INSTALL_DIR = path.join(os.homedir(), ".token-board-agent");
 const INSTALLED_AGENT_FILE = path.join(INSTALL_DIR, "token-board-agent.mjs");
 const LAUNCH_AGENT_LABEL = "dev.ffffhx.token-board-agent";
@@ -1561,16 +1562,16 @@ function normalizePlatform(value) {
 
 function printHelp() {
   console.log(`Usage:
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent install
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent status
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent uninstall
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent watch
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent login
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent collect
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent upload
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent resync
-  npx --yes --package ${PACKAGE_URL} -- token-board-agent replace`);
+  ${NPX_COMMAND}
+  ${NPX_COMMAND} install
+  ${NPX_COMMAND} status
+  ${NPX_COMMAND} uninstall
+  ${NPX_COMMAND} watch
+  ${NPX_COMMAND} login
+  ${NPX_COMMAND} collect
+  ${NPX_COMMAND} upload
+  ${NPX_COMMAND} resync
+  ${NPX_COMMAND} replace`);
 }
 
 async function readJson(filePath) {

@@ -1,9 +1,26 @@
 {
   "name": "token-board-agent",
   "version": "0.4.11",
-  "description": "Standalone token leaderboard local usage uploader.",
+  "description": "Local token usage uploader for Open Token Board.",
+  "keywords": [
+    "ai",
+    "agent",
+    "cli",
+    "codex",
+    "token-usage",
+    "leaderboard"
+  ],
+  "homepage": "https://ffffhx.github.io/open-token-board/",
+  "bugs": {
+    "url": "https://github.com/ffffhx/open-token-board/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ffffhx/open-token-board.git",
+    "directory": "tools/token-board-agent-npx"
+  },
   "bin": {
-    "token-board-agent": "./bin/token-board-agent.mjs"
+    "token-board-agent": "bin/token-board-agent.mjs"
   },
   "files": [
     "bin"
@@ -11,5 +28,9 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  }
 }
