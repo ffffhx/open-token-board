@@ -17,8 +17,15 @@ const SINCE_MS = readPositiveNumber(process.env.TOKEN_BOARD_SINCE_HOURS, 24 * 30
 const MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILES, 800);
 const MAX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILE_BYTES, 5 * 1024 * 1024);
 const MAX_CODEX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_CODEX_FILE_BYTES, 256 * 1024 * 1024);
+const FETCH_TIMEOUT_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_TIMEOUT_MS, 30_000);
+const FETCH_MAX_RETRIES = readNonNegativeInteger(
+  process.env.TOKEN_BOARD_FETCH_MAX_RETRIES ?? process.env.TOKEN_BOARD_FETCH_RETRIES,
+  2
+);
+const FETCH_RETRY_BASE_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_BASE_DELAY_MS, 1_000);
+const FETCH_RETRY_MAX_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_MAX_DELAY_MS, 10_000);
 const BATCH_SIZE = 1000;
-const VERSION = "0.4.11";
+const VERSION = "0.4.12";
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
@@ -133,13 +140,17 @@ const DEFAULT_SOURCE_TARGETS = [
 let invalidUsageWarningCount = 0;
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  logError(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
 
 async function main() {
   const command = process.argv[2] || "sync";
-  console.log(`[token-board-agent] running ${command}`);
+  if (command === "watch") {
+    logInfo(`[token-board-agent] running ${command}`);
+  } else {
+    console.log(`[token-board-agent] running ${command}`);
+  }
 
   if (command === "help" || command === "--help" || command === "-h") {
     printHelp();
@@ -209,11 +220,11 @@ async function main() {
 
   if (command === "watch") {
     const config = await loadOrLoginConfig();
-    console.log(`Token usage agent watching every ${Math.round(INTERVAL_MS / 1000)}s.`);
+    logInfo(`Token usage agent watching every ${Math.round(INTERVAL_MS / 1000)}s.`);
 
     while (true) {
       await uploadOnce(config).catch((error) => {
-        console.error(error instanceof Error ? error.message : error);
+        logError(error instanceof Error ? error.message : String(error));
       });
       await sleep(INTERVAL_MS);
     }
@@ -428,12 +439,12 @@ async function uploadOnce(config, options = {}) {
     if (userConfig) {
       await postIngest(config, [], userConfig);
     }
-    console.log(
+    logInfo(
       force
         ? "No token usage events collected for resync."
         : "No new token usage events to upload."
     );
-    console.log("Checked Codex, Claude Code, Cursor, Trae, and custom usage paths for recent token logs.");
+    logInfo("Checked Codex, Claude Code, Cursor, Trae, and custom usage paths for recent token logs.");
     return;
   }
 
@@ -453,7 +464,7 @@ async function uploadOnce(config, options = {}) {
     lastUploadedAt: new Date().toISOString(),
   });
 
-  console.log(
+  logInfo(
     `${force ? "Resynced" : "Uploaded"} ${events.length} events. accepted=${result.accepted} duplicates=${result.duplicates} records=${result.records}`
   );
 }
@@ -955,57 +966,33 @@ function usageRecordToEvent(usage, context) {
 }
 
 async function postIngest(config, events, userConfig) {
-  const response = await fetch(`${API_URL}/api/usage/ingest`, {
+  return requestJsonWithRetry(`${API_URL}/api/usage/ingest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.agentToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(createIngestPayload(events, userConfig)),
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error || `Upload failed with HTTP ${response.status}`);
-  }
-
-  return payload;
+  }, "Upload");
 }
 
 async function postReplace(config, events, userConfig) {
-  const response = await fetch(`${API_URL}/api/usage/replace`, {
+  return requestJsonWithRetry(`${API_URL}/api/usage/replace`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.agentToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(createIngestPayload(events, userConfig)),
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error || `Replace failed with HTTP ${response.status}`);
-  }
-
-  return payload;
+  }, "Replace");
 }
 
 async function postJson(url, body) {
-  const response = await fetch(url, {
+  return requestJsonWithRetry(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
-  }
-
-  return payload;
+  }, "Request");
 }
 
 async function parseSqliteUsageFile(filePath, target, config) {
@@ -1618,9 +1605,137 @@ function sha256(value) {
   return createHash("sha256").update(String(value)).digest("hex");
 }
 
+async function requestJsonWithRetry(url, options, label) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      const text = await response.text();
+      const payload = parseJsonPayload(text);
+
+      if (response.ok) {
+        return payload;
+      }
+
+      const error = new Error(responseErrorMessage(payload, label, response.status));
+      error.status = response.status;
+
+      if (!isRetryableStatus(response.status) || attempt === FETCH_MAX_RETRIES) {
+        throw error;
+      }
+
+      lastError = error;
+    } catch (error) {
+      lastError = normalizeFetchError(error, label);
+
+      if (!isRetryableFetchError(lastError) || attempt === FETCH_MAX_RETRIES) {
+        throw lastError;
+      }
+    }
+
+    const delayMs = retryDelayMs(attempt);
+    logError(
+      `${lastError.message}; retrying in ${delayMs}ms (${attempt + 1}/${FETCH_MAX_RETRIES + 1})`
+    );
+    await sleep(delayMs);
+  }
+
+  throw lastError || new Error(`${label} failed`);
+}
+
+async function fetchWithTimeout(url, options) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (isAbortError(error)) {
+      const timeoutError = new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`);
+      timeoutError.code = "ETIMEDOUT";
+      throw timeoutError;
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseJsonPayload(text) {
+  if (!text) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(text);
+    return parsed && typeof parsed === "object" ? parsed : { value: parsed };
+  } catch {
+    return { error: text.trim() || "Invalid JSON response" };
+  }
+}
+
+function responseErrorMessage(payload, label, status) {
+  const payloadMessage = typeof payload.error === "string" && payload.error ? payload.error : "";
+  return payloadMessage
+    ? `${label} failed with HTTP ${status}: ${truncateLogMessage(payloadMessage)}`
+    : `${label} failed with HTTP ${status}`;
+}
+
+function normalizeFetchError(error, label) {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(`${label} failed: ${String(error)}`);
+}
+
+function isRetryableFetchError(error) {
+  if (typeof error.status === "number") {
+    return isRetryableStatus(error.status);
+  }
+
+  return true;
+}
+
+function isRetryableStatus(status) {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isAbortError(error) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function retryDelayMs(attempt) {
+  const exponentialDelay = Math.min(
+    FETCH_RETRY_MAX_DELAY_MS,
+    FETCH_RETRY_BASE_DELAY_MS * 2 ** attempt
+  );
+  const jitter = Math.floor(Math.random() * Math.min(250, Math.max(1, exponentialDelay * 0.2)));
+  return exponentialDelay + jitter;
+}
+
+function logInfo(message) {
+  console.log(`${new Date().toISOString()} ${message}`);
+}
+
+function logError(message) {
+  console.error(`${new Date().toISOString()} ${message}`);
+}
+
+function truncateLogMessage(message) {
+  return message.length > 500 ? `${message.slice(0, 497)}...` : message;
+}
+
 function readPositiveNumber(value, fallback) {
   const number = Number(value);
   return Number.isFinite(number) && number > 0 ? number : fallback;
+}
+
+function readNonNegativeInteger(value, fallback) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : fallback;
 }
 
 function homePath(...segments) {

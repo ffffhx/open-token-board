@@ -35,6 +35,13 @@ const DEFAULT_CONFIG_FILE = path.join(os.homedir(), ".token-board-agent.json");
 const DEFAULT_STATE_FILE = path.join(os.homedir(), ".token-board-agent-state.json");
 const AGENT_VERSION = "0.1.0";
 const INGEST_BATCH_SIZE = 1000;
+const FETCH_TIMEOUT_MS = readNumberEnv("TOKEN_BOARD_FETCH_TIMEOUT_MS", 30_000);
+const FETCH_MAX_RETRIES = readNonNegativeIntegerEnv(
+  "TOKEN_BOARD_FETCH_MAX_RETRIES",
+  readNonNegativeIntegerEnv("TOKEN_BOARD_FETCH_RETRIES", 2)
+);
+const FETCH_RETRY_BASE_DELAY_MS = readNumberEnv("TOKEN_BOARD_FETCH_RETRY_BASE_DELAY_MS", 1_000);
+const FETCH_RETRY_MAX_DELAY_MS = readNumberEnv("TOKEN_BOARD_FETCH_RETRY_MAX_DELAY_MS", 10_000);
 
 async function main() {
   const command = process.argv[2] || "upload";
@@ -100,7 +107,7 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
     if (userConfig) {
       await postIngest(config, [], userConfig);
     }
-    console.log(force ? "No token usage events collected for resync." : "No new token usage events to upload.");
+    logInfo(force ? "No token usage events collected for resync." : "No new token usage events to upload.");
     return { accepted: 0, duplicates: 0, records: 0 };
   }
 
@@ -123,7 +130,7 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
     });
   }
 
-  console.log(
+  logInfo(
     `${force ? "Resynced" : "Uploaded"} ${events.length} events in ${batches.length} batches. accepted=${result.accepted} duplicates=${result.duplicates} records=${result.records}`
   );
 
@@ -234,13 +241,13 @@ async function loadOrLoginConfig() {
 }
 
 async function watch(config: AgentConfig) {
-  console.log(`Token usage agent watching every ${Math.round(config.intervalMs / 1000)}s.`);
+  logInfo(`Token usage agent watching every ${Math.round(config.intervalMs / 1000)}s.`);
 
   while (true) {
     try {
       await uploadOnce(config);
     } catch (error) {
-      console.error(error instanceof Error ? error.message : error);
+      logError(error instanceof Error ? error.message : String(error));
     }
 
     await new Promise((resolve) => setTimeout(resolve, config.intervalMs));
@@ -258,22 +265,14 @@ async function postIngest(
     throw new Error("Missing agent token. Run `token-board-agent login`.");
   }
 
-  const response = await fetch(`${config.apiUrl}/api/usage/ingest`, {
+  return requestJsonWithRetry(`${config.apiUrl}/api/usage/ingest`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${bearerToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(createIngestPayload(events, clientInfo(), userConfig)),
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error || `Upload failed with HTTP ${response.status}`);
-  }
-
-  return payload as { accepted: number; duplicates: number; records: number };
+  }, "Upload") as Promise<{ accepted: number; duplicates: number; records: number }>;
 }
 
 function chunkEvents<T>(events: T[], size: number) {
@@ -284,6 +283,133 @@ function chunkEvents<T>(events: T[], size: number) {
   }
 
   return chunks;
+}
+
+type FetchJsonError = Error & {
+  code?: string;
+  status?: number;
+};
+
+async function requestJsonWithRetry(url: string, options: RequestInit, label: string) {
+  let lastError: FetchJsonError | undefined;
+
+  for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(url, options);
+      const text = await response.text();
+      const payload = parseJsonPayload(text);
+
+      if (response.ok) {
+        return payload;
+      }
+
+      const error = new Error(responseErrorMessage(payload, label, response.status)) as FetchJsonError;
+      error.status = response.status;
+
+      if (!isRetryableStatus(response.status) || attempt === FETCH_MAX_RETRIES) {
+        throw error;
+      }
+
+      lastError = error;
+    } catch (error) {
+      lastError = normalizeFetchError(error, label);
+
+      if (!isRetryableFetchError(lastError) || attempt === FETCH_MAX_RETRIES) {
+        throw lastError;
+      }
+    }
+
+    const delayMs = retryDelayMs(attempt);
+    logError(`${lastError.message}; retrying in ${delayMs}ms (${attempt + 1}/${FETCH_MAX_RETRIES + 1})`);
+    await sleep(delayMs);
+  }
+
+  throw lastError || new Error(`${label} failed`);
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (isAbortError(error)) {
+      const timeoutError = new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`) as FetchJsonError;
+      timeoutError.code = "ETIMEDOUT";
+      throw timeoutError;
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function parseJsonPayload(text: string): Record<string, unknown> {
+  if (!text) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : { value: parsed };
+  } catch {
+    return { error: text.trim() || "Invalid JSON response" };
+  }
+}
+
+function responseErrorMessage(payload: Record<string, unknown>, label: string, status: number) {
+  const payloadMessage = readString(payload.error) || readString(payload.errorDescription);
+  return payloadMessage
+    ? `${label} failed with HTTP ${status}: ${truncateLogMessage(payloadMessage)}`
+    : `${label} failed with HTTP ${status}`;
+}
+
+function normalizeFetchError(error: unknown, label: string): FetchJsonError {
+  if (error instanceof Error) {
+    return error as FetchJsonError;
+  }
+
+  return new Error(`${label} failed: ${String(error)}`);
+}
+
+function isRetryableFetchError(error: FetchJsonError) {
+  if (typeof error.status === "number") {
+    return isRetryableStatus(error.status);
+  }
+
+  return true;
+}
+
+function isRetryableStatus(status: number) {
+  return status === 408 || status === 409 || status === 425 || status === 429 || status >= 500;
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function retryDelayMs(attempt: number) {
+  const exponentialDelay = Math.min(FETCH_RETRY_MAX_DELAY_MS, FETCH_RETRY_BASE_DELAY_MS * 2 ** attempt);
+  const jitter = Math.floor(Math.random() * Math.min(250, Math.max(1, exponentialDelay * 0.2)));
+  return exponentialDelay + jitter;
+}
+
+function logInfo(message: string) {
+  console.log(`${new Date().toISOString()} ${message}`);
+}
+
+function logError(message: string) {
+  console.error(`${new Date().toISOString()} ${message}`);
+}
+
+function truncateLogMessage(message: string) {
+  return message.length > 500 ? `${message.slice(0, 497)}...` : message;
+}
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }
 
 async function loginWithGitHub() {
@@ -440,19 +566,11 @@ Local repo equivalents:
 }
 
 async function postJson(url: string, body: unknown) {
-  const response = await fetch(url, {
+  return requestJsonWithRetry(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
-  const text = await response.text();
-  const payload = text ? JSON.parse(text) : {};
-
-  if (!response.ok) {
-    throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
-  }
-
-  return payload as Record<string, any>;
+  }, "Request") as Promise<Record<string, any>>;
 }
 
 function readString(value: unknown) {
@@ -502,6 +620,11 @@ function readNumberEnv(name: string, fallback: number) {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+function readNonNegativeIntegerEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
 function readNestedString(record: Record<string, unknown>, parent: string, key: string) {
   const value = record[parent];
   return value && typeof value === "object" ? readString((value as Record<string, unknown>)[key]) : "";
@@ -522,6 +645,6 @@ function readProjectMode(value: string): TokenBoardPrivacyOptions["projectMode"]
 }
 
 void main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  logError(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
