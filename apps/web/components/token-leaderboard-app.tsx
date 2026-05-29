@@ -761,7 +761,7 @@ export function TokenLeaderboardApp({
                   <strong className="text-stone-900">记录数</strong>：全库/可用记录 {isDataLoading ? <LoadingInline label="加载中" /> : recordCountLabel} 条；当前区间参与排行 {isDataLoading ? <LoadingInline label="加载中" /> : rangeRecordCountLabel} 条。
                 </p>
                 <p>
-                  <strong className="text-stone-900">更新时间</strong>：{isDataLoading ? <LoadingInline label="加载中" /> : formatShortDate(summary.endAt)}。
+                  <strong className="text-stone-900">统计截至</strong>：{isDataLoading ? <LoadingInline label="加载中" /> : formatShortDate(summary.endAt)}。
                 </p>
                 <p>
                   <strong className="text-stone-900">费用是估算值</strong>：按公开模型单价计算，不等同于账号额度或实际账单。
@@ -1147,7 +1147,7 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
           </p>
         </div>
         <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
-          {config ? `同步 ${formatShortDate(config.updatedAt)}` : "等待 agent 同步"}
+          {config ? `配置同步 ${formatShortDate(config.updatedAt)}` : "等待 agent 同步"}
         </span>
       </div>
 
@@ -1870,7 +1870,7 @@ function TrustEvidenceBar({
           { label: "不展示伪数据" },
         ]
       : [
-          { label: `更新时间 ${formatShortDate(summary.endAt)}` },
+          { label: `统计截至 ${formatShortDate(summary.endAt)}` },
           { label: `数据源 ${sourceLabel}` },
           { label: `全库/可用 ${formatNumber(recordCount)}` },
           { label: `当前${range} ${formatNumber(rangeRecordCount)}` },
