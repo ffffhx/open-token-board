@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 
 import {
   getInputContextTokens,
@@ -22,6 +22,9 @@ import {
   heatColor,
   rankDeltaTone,
 } from "./utils";
+
+const SESSION_INITIAL_VISIBLE_COUNT = 20;
+const SESSION_VISIBLE_COUNT_STEP = 20;
 
 export function AccountUsagePanel({
   apiEnabled,
@@ -652,8 +655,19 @@ function AccountProjectList({ projects }: { projects: TokenAccountUsageProfile["
 }
 
 export function AccountSessionList({ sessions }: { sessions: TokenAccountUsageProfile["sessions"] }) {
-  const sortedSessions = [...sessions].sort((a, b) => b.tokens - a.tokens);
+  const [visibleSessionCount, setVisibleSessionCount] = useState(SESSION_INITIAL_VISIBLE_COUNT);
+  const sortedSessions = useMemo(() => [...sessions].sort((a, b) => b.tokens - a.tokens), [sessions]);
+  const visibleSessions = sortedSessions.slice(0, visibleSessionCount);
+  const hiddenSessionCount = Math.max(0, sortedSessions.length - visibleSessions.length);
   const maxTokens = Math.max(1, ...sortedSessions.map((session) => session.tokens));
+
+  useEffect(() => {
+    setVisibleSessionCount(SESSION_INITIAL_VISIBLE_COUNT);
+  }, [sessions]);
+
+  function showMoreSessions() {
+    setVisibleSessionCount((count) => Math.min(count + SESSION_VISIBLE_COUNT_STEP, sortedSessions.length));
+  }
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -663,75 +677,91 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
           <p className="mt-1 text-xs leading-5 text-slate-500">按 session 聚合，优先展示本地提取的短标题</p>
         </div>
         <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
-          {formatNumber(sortedSessions.length)} sessions · 按 token 降序
+          {formatNumber(visibleSessions.length)} / {formatNumber(sortedSessions.length)} sessions · 按 token 降序
         </span>
       </div>
 
       {sortedSessions.length ? (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[58rem] table-fixed border-separate border-spacing-0 text-left text-sm">
-            <thead className="text-xs text-slate-500">
-              <tr>
-                <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">Session</th>
-                <th className="w-[10rem] border-b border-slate-200 px-3 py-2 text-right font-semibold" aria-sort="descending">
-                  总 token ↓
-                </th>
-                <th className="w-[12rem] border-b border-slate-200 px-3 py-2 font-semibold">模型</th>
-                <th className="w-[10rem] border-b border-slate-200 px-3 py-2 font-semibold">工具</th>
-                <th className="w-[11rem] border-b border-slate-200 px-3 py-2 font-semibold">项目</th>
-                <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">开始时间</th>
-                <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">结束时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedSessions.map((session) => {
-                const hasTitle = Boolean(session.title);
-                const title = session.title || formatSessionLabel(session.id);
-
-                return (
-                  <tr key={session.id} className="group">
-                    <td className="border-b border-slate-100 px-3 py-3 align-top">
-                      <p
-                        className={`truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
-                        title={hasTitle ? session.title : session.id}
-                      >
-                        {title}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {formatNumber(session.records)} records · {formatUsd(session.costUsd)}
-                        {hasTitle ? ` · ${formatSessionLabel(session.id)}` : ""}
-                      </p>
-                    </td>
-                  <td className="border-b border-slate-100 px-3 py-3 text-right align-top">
-                    <p className="font-mono text-base font-semibold text-blue-700">{formatTokens(session.tokens)}</p>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                      <div
-                        className="h-full rounded-full bg-blue-600"
-                        style={{ width: `${Math.max(2, (session.tokens / maxTokens) * 100)}%` }}
-                      />
-                    </div>
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-3 align-top">
-                    <SessionDimension value={session.model} count={session.models} label="models" />
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-3 align-top">
-                    <SessionDimension value={session.tool} count={session.tools} label="tools" />
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-3 align-top">
-                    <SessionDimension value={session.project} count={session.projects} label="projects" />
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.startAt}>
-                    {formatShortDate(session.startAt)}
-                  </td>
-                  <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.endAt}>
-                    {formatShortDate(session.endAt)}
-                  </td>
+        <>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[58rem] table-fixed border-separate border-spacing-0 text-left text-sm">
+              <thead className="text-xs text-slate-500">
+                <tr>
+                  <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">Session</th>
+                  <th className="w-[10rem] border-b border-slate-200 px-3 py-2 text-right font-semibold" aria-sort="descending">
+                    总 token ↓
+                  </th>
+                  <th className="w-[12rem] border-b border-slate-200 px-3 py-2 font-semibold">模型</th>
+                  <th className="w-[10rem] border-b border-slate-200 px-3 py-2 font-semibold">工具</th>
+                  <th className="w-[11rem] border-b border-slate-200 px-3 py-2 font-semibold">项目</th>
+                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">开始时间</th>
+                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">结束时间</th>
                 </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visibleSessions.map((session) => {
+                  const hasTitle = Boolean(session.title);
+                  const title = session.title || formatSessionLabel(session.id);
+
+                  return (
+                    <tr key={session.id} className="group">
+                      <td className="border-b border-slate-100 px-3 py-3 align-top">
+                        <p
+                          className={`truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
+                          title={hasTitle ? session.title : session.id}
+                        >
+                          {title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {formatNumber(session.records)} records · {formatUsd(session.costUsd)}
+                          {hasTitle ? ` · ${formatSessionLabel(session.id)}` : ""}
+                        </p>
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 text-right align-top">
+                        <p className="font-mono text-base font-semibold text-blue-700">{formatTokens(session.tokens)}</p>
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className="h-full rounded-full bg-blue-600"
+                            style={{ width: `${Math.max(2, (session.tokens / maxTokens) * 100)}%` }}
+                          />
+                        </div>
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 align-top">
+                        <SessionDimension value={session.model} count={session.models} label="models" />
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 align-top">
+                        <SessionDimension value={session.tool} count={session.tools} label="tools" />
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 align-top">
+                        <SessionDimension value={session.project} count={session.projects} label="projects" />
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.startAt}>
+                        {formatShortDate(session.startAt)}
+                      </td>
+                      <td className="border-b border-slate-100 px-3 py-3 align-top font-mono text-xs text-slate-500" title={session.endAt}>
+                        {formatShortDate(session.endAt)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {hiddenSessionCount > 0 ? (
+            <div className="mt-4 flex flex-col items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 sm:flex-row">
+              <p className="text-xs text-slate-500">
+                已展示 {formatNumber(visibleSessions.length)} 条，还有 {formatNumber(hiddenSessionCount)} 条
+              </p>
+              <button
+                type="button"
+                onClick={showMoreSessions}
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 sm:w-auto"
+              >
+                查看更多
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : (
         <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无 session 数据</p>
       )}
