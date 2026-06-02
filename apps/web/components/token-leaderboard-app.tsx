@@ -81,7 +81,7 @@ export function TokenLeaderboardApp({
   initialNow: string;
   apiBaseUrl?: string;
 }) {
-  const [range, setRange] = useState<TokenBoardRange>("7D");
+  const [range, setRange] = useState<TokenBoardRange>("1D");
   const [metric, setMetric] = useState<TokenBoardMetric>("tokens");
   const [status, setStatus] = useState("正在加载真实用户数据");
   const [dataLoadState, setDataLoadState] = useState<DataLoadState>("loading");
