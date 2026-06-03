@@ -674,7 +674,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-base font-semibold">Session 明细</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">按 session 聚合，优先展示本地提取的短标题</p>
+          <p className="mt-1 text-xs leading-5 text-slate-500">按 session 聚合，优先展示本地提取的短标题，并标注项目归属</p>
         </div>
         <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
           {formatNumber(visibleSessions.length)} / {formatNumber(sortedSessions.length)} sessions · 按 token 降序
@@ -706,12 +706,20 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                   return (
                     <tr key={session.id} className="group">
                       <td className="border-b border-slate-100 px-3 py-3 align-top">
-                        <p
-                          className={`truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
-                          title={hasTitle ? session.title : session.id}
-                        >
-                          {title}
-                        </p>
+                        <div className="flex min-w-0 items-center gap-2">
+                          <p
+                            className={`min-w-0 truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
+                            title={hasTitle ? session.title : session.id}
+                          >
+                            {title}
+                          </p>
+                          <span
+                            className="max-w-[7rem] shrink-0 truncate rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700"
+                            title={`项目：${session.project || "unknown"}`}
+                          >
+                            {session.project || "unknown"}
+                          </span>
+                        </div>
                         <p className="mt-1 text-xs text-slate-500">
                           {formatNumber(session.records)} records · {formatUsd(session.costUsd)}
                           {hasTitle ? ` · ${formatSessionLabel(session.id)}` : ""}
