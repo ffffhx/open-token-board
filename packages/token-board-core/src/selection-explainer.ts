@@ -16,6 +16,35 @@ export type SelectionExplainResult = {
   term: string;
 };
 
+export type ArticleChatMessage = {
+  content: string;
+  role: "assistant" | "user";
+};
+
+export type ArticleChatPayload = {
+  articleText: string;
+  excerpt: string;
+  focus: {
+    context: string;
+    selection: string;
+  } | null;
+  headings: Array<{
+    depth: number;
+    text: string;
+  }>;
+  messages: ArticleChatMessage[];
+  slug?: string;
+  title?: string;
+};
+
+export type ArticleChatResult = {
+  answer: string;
+  sources: Array<{
+    title: string;
+    url: string;
+  }>;
+};
+
 type KimiMessage =
   | {
       content: string;
@@ -68,6 +97,19 @@ const KIMI_WEB_SEARCH_TOOL = {
 export const SELECTION_EXPLAIN_LIMITS = {
   context: 1200,
   selection: 80,
+  slug: 220,
+  title: 180,
+} as const;
+
+export const ARTICLE_CHAT_LIMITS = {
+  articleText: 24_000,
+  excerpt: 600,
+  focusContext: 1200,
+  focusSelection: 200,
+  headingText: 160,
+  headings: 48,
+  messageContent: 2000,
+  messages: 8,
   slug: 220,
   title: 180,
 } as const;
@@ -141,6 +183,80 @@ export function parseSelectionExplainPayload(input: unknown) {
   };
 }
 
+export function parseArticleChatPayload(input: unknown) {
+  if (!isRecord(input)) {
+    return {
+      error: "请求格式不正确。",
+      ok: false as const,
+    };
+  }
+
+  const rawMessages = Array.isArray(input.messages) ? input.messages : [];
+  const messages = rawMessages
+    .filter(isRecord)
+    .map((message) => {
+      const role = message.role === "assistant" ? "assistant" : "user";
+      const content = normalizeText(message.content, ARTICLE_CHAT_LIMITS.messageContent);
+
+      if (!content) {
+        return null;
+      }
+
+      return {
+        content,
+        role,
+      } satisfies ArticleChatMessage;
+    })
+    .filter((message): message is ArticleChatMessage => Boolean(message))
+    .slice(-ARTICLE_CHAT_LIMITS.messages);
+
+  if (!messages.some((message) => message.role === "user")) {
+    return {
+      error: "请先输入一个问题。",
+      ok: false as const,
+    };
+  }
+
+  const rawHeadings = Array.isArray(input.headings) ? input.headings : [];
+  const headings = rawHeadings
+    .filter(isRecord)
+    .map((heading) => {
+      const depth = Number(heading.depth);
+      const text = normalizeText(heading.text, ARTICLE_CHAT_LIMITS.headingText);
+
+      if (!text) {
+        return null;
+      }
+
+      return {
+        depth: Number.isFinite(depth) ? depth : 2,
+        text,
+      };
+    })
+    .filter((heading): heading is { depth: number; text: string } => Boolean(heading))
+    .slice(0, ARTICLE_CHAT_LIMITS.headings);
+
+  const focus = isRecord(input.focus)
+    ? {
+        context: normalizeText(input.focus.context, ARTICLE_CHAT_LIMITS.focusContext),
+        selection: normalizeText(input.focus.selection, ARTICLE_CHAT_LIMITS.focusSelection),
+      }
+    : null;
+
+  return {
+    data: {
+      articleText: normalizeText(input.articleText, ARTICLE_CHAT_LIMITS.articleText),
+      excerpt: normalizeText(input.excerpt, ARTICLE_CHAT_LIMITS.excerpt),
+      focus: focus?.selection ? focus : null,
+      headings,
+      messages,
+      slug: normalizeText(input.slug, ARTICLE_CHAT_LIMITS.slug),
+      title: normalizeText(input.title, ARTICLE_CHAT_LIMITS.title),
+    } satisfies ArticleChatPayload,
+    ok: true as const,
+  };
+}
+
 export function buildSelectionExplainMessages(payload: SelectionExplainPayload) {
   const title = payload.title || "未命名文章";
   const slug = payload.slug || "unknown";
@@ -167,6 +283,44 @@ export function buildSelectionExplainMessages(payload: SelectionExplainPayload) 
   ];
 }
 
+export function buildArticleChatMessages(payload: ArticleChatPayload) {
+  const title = payload.title || "未命名文章";
+  const slug = payload.slug || "unknown";
+  const articleText = payload.articleText || "用户没有提供文章正文。";
+  const headings = payload.headings.length
+    ? payload.headings.map((heading) => `${"#".repeat(Math.min(4, Math.max(2, heading.depth)))} ${heading.text}`).join("\n")
+    : "无";
+  const focus = payload.focus
+    ? [`选中内容：${payload.focus.selection}`, `选中上下文：${payload.focus.context || "无"}`].join("\n")
+    : "无";
+
+  return [
+    {
+      content:
+        "你是一个中文技术博客阅读助手。优先依据用户正在阅读的文章回答；如果用户问文章没有提到的背景、来源、对比或延伸细节，可以使用 Kimi 联网搜索核对。回答要准确、克制，区分文章内容和延伸信息。只返回 JSON，不要使用 Markdown。",
+      role: "system" as const,
+    },
+    {
+      content: [
+        `文章标题：${title}`,
+        `文章 slug：${slug}`,
+        `文章摘要：${payload.excerpt || "无"}`,
+        `章节目录：\n${headings}`,
+        `当前选中焦点：\n${focus}`,
+        `文章正文：\n${articleText}`,
+        "请回答后续最后一个用户问题。返回严格 JSON：",
+        '{"answer":"结合文章上下文的回答，可以分段但不要使用 Markdown 标题","sources":[{"title":"来源标题","url":"https://example.com"}]}',
+        "sources 最多 5 个；如果完全依据文章即可回答，或没有可靠来源，就返回空数组。",
+      ].join("\n\n"),
+      role: "user" as const,
+    },
+    ...payload.messages.map((message) => ({
+      content: message.content,
+      role: message.role,
+    })),
+  ] satisfies KimiMessage[];
+}
+
 function extractJsonObject(content: string) {
   const trimmed = content.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
@@ -179,6 +333,49 @@ function extractJsonObject(content: string) {
   }
 
   return candidate.slice(start, end + 1);
+}
+
+export function parseKimiArticleChatContent(content: string): ArticleChatResult {
+  const json = extractJsonObject(content);
+
+  if (!json) {
+    return {
+      answer: normalizeText(content, 4000),
+      sources: [],
+    };
+  }
+
+  try {
+    const parsed = JSON.parse(json) as Record<string, unknown>;
+    const sources = Array.isArray(parsed.sources)
+      ? parsed.sources
+          .filter(isRecord)
+          .map((source) => {
+            const url = normalizeUrl(source.url);
+
+            if (!url) {
+              return null;
+            }
+
+            return {
+              title: normalizeText(source.title, 100) || url,
+              url,
+            };
+          })
+          .filter((source): source is { title: string; url: string } => Boolean(source))
+          .slice(0, 5)
+      : [];
+
+    return {
+      answer: normalizeText(parsed.answer, 4000) || normalizeText(content, 4000),
+      sources,
+    };
+  } catch {
+    return {
+      answer: normalizeText(content, 4000),
+      sources: [],
+    };
+  }
 }
 
 export function parseKimiExplainContent(
@@ -350,6 +547,75 @@ export async function explainSelectionWithKimi(
     }
 
     return parseKimiExplainContent(content, payload.selection);
+  }
+
+  throw new SelectionExplainServiceError(
+    "Kimi 搜索耗时较长，请稍后再试。",
+    504,
+    "kimi_timeout"
+  );
+}
+
+export async function chatArticleWithKimi(
+  payload: ArticleChatPayload
+): Promise<ArticleChatResult> {
+  const messages: KimiMessage[] = buildArticleChatMessages(payload);
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const completion = await requestKimiChat(messages);
+    const choice = completion?.choices?.[0];
+    const assistantMessage = choice?.message;
+
+    if (!choice || !assistantMessage) {
+      throw new SelectionExplainServiceError(
+        "Kimi 没有返回可用内容。",
+        502,
+        "empty_kimi_response"
+      );
+    }
+
+    if (choice.finish_reason === "tool_calls" && assistantMessage.tool_calls?.length) {
+      messages.push({
+        content: assistantMessage.content ?? "",
+        role: "assistant",
+        tool_calls: assistantMessage.tool_calls,
+      });
+
+      for (const toolCall of assistantMessage.tool_calls) {
+        if (toolCall.function.name !== "$web_search") {
+          continue;
+        }
+
+        let toolArguments: unknown;
+
+        try {
+          toolArguments = JSON.parse(toolCall.function.arguments || "{}");
+        } catch {
+          toolArguments = toolCall.function.arguments;
+        }
+
+        messages.push({
+          content: JSON.stringify(toolArguments),
+          name: toolCall.function.name,
+          role: "tool",
+          tool_call_id: toolCall.id,
+        });
+      }
+
+      continue;
+    }
+
+    const content = assistantMessage.content?.trim();
+
+    if (!content) {
+      throw new SelectionExplainServiceError(
+        "Kimi 没有返回问答内容。",
+        502,
+        "empty_kimi_content"
+      );
+    }
+
+    return parseKimiArticleChatContent(content);
   }
 
   throw new SelectionExplainServiceError(

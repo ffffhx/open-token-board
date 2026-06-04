@@ -7,14 +7,17 @@ import {
   type TokenBoardIdentity,
 } from "@open-token-board/core/auth";
 import {
+  chatArticleWithKimi,
   explainSelectionWithKimi,
+  parseArticleChatPayload,
   parseSelectionExplainPayload,
   SelectionExplainServiceError,
 } from "@open-token-board/core/selection-explainer";
 
 const DEFAULT_PORT = 8791;
 const DEFAULT_OWNER_GITHUB_LOGINS = ["ffffhx"];
-const MAX_BODY_BYTES = 16 * 1024;
+const MAX_SELECTION_BODY_BYTES = Number(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES || 16 * 1024);
+const MAX_ARTICLE_CHAT_BODY_BYTES = Number(process.env.ARTICLE_CHAT_MAX_BODY_BYTES || 128 * 1024);
 const SESSION_COOKIE_NAME =
   process.env.SELECTION_EXPLAIN_SESSION_COOKIE_NAME || "token_board_session";
 
@@ -104,7 +107,7 @@ function authenticateSelectionRequest(request: http.IncomingMessage):
 
   if (!identity) {
     return {
-      error: "请先用作者 GitHub 账号登录后再使用 AI 解释。",
+      error: "请先用作者 GitHub 账号登录后再使用 AI 功能。",
       ok: false,
       status: 401,
     };
@@ -112,7 +115,7 @@ function authenticateSelectionRequest(request: http.IncomingMessage):
 
   if (!isGithubIdentityAllowed(identity, allowedGithubLogins)) {
     return {
-      error: "当前 GitHub 账号不在选词 AI 解释白名单中。",
+      error: "当前 GitHub 账号不在文章 AI 功能白名单中。",
       ok: false,
       status: 403,
     };
@@ -124,7 +127,10 @@ function authenticateSelectionRequest(request: http.IncomingMessage):
   };
 }
 
-function readJsonBody(request: http.IncomingMessage) {
+function readJsonBody(
+  request: http.IncomingMessage,
+  maxBytes = MAX_SELECTION_BODY_BYTES
+) {
   return new Promise<unknown>((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
@@ -132,7 +138,7 @@ function readJsonBody(request: http.IncomingMessage) {
     request.on("data", (chunk: Buffer) => {
       size += chunk.length;
 
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new Error("请求体过大。"));
         request.destroy();
         return;
@@ -175,7 +181,7 @@ async function handleExplainSelection(
   let body: unknown;
 
   try {
-    body = await readJsonBody(request);
+    body = await readJsonBody(request, MAX_SELECTION_BODY_BYTES);
   } catch (error) {
     writeJson(
       response,
@@ -238,6 +244,84 @@ async function handleExplainSelection(
   }
 }
 
+async function handleArticleChat(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  corsOrigin: string
+) {
+  const auth = authenticateSelectionRequest(request);
+
+  if (!auth.ok) {
+    writeJson(
+      response,
+      auth.status,
+      {
+        error: auth.error,
+      },
+      corsOrigin
+    );
+    return;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await readJsonBody(request, MAX_ARTICLE_CHAT_BODY_BYTES);
+  } catch (error) {
+    writeJson(
+      response,
+      400,
+      {
+        error: error instanceof Error ? error.message : "请求体不正确。",
+      },
+      corsOrigin
+    );
+    return;
+  }
+
+  const parsed = parseArticleChatPayload(body);
+
+  if (!parsed.ok) {
+    writeJson(
+      response,
+      400,
+      {
+        error: parsed.error,
+      },
+      corsOrigin
+    );
+    return;
+  }
+
+  try {
+    const chat = await chatArticleWithKimi(parsed.data);
+
+    writeJson(response, 200, chat, corsOrigin);
+  } catch (error) {
+    if (error instanceof SelectionExplainServiceError) {
+      writeJson(
+        response,
+        error.status,
+        {
+          code: error.code,
+          error: error.message,
+        },
+        corsOrigin
+      );
+      return;
+    }
+
+    writeJson(
+      response,
+      500,
+      {
+        error: "文章 AI 问答暂时不可用，请稍后再试。",
+      },
+      corsOrigin
+    );
+  }
+}
+
 const server = http.createServer(async (request, response) => {
   const corsOrigin = getCorsOrigin(request);
 
@@ -268,6 +352,7 @@ const server = http.createServer(async (request, response) => {
       200,
       {
         authRequired: true,
+        articleChat: true,
         allowedGithubLogins,
         keyConfigured: Boolean(process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY),
         ok: true,
@@ -279,6 +364,11 @@ const server = http.createServer(async (request, response) => {
 
   if (request.method === "POST" && url.pathname === "/explain-selection") {
     await handleExplainSelection(request, response, corsOrigin);
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/chat-article") {
+    await handleArticleChat(request, response, corsOrigin);
     return;
   }
 

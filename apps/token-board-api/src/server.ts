@@ -38,7 +38,9 @@ import {
   type TokenUsageStore,
 } from "@open-token-board/core/storage";
 import {
+  chatArticleWithKimi,
   explainSelectionWithKimi,
+  parseArticleChatPayload,
   parseSelectionExplainPayload,
   SelectionExplainServiceError,
 } from "@open-token-board/core/selection-explainer";
@@ -59,6 +61,7 @@ const SNAPSHOT_SHARE_DATA_FILE =
   process.env.SNAPSHOT_SHARE_DATA_FILE || path.join(process.cwd(), ".token-board", "snapshot-shares.json");
 const MAX_SNAPSHOT_SHARE_BODY_BYTES = Number(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES || 24 * 1024 * 1024);
 const MAX_SELECTION_EXPLAIN_BODY_BYTES = Number(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES || 16 * 1024);
+const MAX_ARTICLE_CHAT_BODY_BYTES = Number(process.env.ARTICLE_CHAT_MAX_BODY_BYTES || 128 * 1024);
 const DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const SESSION_COOKIE_NAME = "token_board_session";
 const WEB_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_WEB_SESSION_TTL_SECONDS || 30 * 24 * 60 * 60);
@@ -154,6 +157,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     sendJson(request, response, 200, {
       ok: true,
       authRequired: true,
+      articleChat: true,
       allowedGithubLogins: selectionExplainAllowedGithubLogins(),
       keyConfigured: Boolean(process.env.KIMI_API_KEY || process.env.MOONSHOT_API_KEY),
       generatedAt: new Date().toISOString(),
@@ -163,6 +167,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
   if (request.method === "POST" && url.pathname === "/api/explain-selection") {
     await handleSelectionExplain(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/chat-article") {
+    await handleArticleChat(request, response);
     return;
   }
 
@@ -368,6 +377,62 @@ async function handleSelectionExplain(request: IncomingMessage, response: Server
 
     sendJson(request, response, 500, {
       error: "AI 解释暂时不可用，请稍后再试。",
+    });
+  }
+}
+
+async function handleArticleChat(request: IncomingMessage, response: ServerResponse) {
+  const identity = readWebIdentity(request);
+
+  if (!identity) {
+    sendJson(request, response, 401, {
+      error: "请先用作者 GitHub 账号登录后再使用文章 AI 问答。",
+    });
+    return;
+  }
+
+  if (!isGithubIdentityAllowed(identity, selectionExplainAllowedGithubLogins())) {
+    sendJson(request, response, 403, {
+      error: "当前 GitHub 账号不在文章 AI 问答白名单中。",
+    });
+    return;
+  }
+
+  let body: unknown;
+
+  try {
+    body = await readJsonBody(request, MAX_ARTICLE_CHAT_BODY_BYTES);
+  } catch (error) {
+    sendJson(request, response, 400, {
+      error: error instanceof Error ? error.message : "请求体不正确。",
+    });
+    return;
+  }
+
+  const parsed = parseArticleChatPayload(body);
+
+  if (!parsed.ok) {
+    sendJson(request, response, 400, {
+      error: parsed.error,
+    });
+    return;
+  }
+
+  try {
+    const chat = await chatArticleWithKimi(parsed.data);
+
+    sendJson(request, response, 200, chat);
+  } catch (error) {
+    if (error instanceof SelectionExplainServiceError) {
+      sendJson(request, response, error.status, {
+        code: error.code,
+        error: error.message,
+      });
+      return;
+    }
+
+    sendJson(request, response, 500, {
+      error: "文章 AI 问答暂时不可用，请稍后再试。",
     });
   }
 }
