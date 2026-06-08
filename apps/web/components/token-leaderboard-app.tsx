@@ -47,7 +47,7 @@ import {
   StatTile,
   TrustEvidenceBar,
 } from "./token-leaderboard/leaderboard-panels";
-import { Icon, LoadingInline, LoadingSpinner, Toast } from "./token-leaderboard/shared-ui";
+import { Icon, LoadingInline, Toast } from "./token-leaderboard/shared-ui";
 import type {
   AccountLoadState,
   AccountUsageResponse,
@@ -397,7 +397,7 @@ export function TokenLeaderboardApp({
       <PanelHeader
         title="排行榜"
         meta={isDataLoading ? <LoadingInline label="loading" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
-        action={isDataLoading ? <LoadingInline label="Loading" /> : `按${selectedMetricLabel}降序`}
+        action={isDataLoading ? "等待真实数据" : `按${selectedMetricLabel}降序`}
       />
       <div className="grid gap-3 p-3 sm:hidden">
         {isDataLoading ? (
@@ -610,17 +610,17 @@ export function TokenLeaderboardApp({
               <HeroSignal
                 label="当前榜首"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : leader?.displayName ?? "--"}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : leaderMeta}
+                meta={isDataLoading ? "真实数据加载中" : leaderMeta}
               />
               <HeroSignal
                 label="当前区间记录"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : rangeRecordCountLabel}
-                meta={isDataLoading ? <LoadingInline label="Loading" /> : `${ROLLING_RANGE_LABELS[range]}`}
+                meta={isDataLoading ? "等待区间统计" : `${ROLLING_RANGE_LABELS[range]}`}
               />
               <HeroSignal
                 label="高频组合"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : topModelLabel}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : topToolLabel}
+                meta={isDataLoading ? "真实数据加载中" : topToolLabel}
               />
             </div>
             <TrustEvidenceBar
@@ -646,25 +646,25 @@ export function TokenLeaderboardApp({
               <StatTile
                 label="总消耗 Token"
                 value={isDataLoading ? <LoadingInline label="Loading" tone="light" spinnerClassName="size-6" /> : formatTokens(totalConsumptionTokens)}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" tone="light" /> : "输入上下文 + 输出 Token"}
+                meta={isDataLoading ? "真实数据加载中" : "输入上下文 + 输出 Token"}
                 tone="ink"
               />
               <StatTile
                 label="活跃用户"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatNumber(summary.activeUsers)}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : `${summary.activeUsers} 位参与`}
+                meta={isDataLoading ? "真实数据加载中" : `${summary.activeUsers} 位参与`}
                 tone="mint"
               />
               <StatTile
                 label="会话"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatNumber(summary.totalSessions)}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : "Sessions"}
+                meta={isDataLoading ? "真实数据加载中" : "Sessions"}
                 tone="blue"
               />
               <StatTile
                 label="估算费用"
                 value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatUsd(summary.totalCostUsd)}
-                meta={isDataLoading ? <LoadingInline label="真实数据加载中" /> : "非实际账单"}
+                meta={isDataLoading ? "真实数据加载中" : "非实际账单"}
                 tone="gold"
               />
             </div>
@@ -696,8 +696,8 @@ export function TokenLeaderboardApp({
                   />
                 </div>
                 <div className="mt-2 flex justify-between font-mono text-xs text-stone-500">
-                  <span>{isDataLoading ? <LoadingSpinner className="size-3" /> : summary.daily[0]?.date.slice(5) ?? "--"}</span>
-                  <span>{isDataLoading ? <LoadingSpinner className="size-3" /> : summary.daily.at(-1)?.date.slice(5) ?? "--"}</span>
+                  <span>{isDataLoading ? "--" : summary.daily[0]?.date.slice(5) ?? "--"}</span>
+                  <span>{isDataLoading ? "--" : summary.daily.at(-1)?.date.slice(5) ?? "--"}</span>
                 </div>
               </section>
 
@@ -729,7 +729,7 @@ export function TokenLeaderboardApp({
                   <strong className="text-stone-900">时间窗口</strong>：{ROLLING_RANGE_LABELS[range]}，展示时间按 Asia/Shanghai。
                 </p>
                 <p>
-                  <strong className="text-stone-900">记录数</strong>：全库/可用记录 {isDataLoading ? <LoadingInline label="加载中" /> : recordCountLabel} 条；当前区间参与排行 {isDataLoading ? <LoadingInline label="加载中" /> : rangeRecordCountLabel} 条。
+                  <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <LoadingInline label="加载统计口径" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。
                 </p>
                 <p>
                   <strong className="text-stone-900">统计截至</strong>：{isDataLoading ? <LoadingInline label="加载中" /> : formatShortDate(summary.endAt)}。

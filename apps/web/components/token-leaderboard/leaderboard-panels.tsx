@@ -65,8 +65,8 @@ export function TrustEvidenceBar({
   const evidence: Array<{ label: string; loading?: boolean }> = loading
     ? [
         { label: "正在连接后端", loading: true },
-        { label: "不展示示例排行榜", loading: true },
-        { label: "加载超过 10 秒会提示重试", loading: true },
+        { label: "不展示示例排行榜" },
+        { label: "加载超过 10 秒会提示重试" },
       ]
     : error
       ? [
@@ -129,7 +129,7 @@ export function EfficiencyStrip({
             {loading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : item.value}
           </p>
           <p className="mt-1 truncate text-xs text-stone-500">
-            {loading ? <LoadingInline label="真实数据加载中" /> : item.meta}
+            {loading ? "真实数据加载中" : item.meta}
           </p>
         </div>
       ))}
@@ -840,9 +840,7 @@ export function ShareLoadingRows() {
             <div className="h-3 w-2/3 rounded-full bg-white/85" />
             <div className="h-2 rounded-full bg-white/75" />
           </div>
-          <div className="flex justify-end">
-            <LoadingSpinner className="size-3.5" />
-          </div>
+          <div className="ml-auto h-3 w-10 rounded-full bg-white/80" />
         </div>
       ))}
     </>
@@ -906,15 +904,11 @@ function BreakdownLoadingRows() {
           <div className="grid grid-cols-[1rem_minmax(0,1fr)_4.5rem] items-center gap-3">
             <LoadingSpinner className="size-3.5" />
             <div className="h-3 w-1/2 rounded-full bg-stone-950/10" />
-            <div className="flex justify-end">
-              <LoadingSpinner className="size-3.5" />
-            </div>
+            <div className="ml-auto h-3 w-12 rounded-full bg-stone-950/10" />
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-3">
             <div className="h-2 rounded-full bg-stone-950/10" />
-            <div className="flex justify-end">
-              <LoadingSpinner className="size-3" />
-            </div>
+            <div className="ml-auto h-2 w-10 rounded-full bg-stone-950/10" />
           </div>
         </div>
       ))}
