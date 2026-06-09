@@ -16,10 +16,8 @@ import { TokenBoardLogoMark } from "@/components/token-board-logo";
 export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
   const snapshots = buildCodexBenchmarkDailySnapshots(now);
   const today = snapshots[snapshots.length - 1];
-  const previous = snapshots[snapshots.length - 2] ?? today;
-  const iqDelta = today.iqScore - previous.iqScore;
-  const speedDelta = today.speedScore - previous.speedScore;
   const maxP90 = Math.max(1, ...snapshots.map((snapshot) => snapshot.p90TotalSeconds));
+  const sampleWeather = today.weather.replace("今日 Codex", "样例 Codex");
 
   return (
     <main className="min-w-0 bg-slate-100 text-slate-950">
@@ -64,22 +62,22 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
               今日 Codex 智商与速度评测集
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              固定 S1-S5 每日题库，把“聪明不聪明、快不快、会不会乱改”拆成可复跑指标。当前分数使用内置示例 run 展示口径，接真实 runner 后可替换为生产数据。
+              固定 S1-S5 每日题库，把“聪明不聪明、快不快、会不会乱改”拆成可复跑指标。当前页面还没有接真实 runner，所有分数和 7 天趋势都是内置示例 run，只用于展示评分口径。
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <ScoreTile
-                label="今日 IQ"
+                label="IQ 示例"
                 value={`${today.iqScore.toFixed(1)}`}
                 suffix="/100"
-                meta={`较昨日 ${formatSignedScore(iqDelta)}`}
+                meta="内置示例，非真实历史"
                 tone="ink"
               />
               <ScoreTile
-                label="今日速度"
+                label="速度示例"
                 value={today.speedBand}
                 suffix={`${today.speedScore.toFixed(1)}/100`}
-                meta={`较昨日 ${formatSignedScore(speedDelta)}`}
+                meta="待接入真实 runner"
                 tone={today.speedBand === "Fast" ? "mint" : today.speedBand === "Normal" ? "blue" : "gold"}
               />
               <ScoreTile
@@ -100,8 +98,8 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
           </div>
 
           <aside className="rounded-lg border border-slate-200 bg-slate-950 p-5 text-white shadow-sm">
-            <p className="font-mono text-xs font-semibold uppercase text-blue-200">Daily weather</p>
-            <h2 className="mt-3 text-xl font-semibold leading-snug">{today.weather}</h2>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-200">Sample weather</p>
+            <h2 className="mt-3 text-xl font-semibold leading-snug">{sampleWeather}</h2>
             <p className="mt-4 text-sm leading-6 text-slate-300">{today.recommendation}</p>
             <div className="mt-5 grid gap-2 border-t border-white/10 pt-4 text-xs text-slate-300">
               <EvidenceLine label="样本量" value={`${today.sampleRuns} 次完整 S1-S5`} />
@@ -114,8 +112,8 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
         <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold">过去 7 天趋势</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-500">每天跑 {CODEX_BENCHMARK_REPEAT_COUNT} 次，展示 median IQ、median Speed 与 P90 耗时。</p>
+              <h2 className="text-base font-semibold">示例 7 天趋势</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">内置示例数据，用来展示 median IQ、median Speed 与 P90 耗时；接入真实 runner 后再显示真实过去 7 天。</p>
             </div>
             <div className="flex gap-2 font-mono text-[11px] text-slate-500">
               <span className="rounded-full border border-slate-200 px-2 py-1">IQ</span>
@@ -399,14 +397,6 @@ function TaskList({ items, title }: { items: string[]; title: string }) {
 
 function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
-}
-
-function formatSignedScore(value: number) {
-  if (Math.abs(value) < 0.05) {
-    return "0.0";
-  }
-
-  return `${value > 0 ? "+" : ""}${value.toFixed(1)}`;
 }
 
 function formatDuration(seconds: number) {
