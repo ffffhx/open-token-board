@@ -163,6 +163,12 @@ function HeroSection() {
             隐私
           </a>
           <Link
+            href="/bench"
+            className="hidden min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+          >
+            Codex 评测
+          </Link>
+          <Link
             href="/board"
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
@@ -191,6 +197,12 @@ function HeroSection() {
             >
               了解使用流程
             </a>
+            <Link
+              href="/bench"
+              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
+            >
+              查看 Codex 评测
+            </Link>
           </div>
         </div>
 
