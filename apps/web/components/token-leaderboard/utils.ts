@@ -36,6 +36,10 @@ export function formatNumber(value: number) {
   return new Intl.NumberFormat("zh-CN").format(Math.round(value));
 }
 
+export function formatUtcRange(startAt: string, endAt: string) {
+  return `${formatUtcDateTime(startAt)} - ${formatUtcDateTime(endAt)}`;
+}
+
 export function formatDecimal(value: number) {
   return new Intl.NumberFormat("zh-CN", {
     maximumFractionDigits: 1,
@@ -64,11 +68,13 @@ export function normalizeDailyUsageSeries(value: unknown): TokenLeaderboardUser[
       return [];
     }
 
-    const item = point as { date?: unknown; tokens?: unknown };
+    const item = point as { date?: unknown; endAt?: unknown; startAt?: unknown; tokens?: unknown };
     const date = typeof item.date === "string" ? item.date : "";
+    const startAt = normalizeDailyBucketTime(item.startAt, date, 0);
+    const endAt = normalizeDailyBucketTime(item.endAt, date, 1);
     const tokens = typeof item.tokens === "number" && Number.isFinite(item.tokens) ? Math.max(0, item.tokens) : 0;
 
-    return date ? [{ date, tokens }] : [];
+    return date ? [{ date, startAt, endAt, tokens }] : [];
   });
 }
 
@@ -105,12 +111,44 @@ export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric:
 
   return {
     ...summary,
+    daily: normalizeDailyUsageSeries(summary.daily),
     totalTokens,
     users: users.map((user) => ({
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
     })),
   };
+}
+
+function normalizeDailyBucketTime(value: unknown, date: string, dayOffset: number) {
+  if (typeof value === "string" && value.trim()) {
+    const parsed = new Date(value);
+
+    if (Number.isFinite(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+
+  const fallback = new Date(`${date}T00:00:00.000Z`);
+  fallback.setUTCDate(fallback.getUTCDate() + dayOffset);
+
+  return Number.isFinite(fallback.getTime()) ? fallback.toISOString() : new Date(0).toISOString();
+}
+
+function formatUtcDateTime(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "--";
+  }
+
+  const pad = (part: number) => String(part).padStart(2, "0");
+
+  return [
+    `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`,
+    `${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())}`,
+    "UTC",
+  ].join(" ");
 }
 
 export function normalizeRemoteAccountProfile(profile: TokenAccountUsageProfile): TokenAccountUsageProfile {

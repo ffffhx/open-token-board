@@ -4,6 +4,8 @@ export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages";
 
 export type TokenDailyUsagePoint = {
   date: string;
+  startAt: string;
+  endAt: string;
   tokens: number;
 };
 
@@ -906,19 +908,18 @@ function getShanghaiWeekdayHour(value: string) {
 }
 
 function buildDailySeries(entries: TokenUsageEvent[], start: Date, end: Date): TokenDailyUsagePoint[] {
-  const dateKeys = buildDailySeriesDateKeys(start, end);
-  const values = new Map<string, number>();
-
-  for (const date of dateKeys) {
-    values.set(date, 0);
-  }
+  const values = new Map(buildEmptyDailySeries(start, end).map((point) => [point.date, point]));
 
   for (const entry of entries) {
     const key = toDateKey(entry.timestamp);
-    values.set(key, (values.get(key) ?? 0) + getTokenConsumptionTokens(entry));
+    const point = values.get(key);
+
+    if (point) {
+      point.tokens += getTokenConsumptionTokens(entry);
+    }
   }
 
-  return [...values.entries()].map(([date, tokens]) => ({ date, tokens }));
+  return [...values.values()];
 }
 
 function buildDailySeriesByUser(
@@ -926,14 +927,14 @@ function buildDailySeriesByUser(
   start: Date,
   end: Date
 ): Map<string, TokenDailyUsagePoint[]> {
-  const dateKeys = buildDailySeriesDateKeys(start, end);
+  const emptyDailySeries = buildEmptyDailySeries(start, end);
   const valuesByUser = new Map<string, Map<string, number>>();
 
   for (const entry of entries) {
     let values = valuesByUser.get(entry.userId);
 
     if (!values) {
-      values = new Map(dateKeys.map((date) => [date, 0]));
+      values = new Map(emptyDailySeries.map((point) => [point.date, 0]));
       valuesByUser.set(entry.userId, values);
     }
 
@@ -944,21 +945,29 @@ function buildDailySeriesByUser(
   return new Map(
     [...valuesByUser.entries()].map(([userId, values]) => [
       userId,
-      dateKeys.map((date) => ({ date, tokens: values.get(date) ?? 0 })),
+      emptyDailySeries.map((point) => ({ ...point, tokens: values.get(point.date) ?? 0 })),
     ])
   );
 }
 
-function buildDailySeriesDateKeys(start: Date, end: Date) {
-  const keys: string[] = [];
+function buildEmptyDailySeries(start: Date, end: Date): TokenDailyUsagePoint[] {
+  const points: TokenDailyUsagePoint[] = [];
   const startDay = startOfUtcDay(start);
   const endDay = startOfUtcDay(end);
 
   for (let time = startDay.getTime(); time <= endDay.getTime(); time += 24 * 60 * 60 * 1000) {
-    keys.push(toDateKey(new Date(time).toISOString()));
+    const bucketStart = new Date(Math.max(time, start.getTime()));
+    const bucketEnd = new Date(Math.min(time + 24 * 60 * 60 * 1000, end.getTime()));
+
+    points.push({
+      date: toDateKey(new Date(time).toISOString()),
+      startAt: bucketStart.toISOString(),
+      endAt: bucketEnd.toISOString(),
+      tokens: 0,
+    });
   }
 
-  return keys;
+  return points;
 }
 
 function sumTokensByUser(entries: TokenUsageEvent[]) {

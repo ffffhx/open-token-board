@@ -22,6 +22,7 @@ import {
   formatShortDate,
   formatSignedPercent,
   formatTokens,
+  formatUtcRange,
   formatUsd,
   getUserMetricValue,
   normalizeDailyUsageSeries,
@@ -265,7 +266,8 @@ function DailyTokenTrendBar({
   const barHeight = `${barHeightPercent}%`;
   const isLatest = index === dailyLength - 1;
   const exactTokens = `${formatNumber(point.tokens)} tokens`;
-  const exactLabel = `${point.date} ${exactTokens}`;
+  const utcRange = formatUtcRange(point.startAt, point.endAt);
+  const exactLabel = `${point.date} ${exactTokens} ${utcRange}`;
   const tooltipAlignClass =
     dailyLength === 1
       ? "left-1/2 -translate-x-1/2 text-center"
@@ -309,7 +311,7 @@ function DailyTokenTrendBar({
         <span
           id={tooltipId}
           role="tooltip"
-          className={`pointer-events-none absolute top-2 z-30 min-w-[7.5rem] max-w-[10rem] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-0 shadow-sm backdrop-blur transition duration-150 group-hover/trend:translate-y-[-0.2rem] group-hover/trend:opacity-100 group-focus-visible/trend:translate-y-[-0.2rem] group-focus-visible/trend:opacity-100 ${tooltipAlignClass}`}
+          className={`pointer-events-none absolute top-2 z-30 min-w-[9rem] max-w-[16rem] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-0 shadow-sm backdrop-blur transition duration-150 group-hover/trend:translate-y-[-0.2rem] group-hover/trend:opacity-100 group-focus-visible/trend:translate-y-[-0.2rem] group-focus-visible/trend:opacity-100 ${tooltipAlignClass}`}
           data-token-trend-tooltip-placement="top-rail"
           data-token-trend-tooltip={point.date}
         >
@@ -317,6 +319,9 @@ function DailyTokenTrendBar({
           <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">{formatTokens(point.tokens)}</span>
           <span className="mt-1 block truncate font-mono text-[10px] text-stone-500" title={exactTokens}>
             {exactTokens}
+          </span>
+          <span className="mt-1 block whitespace-normal font-mono text-[10px] leading-4 text-stone-500" title={utcRange}>
+            {utcRange}
           </span>
           <span
             aria-hidden="true"

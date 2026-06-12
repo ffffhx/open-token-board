@@ -18,6 +18,7 @@ import {
   formatSessionLabel,
   formatShortDate,
   formatTokens,
+  formatUtcRange,
   formatUsd,
   heatColor,
   rankDeltaTone,
@@ -500,15 +501,7 @@ function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"]
       </div>
       <div className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(5px,1fr))] items-end gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 pb-3 pt-5">
         {daily.map((point, index) => (
-          <div key={point.date} className="flex h-full items-end">
-            <div
-              className={`w-full rounded-t-[3px] transition hover:translate-y-[-2px] ${
-                index === daily.length - 1 ? "bg-amber-500" : "bg-blue-600 hover:bg-blue-500"
-              }`}
-              style={{ height: `${Math.max(2, (point.tokens / maxTokens) * 100)}%` }}
-              title={`${point.date} ${formatTokens(point.tokens)}`}
-            />
-          </div>
+          <AccountDailyTrendBar key={point.date} dailyLength={daily.length} index={index} maxTokens={maxTokens} point={point} />
         ))}
       </div>
       <div className="mt-2 flex justify-between font-mono text-xs text-slate-500">
@@ -516,6 +509,80 @@ function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"]
         <span>{daily.at(-1)?.date.slice(5) ?? "--"}</span>
       </div>
     </section>
+  );
+}
+
+function AccountDailyTrendBar({
+  dailyLength,
+  index,
+  maxTokens,
+  point,
+}: {
+  dailyLength: number;
+  index: number;
+  maxTokens: number;
+  point: TokenAccountUsageProfile["daily"][number];
+}) {
+  const safeMaxTokens = Math.max(1, maxTokens);
+  const isLatest = index === dailyLength - 1;
+  const exactTokens = `${formatNumber(point.tokens)} tokens`;
+  const utcRange = formatUtcRange(point.startAt, point.endAt);
+  const exactLabel = `${point.date} ${exactTokens} ${utcRange}`;
+  const tooltipId = `account-daily-trend-${point.date}`;
+  const tooltipAlignClass =
+    dailyLength === 1
+      ? "left-1/2 -translate-x-1/2 text-center"
+      : index === 0
+        ? "left-0 translate-x-0 text-left"
+        : isLatest
+          ? "right-0 translate-x-0 text-right"
+          : "left-1/2 -translate-x-1/2 text-center";
+  const tooltipArrowClass =
+    dailyLength === 1
+      ? "left-1/2 -translate-x-1/2"
+      : index === 0
+        ? "left-3"
+        : isLatest
+          ? "right-3"
+          : "left-1/2 -translate-x-1/2";
+
+  return (
+    <div className="relative flex h-full min-w-0 items-end">
+      <button
+        type="button"
+        aria-describedby={tooltipId}
+        aria-label={exactLabel}
+        className="group/account-trend relative flex h-full w-full cursor-crosshair appearance-none items-end border-0 bg-transparent px-0 pb-0 pt-20 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-blue-600/35 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-50"
+      >
+        <span
+          aria-hidden="true"
+          className={`block w-full rounded-t-[3px] transition duration-200 group-hover/account-trend:translate-y-[-2px] group-focus-visible/account-trend:translate-y-[-2px] ${
+            isLatest
+              ? "bg-amber-500 group-hover/account-trend:bg-amber-400 group-focus-visible/account-trend:bg-amber-400"
+              : "bg-blue-600 group-hover/account-trend:bg-blue-500 group-focus-visible/account-trend:bg-blue-500"
+          }`}
+          style={{ height: `${Math.max(2, (point.tokens / safeMaxTokens) * 100)}%` }}
+        />
+        <span
+          id={tooltipId}
+          role="tooltip"
+          className={`pointer-events-none absolute top-2 z-30 min-w-[9rem] max-w-[16rem] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-slate-950 opacity-0 shadow-sm backdrop-blur transition duration-150 group-hover/account-trend:translate-y-[-0.2rem] group-hover/account-trend:opacity-100 group-focus-visible/account-trend:translate-y-[-0.2rem] group-focus-visible/account-trend:opacity-100 ${tooltipAlignClass}`}
+        >
+          <span className="block font-mono text-[10px] font-semibold text-blue-600">{point.date}</span>
+          <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">{formatTokens(point.tokens)}</span>
+          <span className="mt-1 block truncate font-mono text-[10px] text-slate-500" title={exactTokens}>
+            {exactTokens}
+          </span>
+          <span className="mt-1 block whitespace-normal font-mono text-[10px] leading-4 text-slate-500" title={utcRange}>
+            {utcRange}
+          </span>
+          <span
+            aria-hidden="true"
+            className={`absolute top-full size-2 rotate-45 border-b border-r border-blue-600/18 bg-white ${tooltipArrowClass}`}
+          />
+        </span>
+      </button>
+    </div>
   );
 }
 
