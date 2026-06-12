@@ -229,14 +229,14 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const range = parseRange(url.searchParams.get("range"));
     const metric = parseMetric(url.searchParams.get("metric"));
     const now = parseNow(url.searchParams.get("now"));
-    const events = await usageStore().listEvents();
+    const { records, summary } = await readUsageLeaderboard({ range, metric, now });
 
     sendJson(request, response, 200, {
       schemaVersion: 1,
       source: "server",
-      records: events.length,
+      records,
       generatedAt: new Date().toISOString(),
-      summary: buildTokenLeaderboard(events, { range, metric, now }),
+      summary,
     });
     return;
   }
@@ -298,8 +298,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const metric = parseMetric(url.searchParams.get("metric"));
     const now = parseNow(url.searchParams.get("now"));
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 50)));
-    const events = await usageStore().listEvents();
-    const summary = buildTokenLeaderboard(events, { range, metric, now });
+    const { summary } = await readUsageLeaderboard({ range, metric, now });
 
     sendJson(request, response, 200, {
       schemaVersion: 1,
@@ -1129,6 +1128,29 @@ function usageStore() {
   }
 
   return tokenUsageStore;
+}
+
+async function readUsageLeaderboard({
+  range,
+  metric,
+  now,
+}: {
+  range: TokenBoardRange;
+  metric: TokenBoardMetric;
+  now: Date;
+}) {
+  const store = usageStore();
+
+  if (store.getLeaderboardSummary) {
+    return store.getLeaderboardSummary({ range, metric, now });
+  }
+
+  const events = await store.listEvents();
+
+  return {
+    records: events.length,
+    summary: buildTokenLeaderboard(events, { range, metric, now }),
+  };
 }
 
 function shareStore() {

@@ -7,7 +7,12 @@ import { mergeTokenEvents } from "./token-board-automation";
 import {
   normalizeTokenUsageEvent,
   parseTokenUsageImport,
+  type TokenBoardMetric,
+  type TokenBoardRange,
   type TokenBoardUserConfig,
+  type TokenDailyUsagePoint,
+  type TokenLeaderboardSummary,
+  type TokenLeaderboardUser,
   type TokenUsageEvent,
 } from "./token-leaderboard";
 
@@ -24,10 +29,22 @@ export type TokenUsageStoreDeleteResult = {
   records: number;
 };
 
+export type TokenUsageLeaderboardOptions = {
+  range: TokenBoardRange;
+  metric: TokenBoardMetric;
+  now?: Date;
+};
+
+export type TokenUsageLeaderboardResult = {
+  records: number;
+  summary: TokenLeaderboardSummary;
+};
+
 export type TokenUsageStore = {
   kind: TokenUsageStoreKind;
   label: string;
   listEvents: () => Promise<TokenUsageEvent[]>;
+  getLeaderboardSummary?: (options: TokenUsageLeaderboardOptions) => Promise<TokenUsageLeaderboardResult>;
   countEvents: () => Promise<number>;
   insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
   deleteEventsForUser: (userId: string) => Promise<TokenUsageStoreDeleteResult>;
@@ -53,6 +70,12 @@ export type TokenUsageJsonImportResult = TokenUsageStoreInsertResult & {
 const POSTGRES_TABLE = "usage_events";
 const POSTGRES_USER_CONFIGS_TABLE = "user_configs";
 const INSERT_BATCH_SIZE = 400;
+const RANGE_DAYS: Record<TokenBoardRange, number> = {
+  "1D": 1,
+  "7D": 7,
+  "30D": 30,
+  "90D": 90,
+};
 
 export async function createTokenUsageStore(options: TokenUsageStoreOptions): Promise<TokenUsageStore> {
   const databaseUrl = options.databaseUrl?.trim();
@@ -241,6 +264,7 @@ function createPostgresTokenUsageStore({
 
       return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
     },
+    getLeaderboardSummary: (options) => readPostgresLeaderboardSummary(pool, table, options),
     countEvents: async () => {
       const result = await pool.query<{ count: string }>(`SELECT count(*) AS count FROM ${table}`);
       return Number(result.rows[0]?.count || 0);
@@ -309,6 +333,369 @@ function createPostgresTokenUsageStore({
     },
     close: () => pool.end(),
   } satisfies TokenUsageStore & { initialize: () => Promise<void> };
+}
+
+type PostgresLeaderboardUserRow = {
+  user_id: string;
+  display_name: string;
+  team: string | null;
+  input_tokens: string | number;
+  cached_input_tokens: string | number;
+  output_tokens: string | number;
+  reasoning_output_tokens: string | number;
+  tokens: string | number;
+  cost_usd: string | number;
+  messages: string | number;
+  records: string | number;
+  sessions: string | number;
+  active_days: string | number;
+  last_reported_at: Date | string | null;
+  previous_tokens: string | number | null;
+  top_model: string | null;
+  top_tool: string | null;
+};
+
+type PostgresDailyUsageRow = {
+  user_id?: string;
+  date: string;
+  tokens: string | number;
+};
+
+type PostgresNamedUsageRow = {
+  name: string;
+  tokens: string | number;
+  cost_usd?: string | number;
+  sessions?: string | number;
+};
+
+async function readPostgresLeaderboardSummary(
+  pool: Pool,
+  table: string,
+  { range, metric, now = new Date() }: TokenUsageLeaderboardOptions
+): Promise<TokenUsageLeaderboardResult> {
+  const end = Number.isFinite(now.getTime()) ? now : new Date();
+  const rangeMs = RANGE_DAYS[range] * 24 * 60 * 60 * 1000;
+  const start = new Date(end.getTime() - rangeMs);
+  const previousStart = new Date(start.getTime() - rangeMs);
+  const rangeParams = [start, end];
+  const userResult = await pool.query<PostgresLeaderboardUserRow>(
+    `
+      WITH current_events AS (
+        SELECT *
+        FROM ${table}
+        WHERE reported_at >= $1
+          AND reported_at <= $2
+      ),
+      previous_by_user AS (
+        SELECT
+          user_id,
+          SUM(total_tokens)::double precision AS previous_tokens
+        FROM ${table}
+        WHERE reported_at >= $3
+          AND reported_at < $1
+        GROUP BY user_id
+      ),
+      user_totals AS (
+        SELECT
+          user_id,
+          SUM(input_tokens)::double precision AS input_tokens,
+          SUM(cached_input_tokens)::double precision AS cached_input_tokens,
+          SUM(output_tokens)::double precision AS output_tokens,
+          SUM(reasoning_output_tokens)::double precision AS reasoning_output_tokens,
+          SUM(total_tokens)::double precision AS tokens,
+          COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd,
+          SUM(messages)::double precision AS messages,
+          COUNT(*)::integer AS records,
+          COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
+          COUNT(DISTINCT (reported_at AT TIME ZONE 'UTC')::date)::integer AS active_days,
+          MAX(reported_at) AS last_reported_at
+        FROM current_events
+        GROUP BY user_id
+      ),
+      latest_user AS (
+        SELECT DISTINCT ON (user_id)
+          user_id,
+          display_name,
+          team
+        FROM current_events
+        ORDER BY user_id, reported_at DESC, created_at DESC
+      ),
+      top_model AS (
+        SELECT user_id, model AS top_model
+        FROM (
+          SELECT
+            user_id,
+            model,
+            ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY tokens DESC, model ASC) AS rn
+          FROM (
+            SELECT user_id, model, SUM(total_tokens)::double precision AS tokens
+            FROM current_events
+            GROUP BY user_id, model
+          ) model_totals
+        ) ranked_models
+        WHERE rn = 1
+      ),
+      top_tool AS (
+        SELECT user_id, tool_name AS top_tool
+        FROM (
+          SELECT
+            user_id,
+            tool_name,
+            ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY tokens DESC, tool_name ASC) AS rn
+          FROM (
+            SELECT
+              user_id,
+              COALESCE(NULLIF(tool, ''), NULLIF(source, ''), 'unknown') AS tool_name,
+              SUM(total_tokens)::double precision AS tokens
+            FROM current_events
+            GROUP BY user_id, tool_name
+          ) tool_totals
+        ) ranked_tools
+        WHERE rn = 1
+      )
+      SELECT
+        user_totals.user_id,
+        COALESCE(NULLIF(latest_user.display_name, ''), user_totals.user_id) AS display_name,
+        COALESCE(NULLIF(latest_user.team, ''), 'Friends') AS team,
+        user_totals.input_tokens,
+        user_totals.cached_input_tokens,
+        user_totals.output_tokens,
+        user_totals.reasoning_output_tokens,
+        user_totals.tokens,
+        user_totals.cost_usd,
+        user_totals.messages,
+        user_totals.records,
+        user_totals.sessions,
+        user_totals.active_days,
+        user_totals.last_reported_at,
+        COALESCE(previous_by_user.previous_tokens, 0)::double precision AS previous_tokens,
+        COALESCE(top_model.top_model, 'unknown') AS top_model,
+        COALESCE(top_tool.top_tool, 'unknown') AS top_tool
+      FROM user_totals
+      LEFT JOIN latest_user ON latest_user.user_id = user_totals.user_id
+      LEFT JOIN previous_by_user ON previous_by_user.user_id = user_totals.user_id
+      LEFT JOIN top_model ON top_model.user_id = user_totals.user_id
+      LEFT JOIN top_tool ON top_tool.user_id = user_totals.user_id
+    `,
+    [start, end, previousStart]
+  );
+
+  const dailyResult = await pool.query<PostgresDailyUsageRow>(
+    `
+      SELECT
+        to_char((reported_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+        SUM(total_tokens)::double precision AS tokens
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at <= $2
+      GROUP BY date
+      ORDER BY date
+    `,
+    rangeParams
+  );
+  const dailyByUserResult = await pool.query<PostgresDailyUsageRow>(
+    `
+      SELECT
+        user_id,
+        to_char((reported_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+        SUM(total_tokens)::double precision AS tokens
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at <= $2
+      GROUP BY user_id, date
+      ORDER BY user_id, date
+    `,
+    rangeParams
+  );
+  const modelResult = await pool.query<PostgresNamedUsageRow>(
+    `
+      SELECT
+        model AS name,
+        SUM(total_tokens)::double precision AS tokens,
+        COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at <= $2
+      GROUP BY model
+      ORDER BY tokens DESC, name ASC
+      LIMIT 12
+    `,
+    rangeParams
+  );
+  const toolResult = await pool.query<PostgresNamedUsageRow>(
+    `
+      SELECT
+        COALESCE(NULLIF(tool, ''), NULLIF(source, ''), 'unknown') AS name,
+        SUM(total_tokens)::double precision AS tokens,
+        COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at <= $2
+      GROUP BY name
+      ORDER BY tokens DESC, name ASC
+      LIMIT 12
+    `,
+    rangeParams
+  );
+  const emptyDailySeries = buildEmptyDailySeries(start, end);
+  const dailyByUserValues = new Map<string, Map<string, number>>();
+
+  for (const row of dailyByUserResult.rows) {
+    if (!row.user_id) {
+      continue;
+    }
+
+    const values = dailyByUserValues.get(row.user_id) ?? new Map<string, number>();
+    values.set(row.date, toFiniteNumber(row.tokens));
+    dailyByUserValues.set(row.user_id, values);
+  }
+
+  const users = rankLeaderboardUsers(
+    userResult.rows.map((row) => {
+      const tokens = toFiniteNumber(row.tokens);
+      const previousTokens = toFiniteNumber(row.previous_tokens);
+
+      return {
+        rank: 0,
+        userId: row.user_id,
+        displayName: row.display_name || row.user_id,
+        team: row.team || "Friends",
+        tokens,
+        inputTokens: toFiniteNumber(row.input_tokens),
+        cachedInputTokens: toFiniteNumber(row.cached_input_tokens),
+        outputTokens: toFiniteNumber(row.output_tokens),
+        reasoningOutputTokens: toFiniteNumber(row.reasoning_output_tokens),
+        costUsd: toFiniteNumber(row.cost_usd),
+        sessions: toFiniteInteger(row.sessions),
+        messages: toFiniteNumber(row.messages),
+        records: toFiniteInteger(row.records),
+        activeDays: toFiniteInteger(row.active_days),
+        lastReportedAt: row.last_reported_at ? toIsoString(row.last_reported_at) : undefined,
+        topModel: row.top_model || "unknown",
+        topTool: row.top_tool || "unknown",
+        share: 0,
+        deltaTokens: previousTokens > 0 ? (tokens - previousTokens) / previousTokens : null,
+        daily: fillDailySeries(emptyDailySeries, dailyByUserValues.get(row.user_id)),
+      };
+    }),
+    metric
+  );
+  const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
+  const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
+  const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
+  const totalMessages = users.reduce((sum, user) => sum + user.messages, 0);
+  const usersWithShare = users.map((user) => ({
+    ...user,
+    share: totalTokens > 0 ? user.tokens / totalTokens : 0,
+  }));
+  const models = modelResult.rows.map((row) => {
+    const tokens = toFiniteNumber(row.tokens);
+
+    return {
+      name: row.name || "unknown",
+      tokens,
+      costUsd: toFiniteNumber(row.cost_usd),
+      share: totalTokens > 0 ? tokens / totalTokens : 0,
+    };
+  });
+  const tools = toolResult.rows.map((row) => {
+    const tokens = toFiniteNumber(row.tokens);
+
+    return {
+      name: row.name || "unknown",
+      tokens,
+      sessions: toFiniteInteger(row.sessions),
+      share: totalTokens > 0 ? tokens / totalTokens : 0,
+    };
+  });
+  const dailyValues = new Map(dailyResult.rows.map((row) => [row.date, toFiniteNumber(row.tokens)]));
+
+  return {
+    records: usersWithShare.reduce((sum, user) => sum + user.records, 0),
+    summary: {
+      range,
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      totalTokens,
+      totalCostUsd,
+      totalSessions,
+      totalMessages,
+      activeUsers: usersWithShare.length,
+      topModel: models[0]?.name ?? "unknown",
+      topTool: tools[0]?.name ?? "unknown",
+      daily: fillDailySeries(emptyDailySeries, dailyValues),
+      models,
+      tools,
+      users: usersWithShare,
+    },
+  };
+}
+
+function rankLeaderboardUsers(users: TokenLeaderboardUser[], metric: TokenBoardMetric) {
+  return users
+    .sort((a, b) => leaderboardMetricValue(b, metric) - leaderboardMetricValue(a, metric) || a.displayName.localeCompare(b.displayName))
+    .map((user, index) => ({ ...user, rank: index + 1 }));
+}
+
+function leaderboardMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return user.costUsd;
+  }
+
+  if (metric === "sessions") {
+    return user.sessions;
+  }
+
+  if (metric === "messages") {
+    return user.messages;
+  }
+
+  return user.tokens;
+}
+
+function buildEmptyDailySeries(start: Date, end: Date): TokenDailyUsagePoint[] {
+  const points: TokenDailyUsagePoint[] = [];
+  const startDay = startOfUtcDay(start);
+  const endDay = startOfUtcDay(end);
+
+  for (let time = startDay.getTime(); time <= endDay.getTime(); time += 24 * 60 * 60 * 1000) {
+    const bucketStart = new Date(Math.max(time, start.getTime()));
+    const bucketEnd = new Date(Math.min(time + 24 * 60 * 60 * 1000, end.getTime()));
+
+    points.push({
+      date: new Date(time).toISOString().slice(0, 10),
+      startAt: bucketStart.toISOString(),
+      endAt: bucketEnd.toISOString(),
+      tokens: 0,
+    });
+  }
+
+  return points;
+}
+
+function fillDailySeries(emptyDailySeries: TokenDailyUsagePoint[], values = new Map<string, number>()) {
+  return emptyDailySeries.map((point) => ({
+    ...point,
+    tokens: values.get(point.date) ?? 0,
+  }));
+}
+
+function startOfUtcDay(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function toIsoString(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : new Date(0).toISOString();
+}
+
+function toFiniteNumber(value: unknown) {
+  const number = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function toFiniteInteger(value: unknown) {
+  return Math.trunc(toFiniteNumber(value));
 }
 
 async function readTokenUserConfigsFromFile(filePath: string): Promise<Record<string, TokenBoardUserConfig>> {
