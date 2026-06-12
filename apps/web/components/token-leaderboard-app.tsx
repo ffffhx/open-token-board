@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   buildTokenLeaderboard,
@@ -100,6 +100,10 @@ export function TokenLeaderboardApp({
   const [installGuidePlatform, setInstallGuidePlatform] = useState<InstallGuidePlatform>("macos");
   const [installGuideStep, setInstallGuideStep] = useState(0);
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
+  const statsCacheRef = useRef(
+    new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>()
+  );
+  const accountCacheRef = useRef(new Map<string, TokenAccountUsageProfile>());
 
   useEffect(() => {
     setNow(new Date());
@@ -129,12 +133,23 @@ export function TokenLeaderboardApp({
 
     let active = true;
     const params = new URLSearchParams({ range, metric });
+    const cacheKey = `${range}|${metric}`;
+    const cached = statsCacheRef.current.get(cacheKey);
 
-    setRemoteSummary(null);
-    setRemoteRecordCount(null);
-    setDataLoadState("loading");
-    setDataLoadError("");
-    setStatus("正在加载真实用户数据");
+    if (cached) {
+      // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
+      setRemoteSummary(cached.summary);
+      setRemoteRecordCount(cached.records);
+      setDataLoadState("ready");
+      setDataLoadError("");
+      setStatus(`后端数据 ${cached.records ?? cached.summary.users.length} 条`);
+    } else {
+      setRemoteSummary(null);
+      setRemoteRecordCount(null);
+      setDataLoadState("loading");
+      setDataLoadError("");
+      setStatus("正在加载真实用户数据");
+    }
     fetch(`${normalizedApiBaseUrl}/api/usage/stats?${params.toString()}`, {
       cache: "no-store",
       credentials: "include",
@@ -147,23 +162,28 @@ export function TokenLeaderboardApp({
         return response.json() as Promise<RemoteStatsResponse>;
       })
       .then((payload) => {
-        if (!active) {
-          return;
-        }
-
         const summary = "summary" in payload && payload.summary ? payload.summary : payload;
         if (!isTokenLeaderboardSummary(summary)) {
           throw new Error("后端返回格式不正确");
         }
 
-        setRemoteSummary(normalizeRemoteSummary(summary, metric));
-        setRemoteRecordCount(typeof payload.records === "number" ? payload.records : null);
+        const normalized = normalizeRemoteSummary(summary, metric);
+        const records = typeof payload.records === "number" ? payload.records : null;
+        statsCacheRef.current.set(cacheKey, { summary: normalized, records });
+
+        if (!active) {
+          return;
+        }
+
+        setRemoteSummary(normalized);
+        setRemoteRecordCount(records);
         setDataLoadState("ready");
         setDataLoadError("");
-        setStatus(`后端数据 ${typeof payload.records === "number" ? payload.records : summary.users.length} 条`);
+        setStatus(`后端数据 ${records ?? summary.users.length} 条`);
       })
       .catch((error) => {
-        if (!active) {
+        // 后台刷新失败时继续展示缓存数据，不打断用户
+        if (!active || statsCacheRef.current.has(cacheKey)) {
           return;
         }
 
@@ -216,9 +236,18 @@ export function TokenLeaderboardApp({
 
     let active = true;
     const params = new URLSearchParams({ range });
+    const cacheKey = `${viewer.user?.userId ?? "viewer"}|${range}`;
+    const cached = accountCacheRef.current.get(cacheKey);
 
-    setAccountLoadState("loading");
-    setAccountError("");
+    if (cached) {
+      // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
+      setAccountProfile(cached);
+      setAccountLoadState("ready");
+      setAccountError("");
+    } else {
+      setAccountLoadState("loading");
+      setAccountError("");
+    }
     fetch(`${normalizedApiBaseUrl}/api/usage/me?${params.toString()}`, {
       cache: "no-store",
       credentials: "include",
@@ -231,19 +260,23 @@ export function TokenLeaderboardApp({
         return response.json() as Promise<AccountUsageResponse>;
       })
       .then((payload) => {
-        if (!active) {
-          return;
-        }
-
         if (!isTokenAccountUsageProfile(payload.profile)) {
           throw new Error("后端返回格式不正确");
         }
 
-        setAccountProfile(normalizeRemoteAccountProfile(payload.profile));
+        const normalized = normalizeRemoteAccountProfile(payload.profile);
+        accountCacheRef.current.set(cacheKey, normalized);
+
+        if (!active) {
+          return;
+        }
+
+        setAccountProfile(normalized);
         setAccountLoadState("ready");
       })
       .catch((error) => {
-        if (!active) {
+        // 后台刷新失败时继续展示缓存数据，不打断用户
+        if (!active || accountCacheRef.current.has(cacheKey)) {
           return;
         }
 
@@ -372,6 +405,8 @@ export function TokenLeaderboardApp({
   }
 
   function retryDataLoad() {
+    statsCacheRef.current.clear();
+    accountCacheRef.current.clear();
     setDataLoadState("loading");
     setDataLoadError("");
     setStatus("正在重新加载真实用户数据");
