@@ -12,7 +12,7 @@ import {
 
 import { METRICS, ROLLING_RANGE_LABELS } from "./constants";
 import type { ViewerState } from "./types";
-import { Avatar, Icon, LoadingInline, LoadingSpinner } from "./shared-ui";
+import { Avatar, Icon, Skeleton } from "./shared-ui";
 import {
   buildLeaderboardInsight,
   formatMetricValue,
@@ -36,8 +36,8 @@ export function InsightStrip({ loading, text }: { loading: boolean; text: string
         <span className="w-fit rounded-full bg-slate-950 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase text-white">
           自动洞察
         </span>
-        <p className="text-sm leading-6 text-stone-700">
-          {loading ? <LoadingInline label="真实数据加载后会生成榜首、峰值与效率摘要。" /> : text}
+        <p className="min-w-0 flex-1 text-sm leading-6 text-stone-700">
+          {loading ? <Skeleton className="h-4 w-full max-w-md align-middle" /> : text}
         </p>
       </div>
     </section>
@@ -63,35 +63,29 @@ export function TrustEvidenceBar({
   sourceLabel: string;
   summary: TokenLeaderboardSummary;
 }) {
-  const evidence: Array<{ label: string; loading?: boolean }> = loading
-    ? [
-        { label: "正在连接后端", loading: true },
-        { label: "不展示示例排行榜" },
-        { label: "加载超过 10 秒会提示重试" },
-      ]
-    : error
-      ? [
-          { label: `读取失败：${error}` },
-          { label: "可重试或检查 agent 上报" },
-          { label: "不展示伪数据" },
-        ]
-      : [
-          { label: `统计截至 ${formatShortDate(summary.endAt)}` },
-          { label: `数据源 ${sourceLabel}` },
-          { label: `全库/可用 ${formatNumber(recordCount)}` },
-          { label: `当前${range} ${formatNumber(rangeRecordCount)}` },
-          { label: `活跃用户 ${formatNumber(summary.activeUsers)}` },
-          { label: `${ROLLING_RANGE_LABELS[range]} · Asia/Shanghai` },
-        ];
+  const evidence: string[] = error
+    ? [`读取失败：${error}`, "可重试或检查 agent 上报", "不展示伪数据"]
+    : [
+        `统计截至 ${formatShortDate(summary.endAt)}`,
+        `数据源 ${sourceLabel}`,
+        `全库/可用 ${formatNumber(recordCount)}`,
+        `当前${range} ${formatNumber(rangeRecordCount)}`,
+        `活跃用户 ${formatNumber(summary.activeUsers)}`,
+        `${ROLLING_RANGE_LABELS[range]} · Asia/Shanghai`,
+      ];
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="flex flex-wrap gap-2">
-        {evidence.map((item) => (
-          <span key={item.label} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-600">
-            {item.loading ? <LoadingInline label={item.label} /> : item.label}
-          </span>
-        ))}
+        {loading
+          ? ["w-24", "w-20", "w-28", "w-24", "w-16", "w-32"].map((width, index) => (
+              <Skeleton key={index} className={`h-[26px] rounded-full ${width}`} />
+            ))
+          : evidence.map((label) => (
+              <span key={label} className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-600">
+                {label}
+              </span>
+            ))}
       </div>
       <p className="mt-2 hidden text-xs leading-5 text-slate-500 sm:block">
         {apiBaseUrl ? "本页只读取自动上报服务。" : "Token Board API 未配置，页面不会回退到静态或本地数据。"}
@@ -127,10 +121,10 @@ export function EfficiencyStrip({
         <div key={item.label} className="rounded-lg border border-stone-950/8 bg-slate-50 px-3 py-3">
           <p className="text-xs font-semibold text-stone-500">{item.label}</p>
           <p className="mt-2 font-mono text-xl font-semibold text-stone-950">
-            {loading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : item.value}
+            {loading ? <Skeleton className="h-6 w-20" /> : item.value}
           </p>
           <p className="mt-1 truncate text-xs text-stone-500">
-            {loading ? "真实数据加载中" : item.meta}
+            {loading ? <Skeleton className="h-3 w-16" /> : item.meta}
           </p>
         </div>
       ))}
@@ -734,33 +728,58 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
 
 export function MobileLeaderboardLoading({ slow }: { slow: boolean }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-stone-950/8 bg-slate-50 p-6 text-center">
-      <LoadingSpinner className="size-7" />
-      <div>
-        <p className="font-semibold text-stone-950">{slow ? "数据加载较慢" : "Loading 真实用户数据"}</p>
-        <p className="mt-1 text-xs text-stone-500">
-          {slow ? "可以点击右侧刷新榜单，或确认本机 agent 是否已完成上报。" : "数据没回来前不会展示示例排行榜"}
-        </p>
-      </div>
-    </div>
+    <>
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-9 rounded-lg" />
+            <div className="flex flex-1 flex-col gap-1.5">
+              <Skeleton className="h-3.5 w-28" />
+              <Skeleton className="h-2.5 w-16" />
+            </div>
+            <Skeleton className="h-5 w-16" />
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <Skeleton className="h-8" />
+            <Skeleton className="h-8" />
+            <Skeleton className="h-8" />
+          </div>
+        </div>
+      ))}
+      {slow ? (
+        <p className="text-center text-xs text-stone-500">数据加载较慢，可以点击刷新榜单，或确认本机 agent 是否已完成上报。</p>
+      ) : null}
+    </>
   );
 }
 
 export function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: number; slow: boolean }) {
   return (
-    <tr>
-      <td colSpan={columnCount} className="px-4 py-12">
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-stone-950/8 bg-slate-50 p-6 text-center">
-          <LoadingSpinner className="size-7" />
-          <div>
-            <p className="font-semibold text-stone-950">{slow ? "数据加载较慢" : "Loading 真实用户数据"}</p>
-            <p className="mt-1 text-xs text-stone-500">
-              {slow ? "可以稍后重试、刷新榜单，或确认本机 agent 是否已完成上报。" : "数据没回来前不会展示示例排行榜"}
-            </p>
-          </div>
-        </div>
-      </td>
-    </tr>
+    <>
+      {Array.from({ length: 5 }, (_, index) => (
+        <tr key={index}>
+          <td colSpan={columnCount} className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-9 rounded-lg" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-3.5 w-32" />
+                <Skeleton className="h-2.5 w-20" />
+              </div>
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="hidden h-4 w-14 sm:block" />
+              <Skeleton className="hidden h-4 w-12 sm:block" />
+            </div>
+          </td>
+        </tr>
+      ))}
+      {slow ? (
+        <tr>
+          <td colSpan={columnCount} className="px-4 pb-3 pt-1 text-center text-xs text-stone-500">
+            数据加载较慢，可稍后重试、刷新榜单，或确认本机 agent 是否已完成上报。
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
@@ -838,25 +857,33 @@ export function ShareLoadingRows() {
     <>
       {Array.from({ length: 5 }, (_, index) => (
         <div key={index} className="grid grid-cols-[2.25rem_minmax(0,1fr)_5rem] items-center gap-3">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-white/80">
-            <LoadingSpinner className="size-4" />
-          </span>
+          <Skeleton className="size-9 rounded-lg" />
           <div className="space-y-2">
-            <div className="h-3 w-2/3 rounded-full bg-white/85" />
-            <div className="h-2 rounded-full bg-white/75" />
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-2 w-full rounded-full" />
           </div>
-          <div className="ml-auto h-3 w-10 rounded-full bg-white/80" />
+          <Skeleton className="ml-auto h-3 w-10" />
         </div>
       ))}
     </>
   );
 }
 
+const TREND_SKELETON_HEIGHTS = ["35%", "55%", "42%", "68%", "50%", "78%", "60%", "88%", "46%", "72%", "58%", "94%"];
+
 function TrendLoadingBars() {
   return (
-    <div className="col-span-full flex h-full items-center justify-center">
-      <LoadingInline label="趋势加载中" spinnerClassName="size-8" />
-    </div>
+    <>
+      {TREND_SKELETON_HEIGHTS.map((height, index) => (
+        <div key={index} className="flex h-full min-w-0 items-end">
+          <span
+            aria-hidden="true"
+            className="block w-full rounded-t-[3px] bg-slate-200/80 motion-safe:animate-pulse"
+            style={{ height }}
+          />
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -878,7 +905,7 @@ export function BreakdownPanel({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{title}</h2>
         <span className="font-mono text-xs text-stone-500">
-          {loading ? <LoadingInline label="Loading" /> : items.length}
+          {loading ? <Skeleton className="h-3 w-6 align-middle" /> : items.length}
         </span>
       </div>
       <div className="mt-4 space-y-3">
@@ -906,14 +933,13 @@ function BreakdownLoadingRows() {
     <>
       {Array.from({ length: 4 }, (_, index) => (
         <div key={index} className="space-y-2">
-          <div className="grid grid-cols-[1rem_minmax(0,1fr)_4.5rem] items-center gap-3">
-            <LoadingSpinner className="size-3.5" />
-            <div className="h-3 w-1/2 rounded-full bg-stone-950/10" />
-            <div className="ml-auto h-3 w-12 rounded-full bg-stone-950/10" />
+          <div className="flex items-center justify-between gap-3">
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-12" />
           </div>
           <div className="grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-3">
-            <div className="h-2 rounded-full bg-stone-950/10" />
-            <div className="ml-auto h-2 w-10 rounded-full bg-stone-950/10" />
+            <Skeleton className="h-2 w-full rounded-full" />
+            <Skeleton className="ml-auto h-2 w-10" />
           </div>
         </div>
       ))}

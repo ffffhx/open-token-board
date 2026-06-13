@@ -47,7 +47,7 @@ import {
   StatTile,
   TrustEvidenceBar,
 } from "./token-leaderboard/leaderboard-panels";
-import { Icon, LoadingInline, Toast } from "./token-leaderboard/shared-ui";
+import { Icon, LoadingInline, Skeleton, Toast } from "./token-leaderboard/shared-ui";
 import type {
   AccountLoadState,
   AccountUsageResponse,
@@ -431,8 +431,8 @@ export function TokenLeaderboardApp({
     <section id="token-leaderboard-rankings" className="min-w-0 overflow-hidden rounded-lg border border-stone-950/10 bg-white shadow-sm">
       <PanelHeader
         title="排行榜"
-        meta={isDataLoading ? <LoadingInline label="loading" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
-        action={isDataLoading ? "等待真实数据" : `按${selectedMetricLabel}降序`}
+        meta={isDataLoading ? <Skeleton className="h-3 w-40 align-middle" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
+        action={`按${selectedMetricLabel}降序`}
       />
       <div className="grid gap-3 p-3 sm:hidden">
         {isDataLoading ? (
@@ -489,7 +489,7 @@ export function TokenLeaderboardApp({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{selectedMetricLabel}份额</h2>
         <span className="font-mono text-xs text-stone-500">
-          {isDataLoading ? <LoadingInline label="Loading" /> : `${topUsers.length} 人`}
+          {isDataLoading ? <Skeleton className="h-3 w-10 align-middle" /> : `${topUsers.length} 人`}
         </span>
       </div>
       <div className="mt-4 space-y-3">
@@ -508,7 +508,7 @@ export function TokenLeaderboardApp({
           <p className="mt-1 text-xs text-stone-500">安装 agent 后从本机采集 token 记录并自动上报。</p>
         </div>
         <span className="rounded-full bg-stone-950 px-2.5 py-1 font-mono text-xs text-white">
-          {isDataLoading ? <LoadingInline label="同步中" tone="light" /> : rangeRecordCountLabel}
+          {isDataLoading ? <Skeleton className="h-3 w-10 align-middle" /> : rangeRecordCountLabel}
         </span>
       </div>
       <div className="mt-4 space-y-3">
@@ -578,7 +578,7 @@ export function TokenLeaderboardApp({
                     Open Token Board
                   </span>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                    {isDataLoading ? <LoadingInline label={sourceLabel} /> : sourceLabel}
+                    {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : sourceLabel}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-mono text-xs text-slate-500">
                     {ROLLING_RANGE_LABELS[range]}
@@ -588,9 +588,7 @@ export function TokenLeaderboardApp({
                   朋友间的 Token 排行榜
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  {isDataLoading
-                    ? <LoadingInline label="正在加载真实用户数据" />
-                    : `${formatShortDate(summary.startAt)} - ${formatShortDate(summary.endAt)} · Asia/Shanghai`}
+                  {`${formatShortDate(summary.startAt)} - ${formatShortDate(summary.endAt)} · Asia/Shanghai`}
                 </p>
               </div>
               <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
@@ -644,18 +642,18 @@ export function TokenLeaderboardApp({
             <div className="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
               <HeroSignal
                 label="当前榜首"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : leader?.displayName ?? "--"}
-                meta={isDataLoading ? "真实数据加载中" : leaderMeta}
+                value={isDataLoading ? <Skeleton className="h-5 w-28" /> : leader?.displayName ?? "--"}
+                meta={isDataLoading ? <Skeleton className="h-3 w-16" /> : leaderMeta}
               />
               <HeroSignal
                 label="当前区间记录"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : rangeRecordCountLabel}
-                meta={isDataLoading ? "等待区间统计" : `${ROLLING_RANGE_LABELS[range]}`}
+                value={isDataLoading ? <Skeleton className="h-5 w-20" /> : rangeRecordCountLabel}
+                meta={isDataLoading ? <Skeleton className="h-3 w-24" /> : `${ROLLING_RANGE_LABELS[range]}`}
               />
               <HeroSignal
                 label="高频组合"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-5" /> : topModelLabel}
-                meta={isDataLoading ? "真实数据加载中" : topToolLabel}
+                value={isDataLoading ? <Skeleton className="h-5 w-24" /> : topModelLabel}
+                meta={isDataLoading ? <Skeleton className="h-3 w-16" /> : topToolLabel}
               />
             </div>
             <TrustEvidenceBar
@@ -680,26 +678,26 @@ export function TokenLeaderboardApp({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatTile
                 label="总消耗 Token"
-                value={isDataLoading ? <LoadingInline label="Loading" tone="light" spinnerClassName="size-6" /> : formatTokens(totalConsumptionTokens)}
-                meta={isDataLoading ? "真实数据加载中" : "输入上下文 + 输出 Token"}
+                value={isDataLoading ? <Skeleton className="h-8 w-28" /> : formatTokens(totalConsumptionTokens)}
+                meta={isDataLoading ? "" : "输入上下文 + 输出 Token"}
                 tone="ink"
               />
               <StatTile
                 label="活跃用户"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatNumber(summary.activeUsers)}
-                meta={isDataLoading ? "真实数据加载中" : `${summary.activeUsers} 位参与`}
+                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.activeUsers)}
+                meta={isDataLoading ? "" : `${summary.activeUsers} 位参与`}
                 tone="mint"
               />
               <StatTile
                 label="会话"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatNumber(summary.totalSessions)}
-                meta={isDataLoading ? "真实数据加载中" : "Sessions"}
+                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.totalSessions)}
+                meta={isDataLoading ? "" : "Sessions"}
                 tone="blue"
               />
               <StatTile
                 label="估算费用"
-                value={isDataLoading ? <LoadingInline label="Loading" spinnerClassName="size-6" /> : formatUsd(summary.totalCostUsd)}
-                meta={isDataLoading ? "真实数据加载中" : "非实际账单"}
+                value={isDataLoading ? <Skeleton className="h-8 w-24" /> : formatUsd(summary.totalCostUsd)}
+                meta={isDataLoading ? "" : "非实际账单"}
                 tone="gold"
               />
             </div>
@@ -717,7 +715,7 @@ export function TokenLeaderboardApp({
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-base font-semibold">Token 趋势</h2>
                   <p className="font-mono text-xs text-stone-500">
-                    峰值 {isDataLoading ? <LoadingInline label="Loading" /> : formatTokens(maxDailyTokens)}
+                    峰值 {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : formatTokens(maxDailyTokens)}
                   </p>
                 </div>
                 <div
@@ -764,10 +762,10 @@ export function TokenLeaderboardApp({
                   <strong className="text-stone-900">时间窗口</strong>：{ROLLING_RANGE_LABELS[range]}，展示时间按 Asia/Shanghai。
                 </p>
                 <p>
-                  <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <LoadingInline label="加载统计口径" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。
+                  <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <Skeleton className="h-3 w-48 align-middle" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。
                 </p>
                 <p>
-                  <strong className="text-stone-900">统计截至</strong>：{isDataLoading ? <LoadingInline label="加载中" /> : formatShortDate(summary.endAt)}。
+                  <strong className="text-stone-900">统计截至</strong>：{formatShortDate(summary.endAt)}。
                 </p>
                 <p>
                   <strong className="text-stone-900">费用是估算值</strong>：按公开模型单价计算，不等同于账号额度或实际账单。

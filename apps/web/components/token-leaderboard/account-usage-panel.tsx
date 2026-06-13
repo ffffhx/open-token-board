@@ -10,7 +10,7 @@ import {
 } from "@open-token-board/core";
 
 import type { AccountLoadState, ViewerState } from "./types";
-import { Avatar, Icon, LoadingInline, LoadingSpinner } from "./shared-ui";
+import { Avatar, Icon, Skeleton } from "./shared-ui";
 import {
   formatNumber,
   formatPercent,
@@ -417,14 +417,26 @@ function AccountEmptyState({ title, description }: { title: string; description:
 
 function AccountLoadingState() {
   return (
-    <div className="space-y-5 px-5 py-5 sm:px-6">
-      <div className="flex min-h-24 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-        <LoadingInline label="正在加载个人消耗" spinnerClassName="size-7" />
+    <div className="space-y-5 px-5 py-5 sm:px-6" role="status" aria-label="正在加载个人消耗">
+      <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-12 rounded-lg" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-3 w-32" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-12" />
+          <Skeleton className="h-12" />
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {Array.from({ length: 9 }, (_, index) => (
-          <div key={index} className="flex h-28 items-center justify-center rounded-lg border border-slate-200 bg-slate-50">
-            <LoadingSpinner className="size-5" />
+          <div key={index} className="min-h-28 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-6 w-20" />
+            <Skeleton className="h-3 w-12" />
           </div>
         ))}
       </div>

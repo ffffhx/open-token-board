@@ -44,6 +44,15 @@ export function LoadingSpinner({
   );
 }
 
+export function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block rounded-md bg-slate-200/80 motion-safe:animate-pulse ${className}`}
+    />
+  );
+}
+
 export function LoadingInline({
   className = "",
   label,
