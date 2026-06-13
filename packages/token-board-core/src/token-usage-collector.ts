@@ -403,6 +403,10 @@ export async function parseUsageFile(filePath: string, context: ExtractionContex
     return parseCodexSessionJsonl(text, context);
   }
 
+  if (context.source === "claude-code" && (ext === ".jsonl" || ext === ".log")) {
+    return parseClaudeCodeSessionJsonl(text, context);
+  }
+
   if (ext === ".jsonl" || ext === ".log") {
     const objects = text
       .split(/\r?\n/)
@@ -511,6 +515,50 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
   }
 
   return dedupeTokenEvents(entries);
+}
+
+function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  // Claude Code keeps the session title in its own log lines: `ai-title` carries the
+  // generated short title (refreshed multiple times — keep the last), and `last-prompt`
+  // carries the latest user input as a fallback. The collector wasn't reading either,
+  // so these sessions fell back to the raw session id in the UI.
+  let aiTitle = "";
+  let lastPrompt = "";
+  for (const line of lines) {
+    if (!line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
+      continue;
+    }
+
+    const parsed = safeJsonParse(line);
+    if (!isRecord(parsed)) {
+      continue;
+    }
+
+    if (parsed.type === "ai-title") {
+      const title = normalizeTextField(parsed.aiTitle);
+      if (title) {
+        aiTitle = title;
+      }
+    } else if (parsed.type === "last-prompt") {
+      const prompt = normalizeTextField(parsed.lastPrompt);
+      if (prompt) {
+        lastPrompt = prompt;
+      }
+    }
+  }
+
+  const sessionTitle =
+    sanitizeSessionTitle(aiTitle) || summarizeSessionTitleFromMessage(lastPrompt) || context.sessionTitle;
+  const enrichedContext = sessionTitle ? { ...context, sessionTitle } : context;
+
+  const objects = lines.flatMap((line) => parseJsonLine(line));
+
+  return dedupeTokenEvents(objects.flatMap((object) => extractTokenUsageEventsFromJson(object, enrichedContext)));
 }
 
 function extractSessionTitle(record: Record<string, unknown>) {
