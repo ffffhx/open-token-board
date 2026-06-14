@@ -157,15 +157,27 @@ const RANGE_DAYS: Record<TokenBoardRange, number> = {
   "90D": 90,
 };
 
+// Order matters: estimateCostUsd takes the FIRST matching entry, so cheaper
+// mini/nano variants must precede their flagship arms, and the broad catch-all
+// arms use word boundaries so they cannot swallow lighter siblings (gpt-5-mini)
+// or unrelated strings (my-gpt-5000).
 const MODEL_PRICING = [
+  // OpenAI gpt-5 family — mini/nano variants (any suffix depth, e.g. gpt-5.1-codex-mini) first
+  { match: /gpt-5.*\b(mini|nano)\b/i, input: 0.75, cachedInput: 0.075, output: 4.5 },
   { match: /gpt-5\.5/i, input: 5, cachedInput: 0.5, output: 30 },
-  { match: /gpt-5\.4-mini/i, input: 0.75, cachedInput: 0.075, output: 4.5 },
   { match: /gpt-5\.4/i, input: 2.5, cachedInput: 0.25, output: 15 },
-  { match: /gpt-5\.3|gpt-5\.2|gpt-5/i, input: 1.25, cachedInput: 0.125, output: 10 },
+  { match: /gpt-5(\.[0-3])?\b/i, input: 1.25, cachedInput: 0.125, output: 10 },
+  // OpenAI o-series reasoning models
+  { match: /\bo[34](-mini)?\b/i, input: 1.1, cachedInput: 0.275, output: 4.4 },
+  // OpenAI gpt-4 family
+  { match: /gpt-4\.1.*\b(mini|nano)\b/i, input: 0.4, cachedInput: 0.1, output: 1.6 },
+  { match: /gpt-4\.1/i, input: 2, cachedInput: 0.5, output: 8 },
+  { match: /gpt-4o-mini/i, input: 0.15, cachedInput: 0.075, output: 0.6 },
+  { match: /gpt-4o/i, input: 2.5, cachedInput: 1.25, output: 10 },
+  // Anthropic Claude
   { match: /claude.*opus/i, input: 15, cachedInput: 1.5, output: 75 },
   { match: /claude.*sonnet/i, input: 3, cachedInput: 0.3, output: 15 },
-  { match: /gemini/i, input: 1.25, cachedInput: 0.125, output: 10 },
-  { match: /deepseek/i, input: 0.55, cachedInput: 0.055, output: 2.19 },
+  { match: /claude.*haiku/i, input: 0.8, cachedInput: 0.08, output: 4 },
 ];
 
 export function buildTokenLeaderboard(
@@ -490,18 +502,27 @@ function recordsToEvents(records: unknown[]) {
     }
 
     const value = record as Record<string, unknown>;
-    const timestamp = normalizeDate(readField(value, ["timestamp", "date", "bucketStart", "createdAt"]));
+    const rawTimestamp = readField(value, ["timestamp", "date", "bucketStart", "createdAt"]);
+    const timestampMs = parseDateMs(rawTimestamp);
+    // A present-but-unparseable timestamp must drop the row, not silently become "now".
+    if (rawTimestamp !== undefined && String(rawTimestamp).trim() !== "" && timestampMs === null) {
+      errors.push(`第 ${index + 1} 行 timestamp 无法解析`);
+      return [];
+    }
+    const timestamp = new Date(timestampMs ?? Date.now()).toISOString();
     const userId = normalizeText(readField(value, ["userId", "user", "username", "name"]));
     const baseInputTokens = toFiniteNumber(
       readField(value, ["inputTokens", "input_tokens", "promptTokens", "prompt_tokens"])
     );
-    const additiveCachedInputTokens =
-      toFiniteNumber(readField(value, ["cache_read_input_tokens", "cacheReadInputTokens"])) +
-      toFiniteNumber(readField(value, ["cache_creation_input_tokens", "cacheCreationInputTokens"]));
+    // cache_read = discounted reads (billed at the cachedInput rate); cache_creation =
+    // premium writes (billed at the full input rate, NOT the discounted cached rate).
+    const cacheReadTokens = toFiniteNumber(readField(value, ["cache_read_input_tokens", "cacheReadInputTokens"]));
+    const cacheCreationTokens = toFiniteNumber(
+      readField(value, ["cache_creation_input_tokens", "cacheCreationInputTokens"])
+    );
     const cachedInputTokens =
-      toFiniteNumber(readField(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"])) +
-      additiveCachedInputTokens;
-    const inputTokens = baseInputTokens + additiveCachedInputTokens;
+      toFiniteNumber(readField(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"])) + cacheReadTokens;
+    const inputTokens = baseInputTokens + cacheReadTokens + cacheCreationTokens;
     const outputTokens = toFiniteNumber(
       readField(value, ["outputTokens", "output_tokens", "completionTokens", "completion_tokens"])
     );
@@ -1039,8 +1060,12 @@ function estimateCostUsd({
     return 0;
   }
 
+  // cachedInputTokens is a subset of inputTokens, so charge the full rate only on
+  // the uncached remainder and the discounted rate on the cached portion.
+  const billableInputTokens = Math.max(0, inputTokens - cachedInputTokens);
+
   return (
-    (inputTokens / 1_000_000) * pricing.input +
+    (billableInputTokens / 1_000_000) * pricing.input +
     (cachedInputTokens / 1_000_000) * pricing.cachedInput +
     (outputTokens / 1_000_000) * pricing.output
   );
@@ -1081,9 +1106,33 @@ function normalizeText(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+// Returns epoch milliseconds for a parseable date/number input, or null when the
+// value is absent, empty, or present-but-unparseable. Numeric/all-digit values are
+// treated as epoch seconds (< 1e12) or milliseconds (>= 1e12).
+function parseDateMs(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    if (/^\d+$/.test(trimmed)) {
+      const epoch = Number(trimmed);
+      return epoch < 1e12 ? epoch * 1000 : epoch;
+    }
+    const ms = new Date(trimmed).getTime();
+    return Number.isFinite(ms) ? ms : null;
+  }
+
+  return null;
+}
+
 function normalizeDate(value: unknown) {
-  const date = new Date(typeof value === "string" && value.trim() ? value : Date.now());
-  return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
+  const ms = parseDateMs(value);
+  return new Date(ms ?? Date.now()).toISOString();
 }
 
 function toDateKey(value: string) {
@@ -1094,14 +1143,16 @@ function startOfUtcDay(value: Date) {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
 }
 
+// Token counts, message counts and costs are never negative; a negative value is
+// corrupt/delta-style data and is clamped to 0 so it cannot silently undercount.
 function toFiniteNumber(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
+    return Math.max(0, value);
   }
 
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value.replace(/[$,\s]/g, ""));
-    return Number.isFinite(parsed) ? parsed : 0;
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
   }
 
   return 0;

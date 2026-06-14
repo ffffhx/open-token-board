@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto";
-import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import {
   dedupeTokenEvents,
@@ -49,7 +47,6 @@ const DEFAULT_SINCE_HOURS = 24 * 30;
 const DEFAULT_MAX_FILES = 800;
 const DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024;
 const DEFAULT_MAX_CODEX_FILE_BYTES = 256 * 1024 * 1024;
-const execFileAsync = promisify(execFile);
 const TOKEN_KEYS = new Set([
   "cached_input_tokens",
   "cachedInputTokens",
@@ -72,18 +69,27 @@ const TOKEN_KEYS = new Set([
   "totalTokens",
   "tokens",
 ]);
-const SQLITE_USAGE_NEEDLES = [
-  "input_tokens",
-  "output_tokens",
-  "total_tokens",
-  "prompt_tokens",
-  "completion_tokens",
+// A record only counts as a leaf usage event when it carries an input/output token
+// key — the rollup-only keys (total_tokens/tokens) are deliberately excluded so a
+// node that reports just a grand total does not shadow real usage in its children.
+const USAGE_SHAPE_KEYS = new Set([
   "cached_input_tokens",
-  "cache_read_input_tokens",
+  "cachedInputTokens",
   "cache_creation_input_tokens",
-  "token_usage",
-  "tokenusage",
-];
+  "cache_read_input_tokens",
+  "completion_tokens",
+  "completionTokens",
+  "input_tokens",
+  "inputTokenCount",
+  "inputTokens",
+  "output_tokens",
+  "outputTokenCount",
+  "outputTokens",
+  "prompt_tokens",
+  "promptTokens",
+  "reasoning_output_tokens",
+  "reasoningOutputTokens",
+]);
 
 export async function collectLocalTokenUsage(config: TokenUsageCollectorConfig = {}) {
   const targets = buildSourceTargets(config);
@@ -92,37 +98,42 @@ export async function collectLocalTokenUsage(config: TokenUsageCollectorConfig =
   const maxFileBytes = config.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
   const maxCodexFileBytes = config.maxCodexFileBytes ?? DEFAULT_MAX_CODEX_FILE_BYTES;
   const sinceMs = Date.now() - (config.sinceHours ?? DEFAULT_SINCE_HOURS) * 60 * 60 * 1000;
-  const entries: TokenUsageEvent[] = [];
 
+  // Gather every candidate file across all targets first, then keep the globally
+  // newest up to maxFiles. This makes maxFiles a single shared budget (instead of
+  // resetting per target) and guarantees the most recent sessions are never dropped
+  // in favor of older ones from an earlier directory.
+  const candidates: Array<{ filePath: string; mtimeMs: number; target: SourceTarget }> = [];
   for (const target of targets) {
-    let scannedFiles = 0;
-
     for (const targetPath of target.paths) {
       const files = await listUsageFiles(expandHome(targetPath), {
         source: target.source,
-        maxFiles: Math.max(0, maxFiles - scannedFiles),
         maxFileBytes,
         maxCodexFileBytes,
         sinceMs,
       });
-      scannedFiles += files.length;
-
-      for (const filePath of files) {
-        entries.push(
-          ...(await parseUsageFile(filePath, {
-            source: target.source,
-            tool: target.tool,
-            filePath,
-            userId: config.userId,
-            displayName: config.displayName,
-            team: config.team,
-            project: path.basename(path.dirname(filePath)),
-            sessionId: path.basename(filePath),
-            sessionTitle: target.source === "codex" ? codexTitleIndex.get(sessionIdFromPath(filePath)) : undefined,
-          }))
-        );
+      for (const file of files) {
+        candidates.push({ filePath: file.path, mtimeMs: file.mtimeMs, target });
       }
     }
+  }
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+
+  const entries: TokenUsageEvent[] = [];
+  for (const { filePath, target } of candidates.slice(0, Math.max(0, maxFiles))) {
+    entries.push(
+      ...(await parseUsageFile(filePath, {
+        source: target.source,
+        tool: target.tool,
+        filePath,
+        userId: config.userId,
+        displayName: config.displayName,
+        team: config.team,
+        project: path.basename(path.dirname(filePath)),
+        sessionId: path.basename(filePath),
+        sessionTitle: target.source === "codex" ? codexTitleIndex.get(sessionIdFromPath(filePath)) : undefined,
+      }))
+    );
   }
 
   return dedupeTokenEvents(entries);
@@ -387,12 +398,39 @@ export function extractTokenUsageEventsFromJson(value: unknown, context: Extract
   return dedupeTokenEvents(entries);
 }
 
-export async function parseUsageFile(filePath: string, context: ExtractionContext) {
-  if (isSqliteUsageFile(filePath)) {
-    return parseSqliteUsageFile(filePath, context);
+async function readUsageFileText(filePath: string): Promise<string | null> {
+  let buffer: Buffer;
+  try {
+    buffer = await fs.readFile(filePath);
+  } catch {
+    return null;
   }
 
-  const text = await fs.readFile(filePath, "utf8");
+  // Decode by BOM: UTF-16LE / UTF-16BE files (e.g. Windows/Excel exports) would
+  // otherwise be read as garbage UTF-8 and silently produce zero events.
+  if (buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe) {
+    return buffer.toString("utf16le").replace(/^﻿/, "");
+  }
+  if (buffer.length >= 2 && buffer[0] === 0xfe && buffer[1] === 0xff) {
+    const swapped = Buffer.alloc(buffer.length - (buffer.length % 2));
+    for (let index = 0; index + 1 < buffer.length; index += 2) {
+      swapped[index] = buffer[index + 1];
+      swapped[index + 1] = buffer[index];
+    }
+    return swapped.toString("utf16le").replace(/^﻿/, "");
+  }
+
+  // Strip a leading UTF-8 BOM so whole-file JSON.parse does not choke on it.
+  return buffer.toString("utf8").replace(/^﻿/, "");
+}
+
+export async function parseUsageFile(filePath: string, context: ExtractionContext) {
+  // Read defensively: the file may be deleted/rotated between enumeration and read
+  // (Codex/Claude Code churn logs constantly), and may be BOM-prefixed or UTF-16.
+  const text = await readUsageFileText(filePath);
+  if (text === null) {
+    return [];
+  }
   const ext = path.extname(filePath).toLowerCase();
 
   if (ext === ".csv") {
@@ -482,13 +520,16 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
     }
 
     const totalUsage = isRecord(info.total_token_usage) ? info.total_token_usage : undefined;
-    const usage = totalUsage
-      ? tokenUsageDelta(totalUsage, previousTotalUsage)
-      : isRecord(info.last_token_usage)
-        ? info.last_token_usage
-        : undefined;
+    let usage: Record<string, unknown> | undefined;
     if (totalUsage) {
+      // total_token_usage is cumulative. On context compaction Codex resets/shrinks
+      // the running total; a field-wise Math.max(0, …) delta would then zero (drop)
+      // the post-compaction turn. Detect the reset and count the whole turn instead.
+      const isReset = toNumber(totalUsage.total_tokens) < toNumber(previousTotalUsage.total_tokens);
+      usage = isReset ? totalUsage : tokenUsageDelta(totalUsage, previousTotalUsage);
       previousTotalUsage = totalUsage;
+    } else if (isRecord(info.last_token_usage)) {
+      usage = info.last_token_usage;
     }
 
     if (!usage || tokenUsageTotal(usage) <= 0) {
@@ -608,19 +649,25 @@ function hasExplicitSessionTitle(record: Record<string, unknown>) {
   );
 }
 
-function textFromMessageLike(value: unknown): string {
+function textFromMessageLike(value: unknown, depth = 0): string {
+  // Guard against pathologically nested content arrays; an unbounded recursion here
+  // would throw RangeError and abort the whole collection run (mirrors visitJson).
+  if (depth > 12) {
+    return "";
+  }
+
   if (typeof value === "string") {
     return value;
   }
 
   if (Array.isArray(value)) {
-    return value.map(textFromMessageLike).filter(Boolean).join(" ");
+    return value.map((item) => textFromMessageLike(item, depth + 1)).filter(Boolean).join(" ");
   }
 
   if (isRecord(value)) {
     return (
       textFromFields(value, ["text", "content", "message", "input_text"]) ||
-      textFromMessageLike(value.text_elements)
+      textFromMessageLike(value.text_elements, depth + 1)
     );
   }
 
@@ -741,53 +788,6 @@ function tokenUsageTotal(record: Record<string, unknown>) {
   return toNumber(record.input_tokens) + toNumber(record.output_tokens);
 }
 
-async function parseSqliteUsageFile(filePath: string, context: ExtractionContext) {
-  const entries: TokenUsageEvent[] = [];
-  const valueMatches = SQLITE_USAGE_NEEDLES.map(
-    (needle) => `lower(cast(value as text)) like '%${needle.replace(/'/g, "''")}%'`
-  );
-  const where = [`lower(key) like '%usage%'`, ...valueMatches].join(" or ");
-
-  for (const table of ["ItemTable", "cursorDiskKV"]) {
-    const rows = await querySqliteJson(
-      filePath,
-      `select key, cast(value as text) as value from ${table} where ${where} limit 200;`
-    );
-
-    for (const row of rows) {
-      if (!isRecord(row) || typeof row.value !== "string") {
-        continue;
-      }
-
-      const parsed = safeJsonParse(row.value);
-      if (parsed === undefined) {
-        continue;
-      }
-
-      entries.push(
-        ...extractTokenUsageEventsFromJson(parsed, {
-          ...context,
-          sessionId: `${filePath}:${typeof row.key === "string" ? row.key : "sqlite"}`,
-        })
-      );
-    }
-  }
-
-  return dedupeTokenEvents(entries);
-}
-
-async function querySqliteJson(filePath: string, sql: string) {
-  try {
-    const { stdout } = await execFileAsync("sqlite3", ["-readonly", "-json", filePath, sql], {
-      maxBuffer: 2 * 1024 * 1024,
-    });
-    const parsed = safeJsonParse(stdout);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
 export function defaultSourceTargets(): SourceTarget[] {
   return [
     {
@@ -825,22 +825,22 @@ async function listUsageFiles(
   inputPath: string,
   {
     source,
-    maxFiles,
     maxFileBytes,
     maxCodexFileBytes,
     sinceMs,
   }: {
     source: string;
-    maxFiles: number;
     maxFileBytes: number;
     maxCodexFileBytes: number;
     sinceMs: number;
   }
 ) {
-  const files: string[] = [];
+  // Enumerate every qualifying file with its mtime; the caller applies the global
+  // maxFiles budget after sorting newest-first, so no cap is imposed here.
+  const files: Array<{ path: string; mtimeMs: number }> = [];
 
   async function walk(currentPath: string, depth: number) {
-    if (files.length >= maxFiles || depth > 8) {
+    if (depth > 8) {
       return;
     }
 
@@ -868,14 +868,8 @@ async function listUsageFiles(
         ? maxCodexFileBytes
         : maxFileBytes;
 
-    if (
-      stat.isFile() &&
-      files.length < maxFiles &&
-      stat.size <= maxBytes &&
-      stat.mtimeMs >= sinceMs &&
-      isUsageFile(currentPath)
-    ) {
-      files.push(currentPath);
+    if (stat.isFile() && stat.size <= maxBytes && stat.mtimeMs >= sinceMs && isUsageFile(currentPath)) {
+      files.push({ path: currentPath, mtimeMs: stat.mtimeMs });
     }
   }
 
@@ -926,13 +920,13 @@ function visitJson(
 
 function recordToUsageEvent(record: Record<string, unknown>, context: ExtractionContext, sequence: number) {
   const baseInputTokens = numberFromFields(record, ["inputTokens", "input_tokens", "inputTokenCount", "promptTokens", "prompt_tokens"]);
-  const additiveCachedInputTokens =
-    numberFromFields(record, ["cache_read_input_tokens", "cacheReadInputTokens"]) +
-    numberFromFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
-  const inputTokens = baseInputTokens + additiveCachedInputTokens;
+  // cache_read = discounted reads (counted as cachedInput); cache_creation = premium
+  // writes (counted as full-rate input only, never as discounted cached input).
+  const cacheReadTokens = numberFromFields(record, ["cache_read_input_tokens", "cacheReadInputTokens"]);
+  const cacheCreationTokens = numberFromFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+  const inputTokens = baseInputTokens + cacheReadTokens + cacheCreationTokens;
   const cachedInputTokens =
-    numberFromFields(record, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) +
-    additiveCachedInputTokens;
+    numberFromFields(record, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) + cacheReadTokens;
   const outputTokens = numberFromFields(record, ["outputTokens", "output_tokens", "outputTokenCount", "completionTokens", "completion_tokens"]);
   const reasoningOutputTokens = numberFromFields(record, [
     "reasoningOutputTokens",
@@ -987,10 +981,23 @@ function tryRecordToUsageEvent(record: Record<string, unknown>, context: Extract
   }
 }
 
+function isoFromEpochFields(record: Record<string, unknown>, fields: string[]) {
+  for (const field of fields) {
+    const value = record[field];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const ms = value < 1e12 ? value * 1000 : value;
+      return new Date(ms).toISOString();
+    }
+  }
+  return "";
+}
+
 function enrichContext(context: ExtractionContext, record: Record<string, unknown>): ExtractionContext {
+  const timestampFields = ["timestamp", "createdAt", "created_at", "date", "time"];
   return {
     ...context,
-    timestamp: context.timestamp || textFromFields(record, ["timestamp", "createdAt", "created_at", "date", "time"]),
+    timestamp:
+      context.timestamp || textFromFields(record, timestampFields) || isoFromEpochFields(record, timestampFields),
     model: context.model || textFromFields(record, ["model", "modelName", "model_name"]),
     project: context.project || textFromFields(record, ["project", "repo", "workspace", "cwd", "root", "directory"]),
     sessionId:
@@ -1018,7 +1025,10 @@ function applyContext(entries: TokenUsageEvent[], context: ExtractionContext) {
 }
 
 function hasUsageShape(record: Record<string, unknown>) {
-  return Object.keys(record).some((key) => TOKEN_KEYS.has(key)) && sumKnownTokens(record) > 0;
+  // Require a real input/output token key (not just a rollup total), otherwise a
+  // node carrying only total_tokens would be treated as a leaf and shadow the real
+  // usage events nested under it.
+  return Object.keys(record).some((key) => USAGE_SHAPE_KEYS.has(key)) && sumKnownTokens(record) > 0;
 }
 
 function sumKnownTokens(record: Record<string, unknown>) {
@@ -1041,13 +1051,15 @@ function textFromFields(record: Record<string, unknown>, fields: string[]) {
 }
 
 function toNumber(value: unknown) {
+  // Token counts are never negative; clamp so a corrupt/delta-style negative cannot
+  // undercount aggregates or zero out a cumulative delta incorrectly.
   if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
+    return Math.max(0, value);
   }
 
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value.replace(/[$,\s]/g, ""));
-    return Number.isFinite(parsed) ? parsed : 0;
+    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
   }
 
   return 0;
@@ -1071,20 +1083,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isUsageFile(filePath: string) {
-  const basename = path.basename(filePath).toLowerCase();
-  return (
-    [".csv", ".json", ".jsonl", ".log", ".vscdb"].includes(path.extname(filePath).toLowerCase()) ||
-    basename === "state.vscdb.backup"
-  );
-}
-
-function isSqliteUsageFile(filePath: string) {
-  const basename = path.basename(filePath).toLowerCase();
-  return (
-    basename === "state.vscdb" ||
-    basename === "state.vscdb.backup" ||
-    path.extname(filePath).toLowerCase() === ".vscdb"
-  );
+  return [".csv", ".json", ".jsonl", ".log"].includes(path.extname(filePath).toLowerCase());
 }
 
 function shouldSkipDirectory(dirPath: string) {
