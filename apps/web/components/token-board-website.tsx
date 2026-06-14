@@ -28,7 +28,7 @@ const workflowSteps = [
   {
     eyebrow: "01",
     title: "安装并完成授权",
-    body: "在你平时使用 Codex、Claude Code、Cursor 或 Trae 的电脑终端里运行安装命令。首次执行会引导 GitHub 授权，并注册后台同步任务。",
+    body: "在你平时使用 Codex 或 Claude Code 的电脑终端里运行安装命令。首次执行会引导 GitHub 授权，并注册后台同步任务。",
     command: NPX_INSTALL_COMMAND,
     commandLabel: "安装命令",
   },

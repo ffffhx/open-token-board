@@ -23,7 +23,7 @@ export const NPX_STATUS_COMMAND = "npx --yes token-board-agent status";
 export const NPX_UNINSTALL_COMMAND = "npx --yes token-board-agent uninstall";
 export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = {
   macos: {
-    description: "适合在 macOS 上使用 Codex、Claude Code、Cursor 或 Trae 的朋友。",
+    description: "适合在 macOS 上使用 Codex 或 Claude Code 的朋友。",
     label: "macOS",
     uninstall: {
       command: NPX_UNINSTALL_COMMAND,
@@ -57,7 +57,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
     ],
   },
   windows: {
-    description: "适合在 Windows PowerShell 里使用 Cursor、Trae 或 Codex CLI 的朋友。",
+    description: "适合在 Windows PowerShell 里使用 Codex CLI 或 Claude Code 的朋友。",
     label: "Windows",
     uninstall: {
       command: NPX_UNINSTALL_COMMAND,
@@ -86,7 +86,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         title: "回到榜单刷新",
         eyebrow: "Step 3",
         description: "任务开始同步后，回到页面刷新榜单或切换时间范围，就能看到自己的 token 记录。",
-        note: "Windows 模式会读取 %APPDATA% 下的 Cursor / Trae 数据，也会读取用户目录下的 Codex / Claude Code 记录。",
+        note: "Windows 模式会读取用户目录下的 Codex / Claude Code 记录。",
       },
     ],
   },

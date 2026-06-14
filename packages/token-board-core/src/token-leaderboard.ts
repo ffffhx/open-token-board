@@ -400,7 +400,7 @@ export function createDemoTokenEntries(now = new Date()): TokenUsageEvent[] {
     { userId: "nora", displayName: "Nora", team: "Research Desk", weight: 0.38 },
   ];
   const models = ["gpt-5.5", "claude-sonnet-4-6", "gpt-5.4-mini", "gpt-5.3-codex"];
-  const tools = ["Codex CLI", "Claude Code", "Cursor", "Gemini CLI"];
+  const tools = ["Codex CLI", "Claude Code"];
   const projects = ["garden-lab", "token-board", "notes", "side-project"];
   const today = startOfUtcDay(now);
   const entries: TokenUsageEvent[] = [];

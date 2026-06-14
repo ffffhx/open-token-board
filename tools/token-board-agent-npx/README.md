@@ -32,8 +32,6 @@ The agent scans local usage records from supported AI coding tools when their de
 
 - Codex CLI: `~/.codex/sessions`, `~/.codex/archived_sessions`, `~/.codex/projects`
 - Claude Code: `~/.claude/projects`, `~/.claude/history.jsonl`
-- Cursor: user `globalStorage` and log folders
-- Trae / Trae CN: user `globalStorage`, logs, modular AI agent data, and `.trae*` folders
 
 You can override scan targets with `TOKEN_BOARD_USAGE_PATHS` or disable default targets with:
 

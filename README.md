@@ -4,7 +4,7 @@
 
 **朋友间的 AI 编码 Token 排行榜 —— 自托管、隐私优先、自动上报。**
 
-把 Codex CLI、Claude Code、Cursor、Trae、Gemini CLI 这些工具的本地用量，
+把 Codex CLI、Claude Code 这些工具的本地用量，
 聚合成一个可以和朋友们一起较劲的实时榜单。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -31,7 +31,7 @@ Open Token Board 是一个**自己就能部署一套**的 AI 编码 Token 排行
 
 ## ✨ 功能特性
 
-- 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code、Cursor、Trae、Gemini CLI 的本地用量日志
+- 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code 的本地用量日志
 - 🏅 **实时公共榜单** — 按 1D / 7D / 30D / 90D 滚动窗口，按总消耗 / 费用 / 会话排序，含每日趋势与份额
 - 📊 **个人消耗看板** — 排名、百分位、缓存命中率、模型 / 工具 / 项目分布、分时活跃热力图、Session 明细
 - 🔐 **GitHub 登录** — OAuth + Device Flow，agent 与网页用同一身份；可用白名单限制谁能上报
@@ -85,9 +85,6 @@ pnpm token:agent upload
 | --- | --- | --- |
 | Codex CLI | `codex` | `~/.codex/sessions`、`~/.codex/projects` |
 | Claude Code | `claude-code` | `~/.claude/projects` |
-| Cursor | `cursor` | `~/Library/Application Support/Cursor`、`~/.config/Cursor` |
-| Trae / Trae CN | `trae` | `~/Library/Application Support/Trae*`、`~/.trae*` |
-| Gemini CLI | `gemini-cli` | `~/.gemini` |
 
 > agent 只读取这些工具自己写下的用量日志，不修改任何文件，也不访问网络上的其它内容。
 

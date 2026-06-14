@@ -800,38 +800,6 @@ export function defaultSourceTargets(): SourceTarget[] {
       tool: "Claude Code",
       paths: ["~/.claude/projects"],
     },
-    {
-      source: "cursor",
-      tool: "Cursor",
-      paths: [
-        "~/Library/Application Support/Cursor/User/globalStorage",
-        "~/Library/Application Support/Cursor/logs",
-        "~/.config/Cursor/User/globalStorage",
-        "~/.config/Cursor/logs",
-      ],
-    },
-    {
-      source: "trae",
-      tool: "Trae",
-      paths: [
-        "~/Library/Application Support/Trae/User/globalStorage",
-        "~/Library/Application Support/Trae CN/User/globalStorage",
-        "~/Library/Application Support/Trae/logs",
-        "~/Library/Application Support/Trae CN/logs",
-        "~/Library/Application Support/Trae/ModularData/ai-agent",
-        "~/Library/Application Support/Trae CN/ModularData/ai-agent",
-        "~/.config/Trae/User/globalStorage",
-        "~/.config/Trae CN/User/globalStorage",
-        "~/.trae",
-        "~/.trae-cn",
-        "~/.trae-aicc-internal",
-      ],
-    },
-    {
-      source: "gemini-cli",
-      tool: "Gemini CLI",
-      paths: ["~/.gemini"],
-    },
   ];
 }
 
