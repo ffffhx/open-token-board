@@ -525,12 +525,15 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
 
   // Claude Code keeps the session title in its own log lines: `ai-title` carries the
   // generated short title (refreshed multiple times — keep the last), and `last-prompt`
-  // carries the latest user input as a fallback. The collector wasn't reading either,
-  // so these sessions fell back to the raw session id in the UI.
+  // carries the latest user input. Subagent transcripts (under `<session>/subagents/`)
+  // have neither, so fall back to the first user message — its content is the task the
+  // subagent was given. Without this the collector left these as the raw session id.
   let aiTitle = "";
   let lastPrompt = "";
+  let firstUserMessage = "";
   for (const line of lines) {
-    if (!line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
+    const wantFirstUser = !firstUserMessage && line.includes('"type":"user"');
+    if (!wantFirstUser && !line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
       continue;
     }
 
@@ -549,11 +552,19 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
       if (prompt) {
         lastPrompt = prompt;
       }
+    } else if (parsed.type === "user" && !firstUserMessage && isRecord(parsed.message)) {
+      const message = textFromMessageLike(parsed.message.content);
+      if (message) {
+        firstUserMessage = message;
+      }
     }
   }
 
   const sessionTitle =
-    sanitizeSessionTitle(aiTitle) || summarizeSessionTitleFromMessage(lastPrompt) || context.sessionTitle;
+    sanitizeSessionTitle(aiTitle) ||
+    summarizeSessionTitleFromMessage(lastPrompt) ||
+    summarizeSessionTitleFromMessage(firstUserMessage) ||
+    context.sessionTitle;
   const enrichedContext = sessionTitle ? { ...context, sessionTitle } : context;
 
   const objects = lines.flatMap((line) => parseJsonLine(line));
