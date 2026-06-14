@@ -3,6 +3,8 @@ import { randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
+import sanitizeHtml from "sanitize-html";
+
 import {
   createAgentSessionToken,
   createOAuthState,
@@ -32,6 +34,7 @@ import {
   type TokenBoardMetric,
   type TokenBoardRange,
 } from "@open-token-board/core";
+import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
 import {
   createTokenUsageStore,
   importTokenUsageEventsFromJsonFile,
@@ -140,6 +143,14 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       githubAuth: Boolean(process.env.GITHUB_CLIENT_ID),
       generatedAt: new Date().toISOString(),
     });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/usage/rate-limits") {
+    const daysParam = Number(url.searchParams.get("days"));
+    const lookbackDays = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(90, daysParam) : undefined;
+    const report = await analyzeCodexRateLimits({ lookbackDays, cacheMs: 8000 });
+    sendJson(request, response, 200, report);
     return;
   }
 
@@ -252,19 +263,42 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const range = parseRange(url.searchParams.get("range"));
     const now = parseNow(url.searchParams.get("now"));
     const store = usageStore();
-    const events = await store.listEvents();
-    const profile = buildTokenAccountUsageProfile(events, {
+    // Load only this user's events for the per-user breakdown, and derive the
+    // cross-user ranking from the aggregated leaderboard, so neither path scans the
+    // whole event table on every request.
+    const userEvents = await store.listEventsForUser(identity.userId);
+    const profile = buildTokenAccountUsageProfile(userEvents, {
       userId: identity.userId,
       range,
       now,
     });
+    const { summary } = await readUsageLeaderboard({ range, metric: "tokens", now });
+    const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
+    const totalUsers = summary.users.length;
+    const rank = rankedUser?.rank ?? null;
+    const { summary: previousSummary } = await readUsageLeaderboard({
+      range,
+      metric: "tokens",
+      now: new Date(summary.startAt),
+    });
+    const previousRank = previousSummary.users.find((entry) => entry.userId === identity.userId)?.rank ?? null;
+    profile.rank = rank;
+    profile.previousRank = previousRank;
+    profile.rankDelta = rank !== null && previousRank !== null ? previousRank - rank : null;
+    profile.totalUsers = totalUsers;
+    profile.percentile = rank !== null && totalUsers > 0 ? (totalUsers - rank) / totalUsers : null;
+    if (profile.user && rankedUser) {
+      profile.user.rank = rankedUser.rank;
+      profile.user.share = rankedUser.share;
+      profile.user.deltaTokens = rankedUser.deltaTokens;
+    }
     const userConfig = await store.getUserConfig(identity.userId);
 
     sendJson(request, response, 200, {
       schemaVersion: 1,
       source: "server",
       records: profile.records,
-      totalRecords: events.length,
+      totalRecords: await store.countEvents(),
       generatedAt: new Date().toISOString(),
       user: identity,
       profile: {
@@ -278,16 +312,19 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   if (request.method === "GET" && url.pathname === "/api/usage/summary") {
     const now = parseNow(url.searchParams.get("now"));
     const ownerUserId = normalizeOptionalText(url.searchParams.get("userId")) || normalizeOptionalText(process.env.TOKEN_BOARD_SUMMARY_USER_ID);
-    const events = await usageStore().listEvents();
-    const filteredEvents = ownerUserId ? events.filter((event) => event.userId === ownerUserId) : events;
+    const store = usageStore();
+    // When scoped to a user, fetch only that user's events so an arbitrary userId
+    // cannot force a full-table scan on every request.
+    const scopedEvents = ownerUserId ? await store.listEventsForUser(ownerUserId) : await store.listEvents();
+    const totalRecords = ownerUserId ? await store.countEvents() : scopedEvents.length;
 
     sendJson(request, response, 200, {
-      ...buildTokenUsageSnapshotFromEvents(filteredEvents, {
+      ...buildTokenUsageSnapshotFromEvents(scopedEvents, {
         now,
         source: ownerUserId ? "token-board-server-user" : "token-board-server",
       }),
-      records: filteredEvents.length,
-      totalRecords: events.length,
+      records: scopedEvents.length,
+      totalRecords,
       userId: ownerUserId || null,
     });
     return;
@@ -921,11 +958,23 @@ function sanitizeTurnHtml(snapshot: Record<string, unknown>) {
 }
 
 function sanitizePublishedHtml(value: string) {
-  return value
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<(?:iframe|object|embed)\b[^>]*>[\s\S]*?<\/(?:iframe|object|embed)>/gi, "")
-    .replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  // Use a real allowlist-based sanitizer rather than regex stripping, which is
+  // trivially bypassable (malformed/nested tags, javascript: URLs, svg/onload, …).
+  return sanitizeHtml(value, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat(["img", "figure", "figcaption", "span"]),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      "*": ["class", "style"],
+      a: ["href", "name", "target", "rel"],
+      img: ["src", "alt", "title", "width", "height"],
+    },
+    allowedSchemes: ["http", "https", "mailto"],
+    allowedSchemesByTag: { img: ["http", "https", "data"] },
+    disallowedTagsMode: "discard",
+    transformTags: {
+      a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer", target: "_blank" }),
+    },
+  });
 }
 
 function expiryFromDays(value: unknown) {

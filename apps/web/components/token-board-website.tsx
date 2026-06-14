@@ -169,6 +169,12 @@ function HeroSection() {
             Codex 评测
           </Link>
           <Link
+            href="/limits"
+            className="hidden min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
+          >
+            额度面板
+          </Link>
+          <Link
             href="/board"
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
           >

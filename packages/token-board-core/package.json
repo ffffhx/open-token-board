@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./codex-rate-limits": "./src/codex-rate-limits.ts",
     "./auth": "./src/token-board-auth.ts",
     "./automation": "./src/token-board-automation.ts",
     "./collector": "./src/token-usage-collector.ts",

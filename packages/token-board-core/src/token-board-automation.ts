@@ -175,7 +175,10 @@ export function sanitizeIngestEvents(
 }
 
 export function mergeTokenEvents(existing: TokenUsageEvent[], incoming: TokenUsageEvent[], maxEvents = 100_000) {
-  return dedupeTokenEvents([...incoming, ...existing]).slice(0, maxEvents);
+  // Incoming events are listed last so that on an id collision the fresher event
+  // wins in dedupeTokenEvents (later set() overwrites). This lets a re-ingested
+  // event carry an updated session title instead of being shadowed by the old one.
+  return dedupeTokenEvents([...existing, ...incoming]).slice(0, maxEvents);
 }
 
 export function sanitizeTokenBoardUserConfig(

@@ -111,23 +111,6 @@ export function AccountUsagePanel({
         />
       ) : !viewer ? (
         <AccountLoadingState />
-      ) : !viewer.authenticated ? (
-        <div className="grid gap-4 px-5 py-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-center">
-          <div>
-            <p className="text-lg font-semibold">登录后查看自己的 GitHub 消耗</p>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              这里会只展示当前 GitHub 账号通过 agent 上报的 Token、费用、模型、项目和活跃分布。
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onLogin}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            <Icon name="github" />
-            GitHub 登录
-          </button>
-        </div>
       ) : loadState === "loading" ? (
         <AccountLoadingState />
       ) : loadState === "error" ? (
@@ -231,7 +214,7 @@ export function AccountUsagePanel({
               tooltip={{
                 title: "缓存命中率",
                 description: "输入上下文里有多少来自缓存命中。命中越高，通常代表重复上下文更多、单位成本更低。",
-                formula: "Σ cached_input_tokens ÷ (Σ input_tokens + Σ cached_input_tokens)",
+                formula: "Σ cached_input_tokens ÷ Σ input_tokens",
                 detail: `${formatTokens(user.cachedInputTokens)} ÷ ${formatTokens(inputContextTokens)} = ${formatPercent(cacheHitRate)}`,
               }}
             />

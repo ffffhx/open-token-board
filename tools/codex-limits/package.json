@@ -1,0 +1,23 @@
+{
+  "name": "@open-token-board/codex-limits",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "查看 Codex CLI 实时剩余额度与预计耗尽时间的命令行工具。",
+  "bin": {
+    "codex-limits": "src/cli.ts"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "watch": "tsx src/cli.ts --watch",
+    "typecheck": "tsc --noEmit --project tsconfig.json"
+  },
+  "dependencies": {
+    "@open-token-board/core": "workspace:*",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}

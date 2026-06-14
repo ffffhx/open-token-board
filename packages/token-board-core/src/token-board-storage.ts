@@ -44,6 +44,7 @@ export type TokenUsageStore = {
   kind: TokenUsageStoreKind;
   label: string;
   listEvents: () => Promise<TokenUsageEvent[]>;
+  listEventsForUser: (userId: string) => Promise<TokenUsageEvent[]>;
   getLeaderboardSummary?: (options: TokenUsageLeaderboardOptions) => Promise<TokenUsageLeaderboardResult>;
   countEvents: () => Promise<number>;
   insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
@@ -150,15 +151,26 @@ function createFileTokenUsageStore({
     kind: "file",
     label: dataFile,
     listEvents: () => readTokenUsageEventsFromFile(dataFile).then((result) => result.entries),
+    listEventsForUser: (userId) =>
+      readTokenUsageEventsFromFile(dataFile).then((result) =>
+        result.entries.filter((event) => event.userId === userId)
+      ),
     countEvents: async () => (await readTokenUsageEventsFromFile(dataFile)).entries.length,
     insertEvents: (events) =>
       enqueueStorageOperation(async () => {
         const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
-        const existingIds = new Set(existing.map((event) => event.id));
-        const incomingNew = events.filter((event) => !existingIds.has(event.id));
+        const existingById = new Map(existing.map((event) => [event.id, event]));
+        const incomingNew = events.filter((event) => !existingById.has(event.id));
+        // A re-ingested event can carry a session title we only discovered later;
+        // treat that as a change to flush, so the update is not silently dropped
+        // (mirrors the Postgres ON CONFLICT DO UPDATE of session_title).
+        const hasTitleUpdate = events.some((event) => {
+          const prior = existingById.get(event.id);
+          return Boolean(prior && event.sessionTitle && event.sessionTitle !== prior.sessionTitle);
+        });
         const merged = mergeTokenEvents(existing, events, maxEvents);
 
-        if (incomingNew.length) {
+        if (incomingNew.length || hasTitleUpdate) {
           await writeTokenUsageEventsToFile(dataFile, merged);
         }
 
@@ -264,6 +276,20 @@ function createPostgresTokenUsageStore({
 
       return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
     },
+    listEventsForUser: async (userId: string) => {
+      const result = await pool.query<TokenUsageEventRow>(
+        `
+          SELECT *
+          FROM ${table}
+          WHERE user_id = $1
+          ORDER BY reported_at DESC, created_at DESC
+          LIMIT $2
+        `,
+        [userId, maxEvents]
+      );
+
+      return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
+    },
     getLeaderboardSummary: (options) => readPostgresLeaderboardSummary(pool, table, options),
     countEvents: async () => {
       const result = await pool.query<{ count: string }>(`SELECT count(*) AS count FROM ${table}`);
@@ -283,8 +309,10 @@ function createPostgresTokenUsageStore({
       for (let index = 0; index < events.length; index += INSERT_BATCH_SIZE) {
         const batch = events.slice(index, index + INSERT_BATCH_SIZE).map(normalizeTokenUsageEvent);
         const { text, values } = buildInsertQuery(table, batch);
-        const result = await pool.query(text, values);
-        accepted += result.rowCount || 0;
+        // RETURNING (xmax = 0) marks freshly-inserted rows; an ON CONFLICT title
+        // update has xmax != 0, so it is not miscounted as a new acceptance.
+        const result = await pool.query<{ inserted: boolean }>(text, values);
+        accepted += result.rows.filter((row) => row.inserted).length;
       }
 
       return {
@@ -817,6 +845,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       SET "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title")
       WHERE NULLIF(EXCLUDED."session_title", '') IS NOT NULL
         AND COALESCE(${table}."session_title", '') <> EXCLUDED."session_title"
+      RETURNING (xmax = 0) AS inserted
     `,
     values,
   };

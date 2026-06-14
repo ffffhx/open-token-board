@@ -16,6 +16,8 @@
     "token:migrate-json": "pnpm --filter @open-token-board/api token:migrate-json",
     "token:agent": "pnpm --filter @open-token-board/api token:agent",
     "token:agent:watch": "pnpm --filter @open-token-board/api token:agent:watch",
-    "token:service": "pnpm --filter @open-token-board/service token:server"
+    "token:service": "pnpm --filter @open-token-board/service token:server",
+    "codex:limits": "pnpm --filter @open-token-board/codex-limits start",
+    "codex:limits:watch": "pnpm --filter @open-token-board/codex-limits watch"
   }
 }

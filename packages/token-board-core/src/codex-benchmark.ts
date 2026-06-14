@@ -521,16 +521,18 @@ function buildCodexBenchmarkDemoRuns(now: Date): CodexBenchmarkRun[] {
     { iqPenalty: 3, speedScale: 1.68, slowTaskId: "S2" as CodexBenchmarkTaskId },
     { iqPenalty: 6, speedScale: 1.28, failureTaskId: "S4" as CodexBenchmarkTaskId },
   ];
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0);
+  // Build timestamps in UTC so day grouping (which keys off the UTC date in the ISO
+  // string) stays consistent with the run ids regardless of the host timezone.
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 10, 0, 0));
   const runs: CodexBenchmarkRun[] = [];
 
   dayProfiles.forEach((profile, dayIndex) => {
     const day = new Date(today);
-    day.setDate(today.getDate() - (dayProfiles.length - 1 - dayIndex));
+    day.setUTCDate(today.getUTCDate() - (dayProfiles.length - 1 - dayIndex));
 
     for (let repeatIndex = 0; repeatIndex < CODEX_BENCHMARK_REPEAT_COUNT; repeatIndex += 1) {
       const startedAt = new Date(day);
-      startedAt.setHours(10 + repeatIndex * 3, 12 + dayIndex, 0, 0);
+      startedAt.setUTCHours(10 + repeatIndex * 3, 12 + dayIndex, 0, 0);
       runs.push({
         id: `${formatDateKey(day)}-run-${repeatIndex + 1}`,
         startedAt: startedAt.toISOString(),

@@ -430,7 +430,17 @@ async function loginWithGitHub() {
 
   while (Date.now() < expiresAt) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
-    const poll = await postJson(`${apiUrl}/api/auth/device/poll`, { deviceCode: start.deviceCode });
+    // The poll endpoint returns HTTP 200 only for pending/slow_down; terminal device
+    // errors (access_denied, expired_token, …) come back as HTTP 400, which postJson
+    // throws on — surface a clear message instead of an opaque request failure.
+    let poll: Awaited<ReturnType<typeof postJson>>;
+    try {
+      poll = await postJson(`${apiUrl}/api/auth/device/poll`, { deviceCode: start.deviceCode });
+    } catch (error) {
+      throw new Error(
+        `GitHub device login failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
 
     if (poll.status === "authorized" && poll.token) {
       const nextConfig = {
