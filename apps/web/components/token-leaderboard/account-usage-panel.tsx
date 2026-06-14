@@ -785,10 +785,9 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                   return (
                     <tr key={session.id} className="group">
                       <td className="border-b border-slate-100 px-3 py-3 align-top">
-                        <div className="flex min-w-0 items-center gap-2">
+                        <div className="group/title relative flex min-w-0 items-center gap-2">
                           <p
                             className={`min-w-0 truncate text-sm font-semibold ${hasTitle ? "text-slate-900" : "font-mono text-xs text-blue-700"}`}
-                            title={hasTitle ? session.title : session.id}
                           >
                             {title}
                           </p>
@@ -797,6 +796,12 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                             title={`项目：${session.project || "unknown"}`}
                           >
                             {session.project || "unknown"}
+                          </span>
+                          <span
+                            role="tooltip"
+                            className="pointer-events-none absolute left-0 top-full z-30 mt-1 max-w-[24rem] whitespace-normal break-words rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium leading-5 text-slate-700 opacity-0 shadow-lg transition duration-150 group-hover/title:opacity-100 group-focus-within/title:opacity-100"
+                          >
+                            {hasTitle ? session.title : session.id}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-slate-500">
