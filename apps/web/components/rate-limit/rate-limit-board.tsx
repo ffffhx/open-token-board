@@ -37,10 +37,10 @@ function secondsUntil(iso: string | null, now: number): number | null {
   return Math.round((Date.parse(iso) - now) / 1000);
 }
 
-function toneFor(percent: number): { bar: string; text: string; ring: string } {
-  if (percent >= 85) return { bar: "bg-rose-500", text: "text-rose-600", ring: "ring-rose-200" };
-  if (percent >= 60) return { bar: "bg-amber-500", text: "text-amber-600", ring: "ring-amber-200" };
-  return { bar: "bg-emerald-500", text: "text-emerald-600", ring: "ring-emerald-200" };
+function toneFor(percent: number): { bar: string; text: string } {
+  if (percent >= 85) return { bar: "bg-rose-500", text: "text-rose-600" };
+  if (percent >= 60) return { bar: "bg-amber-500", text: "text-amber-600" };
+  return { bar: "bg-emerald-500", text: "text-emerald-600" };
 }
 
 function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }) {
@@ -68,7 +68,7 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold text-slate-900">{w.label}窗口</h2>
+        <h3 className="text-lg font-semibold text-slate-900">{w.label}窗口</h3>
         <span className="font-mono text-xs text-slate-400">{w.windowMinutes} 分钟</span>
       </div>
 
@@ -118,7 +118,16 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
   );
 }
 
-export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
+interface RateLimitData {
+  report: CodexRateLimitReport | null;
+  state: LoadState;
+  error: string | null;
+  now: number;
+  base: string;
+  reload: () => void;
+}
+
+function useRateLimitReport(apiBaseUrl: string): RateLimitData {
   const base = apiBaseUrl.replace(/\/+$/, "");
   const [report, setReport] = useState<CodexRateLimitReport | null>(null);
   const [state, setState] = useState<LoadState>("idle");
@@ -126,7 +135,7 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [now, setNow] = useState<number>(() => Date.now());
   const firstLoad = useRef(true);
 
-  const load = useCallback(async () => {
+  const reload = useCallback(async () => {
     if (!base) {
       setState("error");
       setError("未配置 API 地址。");
@@ -150,18 +159,88 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
   }, [base]);
 
   useEffect(() => {
-    void load();
-    const poll = setInterval(() => void load(), POLL_INTERVAL_MS);
+    void reload();
+    const poll = setInterval(() => void reload(), POLL_INTERVAL_MS);
     return () => clearInterval(poll);
-  }, [load]);
+  }, [reload]);
 
-  // 每秒刷新倒计时（用绝对时间戳计算，无需重新请求）。
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(tick);
   }, []);
 
-  const latestAgeSec = report?.latestEventAt ? Math.round((now - Date.parse(report.latestEventAt)) / 1000) : null;
+  return { report, state, error, now, base, reload: () => void reload() };
+}
+
+function StatusLine({ report, now }: { report: CodexRateLimitReport; now: number }) {
+  const latestAgeSec = report.latestEventAt ? Math.round((now - Date.parse(report.latestEventAt)) / 1000) : null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
+      {report.plan && (
+        <span>
+          计划 <span className="font-semibold text-slate-700">{report.plan}</span>
+        </span>
+      )}
+      {report.recentTokensPerHour !== null && (
+        <span>
+          最近一小时吞吐 <span className="font-semibold text-slate-700">{fmtTokens(report.recentTokensPerHour)}/小时</span>
+        </span>
+      )}
+      {latestAgeSec !== null && (
+        <span>
+          最近活动 <span className="font-semibold text-slate-700">{fmtDuration(latestAgeSec)}前</span>
+        </span>
+      )}
+      <span className="text-slate-400">每 15 秒自动刷新</span>
+    </div>
+  );
+}
+
+function WindowGrid({ report, now }: { report: CodexRateLimitReport; now: number }) {
+  return (
+    <div className="grid gap-5 md:grid-cols-2">
+      {report.windows.map((w) => (
+        <WindowCard key={w.key} window={w} now={now} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * 嵌入式额度面板：用于 /board 个人区域。本机没有限额数据（远程访客、未启动
+ * 本地 API）时静默隐藏，避免给公开榜单的访客显示报错。
+ */
+export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
+  const { report, state, now } = useRateLimitReport(apiBaseUrl);
+
+  if (state !== "ready" || !report || !report.available || report.windows.length === 0) {
+    return null;
+  }
+
+  return (
+    <section className="rounded-lg border border-stone-950/10 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Codex 额度面板</h2>
+          <p className="mt-1 text-xs text-slate-500">本机 ~/.codex 的 5 小时与每周额度，实时刷新。</p>
+        </div>
+        <Link href="/limits" className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-700">
+          独立页面 →
+        </Link>
+      </div>
+      <div className="mt-4">
+        <StatusLine report={report} now={now} />
+      </div>
+      <div className="mt-4">
+        <WindowGrid report={report} now={now} />
+      </div>
+    </section>
+  );
+}
+
+/** 全页额度面板：/limits 路由。 */
+export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
+  const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl);
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -178,7 +257,7 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
           </Link>
           <button
             type="button"
-            onClick={() => void load()}
+            onClick={reload}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             刷新
@@ -228,31 +307,12 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
 
         {report && report.available && (
           <>
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
-              {report.plan && (
-                <span>
-                  计划 <span className="font-semibold text-slate-700">{report.plan}</span>
-                </span>
-              )}
-              {report.recentTokensPerHour !== null && (
-                <span>
-                  最近一小时吞吐 <span className="font-semibold text-slate-700">{fmtTokens(report.recentTokensPerHour)}/小时</span>
-                </span>
-              )}
-              {latestAgeSec !== null && (
-                <span>
-                  最近活动 <span className="font-semibold text-slate-700">{fmtDuration(latestAgeSec)}前</span>
-                </span>
-              )}
-              <span className="text-slate-400">每 15 秒自动刷新</span>
+            <div className="mt-6">
+              <StatusLine report={report} now={now} />
             </div>
-
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              {report.windows.map((w) => (
-                <WindowCard key={w.key} window={w} now={now} />
-              ))}
+            <div className="mt-5">
+              <WindowGrid report={report} now={now} />
             </div>
-
             {report.notes.map((note) => (
               <p key={note} className="mt-5 text-xs leading-5 text-slate-400">
                 注：{note}

@@ -10,6 +10,7 @@
   "scripts": {
     "start": "tsx src/cli.ts",
     "watch": "tsx src/cli.ts --watch",
+    "serve": "tsx src/cli.ts --serve",
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {

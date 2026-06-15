@@ -12,6 +12,7 @@ import {
   type TokenLeaderboardSummary,
 } from "@open-token-board/core";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { RateLimitPanel } from "@/components/rate-limit/rate-limit-board";
 
 import { AccountUsagePanel } from "./token-leaderboard/account-usage-panel";
 import {
@@ -780,6 +781,8 @@ export function TokenLeaderboardApp({
             </section>
           </aside>
         </div>
+
+        <RateLimitPanel apiBaseUrl={normalizedApiBaseUrl} />
 
         <AccountUsagePanel
           apiEnabled={Boolean(normalizedApiBaseUrl)}
