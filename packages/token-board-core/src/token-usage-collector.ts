@@ -104,6 +104,7 @@ export async function collectLocalTokenUsage(config: TokenUsageCollectorConfig =
   // resetting per target) and guarantees the most recent sessions are never dropped
   // in favor of older ones from an earlier directory.
   const candidates: Array<{ filePath: string; mtimeMs: number; target: SourceTarget }> = [];
+  const seenRealPaths = new Set<string>();
   for (const target of targets) {
     for (const targetPath of target.paths) {
       const files = await listUsageFiles(expandHome(targetPath), {
@@ -113,6 +114,18 @@ export async function collectLocalTokenUsage(config: TokenUsageCollectorConfig =
         sinceMs,
       });
       for (const file of files) {
+        // Dedupe by resolved real path so the same file reached through overlapping
+        // roots, a symlink, or a "../" spelling is only collected (and counted) once.
+        let realPath = file.path;
+        try {
+          realPath = await fs.realpath(file.path);
+        } catch {
+          // fall back to the raw path if it cannot be resolved
+        }
+        if (seenRealPaths.has(realPath)) {
+          continue;
+        }
+        seenRealPaths.add(realPath);
         candidates.push({ filePath: file.path, mtimeMs: file.mtimeMs, target });
       }
     }
