@@ -26,12 +26,26 @@ export type SnapshotSharePublicRecord = Omit<SnapshotShareRecord, "publisher">;
 
 export type SnapshotShareStoreKind = "file" | "postgres";
 
+export type SnapshotShareMutationOptions = {
+  // When set, the operation only succeeds if the existing share is owned by this
+  // user — prevents one authenticated user from overwriting/deleting another's share.
+  requireOwnerUserId?: string;
+};
+
+// Thrown by putShare when an existing share with the same id is owned by someone else.
+export class SnapshotShareOwnershipError extends Error {
+  constructor(message = "Not authorized to modify this snapshot share") {
+    super(message);
+    this.name = "SnapshotShareOwnershipError";
+  }
+}
+
 export type SnapshotShareStore = {
   kind: SnapshotShareStoreKind;
   label: string;
-  putShare: (record: SnapshotShareRecord) => Promise<void>;
+  putShare: (record: SnapshotShareRecord, options?: SnapshotShareMutationOptions) => Promise<void>;
   getShare: (id: string) => Promise<SnapshotSharePublicRecord | undefined>;
-  deleteShare: (id: string) => Promise<boolean>;
+  deleteShare: (id: string, options?: SnapshotShareMutationOptions) => Promise<boolean>;
   countShares: () => Promise<number>;
   close?: () => Promise<void>;
 };
@@ -74,9 +88,13 @@ function createFileSnapshotShareStore({ dataFile }: { dataFile: string }): Snaps
   return {
     kind: "file",
     label: dataFile,
-    putShare: (record) =>
+    putShare: (record, options) =>
       enqueueStorageOperation(async () => {
         const existing = await readSnapshotSharesFromFile(dataFile);
+        const prior = existing.find((item) => item.id === record.id);
+        if (prior && options?.requireOwnerUserId && prior.publisher?.userId !== options.requireOwnerUserId) {
+          throw new SnapshotShareOwnershipError();
+        }
         const next = existing.filter((item) => item.id !== record.id).concat(record);
         await writeSnapshotSharesToFile(dataFile, next);
       }),
@@ -84,13 +102,17 @@ function createFileSnapshotShareStore({ dataFile }: { dataFile: string }): Snaps
       const record = (await readSnapshotSharesFromFile(dataFile)).find((item) => item.id === id);
       return isShareExpired(record) ? undefined : toPublicRecord(record);
     },
-    deleteShare: (id) =>
+    deleteShare: (id, options) =>
       enqueueStorageOperation(async () => {
         const existing = await readSnapshotSharesFromFile(dataFile);
-        const next = existing.filter((item) => item.id !== id);
-        if (next.length === existing.length) {
+        const prior = existing.find((item) => item.id === id);
+        if (!prior) {
           return false;
         }
+        if (options?.requireOwnerUserId && prior.publisher?.userId !== options.requireOwnerUserId) {
+          return false;
+        }
+        const next = existing.filter((item) => item.id !== id);
         await writeSnapshotSharesToFile(dataFile, next);
         return true;
       }),
@@ -134,8 +156,28 @@ function createPostgresSnapshotShareStore({
       `);
       await pool.query(`CREATE INDEX IF NOT EXISTS snapshot_shares_updated_at_idx ON ${table} (updated_at DESC)`);
     },
-    putShare: async (record: SnapshotShareRecord) => {
-      await pool.query(
+    putShare: async (record: SnapshotShareRecord, options?: SnapshotShareMutationOptions) => {
+      const ownerGuard = options?.requireOwnerUserId;
+      const params: Array<string | number | boolean | null> = [
+        record.id,
+        record.title,
+        record.engine,
+        record.engineLabel,
+        record.sourceRef || null,
+        record.createdAt,
+        record.updatedAt,
+        record.expiresAt || null,
+        record.redacted,
+        record.turnCount,
+        record.publisher ? JSON.stringify(record.publisher) : null,
+        JSON.stringify(record.snapshot),
+      ];
+      if (ownerGuard) {
+        params.push(ownerGuard);
+      }
+      // A fresh INSERT always succeeds; on conflict the row is only overwritten when
+      // the existing publisher matches the guard, so a mismatched owner yields 0 rows.
+      const result = await pool.query(
         `
           INSERT INTO ${table} (
             id,
@@ -163,22 +205,14 @@ function createPostgresSnapshotShareStore({
             turn_count = EXCLUDED.turn_count,
             publisher = EXCLUDED.publisher,
             payload = EXCLUDED.payload
+          ${ownerGuard ? `WHERE ${table}.publisher->>'userId' = $13` : ""}
+          RETURNING id
         `,
-        [
-          record.id,
-          record.title,
-          record.engine,
-          record.engineLabel,
-          record.sourceRef || null,
-          record.createdAt,
-          record.updatedAt,
-          record.expiresAt || null,
-          record.redacted,
-          record.turnCount,
-          record.publisher ? JSON.stringify(record.publisher) : null,
-          JSON.stringify(record.snapshot),
-        ]
+        params
       );
+      if (!result.rowCount) {
+        throw new SnapshotShareOwnershipError();
+      }
     },
     getShare: async (id: string) => {
       const result = await pool.query<SnapshotShareRow>(
@@ -193,8 +227,13 @@ function createPostgresSnapshotShareStore({
       );
       return result.rows[0] ? rowToPublicShare(result.rows[0]) : undefined;
     },
-    deleteShare: async (id: string) => {
-      const result = await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+    deleteShare: async (id: string, options?: SnapshotShareMutationOptions) => {
+      const result = options?.requireOwnerUserId
+        ? await pool.query(`DELETE FROM ${table} WHERE id = $1 AND publisher->>'userId' = $2`, [
+            id,
+            options.requireOwnerUserId,
+          ])
+        : await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
       return Boolean(result.rowCount);
     },
     countShares: async () => {

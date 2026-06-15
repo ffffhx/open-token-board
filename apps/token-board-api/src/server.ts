@@ -49,6 +49,7 @@ import {
 } from "@open-token-board/core/selection-explainer";
 import {
   createSnapshotShareStore,
+  SnapshotShareOwnershipError,
   type SnapshotShareRecord,
   type SnapshotShareStore,
 } from "@open-token-board/core/snapshot-share-storage";
@@ -58,13 +59,22 @@ const PORT = Number(process.env.TOKEN_BOARD_PORT || 8787);
 const HOST = process.env.TOKEN_BOARD_HOST || "127.0.0.1";
 const DATA_FILE = process.env.TOKEN_BOARD_DATA_FILE || path.join(process.cwd(), ".token-board", "usage-events.json");
 const USERS_FILE = process.env.TOKEN_BOARD_USERS_FILE || path.join(process.cwd(), ".token-board", "users.json");
-const MAX_BODY_BYTES = Number(process.env.TOKEN_BOARD_MAX_BODY_BYTES || 4 * 1024 * 1024);
-const MAX_EVENTS = Number(process.env.TOKEN_BOARD_MAX_EVENTS || 100_000);
+const MAX_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_BODY_BYTES, 4 * 1024 * 1024);
+const MAX_EVENTS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENTS, 100_000);
 const SNAPSHOT_SHARE_DATA_FILE =
   process.env.SNAPSHOT_SHARE_DATA_FILE || path.join(process.cwd(), ".token-board", "snapshot-shares.json");
-const MAX_SNAPSHOT_SHARE_BODY_BYTES = Number(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES || 24 * 1024 * 1024);
-const MAX_SELECTION_EXPLAIN_BODY_BYTES = Number(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES || 16 * 1024);
-const MAX_ARTICLE_CHAT_BODY_BYTES = Number(process.env.ARTICLE_CHAT_MAX_BODY_BYTES || 128 * 1024);
+const MAX_SNAPSHOT_SHARE_BODY_BYTES = positiveNumberEnv(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES, 24 * 1024 * 1024);
+const MAX_SELECTION_EXPLAIN_BODY_BYTES = positiveNumberEnv(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES, 16 * 1024);
+const MAX_ARTICLE_CHAT_BODY_BYTES = positiveNumberEnv(process.env.ARTICLE_CHAT_MAX_BODY_BYTES, 128 * 1024);
+const DEV_AUTH_SECRET_PLACEHOLDER = "dev-only-token-board-auth-secret";
+
+// Parse a positive numeric env var, falling back to a safe default when it is unset
+// OR set to a non-numeric value — so a misconfigured limit never becomes NaN (which
+// would silently disable the guard it controls).
+function positiveNumberEnv(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 const DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const SESSION_COOKIE_NAME = "token_board_session";
 const WEB_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_WEB_SESSION_TTL_SECONDS || 30 * 24 * 60 * 60);
@@ -72,8 +82,11 @@ const AGENT_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_AGENT_SESSION_T
 const OAUTH_STATE_TTL_SECONDS = 15 * 60;
 let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
+const GLOBAL_SUMMARY_CACHE_MS = 10_000;
+let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
 
 async function main() {
+  authSecret(); // fail fast if the auth secret is missing/placeholder
   tokenUsageStore = await openTokenUsageStore();
   snapshotShareStore = await openSnapshotShareStore();
 
@@ -86,9 +99,10 @@ async function main() {
 
   const server = createServer((request, response) => {
     void routeRequest(request, response).catch((error) => {
-      sendJson(request, response, 500, {
-        error: error instanceof Error ? error.message : "Internal server error",
-      });
+      // Log the real error server-side; return a generic message so internal detail
+      // (SQL fragments, connection strings, env names, upstream text) is not leaked.
+      console.error("Unhandled request error:", error);
+      sendJson(request, response, 500, { error: "Internal server error" });
     });
   });
 
@@ -313,20 +327,36 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const now = parseNow(url.searchParams.get("now"));
     const ownerUserId = normalizeOptionalText(url.searchParams.get("userId")) || normalizeOptionalText(process.env.TOKEN_BOARD_SUMMARY_USER_ID);
     const store = usageStore();
-    // When scoped to a user, fetch only that user's events so an arbitrary userId
-    // cannot force a full-table scan on every request.
-    const scopedEvents = ownerUserId ? await store.listEventsForUser(ownerUserId) : await store.listEvents();
-    const totalRecords = ownerUserId ? await store.countEvents() : scopedEvents.length;
 
-    sendJson(request, response, 200, {
-      ...buildTokenUsageSnapshotFromEvents(scopedEvents, {
-        now,
-        source: ownerUserId ? "token-board-server-user" : "token-board-server",
-      }),
-      records: scopedEvents.length,
-      totalRecords,
-      userId: ownerUserId || null,
-    });
+    if (ownerUserId) {
+      // Scope to a single user's events so an arbitrary userId cannot force a
+      // full-table scan on every request.
+      const scopedEvents = await store.listEventsForUser(ownerUserId);
+      sendJson(request, response, 200, {
+        ...buildTokenUsageSnapshotFromEvents(scopedEvents, { now, source: "token-board-server-user" }),
+        records: scopedEvents.length,
+        totalRecords: await store.countEvents(),
+        userId: ownerUserId,
+      });
+      return;
+    }
+
+    // Global (unauthenticated) board: cache the full-scan result briefly so it cannot
+    // be hammered into repeated whole-table scans.
+    const cacheKey = `summary:${url.searchParams.get("now") || "live"}`;
+    if (globalSummaryCache && globalSummaryCache.key === cacheKey && Date.now() - globalSummaryCache.at < GLOBAL_SUMMARY_CACHE_MS) {
+      sendJson(request, response, 200, globalSummaryCache.value);
+      return;
+    }
+    const events = await store.listEvents();
+    const payload = {
+      ...buildTokenUsageSnapshotFromEvents(events, { now, source: "token-board-server" }),
+      records: events.length,
+      totalRecords: events.length,
+      userId: null,
+    };
+    globalSummaryCache = { key: cacheKey, at: Date.now(), value: payload };
+    sendJson(request, response, 200, payload);
     return;
   }
 
@@ -482,6 +512,10 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
   }
 
   const body = await readJsonBody(request);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    sendJson(request, response, 400, { error: "Body must be a JSON object" });
+    return;
+  }
   const userConfig = extractUserConfigFromIngestBody(body);
   const rawEvents = Array.isArray((body as { events?: unknown }).events)
     ? ((body as { events: Parameters<typeof sanitizeIngestEvents>[0] }).events)
@@ -493,12 +527,7 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
   }
 
   const sanitized = rawEvents.length
-    ? sanitizeIngestEvents(rawEvents, identity, {
-        projectMode: parseProjectMode(process.env.TOKEN_BOARD_PROJECT_MODE),
-        includeModel: process.env.TOKEN_BOARD_INCLUDE_MODEL !== "false",
-        includeSource: process.env.TOKEN_BOARD_INCLUDE_SOURCE !== "false",
-        hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
-      })
+    ? sanitizeIngestEvents(rawEvents, identity, ingestPrivacyOptions())
     : { entries: [], errors: [] };
 
   if (!sanitized.entries.length && sanitized.errors.length && !userConfig) {
@@ -539,6 +568,10 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   const body = await readJsonBody(request);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    sendJson(request, response, 400, { error: "Body must be a JSON object" });
+    return;
+  }
   const userConfig = extractUserConfigFromIngestBody(body);
   const rawEvents = Array.isArray((body as { events?: unknown }).events)
     ? ((body as { events: Parameters<typeof sanitizeIngestEvents>[0] }).events)
@@ -550,12 +583,7 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   const sanitized = rawEvents.length
-    ? sanitizeIngestEvents(rawEvents, identity, {
-        projectMode: parseProjectMode(process.env.TOKEN_BOARD_PROJECT_MODE),
-        includeModel: process.env.TOKEN_BOARD_INCLUDE_MODEL !== "false",
-        includeSource: process.env.TOKEN_BOARD_INCLUDE_SOURCE !== "false",
-        hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
-      })
+    ? sanitizeIngestEvents(rawEvents, identity, ingestPrivacyOptions())
     : { entries: [], errors: [] };
 
   if (!sanitized.entries.length && sanitized.errors.length && !userConfig) {
@@ -649,7 +677,15 @@ async function handleSnapshotSharePublish(request: IncomingMessage, response: Se
     snapshot: snapshot.payload,
   };
 
-  await shareStore().putShare(record);
+  try {
+    await shareStore().putShare(record, { requireOwnerUserId: identity.userId });
+  } catch (error) {
+    if (error instanceof SnapshotShareOwnershipError) {
+      sendJson(request, response, 403, { error: "This snapshot share id belongs to another user" });
+      return;
+    }
+    throw error;
+  }
 
   sendJson(request, response, 200, {
     ok: true,
@@ -704,7 +740,8 @@ async function handleSnapshotShareDelete(
     return;
   }
 
-  const deleted = await shareStore().deleteShare(id);
+  // Scope deletion to the publisher so a logged-in user cannot delete others' shares.
+  const deleted = await shareStore().deleteShare(id, { requireOwnerUserId: identity.userId });
 
   sendJson(request, response, deleted ? 200 : 404, {
     ok: deleted,
@@ -714,6 +751,9 @@ async function handleSnapshotShareDelete(
 }
 
 async function handleGithubStart(request: IncomingMessage, response: ServerResponse, url: URL) {
+  if (!enforceAuthRateLimit(request, response)) {
+    return;
+  }
   const clientId = requireEnv("GITHUB_CLIENT_ID");
   const returnTo = sanitizeReturnTo(url.searchParams.get("returnTo"), allowedReturnOrigins(request), "/token-leaderboard/");
   const state = createOAuthState(returnTo, authSecret(), OAUTH_STATE_TTL_SECONDS);
@@ -752,6 +792,9 @@ async function handleGithubCallback(request: IncomingMessage, response: ServerRe
 }
 
 async function handleDeviceStart(request: IncomingMessage, response: ServerResponse) {
+  if (!enforceAuthRateLimit(request, response)) {
+    return;
+  }
   const clientId = requireEnv("GITHUB_CLIENT_ID");
   const githubResponse = await postGithubForm("https://github.com/login/device/code", {
     client_id: clientId,
@@ -768,8 +811,14 @@ async function handleDeviceStart(request: IncomingMessage, response: ServerRespo
 }
 
 async function handleDevicePoll(request: IncomingMessage, response: ServerResponse) {
-  const body = (await readJsonBody(request)) as { deviceCode?: string };
-  const deviceCode = typeof body.deviceCode === "string" ? body.deviceCode : "";
+  if (!enforceAuthRateLimit(request, response)) {
+    return;
+  }
+  const body = await readJsonBody(request);
+  const deviceCode =
+    body && typeof body === "object" && !Array.isArray(body) && typeof (body as { deviceCode?: unknown }).deviceCode === "string"
+      ? (body as { deviceCode: string }).deviceCode
+      : "";
 
   if (!deviceCode) {
     sendJson(request, response, 400, { error: "deviceCode is required" });
@@ -1093,8 +1142,19 @@ function parseNow(value: string | null) {
   return Number.isFinite(parsed.getTime()) ? parsed : new Date();
 }
 
-function parseProjectMode(value: string | undefined) {
+function parseProjectMode(value: string | undefined): "basename" | "hash" | "none" {
   return value === "hash" || value === "none" ? value : "basename";
+}
+
+function ingestPrivacyOptions() {
+  return {
+    projectMode: parseProjectMode(process.env.TOKEN_BOARD_PROJECT_MODE),
+    includeModel: process.env.TOKEN_BOARD_INCLUDE_MODEL !== "false",
+    includeSource: process.env.TOKEN_BOARD_INCLUDE_SOURCE !== "false",
+    hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
+    includeSessionTitle: process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE !== "false",
+    maxEventAgeDays: positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120),
+  };
 }
 
 function normalizeOptionalText(value: string | null | undefined) {
@@ -1139,7 +1199,21 @@ function publicBaseUrl(request: IncomingMessage) {
 }
 
 function authSecret() {
-  return process.env.TOKEN_BOARD_AUTH_SECRET || "dev-only-token-board-auth-secret";
+  const secret = process.env.TOKEN_BOARD_AUTH_SECRET;
+
+  if (secret && secret !== DEV_AUTH_SECRET_PLACEHOLDER) {
+    return secret;
+  }
+
+  // Never sign real sessions with the committed placeholder; that would let anyone
+  // who has read this repo forge tokens. Require an explicit opt-in for local dev.
+  if (process.env.TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET === "true") {
+    return DEV_AUTH_SECRET_PLACEHOLDER;
+  }
+
+  throw new Error(
+    "TOKEN_BOARD_AUTH_SECRET must be set to a strong random value. Set it, or set TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET=true for local development only."
+  );
 }
 
 function requireEnv(name: string) {
@@ -1150,6 +1224,45 @@ function requireEnv(name: string) {
   }
 
   return value;
+}
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+// Lightweight fixed-window per-key limiter for unauthenticated endpoints that proxy
+// outbound calls to GitHub, so they cannot be hammered to exhaust quota / relay abuse.
+function rateLimitExceeded(key: string, limit: number, windowMs: number) {
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    if (rateLimitBuckets.size > 5000) {
+      for (const [bucketKey, value] of rateLimitBuckets) {
+        if (value.resetAt <= now) {
+          rateLimitBuckets.delete(bucketKey);
+        }
+      }
+    }
+    rateLimitBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return false;
+  }
+
+  bucket.count += 1;
+  return bucket.count > limit;
+}
+
+function clientIp(request: IncomingMessage) {
+  const forwarded = request.headers["x-forwarded-for"];
+  const raw = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  return raw?.split(",")[0]?.trim() || request.socket.remoteAddress || "unknown";
+}
+
+function enforceAuthRateLimit(request: IncomingMessage, response: ServerResponse) {
+  if (rateLimitExceeded(`auth:${clientIp(request)}`, 60, 60_000)) {
+    sendJson(request, response, 429, { error: "Too many requests, please slow down" });
+    return false;
+  }
+
+  return true;
 }
 
 async function openTokenUsageStore() {
@@ -1216,10 +1329,21 @@ function applyCors(request: IncomingMessage, response: ServerResponse) {
     .map((origin) => origin.trim())
     .filter(Boolean);
   const origin = request.headers.origin || "";
-  const allowOrigin = origin && (allowed.includes("*") || allowed.includes(origin)) ? origin : allowed[0] || "*";
+  const wildcard = allowed.includes("*");
+  const explicitlyAllowed = Boolean(origin) && allowed.includes(origin);
 
-  response.setHeader("Access-Control-Allow-Origin", allowOrigin);
-  response.setHeader("Access-Control-Allow-Credentials", "true");
+  if (explicitlyAllowed) {
+    // Only an explicitly allowlisted origin may be paired with credentials.
+    response.setHeader("Access-Control-Allow-Origin", origin);
+    response.setHeader("Access-Control-Allow-Credentials", "true");
+  } else if (wildcard) {
+    // Wildcard config: reflect the origin for public reads but NEVER allow
+    // credentials, so a malicious site cannot read a logged-in user's responses.
+    response.setHeader("Access-Control-Allow-Origin", origin || "*");
+  } else {
+    response.setHeader("Access-Control-Allow-Origin", allowed[0] || "*");
+  }
+
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
   response.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type,X-Token-Board-Token");
   response.setHeader("Vary", "Origin");

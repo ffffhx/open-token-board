@@ -101,7 +101,9 @@ export function sanitizeReturnTo(value: string | null, allowedOrigins: string[],
     return fallback;
   }
 
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+  // Same-site relative path only. Reject "//host" and "/\host" (browsers treat a
+  // backslash as a slash), which would otherwise be open redirects.
+  if (trimmed.startsWith("/") && !/^\/[/\\]/.test(trimmed)) {
     return trimmed;
   }
 

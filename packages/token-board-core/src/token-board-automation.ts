@@ -159,6 +159,9 @@ export function sanitizeIngestEvents(
           source,
           tool: sanitizeLabel(normalized.tool, 60) || source,
           model,
+          // When the model is hidden, drop the original cost so it cannot be used to
+          // reverse-infer the model from its per-token rate (re-estimated as 0 for "hidden").
+          costUsd: options.includeModel === false ? undefined : normalized.costUsd,
           project,
           sessionId,
           sessionTitle,

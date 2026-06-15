@@ -16,8 +16,17 @@ import {
 
 const DEFAULT_PORT = 8791;
 const DEFAULT_OWNER_GITHUB_LOGINS = ["ffffhx"];
-const MAX_SELECTION_BODY_BYTES = Number(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES || 16 * 1024);
-const MAX_ARTICLE_CHAT_BODY_BYTES = Number(process.env.ARTICLE_CHAT_MAX_BODY_BYTES || 128 * 1024);
+const DEV_AUTH_SECRET_PLACEHOLDER = "dev-only-token-board-auth-secret";
+
+// Falls back to the safe default when unset OR non-numeric, so a misconfigured value
+// never becomes NaN and silently disables the body-size limit.
+function positiveNumberEnv(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+const MAX_SELECTION_BODY_BYTES = positiveNumberEnv(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES, 16 * 1024);
+const MAX_ARTICLE_CHAT_BODY_BYTES = positiveNumberEnv(process.env.ARTICLE_CHAT_MAX_BODY_BYTES, 128 * 1024);
 const SESSION_COOKIE_NAME =
   process.env.SELECTION_EXPLAIN_SESSION_COOKIE_NAME || "token_board_session";
 
@@ -85,10 +94,19 @@ function writeJson(
 }
 
 function authSecret() {
-  return (
-    process.env.SELECTION_EXPLAIN_AUTH_SECRET ||
-    process.env.TOKEN_BOARD_AUTH_SECRET ||
-    "dev-only-token-board-auth-secret"
+  const secret = process.env.SELECTION_EXPLAIN_AUTH_SECRET || process.env.TOKEN_BOARD_AUTH_SECRET;
+
+  if (secret && secret !== DEV_AUTH_SECRET_PLACEHOLDER) {
+    return secret;
+  }
+
+  // Never verify sessions with the committed placeholder unless explicitly opted in.
+  if (process.env.TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET === "true") {
+    return DEV_AUTH_SECRET_PLACEHOLDER;
+  }
+
+  throw new Error(
+    "SELECTION_EXPLAIN_AUTH_SECRET or TOKEN_BOARD_AUTH_SECRET must be set to a strong random value. Set it, or set TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET=true for local development only."
   );
 }
 
@@ -381,6 +399,8 @@ const server = http.createServer(async (request, response) => {
     corsOrigin
   );
 });
+
+authSecret(); // fail fast if the auth secret is missing/placeholder
 
 server.listen(port, host, () => {
   console.log(`Selection explainer server listening on http://${host}:${port}`);

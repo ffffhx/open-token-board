@@ -692,10 +692,16 @@ function summarizeSessionTitleFromMessage(value: string) {
     .split(/[，,。！？!?；;\n]/)
     .map((clause) => stripRequestPrefix(clause))
     .filter(Boolean);
-  const clause = [...clauses].reverse().find(hasTitleAction) || stripRequestPrefix(text);
+  // Only derive a title from a clause that contains a recognized task action. Falling
+  // back to the raw prompt text would leak arbitrary user input (secrets, paths, …)
+  // into the stored session title, bypassing the sensitive-key redaction.
+  const clause = [...clauses].reverse().find(hasTitleAction);
+  if (!clause) {
+    return "";
+  }
   const compactTitle = compactRequestClause(clause);
 
-  return finalizeSessionTitle(compactTitle || text);
+  return finalizeSessionTitle(compactTitle || clause);
 }
 
 function prepareSessionTitleText(value: string) {
