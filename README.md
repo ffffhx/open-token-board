@@ -34,6 +34,7 @@ Open Token Board 是一个**自己就能部署一套**的 AI 编码 Token 排行
 - 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code 的本地用量日志
 - 🏅 **实时公共榜单** — 按 1D / 7D / 30D / 90D 滚动窗口，按总消耗 / 费用 / 会话排序，含每日趋势与份额
 - 📊 **个人消耗看板** — 排名、百分位、缓存命中率、模型 / 工具 / 项目分布、分时活跃热力图、Session 明细
+- 📟 **Codex 额度面板** — 实时读取本机 `~/.codex`，展示 5 小时 / 每周额度剩余、重置倒计时与预计耗尽时间；支持命令行、本地网页与榜单内嵌三种用法
 - 🔐 **GitHub 登录** — OAuth + Device Flow，agent 与网页用同一身份；可用白名单限制谁能上报
 - 🕵️ **隐私优先** — 只上报 token 数、模型、工具、项目 basename 与会话短标题，**绝不上传 prompt 正文**
 - 🧾 **费用估算** — 按公开模型单价估算成本（非实际账单），帮你横向比较
@@ -79,6 +80,30 @@ pnpm token:agent login
 pnpm token:agent upload
 ```
 
+## 📟 Codex 额度面板
+
+Codex CLI 会把每次请求的限额状态写进 `~/.codex` 的会话日志（`rate_limits`，含 `used_percent`、`window_minutes`、`resets_at`）。这个面板直接读这些日志，算出 5 小时与每周两个窗口的剩余额度、重置倒计时和预计耗尽时间。
+
+- **百分比与重置时间是精确的**（Codex 自己上报的）；消耗速度与预计耗尽由最近一段未被重置打断的斜率推算。
+- **token 容量是估算值**：百分比按整数取整，且额度按账号跨设备共享，本机日志看不到网页版 / 其它机器的用量，所以容量只能给下界。
+- **已计入提前充值**：窗口边界以重置点切分，Codex 提前刷新额度也不会把旧用量算进来。
+
+三种用法：
+
+```bash
+# 1) 命令行
+pnpm codex:limits            # 跑一次
+pnpm codex:limits:watch      # 实时刷新的终端面板
+pnpm codex:limits:serve      # 启动本地小网页（默认 http://127.0.0.1:4747）
+pnpm codex:limits -- --json --days=30   # 输出原始 JSON / 指定回看天数
+
+# 2) 项目网页（需本机已启动 token:server）
+#    独立页：http://localhost:3000/limits
+#    榜单内嵌：http://localhost:3000/board 的个人区域
+```
+
+网页面板通过后端的 `GET /api/usage/rate-limits` 取数（读取的是 **API 服务所在机器** 的 `~/.codex`），因此需要运行在跑 Codex 的同一台机器上；远程访客或无数据时内嵌面板会自动隐藏。命令行的 `--serve` 则完全自包含，不依赖后端。
+
 ## 🧩 支持的工具
 
 | 工具 | 来源标识 | 默认采集路径 |
@@ -112,6 +137,7 @@ deploy/
   token-board/             PostgreSQL + API 的 Docker Compose 部署包
 tools/
   token-board-agent-npx/   面向朋友的轻量 npx agent
+  codex-limits/            Codex 额度面板命令行（report / watch / serve）
 scripts/
   pack-agent.mjs           将 agent 打包进站点静态资源一起发布
 ```
@@ -124,6 +150,7 @@ pnpm dev            # 启动网页端（apps/web）
 pnpm token:server   # 启动后端 API
 pnpm typecheck      # 全量类型检查
 pnpm pack:agent     # 打包 npx agent 为静态资源
+pnpm codex:limits   # 查看本机 Codex 额度（额度面板命令行）
 ```
 
 > 网页端通过 `NEXT_PUBLIC_TOKEN_BOARD_API_URL` 指向后端；未配置时页面不会回退到示例数据，而是提示连接后端。
