@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CodexRateLimitReport, CodexRateWindow } from "@open-token-board/core/codex-rate-limits";
 
+import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogo } from "@/components/token-board-logo";
 
 const POLL_INTERVAL_MS = 15_000;
@@ -244,17 +245,12 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
-      <nav className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
+      <nav className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <Link href="/" className="text-slate-900">
           <TokenBoardLogo />
         </Link>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/board"
-            className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900"
-          >
-            排行榜
-          </Link>
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <AppNavLinks active="limits" />
           <button
             type="button"
             onClick={reload}
@@ -270,7 +266,8 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
           <p className="font-mono text-xs font-semibold uppercase text-blue-600">Codex rate limits</p>
           <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Codex 额度面板</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            实时读取本机 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code> 日志，
+            实时读取 API 服务所在机器的 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code> 日志，
+            本机部署时就是你的电脑；公网页面通常读取远端服务器。
             展示 5 小时与每周额度的剩余、重置倒计时和预计耗尽时间。百分比与重置时间是 Codex 上报的精确值，
             token 容量为估算值。窗口按重置点切分，已计入提前充值。
           </p>
@@ -302,6 +299,30 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
                 {note}
               </p>
             ))}
+            <p className="mt-3 text-amber-700">
+              当前读取的是 API 服务所在机器的 Codex 日志，不是浏览器所在电脑的文件系统。若这里出现
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">/home/node</code>
+              之类路径，说明你正在看远端容器的日志路径。
+            </p>
+            {report.sourcePaths.length > 0 && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-white/60 px-4 py-3">
+                <p className="font-semibold text-amber-900">当前读取路径</p>
+                <ul className="mt-2 space-y-1 font-mono text-xs leading-5 text-amber-800">
+                  {report.sourcePaths.map((sourcePath) => (
+                    <li key={sourcePath}>{sourcePath}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <p className="mt-3 text-amber-700">
+              要读取你这台电脑的额度，请在本机运行
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">pnpm codex:limits</code>
+              或
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">pnpm codex:limits:serve</code>。
+              项目网页则需要本机启动 Token Board API，并让
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code>
+              指向本机 API。
+            </p>
           </div>
         )}
 

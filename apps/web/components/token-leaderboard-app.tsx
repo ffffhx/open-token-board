@@ -11,6 +11,7 @@ import {
   type TokenBoardRange,
   type TokenLeaderboardSummary,
 } from "@open-token-board/core";
+import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
 import { RateLimitPanel } from "@/components/rate-limit/rate-limit-board";
 
@@ -571,6 +572,13 @@ export function TokenLeaderboardApp({
       <div className="space-y-4">
         <header className="overflow-hidden rounded-lg border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 lg:px-7">
           <div className="space-y-5">
+            <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-950">
+                <TokenBoardLogoMark className="size-7 shrink-0" decorative />
+                <span className="truncate">Open Token Board</span>
+              </div>
+              <AppNavLinks active="board" className="justify-start lg:justify-end" />
+            </div>
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div className="max-w-3xl">
                 <div className="flex flex-wrap items-center gap-2">

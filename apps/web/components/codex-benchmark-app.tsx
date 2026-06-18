@@ -11,6 +11,7 @@ import {
   type CodexBenchmarkTaskStatus,
 } from "@open-token-board/core";
 
+import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
 
 export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
@@ -27,20 +28,7 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
             <TokenBoardLogoMark className="size-7 shrink-0" decorative />
             <span className="truncate">Open Token Board</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/board"
-              className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-            >
-              Token 榜单
-            </Link>
-            <Link
-              href="/"
-              className="hidden min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-950 sm:inline-flex"
-            >
-              首页
-            </Link>
-          </div>
+          <AppNavLinks active="bench" className="justify-end" />
         </nav>
       </header>
 

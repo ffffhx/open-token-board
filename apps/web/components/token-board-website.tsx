@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogo } from "@/components/token-board-logo";
 
 const NPX_INSTALL_COMMAND = "npx --yes token-board-agent install";
@@ -151,35 +152,18 @@ function HeroSection() {
       <HeroDashboardScene />
       <div className="absolute inset-0 bg-slate-950/72" />
 
-      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+      <nav className="relative z-10 mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <Link href="/" className="text-white">
           <TokenBoardLogo />
         </Link>
-        <div className="flex items-center gap-2">
-          <a href="#capabilities" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex">
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+          <a href="#capabilities" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white lg:inline-flex">
             能力
           </a>
-          <a href="#privacy" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex">
+          <a href="#privacy" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white lg:inline-flex">
             隐私
           </a>
-          <Link
-            href="/bench"
-            className="hidden min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-          >
-            Codex 评测
-          </Link>
-          <Link
-            href="/limits"
-            className="hidden min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white sm:inline-flex"
-          >
-            额度面板
-          </Link>
-          <Link
-            href="/board"
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            进入榜单
-          </Link>
+          <AppNavLinks active="home" theme="dark" />
         </div>
       </nav>
 
