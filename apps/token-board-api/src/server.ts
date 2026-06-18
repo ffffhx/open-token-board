@@ -33,6 +33,7 @@ import {
   buildTokenLeaderboard,
   type TokenBoardMetric,
   type TokenBoardRange,
+  type TokenLeaderboardSummary,
 } from "@open-token-board/core";
 import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
 import {
@@ -61,6 +62,10 @@ const DATA_FILE = process.env.TOKEN_BOARD_DATA_FILE || path.join(process.cwd(), 
 const USERS_FILE = process.env.TOKEN_BOARD_USERS_FILE || path.join(process.cwd(), ".token-board", "users.json");
 const MAX_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_BODY_BYTES, 4 * 1024 * 1024);
 const MAX_EVENTS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENTS, 100_000);
+const LEADERBOARD_SNAPSHOT_FILE =
+  process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_FILE || path.join(path.dirname(DATA_FILE), "leaderboard-snapshots.json");
+const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_REFRESH_MS, 60_000);
+const LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS, 5_000);
 const SNAPSHOT_SHARE_DATA_FILE =
   process.env.SNAPSHOT_SHARE_DATA_FILE || path.join(process.cwd(), ".token-board", "snapshot-shares.json");
 const MAX_SNAPSHOT_SHARE_BODY_BYTES = positiveNumberEnv(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES, 24 * 1024 * 1024);
@@ -84,11 +89,20 @@ let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
+const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
+const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages"];
+let leaderboardSnapshotCache = new Map<string, LeaderboardSnapshotEntry>();
+let leaderboardSnapshotRefreshPromise: Promise<void> | undefined;
+let leaderboardSnapshotRefreshTimer: NodeJS.Timeout | undefined;
+let leaderboardSnapshotWriteTimer: NodeJS.Timeout | undefined;
+let leaderboardSnapshotLastRefreshAt = "";
+let leaderboardSnapshotLastError = "";
 
 async function main() {
   authSecret(); // fail fast if the auth secret is missing/placeholder
   tokenUsageStore = await openTokenUsageStore();
   snapshotShareStore = await openSnapshotShareStore();
+  await loadLeaderboardSnapshotsFromFile();
 
   if (process.env.TOKEN_BOARD_MIGRATE_JSON_ON_START === "true") {
     const result = await importTokenUsageEventsFromJsonFile(tokenUsageStore, DATA_FILE);
@@ -96,6 +110,7 @@ async function main() {
       `migrated ${result.accepted}/${result.imported} token usage events from ${result.filePath}; duplicates=${result.duplicates}; records=${result.records}`
     );
   }
+  startLeaderboardSnapshotRefreshLoop();
 
   const server = createServer((request, response) => {
     void routeRequest(request, response).catch((error) => {
@@ -110,6 +125,7 @@ async function main() {
     console.log(`token-board server listening on http://${HOST}:${PORT}`);
     console.log(`storage: ${tokenUsageStore?.kind} (${tokenUsageStore?.label})`);
     console.log(`snapshot shares: ${snapshotShareStore?.kind} (${snapshotShareStore?.label})`);
+    console.log(`leaderboard snapshots: ${LEADERBOARD_SNAPSHOT_FILE}`);
   });
 }
 
@@ -154,6 +170,14 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       snapshotShares,
       storage: usageStore().kind,
       snapshotShareStorage: shareStore().kind,
+      leaderboardSnapshots: {
+        entries: leaderboardSnapshotCache.size,
+        file: LEADERBOARD_SNAPSHOT_FILE,
+        lastRefreshAt: leaderboardSnapshotLastRefreshAt || null,
+        lastError: leaderboardSnapshotLastError || null,
+        refreshMs: LEADERBOARD_SNAPSHOT_REFRESH_MS,
+        refreshing: Boolean(leaderboardSnapshotRefreshPromise),
+      },
       githubAuth: Boolean(process.env.GITHUB_CLIENT_ID),
       generatedAt: new Date().toISOString(),
     });
@@ -254,13 +278,18 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const range = parseRange(url.searchParams.get("range"));
     const metric = parseMetric(url.searchParams.get("metric"));
     const now = parseNow(url.searchParams.get("now"));
-    const { records, summary } = await readUsageLeaderboard({ range, metric, now });
+    const { generatedAt, records, source, summary } = await readUsageLeaderboard({
+      range,
+      metric,
+      now,
+      preferSnapshot: !url.searchParams.has("now"),
+    });
 
     sendJson(request, response, 200, {
       schemaVersion: 1,
-      source: "server",
+      source,
       records,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       summary,
     });
     return;
@@ -286,7 +315,12 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       range,
       now,
     });
-    const { summary } = await readUsageLeaderboard({ range, metric: "tokens", now });
+    const { summary } = await readUsageLeaderboard({
+      range,
+      metric: "tokens",
+      now,
+      preferSnapshot: !url.searchParams.has("now"),
+    });
     const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
     const totalUsers = summary.users.length;
     const rank = rankedUser?.rank ?? null;
@@ -365,11 +399,17 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     const metric = parseMetric(url.searchParams.get("metric"));
     const now = parseNow(url.searchParams.get("now"));
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") || 50)));
-    const { summary } = await readUsageLeaderboard({ range, metric, now });
+    const { generatedAt, source, summary } = await readUsageLeaderboard({
+      range,
+      metric,
+      now,
+      preferSnapshot: !url.searchParams.has("now"),
+    });
 
     sendJson(request, response, 200, {
       schemaVersion: 1,
-      source: "server",
+      source,
+      generatedAt,
       users: summary.users.slice(0, limit),
       summary,
     });
@@ -543,6 +583,9 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
     await store.upsertUserConfig(identity.userId, userConfig);
   }
   const result = await store.insertEvents(sanitized.entries);
+  if (result.accepted > 0) {
+    queueLeaderboardSnapshotRefresh();
+  }
 
   sendJson(request, response, 200, {
     ok: true,
@@ -600,6 +643,9 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
   const deleted = sanitized.entries.length ? await store.deleteEventsForUser(identity.userId) : { deleted: 0, records: await store.countEvents() };
   const inserted = await store.insertEvents(sanitized.entries);
+  if (deleted.deleted > 0 || inserted.accepted > 0) {
+    queueLeaderboardSnapshotRefresh();
+  }
 
   sendJson(request, response, 200, {
     ok: true,
@@ -1292,7 +1338,60 @@ function usageStore() {
   return tokenUsageStore;
 }
 
+type UsageLeaderboardReadResult = {
+  generatedAt: string;
+  records: number;
+  source: "live" | "snapshot";
+  summary: TokenLeaderboardSummary;
+};
+
+type LeaderboardSnapshotEntry = {
+  generatedAt: string;
+  key: string;
+  metric: TokenBoardMetric;
+  range: TokenBoardRange;
+  records: number;
+  summary: TokenLeaderboardSummary;
+};
+
 async function readUsageLeaderboard({
+  range,
+  metric,
+  now,
+  preferSnapshot = false,
+}: {
+  range: TokenBoardRange;
+  metric: TokenBoardMetric;
+  now: Date;
+  preferSnapshot?: boolean;
+}): Promise<UsageLeaderboardReadResult> {
+  if (preferSnapshot) {
+    const snapshot = await readLeaderboardSnapshot({ range, metric });
+
+    if (snapshot) {
+      return {
+        generatedAt: snapshot.generatedAt,
+        records: snapshot.records,
+        source: "snapshot",
+        summary: snapshot.summary,
+      };
+    }
+
+    if (leaderboardSnapshotLastError) {
+      throw new Error(`Leaderboard snapshot is not ready: ${leaderboardSnapshotLastError}`);
+    }
+  }
+
+  const live = await readLiveUsageLeaderboard({ range, metric, now });
+
+  return {
+    ...live,
+    generatedAt: new Date().toISOString(),
+    source: "live",
+  };
+}
+
+async function readLiveUsageLeaderboard({
   range,
   metric,
   now,
@@ -1313,6 +1412,226 @@ async function readUsageLeaderboard({
     records: events.length,
     summary: buildTokenLeaderboard(events, { range, metric, now }),
   };
+}
+
+async function readLeaderboardSnapshot({
+  range,
+  metric,
+}: {
+  range: TokenBoardRange;
+  metric: TokenBoardMetric;
+}) {
+  const key = leaderboardSnapshotKey(range, metric);
+  const cached = leaderboardSnapshotCache.get(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  await refreshLeaderboardSnapshots("cache-miss").catch((error) => {
+    console.error("Leaderboard snapshot refresh failed:", error);
+  });
+
+  return leaderboardSnapshotCache.get(key) ?? null;
+}
+
+function startLeaderboardSnapshotRefreshLoop() {
+  void refreshLeaderboardSnapshots("startup").catch((error) => {
+    console.error("Initial leaderboard snapshot refresh failed:", error);
+  });
+
+  if (leaderboardSnapshotRefreshTimer) {
+    clearInterval(leaderboardSnapshotRefreshTimer);
+  }
+
+  leaderboardSnapshotRefreshTimer = setInterval(() => {
+    void refreshLeaderboardSnapshots("interval").catch((error) => {
+      console.error("Leaderboard snapshot refresh failed:", error);
+    });
+  }, LEADERBOARD_SNAPSHOT_REFRESH_MS);
+
+  leaderboardSnapshotRefreshTimer.unref?.();
+}
+
+function queueLeaderboardSnapshotRefresh() {
+  if (leaderboardSnapshotWriteTimer) {
+    clearTimeout(leaderboardSnapshotWriteTimer);
+  }
+
+  leaderboardSnapshotWriteTimer = setTimeout(() => {
+    leaderboardSnapshotWriteTimer = undefined;
+    void refreshLeaderboardSnapshots("write").catch((error) => {
+      console.error("Leaderboard snapshot refresh after write failed:", error);
+    });
+  }, LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS);
+
+  leaderboardSnapshotWriteTimer.unref?.();
+}
+
+async function refreshLeaderboardSnapshots(reason: string) {
+  if (leaderboardSnapshotRefreshPromise) {
+    return leaderboardSnapshotRefreshPromise;
+  }
+
+  leaderboardSnapshotRefreshPromise = refreshLeaderboardSnapshotsNow(reason)
+    .catch((error) => {
+      leaderboardSnapshotLastError = error instanceof Error ? error.message : String(error);
+      throw error;
+    })
+    .finally(() => {
+      leaderboardSnapshotRefreshPromise = undefined;
+    });
+
+  return leaderboardSnapshotRefreshPromise;
+}
+
+async function refreshLeaderboardSnapshotsNow(reason: string) {
+  const refreshedAt = new Date().toISOString();
+  const nextCache = new Map<string, LeaderboardSnapshotEntry>();
+
+  for (const range of LEADERBOARD_SNAPSHOT_RANGES) {
+    const { records, summary } = await readLiveUsageLeaderboard({
+      range,
+      metric: "tokens",
+      now: new Date(refreshedAt),
+    });
+
+    for (const metric of LEADERBOARD_SNAPSHOT_METRICS) {
+      const metricSummary = summaryForMetric(summary, metric);
+      nextCache.set(leaderboardSnapshotKey(range, metric), {
+        generatedAt: refreshedAt,
+        key: leaderboardSnapshotKey(range, metric),
+        metric,
+        range,
+        records,
+        summary: metricSummary,
+      });
+    }
+  }
+
+  leaderboardSnapshotCache = nextCache;
+  leaderboardSnapshotLastRefreshAt = refreshedAt;
+  leaderboardSnapshotLastError = "";
+  await writeLeaderboardSnapshotsToFile();
+  console.log(
+    `leaderboard snapshots refreshed (${reason}); entries=${leaderboardSnapshotCache.size}; generatedAt=${refreshedAt}`
+  );
+}
+
+async function loadLeaderboardSnapshotsFromFile() {
+  try {
+    const text = await fs.readFile(LEADERBOARD_SNAPSHOT_FILE, "utf8");
+    const parsed = JSON.parse(text) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || !Array.isArray((parsed as { entries?: unknown }).entries)) {
+      return;
+    }
+
+    const nextCache = new Map<string, LeaderboardSnapshotEntry>();
+    for (const entry of (parsed as { entries: unknown[] }).entries) {
+      const normalized = normalizeLeaderboardSnapshotEntry(entry);
+      if (normalized) {
+        nextCache.set(normalized.key, normalized);
+      }
+    }
+
+    if (nextCache.size) {
+      leaderboardSnapshotCache = nextCache;
+      leaderboardSnapshotLastRefreshAt =
+        typeof (parsed as { generatedAt?: unknown }).generatedAt === "string"
+          ? (parsed as { generatedAt: string }).generatedAt
+          : "";
+      console.log(`loaded ${nextCache.size} leaderboard snapshots from ${LEADERBOARD_SNAPSHOT_FILE}`);
+    }
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return;
+    }
+
+    console.error("Failed to load leaderboard snapshots:", error);
+  }
+}
+
+async function writeLeaderboardSnapshotsToFile() {
+  const entries = [...leaderboardSnapshotCache.values()];
+  const payload = {
+    schemaVersion: 1,
+    generatedAt: leaderboardSnapshotLastRefreshAt || new Date().toISOString(),
+    entries,
+  };
+  const dir = path.dirname(LEADERBOARD_SNAPSHOT_FILE);
+  const tempFile = path.join(
+    dir,
+    `.${path.basename(LEADERBOARD_SNAPSHOT_FILE)}.${process.pid}.${Date.now()}.${randomBytes(4).toString("hex")}.tmp`
+  );
+
+  await fs.mkdir(dir, { recursive: true });
+
+  try {
+    await fs.writeFile(tempFile, `${JSON.stringify(payload)}\n`);
+    await fs.rename(tempFile, LEADERBOARD_SNAPSHOT_FILE);
+  } catch (error) {
+    await fs.rm(tempFile, { force: true }).catch(() => undefined);
+    leaderboardSnapshotLastError = error instanceof Error ? error.message : String(error);
+    throw error;
+  }
+}
+
+function normalizeLeaderboardSnapshotEntry(value: unknown): LeaderboardSnapshotEntry | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const entry = value as Partial<LeaderboardSnapshotEntry>;
+  if (!entry.range || !isTokenBoardRange(entry.range) || !entry.metric || !isTokenBoardMetric(entry.metric)) {
+    return null;
+  }
+
+  if (!entry.summary || typeof entry.summary !== "object" || !Array.isArray(entry.summary.users)) {
+    return null;
+  }
+
+  return {
+    generatedAt: typeof entry.generatedAt === "string" ? entry.generatedAt : new Date().toISOString(),
+    key: leaderboardSnapshotKey(entry.range, entry.metric),
+    metric: entry.metric,
+    range: entry.range,
+    records: Number.isFinite(entry.records) ? Number(entry.records) : 0,
+    summary: entry.summary as TokenLeaderboardSummary,
+  };
+}
+
+function summaryForMetric(summary: TokenLeaderboardSummary, metric: TokenBoardMetric): TokenLeaderboardSummary {
+  return {
+    ...summary,
+    users: [...summary.users]
+      .sort((left, right) => leaderboardMetricValue(right, metric) - leaderboardMetricValue(left, metric) || left.displayName.localeCompare(right.displayName))
+      .map((user, index) => ({ ...user, rank: index + 1 })),
+  };
+}
+
+function leaderboardMetricValue(user: TokenLeaderboardSummary["users"][number], metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return user.costUsd;
+  }
+
+  if (metric === "sessions") {
+    return user.sessions;
+  }
+
+  if (metric === "messages") {
+    return user.messages;
+  }
+
+  return user.tokens;
+}
+
+function leaderboardSnapshotKey(range: TokenBoardRange, metric: TokenBoardMetric) {
+  return `${range}:${metric}`;
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return Boolean(error && typeof error === "object" && "code" in error);
 }
 
 function shareStore() {
