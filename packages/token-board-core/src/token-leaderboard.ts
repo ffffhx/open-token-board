@@ -1,3 +1,5 @@
+import type { CodexRateLimitReport } from "./codex-rate-limits";
+
 export type TokenBoardRange = "1D" | "7D" | "30D" | "90D";
 
 export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages";
@@ -118,6 +120,7 @@ export type TokenBoardUserConfig = {
     modelMaxContextWindow?: number;
     effectiveContextWindowPercent?: number;
   };
+  rateLimits?: CodexRateLimitReport;
 };
 
 export type TokenUsageActivityCell = {

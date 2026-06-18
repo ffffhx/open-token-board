@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import path from "node:path";
 
+import type { CodexRateLimitReport, CodexRateWindow, CodexRateWindowKey } from "./codex-rate-limits";
 import {
   dedupeTokenEvents,
   normalizeTokenUsageEvent,
@@ -215,8 +216,9 @@ export function sanitizeTokenBoardUserConfig(
   });
   const hasAgent = Boolean(agent.name || agent.version || agent.platform);
   const hasCodex = Object.values(codex).some((item) => item !== undefined);
+  const rateLimits = sanitizeCodexRateLimits(record.rateLimits ?? record.rate_limits);
 
-  if (!hasAgent && !hasCodex) {
+  if (!hasAgent && !hasCodex && !rateLimits) {
     return null;
   }
 
@@ -224,6 +226,86 @@ export function sanitizeTokenBoardUserConfig(
     updatedAt: sanitizeIsoDate(record.updatedAt) || new Date().toISOString(),
     ...(hasAgent ? { agent } : {}),
     ...(hasCodex ? { codex } : {}),
+    ...(rateLimits ? { rateLimits } : {}),
+  };
+}
+
+function sanitizeCodexRateLimits(value: unknown): CodexRateLimitReport | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const generatedAt = sanitizeIsoDate(value.generatedAt);
+  const latestEventAt = sanitizeIsoDate(value.latestEventAt) || null;
+  const windows = Array.isArray(value.windows)
+    ? value.windows.flatMap((window) => {
+        const sanitized = sanitizeCodexRateWindow(window);
+        return sanitized ? [sanitized] : [];
+      })
+    : [];
+  const sourcePaths = Array.isArray(value.sourcePaths)
+    ? value.sourcePaths.flatMap((item) => {
+        const text = sanitizeLabel(item, 240);
+        return text ? [text] : [];
+      }).slice(0, 8)
+    : [];
+  const notes = Array.isArray(value.notes)
+    ? value.notes.flatMap((item) => {
+        const text = sanitizeLabel(item, 280);
+        return text ? [text] : [];
+      }).slice(0, 8)
+    : [];
+
+  return {
+    generatedAt: generatedAt || new Date().toISOString(),
+    available: value.available === true && windows.length > 0,
+    plan: sanitizeLabel(value.plan, 40) || null,
+    latestEventAt,
+    windows,
+    recentTokensPerHour: sanitizeNonNegativeNumberOrNull(value.recentTokensPerHour),
+    notes,
+    sourcePaths,
+  };
+}
+
+function sanitizeCodexRateWindow(value: unknown): CodexRateWindow | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const rawKey = sanitizeLabel(value.key, 20);
+  const key: CodexRateWindowKey | null = rawKey === "5h" || rawKey === "weekly" ? rawKey : null;
+  if (!key) {
+    return null;
+  }
+
+  const windowMinutes = sanitizePositiveInteger(value.windowMinutes);
+  const label = sanitizeLabel(value.label, 20) || (key === "5h" ? "5 小时" : "每周");
+  const observedAt = sanitizeIsoDate(value.observedAt);
+  const usedPercent = sanitizePercent(value.usedPercent);
+  const remainingPercent = sanitizePercent(value.remainingPercent);
+
+  if (!windowMinutes || !observedAt || usedPercent === undefined || remainingPercent === undefined) {
+    return null;
+  }
+
+  return {
+    key,
+    windowMinutes,
+    label,
+    usedPercent,
+    remainingPercent,
+    resetsAt: sanitizeIsoDate(value.resetsAt) || null,
+    resetsInSeconds: sanitizeIntegerOrNull(value.resetsInSeconds),
+    observedAt,
+    staleSeconds: sanitizeNonNegativeInteger(value.staleSeconds) ?? 0,
+    burnPercentPerHour: sanitizeNonNegativeNumberOrNull(value.burnPercentPerHour),
+    etaSeconds: sanitizeIntegerOrNull(value.etaSeconds),
+    etaAt: sanitizeIsoDate(value.etaAt) || null,
+    willExhaustBeforeReset: value.willExhaustBeforeReset === true,
+    estimatedCapacityTokens: sanitizeNonNegativeIntegerOrNull(value.estimatedCapacityTokens),
+    estimatedRemainingTokens: sanitizeNonNegativeIntegerOrNull(value.estimatedRemainingTokens),
+    localConsumedTokensThisWindow: sanitizeNonNegativeIntegerOrNull(value.localConsumedTokensThisWindow),
   };
 }
 
@@ -330,6 +412,38 @@ function sanitizePositiveInteger(value: unknown) {
   const number = typeof value === "string" ? Number(value.replace(/_/g, "")) : Number(value);
 
   return Number.isFinite(number) && number > 0 ? Math.round(number) : undefined;
+}
+
+function sanitizeNonNegativeInteger(value: unknown) {
+  const number = typeof value === "string" ? Number(value.replace(/_/g, "")) : Number(value);
+
+  return Number.isFinite(number) && number >= 0 ? Math.round(number) : undefined;
+}
+
+function sanitizeIntegerOrNull(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const number = typeof value === "string" ? Number(value.replace(/_/g, "")) : Number(value);
+  return Number.isFinite(number) ? Math.round(number) : null;
+}
+
+function sanitizeNonNegativeIntegerOrNull(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  return sanitizeNonNegativeInteger(value) ?? null;
+}
+
+function sanitizeNonNegativeNumberOrNull(value: unknown) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const number = typeof value === "string" ? Number(value.replace(/_/g, "")) : Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
 function sanitizePercent(value: unknown) {

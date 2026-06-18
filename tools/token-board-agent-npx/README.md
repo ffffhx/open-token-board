@@ -1,6 +1,6 @@
 # token-board-agent
 
-Local token usage uploader for [Open Token Board](https://ffffhx.github.io/open-token-board/).
+Local token usage and Codex quota uploader for [Open Token Board](https://ffffhx.github.io/open-token-board/).
 
 ## Usage
 
@@ -10,7 +10,7 @@ npx --yes token-board-agent status
 npx --yes token-board-agent uninstall
 ```
 
-`install` guides you through GitHub device login and registers a background sync task:
+`install` guides you through GitHub device login and registers a background sync task. After that one-time install, the task keeps syncing token usage and the latest Codex 5h/weekly quota snapshot:
 
 - macOS: LaunchAgent under `~/Library/LaunchAgents/dev.ffffhx.token-board-agent.plist`
 - Windows: Task Scheduler task named `TokenBoardAgent`
@@ -41,7 +41,7 @@ TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false npx --yes token-board-agent upload
 
 ## What It Uploads
 
-The uploaded event payload is designed for usage ranking and personal insight. It includes token counts, model/tool/source metadata, timestamps, anonymized session identifiers, and project basename information.
+The uploaded event payload is designed for usage ranking and personal insight. It includes token counts, model/tool/source metadata, timestamps, anonymized session identifiers, project basename information, and a Codex rate-limit snapshot derived from local `~/.codex` logs.
 
 By default, the agent does not upload full prompt text or absolute project paths. Session titles may be included as short labels when available. You can disable them with:
 

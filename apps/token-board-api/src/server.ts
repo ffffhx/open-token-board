@@ -187,8 +187,30 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   if (request.method === "GET" && url.pathname === "/api/usage/rate-limits") {
     const daysParam = Number(url.searchParams.get("days"));
     const lookbackDays = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(90, daysParam) : undefined;
+    const identity = readWebIdentity(request);
+    const userConfig = identity ? await usageStore().getUserConfig(identity.userId) : null;
+
+    if (userConfig?.rateLimits) {
+      sendJson(request, response, 200, {
+        ...userConfig.rateLimits,
+        notes: [
+          ...userConfig.rateLimits.notes,
+          `已从 ${identity?.displayName || identity?.userId || "当前用户"} 的 token-board-agent 后台同步读取。`,
+        ],
+      });
+      return;
+    }
+
     const report = await analyzeCodexRateLimits({ lookbackDays, cacheMs: 8000 });
-    sendJson(request, response, 200, report);
+    sendJson(request, response, 200, {
+      ...report,
+      notes: [
+        ...report.notes,
+        identity
+          ? "尚未收到当前登录用户的 token-board-agent 额度快照；请重新运行 npx --yes token-board-agent install 或等待后台同步。"
+          : "未登录时只能读取 API 服务所在机器的 Codex 日志；登录后可读取 token-board-agent 上传的个人额度快照。",
+      ],
+    });
     return;
   }
 

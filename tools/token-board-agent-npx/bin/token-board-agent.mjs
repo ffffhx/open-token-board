@@ -25,7 +25,12 @@ const FETCH_MAX_RETRIES = readNonNegativeInteger(
 const FETCH_RETRY_BASE_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_BASE_DELAY_MS, 1_000);
 const FETCH_RETRY_MAX_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_MAX_DELAY_MS, 10_000);
 const BATCH_SIZE = 1000;
-const VERSION = "0.4.12";
+const CODEX_RATE_LIMIT_LOOKBACK_DAYS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_DAYS, 14);
+const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_MAX_FILES, 2000);
+const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
+const CODEX_RATE_WINDOW_5H_MINUTES = 300;
+const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
+const VERSION = "0.4.13";
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
@@ -1386,6 +1391,7 @@ function clientInfo() {
 async function collectUserConfig() {
   const codexHome = path.resolve(process.env.CODEX_HOME || homePath(".codex"));
   const codex = await readCodexConfigSummary(codexHome);
+  const rateLimits = await analyzeLocalCodexRateLimits(codexHome);
   const hasCodex = Object.values(codex).some((value) => value !== undefined && value !== "");
 
   return {
@@ -1396,7 +1402,327 @@ async function collectUserConfig() {
       platform: normalizePlatform(os.platform()),
     },
     ...(hasCodex ? { codex } : {}),
+    rateLimits,
   };
+}
+
+async function analyzeLocalCodexRateLimits(codexHome) {
+  const now = Date.now();
+  const cutoffMs = now - CODEX_RATE_LIMIT_LOOKBACK_DAYS * 24 * 3600 * 1000;
+  const { files, scannedDirs } = await listRecentCodexSessionFiles(codexHome, cutoffMs, CODEX_RATE_LIMIT_MAX_FILES);
+  const events = [];
+  let plan = null;
+
+  for (const filePath of files) {
+    const filePlan = await parseCodexRateLimitFile(filePath, events);
+    if (filePlan) {
+      plan = filePlan;
+    }
+  }
+
+  const windows = [];
+  const fiveHour = buildCodexRateWindow(
+    "5h",
+    CODEX_RATE_WINDOW_5H_MINUTES,
+    "5 小时",
+    events,
+    now,
+    (event) => event.pct5,
+    (event) => event.reset5,
+  );
+  const weekly = buildCodexRateWindow(
+    "weekly",
+    CODEX_RATE_WINDOW_WEEKLY_MINUTES,
+    "每周",
+    events,
+    now,
+    (event) => event.pctW,
+    (event) => event.resetW,
+  );
+  if (fiveHour) windows.push(fiveHour);
+  if (weekly) windows.push(weekly);
+
+  let latestEventAt = null;
+  for (const event of events) {
+    if (!latestEventAt || event.ts > Date.parse(latestEventAt)) {
+      latestEventAt = new Date(event.ts).toISOString();
+    }
+  }
+
+  let recentTokensPerHour = null;
+  if (events.length > 0) {
+    const hourAgo = now - 3600 * 1000;
+    let sum = 0;
+    for (const event of events) {
+      if (event.ts >= hourAgo) {
+        sum += event.lastTotal;
+      }
+    }
+    recentTokensPerHour = Math.round(sum);
+  }
+
+  const notes = [];
+  if (files.length === 0) {
+    notes.push(`未在 ${scannedDirs.join("、")} 找到最近 ${CODEX_RATE_LIMIT_LOOKBACK_DAYS} 天的会话日志。`);
+  }
+  if (windows.length > 0) {
+    notes.push(
+      "百分比与重置时间为 Codex 上报的精确值；token 容量为估算（百分比按整数取整、额度按账号跨设备共享，本机日志只能给下界）。窗口边界以重置点切分，已计入提前充值。"
+    );
+  }
+
+  return {
+    generatedAt: new Date(now).toISOString(),
+    available: windows.length > 0,
+    plan,
+    latestEventAt,
+    windows,
+    recentTokensPerHour,
+    notes,
+    sourcePaths: scannedDirs,
+  };
+}
+
+async function listRecentCodexSessionFiles(codexHome, cutoffMs, maxFiles) {
+  const roots = [path.join(codexHome, "sessions"), path.join(codexHome, "archived_sessions")];
+  const found = [];
+  const scannedDirs = [];
+
+  async function walk(dir, depth) {
+    let entries;
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (depth < 6) {
+          await walk(full, depth + 1);
+        }
+      } else if (entry.isFile() && entry.name.endsWith(".jsonl")) {
+        const info = await fs.stat(full).catch(() => undefined);
+        if (info && info.mtimeMs >= cutoffMs) {
+          found.push({ filePath: full, mtime: info.mtimeMs });
+        }
+      }
+    }
+  }
+
+  for (const root of roots) {
+    scannedDirs.push(root);
+    await walk(root, 0);
+  }
+
+  found.sort((a, b) => b.mtime - a.mtime);
+  return { files: found.slice(0, maxFiles).map((entry) => entry.filePath), scannedDirs };
+}
+
+async function parseCodexRateLimitFile(filePath, events) {
+  const sessionId = path.basename(filePath);
+  let plan = null;
+  let lines;
+
+  try {
+    lines = createInterface({
+      input: createReadStream(filePath, { encoding: "utf8" }),
+      crlfDelay: Infinity,
+    });
+  } catch {
+    return null;
+  }
+
+  try {
+    for await (const rawLine of lines) {
+      if (!rawLine.includes('"token_count"')) {
+        continue;
+      }
+
+      const parsed = safeJson(rawLine);
+      const payload = parsed && typeof parsed.payload === "object" ? parsed.payload : {};
+      if (payload.type !== "token_count" || typeof parsed?.timestamp !== "string") {
+        continue;
+      }
+
+      const ts = Date.parse(parsed.timestamp);
+      if (!Number.isFinite(ts)) {
+        continue;
+      }
+
+      const info = payload.info && typeof payload.info === "object" ? payload.info : {};
+      const totalUsage = info.total_token_usage && typeof info.total_token_usage === "object" ? info.total_token_usage : {};
+      const lastUsage = info.last_token_usage && typeof info.last_token_usage === "object" ? info.last_token_usage : {};
+      const cumTotal = numberOrNull(totalUsage.total_tokens);
+      const lastTotal = (numberOrNull(lastUsage.input_tokens) || 0) + (numberOrNull(lastUsage.output_tokens) || 0);
+      const rateLimits = payload.rate_limits && typeof payload.rate_limits === "object" ? payload.rate_limits : {};
+      let pct5 = null;
+      let reset5 = null;
+      let pctW = null;
+      let resetW = null;
+
+      if (typeof rateLimits.plan_type === "string" && rateLimits.plan_type.trim()) {
+        plan = rateLimits.plan_type.trim().slice(0, 40);
+      }
+
+      for (const slotKey of ["primary", "secondary"]) {
+        const slot = rateLimits[slotKey] && typeof rateLimits[slotKey] === "object" ? rateLimits[slotKey] : {};
+        const windowMinutes = numberOrNull(slot.window_minutes);
+        const usedPercent = numberOrNull(slot.used_percent);
+        const resetsAt = numberOrNull(slot.resets_at);
+        if (usedPercent === null) {
+          continue;
+        }
+        if (windowMinutes === CODEX_RATE_WINDOW_5H_MINUTES) {
+          pct5 = usedPercent;
+          reset5 = resetsAt;
+        } else if (windowMinutes === CODEX_RATE_WINDOW_WEEKLY_MINUTES) {
+          pctW = usedPercent;
+          resetW = resetsAt;
+        }
+      }
+
+      events.push({ ts, sessionId, cumTotal, lastTotal, pct5, reset5, pctW, resetW });
+    }
+  } catch {
+    return plan;
+  } finally {
+    lines.close();
+  }
+
+  return plan;
+}
+
+function buildCodexRateWindow(key, windowMinutes, label, events, now, pickPct, pickReset) {
+  let latest = null;
+  for (const event of events) {
+    if (pickPct(event) === null) {
+      continue;
+    }
+    if (!latest || event.ts > latest.ts) {
+      latest = event;
+    }
+  }
+  if (!latest) {
+    return null;
+  }
+
+  const usedPercent = pickPct(latest) || 0;
+  const remainingPercent = Math.max(0, 100 - usedPercent);
+  const resetEpoch = pickReset(latest);
+  const resetsAtMs = resetEpoch !== null ? resetEpoch * 1000 : null;
+  const resetsInSeconds = resetsAtMs !== null ? Math.round((resetsAtMs - now) / 1000) : null;
+  const run = currentCodexRateRun(events, pickPct);
+  let burnPercentPerHour = null;
+  if (run.length >= 2) {
+    const last = run[run.length - 1];
+    const lookbackStart = last.ts - CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS * 3600 * 1000;
+    const window = run.filter((point) => point.ts >= lookbackStart);
+    const first = window.length >= 2 ? window[0] : run[0];
+    const hours = (last.ts - first.ts) / 3600 / 1000;
+    const dPct = last.pct - first.pct;
+    if (hours > 0 && dPct > 0) {
+      burnPercentPerHour = dPct / hours;
+    }
+  }
+
+  let etaSeconds = null;
+  let etaAt = null;
+  if (burnPercentPerHour && burnPercentPerHour > 0 && remainingPercent > 0) {
+    const hoursToEmpty = remainingPercent / burnPercentPerHour;
+    etaSeconds = Math.round(hoursToEmpty * 3600);
+    etaAt = new Date(now + hoursToEmpty * 3600 * 1000).toISOString();
+  }
+
+  const estimatedCapacityTokens = estimateCodexRateCapacityTokens(events, pickPct);
+  const estimatedRemainingTokens =
+    estimatedCapacityTokens !== null ? Math.round((estimatedCapacityTokens * remainingPercent) / 100) : null;
+  let localConsumedTokensThisWindow = null;
+  if (run.length > 0) {
+    const runStartTs = run[0].ts;
+    let sum = 0;
+    for (const event of events) {
+      if (event.ts >= runStartTs) {
+        sum += event.lastTotal;
+      }
+    }
+    localConsumedTokensThisWindow = Math.round(sum);
+  }
+
+  return {
+    key,
+    windowMinutes,
+    label,
+    usedPercent,
+    remainingPercent,
+    resetsAt: resetsAtMs !== null ? new Date(resetsAtMs).toISOString() : null,
+    resetsInSeconds,
+    observedAt: new Date(latest.ts).toISOString(),
+    staleSeconds: Math.round((now - latest.ts) / 1000),
+    burnPercentPerHour,
+    etaSeconds,
+    etaAt,
+    willExhaustBeforeReset: etaSeconds !== null && resetsInSeconds !== null && etaSeconds < resetsInSeconds,
+    estimatedCapacityTokens,
+    estimatedRemainingTokens,
+    localConsumedTokensThisWindow,
+  };
+}
+
+function currentCodexRateRun(events, pickPct) {
+  const points = [];
+  for (const event of events) {
+    const pct = pickPct(event);
+    if (pct !== null) {
+      points.push({ ts: event.ts, pct });
+    }
+  }
+  points.sort((a, b) => a.ts - b.ts);
+  let runStart = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    if (points[index].pct < points[index - 1].pct - 0.5) {
+      runStart = index;
+    }
+  }
+  return points.slice(runStart);
+}
+
+function estimateCodexRateCapacityTokens(events, pickPct) {
+  const bySession = new Map();
+  for (const event of events) {
+    const pct = pickPct(event);
+    if (pct === null || event.cumTotal === null) {
+      continue;
+    }
+    const list = bySession.get(event.sessionId) || [];
+    list.push({ ts: event.ts, cum: event.cumTotal, pct });
+    bySession.set(event.sessionId, list);
+  }
+
+  const ratios = [];
+  for (const list of bySession.values()) {
+    list.sort((a, b) => a.ts - b.ts);
+    let runStart = 0;
+    for (let index = 1; index <= list.length; index += 1) {
+      const broke = index === list.length || list[index].pct < list[index - 1].pct - 0.5;
+      if (broke) {
+        const start = list[runStart];
+        const end = list[index - 1];
+        const dPct = end.pct - start.pct;
+        const dTok = end.cum - start.cum;
+        if (dPct >= 20 && dTok > 0) {
+          ratios.push((dTok / dPct) * 100);
+        }
+        runStart = index;
+      }
+    }
+  }
+
+  if (ratios.length < 3) {
+    return null;
+  }
+  return Math.round(percentile(ratios, 0.8));
 }
 
 async function readCodexConfigSummary(codexHome) {
@@ -1525,6 +1851,19 @@ function positiveInteger(value) {
   const number = typeof value === "string" ? Number(value.replace(/_/g, "")) : Number(value);
 
   return Number.isFinite(number) && number > 0 ? Math.round(number) : undefined;
+}
+
+function numberOrNull(value) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function percentile(values, q) {
+  if (!values.length) {
+    return 0;
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const index = Math.min(sorted.length - 1, Math.max(0, Math.floor(q * sorted.length)));
+  return sorted[index];
 }
 
 function percentNumber(value) {

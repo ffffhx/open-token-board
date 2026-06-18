@@ -144,7 +144,7 @@ function useRateLimitReport(apiBaseUrl: string): RateLimitData {
     }
     if (firstLoad.current) setState("loading");
     try {
-      const res = await fetch(`${base}/api/usage/rate-limits`, { cache: "no-store" });
+      const res = await fetch(`${base}/api/usage/rate-limits`, { cache: "no-store", credentials: "include" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as CodexRateLimitReport;
       setReport(data);
@@ -208,8 +208,8 @@ function WindowGrid({ report, now }: { report: CodexRateLimitReport; now: number
 }
 
 /**
- * 嵌入式额度面板：用于 /board 个人区域。本机没有限额数据（远程访客、未启动
- * 本地 API）时静默隐藏，避免给公开榜单的访客显示报错。
+ * 嵌入式额度面板：用于 /board 个人区域。未登录、未安装 agent 或还没有
+ * 额度快照时静默隐藏，避免给公开榜单的访客显示报错。
  */
 export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
   const { report, state, now } = useRateLimitReport(apiBaseUrl);
@@ -223,7 +223,7 @@ export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-slate-900">Codex 额度面板</h2>
-          <p className="mt-1 text-xs text-slate-500">本机 ~/.codex 的 5 小时与每周额度，实时刷新。</p>
+          <p className="mt-1 text-xs text-slate-500">安装 token-board-agent 后自动同步本机 5 小时与每周额度。</p>
         </div>
         <Link href="/limits" className="font-mono text-xs font-semibold text-blue-600 hover:text-blue-700">
           独立页面 →
@@ -242,6 +242,13 @@ export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
 /** 全页额度面板：/limits 路由。 */
 export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
   const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl);
+  const loginWithGitHub = useCallback(() => {
+    if (!base || typeof window === "undefined") {
+      return;
+    }
+
+    window.location.href = `${base}/api/auth/github/start?returnTo=${encodeURIComponent(window.location.href)}`;
+  }, [base]);
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -266,10 +273,9 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
           <p className="font-mono text-xs font-semibold uppercase text-blue-600">Codex rate limits</p>
           <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Codex 额度面板</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            实时读取 API 服务所在机器的 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code> 日志，
-            本机部署时就是你的电脑；公网页面通常读取远端服务器。
-            展示 5 小时与每周额度的剩余、重置倒计时和预计耗尽时间。百分比与重置时间是 Codex 上报的精确值，
-            token 容量为估算值。窗口按重置点切分，已计入提前充值。
+            安装 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">token-board-agent</code> 后，
+            后台任务会像 token 统计一样定时上传本机 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code>
+            里的 5 小时与每周额度快照。百分比与重置时间是 Codex 上报的精确值，token 容量为估算值。
           </p>
         </header>
 
@@ -316,13 +322,18 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
             )}
             <p className="mt-3 text-amber-700">
               要读取你这台电脑的额度，请在本机运行
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">pnpm codex:limits</code>
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent install</code>
               或
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">pnpm codex:limits:serve</code>。
-              项目网页则需要本机启动 Token Board API，并让
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code>
-              指向本机 API。
+              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent upload</code>。
+              之后后台任务会每 5 分钟同步一次，无需再启动本机 API。
             </p>
+            <button
+              type="button"
+              onClick={loginWithGitHub}
+              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
+            >
+              GitHub 登录后读取 agent 快照
+            </button>
           </div>
         )}
 

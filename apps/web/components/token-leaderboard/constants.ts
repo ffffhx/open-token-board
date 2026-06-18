@@ -38,7 +38,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         description: "在你平时使用 AI 编码工具的 Mac 终端里运行安装命令，首次执行会引导 GitHub 授权。",
         command: NPX_INSTALL_COMMAND,
         commandLabel: "macOS 安装命令",
-        note: "安装成功后会注册 macOS LaunchAgent，终端关闭也会每 5 分钟同步一次。",
+        note: "安装成功后会注册 macOS LaunchAgent，终端关闭也会每 5 分钟同步 token 记录和 Codex 额度快照。",
       },
       {
         title: "检查运行状态",
@@ -51,7 +51,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
       {
         title: "回到榜单刷新",
         eyebrow: "Step 3",
-        description: "后台任务开始同步后，回到页面刷新榜单或切换时间范围，就能看到自己的 token 记录。",
+        description: "后台任务开始同步后，回到页面刷新榜单或打开额度面板，就能看到自己的 token 记录和 Codex 额度。",
         note: "页面只展示 token、模型、工具、项目 basename 与会话短标题，不展示完整 prompt 文本。",
       },
     ],
@@ -72,7 +72,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         description: "在 PowerShell 里运行安装命令，首次执行会引导 GitHub 授权，并注册 Windows 任务计划程序。",
         command: NPX_INSTALL_COMMAND,
         commandLabel: "Windows PowerShell 安装命令",
-        note: "安装成功后会创建名为 TokenBoardAgent 的隐藏 Task Scheduler 任务，每 5 分钟同步一次；关闭 PowerShell 也不影响后台上传。",
+        note: "安装成功后会创建名为 TokenBoardAgent 的隐藏 Task Scheduler 任务，每 5 分钟同步 token 记录和 Codex 额度快照。",
       },
       {
         title: "检查任务状态",
@@ -85,7 +85,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
       {
         title: "回到榜单刷新",
         eyebrow: "Step 3",
-        description: "任务开始同步后，回到页面刷新榜单或切换时间范围，就能看到自己的 token 记录。",
+        description: "任务开始同步后，回到页面刷新榜单或打开额度面板，就能看到自己的 token 记录和 Codex 额度。",
         note: "Windows 模式会读取用户目录下的 Codex / Claude Code 记录。",
       },
     ],
