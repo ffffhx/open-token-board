@@ -121,6 +121,8 @@ export type TokenBoardUserConfig = {
     effectiveContextWindowPercent?: number;
   };
   rateLimits?: CodexRateLimitReport;
+  /** Claude Code 订阅额度(来自状态栏快照,复用 Codex 报告结构)。 */
+  claudeCodeRateLimits?: CodexRateLimitReport;
 };
 
 export type TokenUsageActivityCell = {

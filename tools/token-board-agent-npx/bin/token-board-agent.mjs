@@ -1392,6 +1392,7 @@ async function collectUserConfig() {
   const codexHome = path.resolve(process.env.CODEX_HOME || homePath(".codex"));
   const codex = await readCodexConfigSummary(codexHome);
   const rateLimits = await analyzeLocalCodexRateLimits(codexHome);
+  const claudeCodeRateLimits = await collectClaudeCodeRateLimits();
   const hasCodex = Object.values(codex).some((value) => value !== undefined && value !== "");
 
   return {
@@ -1403,6 +1404,71 @@ async function collectUserConfig() {
     },
     ...(hasCodex ? { codex } : {}),
     rateLimits,
+    ...(claudeCodeRateLimits ? { claudeCodeRateLimits } : {}),
+  };
+}
+
+/**
+ * 读取 Claude Code 状态栏捕获的订阅额度快照(由 claude-statusline-capture.sh 落盘),
+ * 构造成与 Codex 额度报告兼容的结构,以便服务端/前端复用同一套类型与组件。
+ * Claude Code 本地不存额度,仅在状态栏 JSON 的 rate_limits 中出现(精确值)。
+ */
+async function collectClaudeCodeRateLimits() {
+  const snapPath =
+    process.env.TOKEN_BOARD_CC_SNAPSHOT || homePath(".token-board-agent", "claude-rate-limits.json");
+  const snap = await readJson(snapPath);
+  if (!snap || !snap.available || !snap.rateLimits) {
+    return null;
+  }
+
+  const nowMs = Date.now();
+  const observedAt =
+    typeof snap.capturedAt === "string" && snap.capturedAt ? snap.capturedAt : new Date(nowMs).toISOString();
+  const staleSeconds = Math.max(0, Math.round((nowMs - Date.parse(observedAt)) / 1000)) || 0;
+  const windows = [];
+
+  const pushWindow = (bucket, key, windowMinutes, label) => {
+    if (!bucket || typeof bucket.used_percentage !== "number") {
+      return;
+    }
+    const used = Math.max(0, Math.min(100, bucket.used_percentage));
+    const resetsEpoch = typeof bucket.resets_at === "number" ? bucket.resets_at : null;
+    windows.push({
+      key,
+      windowMinutes,
+      label,
+      usedPercent: used,
+      remainingPercent: Math.max(0, 100 - used),
+      resetsAt: resetsEpoch ? new Date(resetsEpoch * 1000).toISOString() : null,
+      resetsInSeconds: resetsEpoch ? Math.round(resetsEpoch - nowMs / 1000) : null,
+      observedAt,
+      staleSeconds,
+      burnPercentPerHour: null,
+      etaSeconds: null,
+      etaAt: null,
+      willExhaustBeforeReset: false,
+      estimatedCapacityTokens: null,
+      estimatedRemainingTokens: null,
+      localConsumedTokensThisWindow: null,
+    });
+  };
+
+  pushWindow(snap.rateLimits.five_hour, "5h", 300, "5 小时");
+  pushWindow(snap.rateLimits.seven_day, "weekly", 10080, "每周");
+
+  if (!windows.length) {
+    return null;
+  }
+
+  return {
+    generatedAt: new Date(nowMs).toISOString(),
+    available: true,
+    plan: snap.claudeVersion ? `Claude Code ${snap.claudeVersion}` : "Claude Code",
+    latestEventAt: observedAt,
+    windows,
+    recentTokensPerHour: null,
+    notes: ["数据来自 Claude Code 状态栏上报的订阅额度(精确值,非估算)。"],
+    sourcePaths: [snapPath],
   };
 }
 

@@ -217,8 +217,11 @@ export function sanitizeTokenBoardUserConfig(
   const hasAgent = Boolean(agent.name || agent.version || agent.platform);
   const hasCodex = Object.values(codex).some((item) => item !== undefined);
   const rateLimits = sanitizeCodexRateLimits(record.rateLimits ?? record.rate_limits);
+  const claudeCodeRateLimits = sanitizeCodexRateLimits(
+    record.claudeCodeRateLimits ?? record.claude_code_rate_limits
+  );
 
-  if (!hasAgent && !hasCodex && !rateLimits) {
+  if (!hasAgent && !hasCodex && !rateLimits && !claudeCodeRateLimits) {
     return null;
   }
 
@@ -227,6 +230,7 @@ export function sanitizeTokenBoardUserConfig(
     ...(hasAgent ? { agent } : {}),
     ...(hasCodex ? { codex } : {}),
     ...(rateLimits ? { rateLimits } : {}),
+    ...(claudeCodeRateLimits ? { claudeCodeRateLimits } : {}),
   };
 }
 

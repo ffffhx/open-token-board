@@ -214,6 +214,39 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/usage/claude-rate-limits") {
+    const identity = readWebIdentity(request);
+    const userConfig = identity ? await usageStore().getUserConfig(identity.userId) : null;
+
+    if (userConfig?.claudeCodeRateLimits) {
+      sendJson(request, response, 200, {
+        ...userConfig.claudeCodeRateLimits,
+        notes: [
+          ...userConfig.claudeCodeRateLimits.notes,
+          `已从 ${identity?.displayName || identity?.userId || "当前用户"} 的 token-board-agent 后台同步读取。`,
+        ],
+      });
+      return;
+    }
+
+    // Claude Code 不在本地落地额度,服务端无 fallback：未上传即 available:false。
+    sendJson(request, response, 200, {
+      generatedAt: new Date().toISOString(),
+      available: false,
+      plan: null,
+      latestEventAt: null,
+      windows: [],
+      recentTokensPerHour: null,
+      notes: [
+        identity
+          ? "尚未收到当前登录用户的 Claude Code 额度快照。请在本机为 Claude Code 配置状态栏捕获(token-board-agent 会读取 ~/.token-board-agent/claude-rate-limits.json),并确保 Claude Code 是订阅(Pro/Max)账号。"
+          : "登录后可读取 token-board-agent 上传的 Claude Code 订阅额度快照。",
+      ],
+      sourcePaths: [],
+    });
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/snapshots/health") {
     sendJson(request, response, 200, {
       ok: true,
