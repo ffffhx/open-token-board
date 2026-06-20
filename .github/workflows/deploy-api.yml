@@ -1,0 +1,89 @@
+name: Deploy API to host
+
+# 把 token-board API 后端的最新代码同步到部署主机、重建镜像并重启。
+# 只有改到后端实际用到的源码时才触发（Web 前端走 deploy.yml 的 Pages 部署）。
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "apps/token-board-api/**"
+      - "packages/token-board-core/**"
+      - "deploy/token-board/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.base.json"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: "deploy-api"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Sync source to host
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        # 只同步 Dockerfile 实际 COPY 的路径；不碰主机上的 .env / data / compose.yaml / Dockerfile。
+        run: |
+          rsync -aR \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            ./apps/token-board-api/src ./apps/token-board-api/package.json ./apps/token-board-api/tsconfig.json \
+            ./packages/token-board-core/src ./packages/token-board-core/package.json \
+            ./deploy/token-board/package.json \
+            ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./tsconfig.base.json \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
+
+      - name: Rebuild and restart on host
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -se" <<'REMOTE'
+          set -euo pipefail
+          cd "${DEPLOY_PATH:-/home/deploy/token-board-service}"
+
+          # 备份当前镜像，便于回滚：docker tag token-board-service:backup-previous token-board-service:latest
+          if docker image inspect token-board-service:latest >/dev/null 2>&1; then
+            docker tag token-board-service:latest token-board-service:backup-previous
+          fi
+
+          docker compose build token-board
+          docker compose up -d token-board
+
+          # 健康检查：服务监听 127.0.0.1:8789
+          for i in $(seq 1 15); do
+            if curl -fsS http://127.0.0.1:8789/api/snapshots/health >/dev/null; then
+              echo "health OK"
+              docker ps --filter "name=token-board-service-token-board-1" --format "{{.Names}} {{.Status}}"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "health check failed; rolling back to backup-previous"
+          if docker image inspect token-board-service:backup-previous >/dev/null 2>&1; then
+            docker tag token-board-service:backup-previous token-board-service:latest
+            docker compose up -d token-board
+          fi
+          docker logs --tail 40 token-board-service-token-board-1 || true
+          exit 1
+          REMOTE
