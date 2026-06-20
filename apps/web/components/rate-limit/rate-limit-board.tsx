@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { CodexRateLimitReport, CodexRateWindow } from "@open-token-board/core/codex-rate-limits";
 
@@ -11,6 +11,14 @@ import { TokenBoardLogo } from "@/components/token-board-logo";
 const POLL_INTERVAL_MS = 15_000;
 
 type LoadState = "idle" | "loading" | "ready" | "error";
+
+// 模块级缓存：在路由切换（额度 ↔ 榜单 ↔ 其它页面）后仍保留上一次的额度快照。
+// 组件卸载时这里不会被清空，切回来时能立即用旧数据渲染，再在后台静默刷新，
+// 而不是每次都从空白 loading 重新拉取。
+const rateLimitReportCache = new Map<string, CodexRateLimitReport>();
+function rateLimitCacheKey(base: string, endpoint: string): string {
+  return `${base}||${endpoint}`;
+}
 
 function fmtTokens(value: number | null): string {
   if (value === null || value === undefined) return "—";
@@ -130,11 +138,11 @@ interface RateLimitData {
 
 function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limits"): RateLimitData {
   const base = apiBaseUrl.replace(/\/+$/, "");
-  const [report, setReport] = useState<CodexRateLimitReport | null>(null);
-  const [state, setState] = useState<LoadState>("idle");
+  const key = rateLimitCacheKey(base, endpoint);
+  const [report, setReport] = useState<CodexRateLimitReport | null>(() => rateLimitReportCache.get(key) ?? null);
+  const [state, setState] = useState<LoadState>(() => (rateLimitReportCache.has(key) ? "ready" : "idle"));
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState<number>(() => Date.now());
-  const firstLoad = useRef(true);
 
   const reload = useCallback(async () => {
     if (!base) {
@@ -142,30 +150,33 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
       setError("未配置 API 地址。");
       return;
     }
-    if (firstLoad.current) setState("loading");
+    const cacheKey = rateLimitCacheKey(base, endpoint);
+    // 已有缓存时不回到 loading，保持旧数据展示直到新数据到达。
+    if (!rateLimitReportCache.has(cacheKey)) setState("loading");
     try {
       const res = await fetch(`${base}${endpoint}`, { cache: "no-store", credentials: "include" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = (await res.json()) as CodexRateLimitReport;
+      rateLimitReportCache.set(cacheKey, data);
       setReport(data);
       setNow(Date.now());
       setState("ready");
       setError(null);
     } catch (err) {
+      // 已有缓存时后台刷新失败不打断展示，继续显示旧快照。
+      if (rateLimitReportCache.has(cacheKey)) return;
       setState("error");
       setError(err instanceof Error ? err.message : "请求失败");
-    } finally {
-      firstLoad.current = false;
     }
   }, [base, endpoint]);
 
-  // 切换数据源（Codex ↔ Claude）时清空旧报告，避免在新数据到达前把上一个工具的
-  // 额度显示在新标题下。
+  // 切换数据源（Codex ↔ Claude）时，用对应缓存立即回填；没缓存才回到 loading。
+  // 既避免把上一个工具的额度显示在新标题下，也避免每次都从空白重新加载。
   useEffect(() => {
-    setReport(null);
-    setState("loading");
-    firstLoad.current = true;
-  }, [endpoint]);
+    const cached = rateLimitReportCache.get(key) ?? null;
+    setReport(cached);
+    setState(cached ? "ready" : "loading");
+  }, [key]);
 
   useEffect(() => {
     void reload();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   buildTokenLeaderboard,
@@ -76,6 +76,17 @@ import {
   normalizeRemoteSummary,
 } from "./token-leaderboard/utils";
 
+// 模块级缓存：路由切换（榜单 ↔ 额度 ↔ 其它页面）会卸载本组件，但这两个 Map
+// 不随之销毁。切回来时先用缓存立即渲染，再在后台静默刷新，避免每次都从骨架屏重拉。
+const statsCache = new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>();
+const accountCache = new Map<string, TokenAccountUsageProfile>();
+function statsCacheKey(base: string, range: TokenBoardRange, metric: TokenBoardMetric): string {
+  return `${base}|${range}|${metric}`;
+}
+function accountCacheKey(base: string, userId: string, range: TokenBoardRange): string {
+  return `${base}|${userId}|${range}`;
+}
+
 export function TokenLeaderboardApp({
   initialNow,
   apiBaseUrl,
@@ -83,16 +94,25 @@ export function TokenLeaderboardApp({
   initialNow: string;
   apiBaseUrl?: string;
 }) {
+  const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
   const [range, setRange] = useState<TokenBoardRange>("1D");
   const [metric, setMetric] = useState<TokenBoardMetric>("tokens");
-  const [status, setStatus] = useState("正在加载真实用户数据");
-  const [dataLoadState, setDataLoadState] = useState<DataLoadState>("loading");
+  // 首次渲染就读缓存：切回榜单时直接显示上次数据，而不是先闪一帧骨架屏。
+  const initialStats = statsCache.get(statsCacheKey(normalizedApiBaseUrl, range, metric)) ?? null;
+  const [status, setStatus] = useState(
+    initialStats
+      ? `后端数据 ${initialStats.records ?? initialStats.summary.users.length} 条`
+      : "正在加载真实用户数据"
+  );
+  const [dataLoadState, setDataLoadState] = useState<DataLoadState>(initialStats ? "ready" : "loading");
   const [dataLoadError, setDataLoadError] = useState("");
   const [isLoadSlow, setIsLoadSlow] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [now, setNow] = useState(() => new Date(initialNow));
-  const [remoteSummary, setRemoteSummary] = useState<TokenLeaderboardSummary | null>(null);
-  const [remoteRecordCount, setRemoteRecordCount] = useState<number | null>(null);
+  const [remoteSummary, setRemoteSummary] = useState<TokenLeaderboardSummary | null>(
+    initialStats?.summary ?? null
+  );
+  const [remoteRecordCount, setRemoteRecordCount] = useState<number | null>(initialStats?.records ?? null);
   const [viewer, setViewer] = useState<ViewerState | null>(null);
   const [accountProfile, setAccountProfile] = useState<TokenAccountUsageProfile | null>(null);
   const [accountLoadState, setAccountLoadState] = useState<AccountLoadState>("idle");
@@ -101,11 +121,6 @@ export function TokenLeaderboardApp({
   const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const [installGuidePlatform, setInstallGuidePlatform] = useState<InstallGuidePlatform>("macos");
   const [installGuideStep, setInstallGuideStep] = useState(0);
-  const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
-  const statsCacheRef = useRef(
-    new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>()
-  );
-  const accountCacheRef = useRef(new Map<string, TokenAccountUsageProfile>());
 
   useEffect(() => {
     setNow(new Date());
@@ -135,8 +150,8 @@ export function TokenLeaderboardApp({
 
     let active = true;
     const params = new URLSearchParams({ range, metric });
-    const cacheKey = `${range}|${metric}`;
-    const cached = statsCacheRef.current.get(cacheKey);
+    const cacheKey = statsCacheKey(normalizedApiBaseUrl, range, metric);
+    const cached = statsCache.get(cacheKey);
 
     if (cached) {
       // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
@@ -171,7 +186,7 @@ export function TokenLeaderboardApp({
 
         const normalized = normalizeRemoteSummary(summary, metric);
         const records = typeof payload.records === "number" ? payload.records : null;
-        statsCacheRef.current.set(cacheKey, { summary: normalized, records });
+        statsCache.set(cacheKey, { summary: normalized, records });
 
         if (!active) {
           return;
@@ -185,7 +200,7 @@ export function TokenLeaderboardApp({
       })
       .catch((error) => {
         // 后台刷新失败时继续展示缓存数据，不打断用户
-        if (!active || statsCacheRef.current.has(cacheKey)) {
+        if (!active || statsCache.has(cacheKey)) {
           return;
         }
 
@@ -238,8 +253,8 @@ export function TokenLeaderboardApp({
 
     let active = true;
     const params = new URLSearchParams({ range });
-    const cacheKey = `${viewer.user?.userId ?? "viewer"}|${range}`;
-    const cached = accountCacheRef.current.get(cacheKey);
+    const cacheKey = accountCacheKey(normalizedApiBaseUrl, viewer.user?.userId ?? "viewer", range);
+    const cached = accountCache.get(cacheKey);
 
     if (cached) {
       // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
@@ -267,7 +282,7 @@ export function TokenLeaderboardApp({
         }
 
         const normalized = normalizeRemoteAccountProfile(payload.profile);
-        accountCacheRef.current.set(cacheKey, normalized);
+        accountCache.set(cacheKey, normalized);
 
         if (!active) {
           return;
@@ -278,7 +293,7 @@ export function TokenLeaderboardApp({
       })
       .catch((error) => {
         // 后台刷新失败时继续展示缓存数据，不打断用户
-        if (!active || accountCacheRef.current.has(cacheKey)) {
+        if (!active || accountCache.has(cacheKey)) {
           return;
         }
 
@@ -407,8 +422,8 @@ export function TokenLeaderboardApp({
   }
 
   function retryDataLoad() {
-    statsCacheRef.current.clear();
-    accountCacheRef.current.clear();
+    statsCache.clear();
+    accountCache.clear();
     setDataLoadState("loading");
     setDataLoadError("");
     setStatus("正在重新加载真实用户数据");
