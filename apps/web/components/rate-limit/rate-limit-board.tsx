@@ -84,11 +84,11 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
       <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
         <div
           className={`h-full rounded-full ${tone.bar} transition-[width] duration-700`}
-          style={{ width: `${Math.min(100, w.usedPercent)}%` }}
+          style={{ width: `${Math.min(100, w.remainingPercent)}%` }}
         />
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        已用 <span className="font-semibold text-slate-700">{w.usedPercent.toFixed(0)}%</span>
+        剩余 <span className="font-semibold text-slate-700">{w.remainingPercent.toFixed(0)}%</span>
       </p>
 
       <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
