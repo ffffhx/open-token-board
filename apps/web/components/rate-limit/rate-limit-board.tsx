@@ -242,6 +242,29 @@ export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
 /** 全页额度面板：/limits 路由。 */
 export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
   const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl);
+  // null = 尚未确定登录态；用它区分「未登录」与「已登录但还没有 agent 快照」，
+  // 避免给已登录用户显示误导性的「GitHub 登录」按钮。
+  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (!base) {
+      setAuthenticated(null);
+      return;
+    }
+    let active = true;
+    fetch(`${base}/api/auth/me`, { cache: "no-store", credentials: "include" })
+      .then((res) => (res.ok ? res.json() : { authenticated: false }))
+      .then((payload: { authenticated?: boolean }) => {
+        if (active) setAuthenticated(Boolean(payload.authenticated));
+      })
+      .catch(() => {
+        if (active) setAuthenticated(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [base]);
+
   const loginWithGitHub = useCallback(() => {
     if (!base || typeof window === "undefined") {
       return;
@@ -327,13 +350,19 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
               <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent upload</code>。
               之后后台任务会每 5 分钟同步一次，无需再启动本机 API。
             </p>
-            <button
-              type="button"
-              onClick={loginWithGitHub}
-              className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
-            >
-              GitHub 登录后读取 agent 快照
-            </button>
+            {authenticated === true ? (
+              <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
+                已登录 ✓，正在等待 token-board-agent 上传你的额度快照
+              </p>
+            ) : authenticated === false ? (
+              <button
+                type="button"
+                onClick={loginWithGitHub}
+                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
+              >
+                GitHub 登录后读取 agent 快照
+              </button>
+            ) : null}
           </div>
         )}
 
