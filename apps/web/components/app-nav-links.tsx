@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 
-type AppNavPage = "home" | "board" | "limits" | "claude-limits" | "bench";
+type AppNavPage = "home" | "board" | "limits" | "bench";
 type AppNavTheme = "light" | "dark";
 
 const navItems: Array<{ key: AppNavPage; href: string; label: string }> = [
   { key: "home", href: "/", label: "首页" },
   { key: "board", href: "/board", label: "Token 榜单" },
-  { key: "limits", href: "/limits", label: "Codex 额度" },
-  { key: "claude-limits", href: "/claude-limits", label: "Claude 额度" },
+  { key: "limits", href: "/limits", label: "额度" },
   { key: "bench", href: "/bench", label: "AI 评测" },
 ];
 

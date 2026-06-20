@@ -159,6 +159,14 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
     }
   }, [base, endpoint]);
 
+  // 切换数据源（Codex ↔ Claude）时清空旧报告，避免在新数据到达前把上一个工具的
+  // 额度显示在新标题下。
+  useEffect(() => {
+    setReport(null);
+    setState("loading");
+    firstLoad.current = true;
+  }, [endpoint]);
+
   useEffect(() => {
     void reload();
     const poll = setInterval(() => void reload(), POLL_INTERVAL_MS);
@@ -239,9 +247,142 @@ export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
   );
 }
 
-/** 全页额度面板：/limits 路由。 */
-export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
-  const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl);
+export type LimitTab = "codex" | "claude";
+
+interface TabConfig {
+  label: string;
+  endpoint: string;
+  eyebrow: string;
+  title: string;
+  description: React.ReactNode;
+  loadingText: string;
+  errorHint: (base: string) => React.ReactNode;
+  emptyTitle: string;
+  emptyExtra: (report: CodexRateLimitReport) => React.ReactNode;
+  loginLabel: string;
+  waitingLabel: string;
+}
+
+const TAB_CONFIG: Record<LimitTab, TabConfig> = {
+  codex: {
+    label: "Codex",
+    endpoint: "/api/usage/rate-limits",
+    eyebrow: "Codex rate limits",
+    title: "Codex 额度面板",
+    description: (
+      <>
+        安装 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">token-board-agent</code> 后，
+        后台任务会像 token 统计一样定时上传本机 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code>
+        里的 5 小时与每周额度快照。百分比与重置时间是 Codex 上报的精确值，token 容量为估算值。
+      </>
+    ),
+    loadingText: "正在读取 Codex 日志…",
+    errorHint: (base) => (
+      <p className="mt-3 text-rose-600">
+        请确认本机已启动 Token Board API（<code className="font-mono">pnpm token:server</code>），
+        且面板的 <code className="font-mono">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code> 指向它（当前：{base || "未配置"}）。
+        该面板需要运行在跑 Codex 的同一台机器上。
+      </p>
+    ),
+    emptyTitle: "未找到限额数据",
+    emptyExtra: (report) => (
+      <>
+        <p className="mt-3 text-amber-700">
+          当前读取的是 API 服务所在机器的 Codex 日志，不是浏览器所在电脑的文件系统。若这里出现
+          <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">/home/node</code>
+          之类路径，说明你正在看远端容器的日志路径。
+        </p>
+        {report.sourcePaths.length > 0 && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-white/60 px-4 py-3">
+            <p className="font-semibold text-amber-900">当前读取路径</p>
+            <ul className="mt-2 space-y-1 font-mono text-xs leading-5 text-amber-800">
+              {report.sourcePaths.map((sourcePath) => (
+                <li key={sourcePath}>{sourcePath}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <p className="mt-3 text-amber-700">
+          要读取你这台电脑的额度，请在本机运行
+          <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent install</code>
+          或
+          <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent upload</code>。
+          之后后台任务会每 5 分钟同步一次，无需再启动本机 API。
+        </p>
+      </>
+    ),
+    loginLabel: "GitHub 登录后读取 agent 快照",
+    waitingLabel: "已登录 ✓，正在等待 token-board-agent 上传你的额度快照",
+  },
+  claude: {
+    label: "Claude Code",
+    endpoint: "/api/usage/claude-rate-limits",
+    eyebrow: "Claude Code rate limits",
+    title: "Claude Code 额度面板",
+    description: (
+      <>
+        Claude Code 不把额度写进本地日志，而是随状态栏 JSON 实时下发。token-board-agent 会读取由状态栏捕获脚本落盘的
+        <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.token-board-agent/claude-rate-limits.json</code>
+        并定时上传。百分比与重置时间为 Claude 订阅额度的精确值。
+      </>
+    ),
+    loadingText: "正在读取 Claude Code 额度…",
+    errorHint: (base) => (
+      <p className="mt-3 text-rose-600">
+        请确认面板的 <code className="font-mono">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code> 指向后端（当前：{base || "未配置"}）。
+      </p>
+    ),
+    emptyTitle: "未找到 Claude Code 额度",
+    emptyExtra: () => (
+      <p className="mt-3 text-amber-700">
+        需要订阅（Pro/Max）账号，且在本机为 Claude Code 配置「状态栏捕获」后，agent 才能拿到精确额度并上传。
+      </p>
+    ),
+    loginLabel: "GitHub 登录后读取 Claude Code 快照",
+    waitingLabel: "已登录 ✓，正在等待 token-board-agent 上传你的 Claude Code 额度快照",
+  },
+};
+
+function LimitTabSwitcher({ tab, onChange }: { tab: LimitTab; onChange: (next: LimitTab) => void }) {
+  return (
+    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="额度数据源">
+      {(Object.keys(TAB_CONFIG) as LimitTab[]).map((key) => {
+        const isActive = key === tab;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => onChange(key)}
+            className={
+              isActive
+                ? "min-h-9 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow transition"
+                : "min-h-9 rounded-lg px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+            }
+          >
+            {TAB_CONFIG[key].label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * 全页额度面板：/limits 路由。Codex 与 Claude Code 合并为一个页面，用页内分段
+ * 切换数据源。`initialTab` 让 /claude-limits 旧链接预选 Claude 标签。
+ */
+export function RateLimitBoard({
+  apiBaseUrl,
+  initialTab = "codex",
+}: {
+  apiBaseUrl: string;
+  initialTab?: LimitTab;
+}) {
+  const [tab, setTab] = useState<LimitTab>(initialTab);
+  const config = TAB_CONFIG[tab];
+  const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl, config.endpoint);
   // null = 尚未确定登录态；用它区分「未登录」与「已登录但还没有 agent 快照」，
   // 避免给已登录用户显示误导性的「GitHub 登录」按钮。
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -292,166 +433,19 @@ export function RateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
       </nav>
 
       <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
-        <header className="mt-2">
-          <p className="font-mono text-xs font-semibold uppercase text-blue-600">Codex rate limits</p>
-          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Codex 额度面板</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            安装 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">token-board-agent</code> 后，
-            后台任务会像 token 统计一样定时上传本机 <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.codex</code>
-            里的 5 小时与每周额度快照。百分比与重置时间是 Codex 上报的精确值，token 容量为估算值。
-          </p>
-        </header>
-
-        {state === "loading" && (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-            正在读取 Codex 日志…
-          </div>
-        )}
-
-        {state === "error" && (
-          <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-            <p className="font-semibold">无法获取额度数据</p>
-            <p className="mt-1">{error}</p>
-            <p className="mt-3 text-rose-600">
-              请确认本机已启动 Token Board API（<code className="font-mono">pnpm token:server</code>），
-              且面板的 <code className="font-mono">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code> 指向它（当前：{base || "未配置"}）。
-              该面板需要运行在跑 Codex 的同一台机器上。
-            </p>
-          </div>
-        )}
-
-        {state === "ready" && report && !report.available && (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-            <p className="font-semibold">未找到限额数据</p>
-            {report.notes.map((note) => (
-              <p key={note} className="mt-1">
-                {note}
-              </p>
-            ))}
-            <p className="mt-3 text-amber-700">
-              当前读取的是 API 服务所在机器的 Codex 日志，不是浏览器所在电脑的文件系统。若这里出现
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">/home/node</code>
-              之类路径，说明你正在看远端容器的日志路径。
-            </p>
-            {report.sourcePaths.length > 0 && (
-              <div className="mt-3 rounded-xl border border-amber-200 bg-white/60 px-4 py-3">
-                <p className="font-semibold text-amber-900">当前读取路径</p>
-                <ul className="mt-2 space-y-1 font-mono text-xs leading-5 text-amber-800">
-                  {report.sourcePaths.map((sourcePath) => (
-                    <li key={sourcePath}>{sourcePath}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            <p className="mt-3 text-amber-700">
-              要读取你这台电脑的额度，请在本机运行
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent install</code>
-              或
-              <code className="mx-1 rounded bg-amber-100 px-1 py-0.5 font-mono text-xs">npx --yes token-board-agent upload</code>。
-              之后后台任务会每 5 分钟同步一次，无需再启动本机 API。
-            </p>
-            {authenticated === true ? (
-              <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-                已登录 ✓，正在等待 token-board-agent 上传你的额度快照
-              </p>
-            ) : authenticated === false ? (
-              <button
-                type="button"
-                onClick={loginWithGitHub}
-                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
-              >
-                GitHub 登录后读取 agent 快照
-              </button>
-            ) : null}
-          </div>
-        )}
-
-        {report && report.available && (
-          <>
-            <div className="mt-6">
-              <StatusLine report={report} now={now} />
-            </div>
-            <div className="mt-5">
-              <WindowGrid report={report} now={now} />
-            </div>
-            {report.notes.map((note) => (
-              <p key={note} className="mt-5 text-xs leading-5 text-slate-400">
-                注：{note}
-              </p>
-            ))}
-          </>
-        )}
-      </div>
-    </main>
-  );
-}
-
-/** 全页 Claude Code 额度面板：/claude-limits 路由。复用 Codex 的窗口组件。 */
-export function ClaudeRateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
-  const { report, state, error, now, base, reload } = useRateLimitReport(
-    apiBaseUrl,
-    "/api/usage/claude-rate-limits"
-  );
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!base) {
-      setAuthenticated(null);
-      return;
-    }
-    let active = true;
-    fetch(`${base}/api/auth/me`, { cache: "no-store", credentials: "include" })
-      .then((res) => (res.ok ? res.json() : { authenticated: false }))
-      .then((payload: { authenticated?: boolean }) => {
-        if (active) setAuthenticated(Boolean(payload.authenticated));
-      })
-      .catch(() => {
-        if (active) setAuthenticated(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [base]);
-
-  const loginWithGitHub = useCallback(() => {
-    if (!base || typeof window === "undefined") {
-      return;
-    }
-    window.location.href = `${base}/api/auth/github/start?returnTo=${encodeURIComponent(window.location.href)}`;
-  }, [base]);
-
-  return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <nav className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <Link href="/" className="text-slate-900">
-          <TokenBoardLogo />
-        </Link>
-        <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-          <AppNavLinks active="claude-limits" />
-          <button
-            type="button"
-            onClick={reload}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
-          >
-            刷新
-          </button>
+        <div className="mt-2">
+          <LimitTabSwitcher tab={tab} onChange={setTab} />
         </div>
-      </nav>
 
-      <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
-        <header className="mt-2">
-          <p className="font-mono text-xs font-semibold uppercase text-blue-600">Claude Code rate limits</p>
-          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Claude Code 额度面板</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Claude Code 不把额度写进本地日志，而是随状态栏 JSON 实时下发。token-board-agent 会读取由状态栏捕获脚本落盘的
-            <code className="mx-1 rounded bg-slate-200 px-1 py-0.5 font-mono text-xs">~/.token-board-agent/claude-rate-limits.json</code>
-            并定时上传。百分比与重置时间为 Claude 订阅额度的精确值。
-          </p>
+        <header className="mt-5">
+          <p className="font-mono text-xs font-semibold uppercase text-blue-600">{config.eyebrow}</p>
+          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{config.title}</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{config.description}</p>
         </header>
 
         {state === "loading" && (
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-            正在读取 Claude Code 额度…
+            {config.loadingText}
           </div>
         )}
 
@@ -459,26 +453,22 @@ export function ClaudeRateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
             <p className="font-semibold">无法获取额度数据</p>
             <p className="mt-1">{error}</p>
-            <p className="mt-3 text-rose-600">
-              请确认面板的 <code className="font-mono">NEXT_PUBLIC_TOKEN_BOARD_API_URL</code> 指向后端（当前：{base || "未配置"}）。
-            </p>
+            {config.errorHint(base)}
           </div>
         )}
 
         {state === "ready" && report && !report.available && (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-            <p className="font-semibold">未找到 Claude Code 额度</p>
+            <p className="font-semibold">{config.emptyTitle}</p>
             {report.notes.map((note) => (
               <p key={note} className="mt-1">
                 {note}
               </p>
             ))}
-            <p className="mt-3 text-amber-700">
-              需要订阅（Pro/Max）账号，且在本机为 Claude Code 配置「状态栏捕获」后，agent 才能拿到精确额度并上传。
-            </p>
+            {config.emptyExtra(report)}
             {authenticated === true ? (
               <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-                已登录 ✓，正在等待 token-board-agent 上传你的 Claude Code 额度快照
+                {config.waitingLabel}
               </p>
             ) : authenticated === false ? (
               <button
@@ -486,7 +476,7 @@ export function ClaudeRateLimitBoard({ apiBaseUrl }: { apiBaseUrl: string }) {
                 onClick={loginWithGitHub}
                 className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
               >
-                GitHub 登录后读取 Claude Code 快照
+                {config.loginLabel}
               </button>
             ) : null}
           </div>
