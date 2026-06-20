@@ -104,6 +104,8 @@ pnpm codex:limits -- --json --days=30   # 输出原始 JSON / 指定回看天数
 
 网页面板通过后端的 `GET /api/usage/rate-limits` 取数。登录用户安装 `token-board-agent` 后，agent 会像 token 统计一样定时上传本机额度快照，公网 `/limits` 也能直接显示；没有登录用户快照时才回退读取 **API 服务所在机器** 的 `~/.codex`。命令行的 `--serve` 完全自包含，不依赖后端。
 
+**Claude Code 订阅额度（`/claude-limits`）**：Claude Code 不在本地落盘额度，精确的 5h / 每周用量只出现在它注入给 statusLine 的 JSON 里（Pro/Max 账号、首个 API 响应后）。`token-board-agent install` 会生成捕获脚本 `~/.token-board-agent/claude-statusline-capture.sh`，把额度落盘成快照（零网络/零认证）并原样透传给你原有的 statusLine；在 `~/.claude/settings.json` 把 `statusLine.command` 指向该脚本即可启用，之后随后台同步上传，登录后在 `/claude-limits` 查看。详见 [agent 包 README](tools/token-board-agent-npx/README.md)。
+
 ## 🧩 支持的工具
 
 | 工具 | 来源标识 | 默认采集路径 |

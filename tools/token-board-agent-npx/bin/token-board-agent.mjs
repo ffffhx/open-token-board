@@ -30,13 +30,18 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.13";
+const VERSION = "0.4.14";
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
 const MAX_INVALID_USAGE_WARNINGS = 5;
 const INSTALL_DIR = path.join(os.homedir(), ".token-board-agent");
 const INSTALLED_AGENT_FILE = path.join(INSTALL_DIR, "token-board-agent.mjs");
+const CLAUDE_STATUSLINE_SHIM_FILE = path.join(INSTALL_DIR, "claude-statusline-capture.sh");
+const CLAUDE_SETTINGS_FILE =
+  process.env.CLAUDE_CONFIG_DIR
+    ? path.join(process.env.CLAUDE_CONFIG_DIR, "settings.json")
+    : path.join(os.homedir(), ".claude", "settings.json");
 const LAUNCH_AGENT_LABEL = "dev.ffffhx.token-board-agent";
 const LAUNCH_AGENT_PLIST = path.join(os.homedir(), "Library", "LaunchAgents", `${LAUNCH_AGENT_LABEL}.plist`);
 const WINDOWS_TASK_NAME = "TokenBoardAgent";
@@ -379,6 +384,113 @@ async function installAgentScript() {
   await fs.mkdir(INSTALL_DIR, { recursive: true });
   await fs.copyFile(fileURLToPath(import.meta.url), INSTALLED_AGENT_FILE);
   await fs.chmod(INSTALLED_AGENT_FILE, 0o755).catch(() => {});
+  if (process.platform !== "win32") {
+    await installClaudeStatuslineShim();
+  }
+}
+
+/**
+ * Claude Code 本地不存订阅额度,精确额度仅出现在 statusLine 注入的 JSON 的
+ * `rate_limits` 字段(Pro/Max 账号、首个 API 响应后)。该 shim 把那份额度落盘成
+ * 快照(零网络/零认证),collectClaudeCodeRateLimits() 离线读取后上传。
+ *
+ * 注意:Claude Code 不提供 `rate_limits_available` 布尔字段——是否有数据只能看
+ * `rate_limits` 对象是否存在,故 shim 以"对象存在且至少有一个窗口"为落盘条件。
+ *
+ * 把 shim 内容作为模板内联在此处,使其随包发布、可版本化,`install` 时重新生成,
+ * 避免手写副本在重装时丢失。生成时保留用户原有的 statusLine 命令作为 INNER,
+ * 透传渲染不变。
+ */
+function renderClaudeStatuslineShim(innerStatusline) {
+  const inner = typeof innerStatusline === "string" ? innerStatusline : "";
+  return `#!/usr/bin/env bash
+# claude-statusline-capture.sh
+# 由 token-board-agent 生成(请勿手改;\`npx token-board-agent install\` 会重新生成)。
+# 1) 读取 Claude Code 经 stdin 传入的 statusLine JSON,把其中 rate_limits 落盘为快照
+#    (供 token-board-agent 离线读取,零网络/零认证);
+# 2) 原样把同一份 stdin 转交给你已有的 statusline,显示不变。
+# 任何提取失败都不影响状态栏渲染(passthrough 始终执行)。
+
+SNAP="\${TOKEN_BOARD_CC_SNAPSHOT:-\$HOME/.token-board-agent/claude-rate-limits.json}"
+INNER="\${TOKEN_BOARD_INNER_STATUSLINE:-${inner}}"
+
+TMP="\$(mktemp 2>/dev/null || echo /tmp/cc-sl-\$\$.json)"
+cat > "\$TMP"
+
+# best-effort 提取快照(出错忽略)
+node -e '
+  const fs=require("fs");
+  try{
+    const inPath=process.argv[1], outPath=process.argv[2];
+    const j=JSON.parse(fs.readFileSync(inPath,"utf8"));
+    const rl=j.rate_limits;
+    // Claude Code 不提供 rate_limits_available 布尔字段;rate_limits 仅在
+    // Pro/Max 订阅且首个 API 响应后才出现,故以"对象存在且至少有一个窗口"为准。
+    const hasData=Boolean(rl && typeof rl==="object" && (rl.five_hour || rl.seven_day));
+    const snap={
+      capturedAt:new Date().toISOString(),
+      source:"claude-code-statusline",
+      claudeVersion:(j.version||j.cli_version||null),
+      available:hasData,
+      rateLimits:rl||null
+    };
+    // 仅当确有订阅额度数据时才覆盖,避免把 null 冲掉上一次有效快照
+    if(hasData){
+      fs.writeFileSync(outPath, JSON.stringify(snap,null,2));
+    }
+  }catch(e){/* ignore */}
+' "\$TMP" "\$SNAP" 2>/dev/null || true
+
+# 始终渲染真实状态栏(若存在原有 statusline)
+if [ -n "\$INNER" ] && [ -x "\$INNER" ]; then
+  "\$INNER" < "\$TMP"
+fi
+rm -f "\$TMP" 2>/dev/null || true
+`;
+}
+
+// 决定透传给哪个原有 statusline:env > 现有 shim 中已保留的值 > Claude settings.json 现有命令。
+async function detectInnerStatusline() {
+  if (process.env.TOKEN_BOARD_INNER_STATUSLINE) {
+    return process.env.TOKEN_BOARD_INNER_STATUSLINE;
+  }
+  try {
+    const existing = await fs.readFile(CLAUDE_STATUSLINE_SHIM_FILE, "utf8");
+    const match = existing.match(/INNER="\$\{TOKEN_BOARD_INNER_STATUSLINE:-([^}]*)\}"/);
+    if (match && match[1]) {
+      return match[1];
+    }
+  } catch {
+    /* no existing shim */
+  }
+  try {
+    const settings = JSON.parse(await fs.readFile(CLAUDE_SETTINGS_FILE, "utf8"));
+    const command = settings?.statusLine?.command;
+    if (typeof command === "string" && command && !command.includes("claude-statusline-capture")) {
+      return command;
+    }
+  } catch {
+    /* no settings.json */
+  }
+  return "";
+}
+
+async function installClaudeStatuslineShim() {
+  const inner = await detectInnerStatusline();
+  await fs.writeFile(CLAUDE_STATUSLINE_SHIM_FILE, renderClaudeStatuslineShim(inner), "utf8");
+  await fs.chmod(CLAUDE_STATUSLINE_SHIM_FILE, 0o755).catch(() => {});
+  let wired = false;
+  try {
+    const settings = JSON.parse(await fs.readFile(CLAUDE_SETTINGS_FILE, "utf8"));
+    wired = typeof settings?.statusLine?.command === "string" && settings.statusLine.command.includes("claude-statusline-capture");
+  } catch {
+    /* ignore */
+  }
+  if (!wired) {
+    console.log("Claude Code 额度采集:已生成 statusLine 捕获脚本(尚未接入):");
+    console.log(`  ${CLAUDE_STATUSLINE_SHIM_FILE}`);
+    console.log("  在 ~/.claude/settings.json 把 statusLine.command 指向该脚本即可采集订阅额度。");
+  }
 }
 
 async function loadOrLoginConfig() {

@@ -39,9 +39,33 @@ You can override scan targets with `TOKEN_BOARD_USAGE_PATHS` or disable default 
 TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false npx --yes token-board-agent upload
 ```
 
+## Claude Code Subscription Quota (statusLine capture)
+
+Claude Code does not persist subscription rate limits to disk — the exact 5h / weekly
+usage only appears in the JSON that Claude Code pipes to a `statusLine` command (for
+Pro/Max accounts, after the first API response). On install (non-Windows), the agent
+writes a capture shim to `~/.token-board-agent/claude-statusline-capture.sh` that:
+
+1. snapshots the `rate_limits` block to `~/.token-board-agent/claude-rate-limits.json`
+   (offline, no network, no auth), and
+2. passes the same stdin through to your existing statusLine so the display is unchanged.
+
+To enable capture, point `statusLine.command` in `~/.claude/settings.json` at the shim:
+
+```json
+{ "statusLine": { "type": "command", "command": "/Users/you/.token-board-agent/claude-statusline-capture.sh" } }
+```
+
+Re-running `install` regenerates the shim and preserves your previous statusLine command
+as the passthrough target (override with `TOKEN_BOARD_INNER_STATUSLINE`). The background
+sync then uploads the snapshot, surfacing the precise quota on the site's `/claude-limits`
+page. Note: Claude Code does **not** emit a `rate_limits_available` flag — presence of the
+`rate_limits` object is the only signal, so the shim writes a snapshot only when at least
+one window is present.
+
 ## What It Uploads
 
-The uploaded event payload is designed for usage ranking and personal insight. It includes token counts, model/tool/source metadata, timestamps, anonymized session identifiers, project basename information, and a Codex rate-limit snapshot derived from local `~/.codex` logs.
+The uploaded event payload is designed for usage ranking and personal insight. It includes token counts, model/tool/source metadata, timestamps, anonymized session identifiers, project basename information, a Codex rate-limit snapshot derived from local `~/.codex` logs, and (when configured) a Claude Code subscription quota snapshot captured via the statusLine shim.
 
 By default, the agent does not upload full prompt text or absolute project paths. Session titles may be included as short labels when available. You can disable them with:
 
