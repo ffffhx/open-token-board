@@ -1,0 +1,32 @@
+{
+  "id": "retry-backoff",
+  "title": "指数退避计算的 off-by-one 与缺少上限 bug",
+  "shortTitle": "退避上限",
+  "kind": "typescript-fix",
+  "difficulty": "low",
+  "prompt": "src/backoff.mjs 中的 computeBackoffMs(attempt, baseMs, capMs) 用于计算重试时的指数退避等待时间（毫秒）。\n\n正确公式应为：min(baseMs × 2^(attempt-1), capMs)\n\n其中 attempt 从 1 开始，第 1 次重试应等待 baseMs 毫秒，第 2 次应等待 2×baseMs，以此类推，但不超过 capMs 上限。\n\n当前实现存在 bug，导致结果不正确。请修复 src/backoff.mjs，并简要说明根因。只允许修改 src/backoff.mjs。",
+  "allowedFiles": ["src/backoff.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "off.?by|指数|exponent|attempt\\s*-\\s*1|2\\^|cap|上限|Math\\.min"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 15,
+    "maxFirstActionSeconds": 60,
+    "targetDurationSeconds": 90,
+    "maxDurationSeconds": 300,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 30,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

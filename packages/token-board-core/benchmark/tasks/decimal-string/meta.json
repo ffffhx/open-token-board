@@ -1,0 +1,32 @@
+{
+  "id": "decimal-string",
+  "title": "任意精度十进制字符串加法与乘法",
+  "shortTitle": "十进制字符串运算",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/decimal.mjs 中实现并以具名导出（export function）的方式提供两个函数：add(a, b) 和 mul(a, b)，分别计算两个十进制数字符串的精确和与精确积。\n\n输入约定：\n- a、b 都是十进制数字符串，例如 \"123\"、\"-12.5\"、\"0.10\"、\"007\"、\"+5\"。\n- 可能带正负号（开头一个 '+' 或 '-'），可能有前导零、尾随零，可能有一个小数点及小数部分。\n- 不使用科学计数法/指数表示（不接受 'e'/'E'）。\n- 允许使用 BigInt 做内部运算；必须是精确结果，不得有浮点误差。\n\n输出（规范化的十进制字符串）必须满足：\n- 整数部分无多余前导零；当整数部分为 0 时只保留一个 '0'（例如结果是 0.3 时输出 \"0.3\"，不是 \".3\" 也不是 \"00.3\"）。\n- 小数部分去掉尾随零；若小数部分被全部去掉，则不保留小数点（例如 12.50 应输出 \"12.5\"，13.0 应输出 \"13\"）。\n- 负号仅在结果真正为负时出现；结果为 0 时一律输出 \"0\"（即不得出现 \"-0\"、\"-0.0\"、\"0.0\" 等形式）。\n- 例如：add(\"0.10\", \"0.20\") => \"0.3\"，add(\"-12.5\", \"12.5\") => \"0\"，mul(\"0.5\", \"0.5\") => \"0.25\"，mul(\"1.5\", \"2\") => \"3\"。\n\n错误处理：当输入为非法十进制字符串时必须抛出异常（throw）。非法包括但不限于：空字符串、只有符号没有数字（如 \"-\"、\"+\"）、出现多个小数点、含有非数字字符（字母、空格、逗号、'e' 指数、'0x' 前缀等）、只有一个小数点而无任何数字、以及非字符串输入（如 null、undefined）。\n\n注意符号组合下的进位与借位、不同小数位数的对齐、以及大数（上百位）的精确性。当前文件是抛出 'not implemented' 的桩代码，请用正确实现替换。只允许修改 src/decimal.mjs。修改完成后请简要说明你的实现思路与关键边界处理（规范化、-0 归一、对齐与进位）。",
+  "allowedFiles": ["src/decimal.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "规范化|normaliz|BigInt|对齐|align|进位|carry|借位|trailing|前导|leading|-0|scale|小数点"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "lru-ttl",
+  "title": "带 TTL 的 LRU 缓存（逻辑时钟）",
+  "shortTitle": "LRU+TTL",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/lru-ttl.mjs 中实现一个「带 TTL（存活时间）的 LRU 缓存」类，并以默认导出（export default）导出，类名为 Cache。时间由调用方传入的整数逻辑时钟 now 表示，不要使用真实时间（Date.now 等）。\n\n构造函数：`new Cache(capacity, defaultTtl)`\n- capacity 必须是正整数（缓存最大条目数），defaultTtl 必须是正整数（默认存活时长）。任一参数非法（非整数或 <= 0）时构造函数必须抛出异常。\n\n方法 `set(key, value, now, ttl?)`\n- 写入或更新键值对。该条目在 now + ttl 时刻过期（其中 ttl 缺省时取 defaultTtl）。换言之过期时刻 expireAt = 写入时的 now 加上生效 ttl。\n- 若显式传入 ttl，它同样必须是正整数，否则抛出异常。\n- 若 key 已存在：更新其 value，并重置其插入时间（即重新计算 expireAt），同时把它标记为「最近使用」。这种「更新已存在键」的操作不会改变条目数量，因此不会触发淘汰。\n- 若 key 不存在且当前条目数已达 capacity：必须先淘汰一个条目，再写入新键。淘汰规则见下。\n- key 可以是任意类型（数字、字符串等，数字 1 与字符串 \"1\" 视为不同键）；value 可以是任意值，包括 0、null、''、false，它们都是合法缓存值，不可被当作「不存在」。\n\n方法 `get(key, now)`\n- 若键不存在，返回 undefined。\n- 过期判定：当 now >= 该条目的 expireAt 时，视为已过期。过期条目必须被当作「不存在」：get 返回 undefined，并且要把它从缓存中真正删除（删除后 size 相应减少）。\n- 若键存在且未过期：返回其 value，并把它刷新为「最近使用」。\n\n淘汰规则（当因插入新键导致超出 capacity 时）\n- 优先淘汰「已过期」的条目（以传入的 now 判定）。若存在多个过期条目，淘汰其中「最久未使用」的那一个（即在最近使用顺序里最靠前的过期条目）。\n- 若当前没有任何已过期条目，则淘汰「最久未使用」（least-recently-used）的条目。\n- 注意：成功的 get 与对已存在键的 set 都会刷新最近使用顺序；过期的 get 不算成功（不刷新，且会删除该项）。\n\n建议提供一个 `size` 取值器（getter）反映当前条目数，便于校验。\n\n当前文件是抛出异常的桩代码（stub），请用正确实现替换。只允许修改 src/lru-ttl.mjs。修改完成后请简要说明你的实现思路与关键的边界处理（过期边界、过期优先淘汰、最近使用刷新）。",
+  "allowedFiles": ["src/lru-ttl.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "TTL|过期|expire|LRU|最近|淘汰|evict|recency|逻辑时钟|expireAt|Map"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

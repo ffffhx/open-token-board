@@ -1,0 +1,32 @@
+{
+  "id": "word-wrap",
+  "title": "贪心自动换行算法",
+  "shortTitle": "自动换行",
+  "kind": "algorithm",
+  "difficulty": "medium",
+  "prompt": "请在 src/wrap.mjs 中实现 `wrapText(text, width)` 函数，按以下规则将文本切分为多行并以数组返回：\n\n1. 先将 text 按空白字符分割为单词列表（连续空格视为一个分隔符，首尾空白忽略）。\n2. 贪心地将单词逐个拼入当前行；单词之间用单个空格隔开。\n3. 若加入下一个单词后当前行长度超过 width，则另起新行。\n4. 若某个单词本身长度已超过 width，该单词单独占一行。\n5. 返回字符串数组，每个元素是一行（不含行尾空格或换行符）；空字符串输入返回空数组。\n\n只允许修改 src/wrap.mjs。",
+  "allowedFiles": ["src/wrap.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "贪心|greedy|超过|overflow|width|长度|space|空格"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

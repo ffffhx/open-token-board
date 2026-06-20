@@ -1,0 +1,32 @@
+{
+  "id": "json-pointer",
+  "title": "RFC6901 JSON Pointer 取值与不可变写入",
+  "shortTitle": "JSON Pointer",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/json-pointer.mjs 中实现并以命名导出（export）提供两个函数：`get(doc, pointer)` 与 `set(doc, pointer, value)`，遵循 RFC6901 JSON Pointer 规范。\n\n指针解析\n- pointer 是字符串。空字符串 \"\" 表示整个文档（根）。\n- 非空 pointer 必须以 \"/\" 开头，按 \"/\" 切分得到一串引用 token（开头那个空段忽略）。例如 \"/a/0\" => [\"a\", \"0\"]，\"/\" => [\"\"]（一个空字符串 token，表示空字符串键）。\n- 每个 token 需要反转义：将 \"~1\" 还原为 \"/\"，将 \"~0\" 还原为 \"~\"。两步的先后顺序会影响结果，请按规范要求的顺序处理。\n\nget(doc, pointer)\n- 从 doc 出发依次按 token 下钻并返回最终值。pointer 为 \"\" 时返回整个 doc。\n- 当当前层是数组时，token 必须是合法的数组下标（非负整数的十进制写法）才能索引；当当前层是对象时，token 作为属性名索引。\n- 路径无法解析时（键不存在、下标越界或非法、或试图在非容器上继续下钻）必须抛出异常，而不是返回 undefined。\n\nset(doc, pointer, value)\n- 返回一个新的文档；绝不能修改传入的 doc 及其任何子结构（保持输入不可变，未被改动的子树可以与原文档共享引用）。\n- pointer 为 \"\" 时，整个文档被替换为 value（直接返回 value）。\n- 沿路径写入目标值；若路径上的中间容器不存在，需要按需创建中间容器。\n- 在数组语义下，特殊 token \"-\" 表示在数组末尾追加 value。\n\n请合理处理各种边界情况。当前文件中的实现存在多处缺陷（反转义、缺失路径处理、可变性等），请用正确实现替换。只允许修改 src/json-pointer.mjs。完成后请简要说明你的实现思路与关键的边界处理（反转义顺序、缺失路径抛错、不可变写入与中间容器创建）。",
+  "allowedFiles": ["src/json-pointer.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "转义|escape|~0|~1|不可变|immutab|copy|拷贝|越界|缺失|missing|RFC6901|pointer|中间容器|intermediate"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

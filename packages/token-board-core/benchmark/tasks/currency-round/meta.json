@@ -1,0 +1,32 @@
+{
+  "id": "currency-round",
+  "title": "金额舍入的银行家舍入 bug",
+  "shortTitle": "银行家舍入",
+  "kind": "ambiguity-control",
+  "difficulty": "high",
+  "prompt": "用户反馈「金额有时不对」。src/money.mjs 中的 roundMoney(cents) 负责把以「分」为单位的浮点金额四舍五入到整分。当前实现对恰好为 x.5 的金额一律向上进位，但正确行为应使用银行家舍入（Banker's Rounding / Round Half to Even）：当小数部分恰好为 0.5 时，应向最近的偶数方向靠拢（例如 0.5 → 0、1.5 → 2、2.5 → 2、3.5 → 4）；非 0.5 情况保持普通四舍五入不变。\n\n请修复 src/money.mjs 中的 roundMoney，使其符合银行家舍入规则。src/tax.mjs 是无关模块，不允许修改。只允许修改 src/money.mjs，并简要说明根因。",
+  "allowedFiles": ["src/money.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "银行家|banker|偶数|half.?to.?even|Math\\.round|0\\.5|round.*even|even.*round"
+  },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 150,
+    "maxDurationSeconds": 480,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

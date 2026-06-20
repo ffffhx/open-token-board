@@ -1,0 +1,14 @@
+{
+  "name": "@open-token-board/eval-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "eval-run": "./run.mjs",
+    "eval-validate": "./validate.mjs"
+  },
+  "scripts": {
+    "validate": "node validate.mjs",
+    "run": "node run.mjs"
+  }
+}

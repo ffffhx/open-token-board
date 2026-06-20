@@ -169,6 +169,7 @@ docker compose up -d --build
 
 - 配置了 `TOKEN_BOARD_DATABASE_URL` / PostgreSQL 时优先使用数据库；否则回退到 `TOKEN_BOARD_DATA_FILE` 的 JSON 存储。
 - 通过 `TOKEN_BOARD_ALLOWED_GITHUB_LOGINS` 可限制允许上报的 GitHub 账号。
+- AI 评测页默认仅 `ffffhx` 可见；可用 `TOKEN_BOARD_BENCHMARK_ALLOWED_GITHUB_LOGINS` 指定逗号分隔的 GitHub login 白名单。
 
 ### 前端（GitHub Pages）
 

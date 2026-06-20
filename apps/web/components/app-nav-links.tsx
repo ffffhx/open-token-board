@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { usePrivateBenchmarkAccess } from "@/components/private-benchmark-access";
+
 type AppNavPage = "home" | "board" | "limits" | "bench";
 type AppNavTheme = "light" | "dark";
 
@@ -19,15 +21,23 @@ function classes(...values: Array<string | false | undefined>): string {
 export function AppNavLinks({
   active,
   className,
+  hideHome = false,
   theme = "light",
 }: {
   active: AppNavPage;
   className?: string;
+  hideHome?: boolean;
   theme?: AppNavTheme;
 }) {
+  const benchmarkAccess = usePrivateBenchmarkAccess();
+  const visibleItems = navItems.filter((item) => {
+    if (hideHome && item.key === "home") return false;
+    return item.key !== "bench" || benchmarkAccess.allowed;
+  });
+
   return (
     <nav aria-label="页面导航" className={classes("flex flex-wrap items-center gap-2", className)}>
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const isActive = item.key === active;
         return (
           <Link
@@ -36,7 +46,7 @@ export function AppNavLinks({
             aria-current={isActive ? "page" : undefined}
             className={classes(
               "inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition",
-              theme === "dark" && isActive && "bg-white text-slate-950",
+              theme === "dark" && isActive && "border border-white/20 bg-white/10 text-white",
               theme === "dark" && !isActive && "text-slate-300 hover:bg-white/10 hover:text-white",
               theme === "light" && isActive && "border border-blue-200 bg-blue-50 text-blue-700",
               theme === "light" &&

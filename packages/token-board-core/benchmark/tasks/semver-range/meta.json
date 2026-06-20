@@ -1,0 +1,32 @@
+{
+  "id": "semver-range",
+  "title": "实现 semver 版本范围匹配 satisfies",
+  "shortTitle": "semver 范围",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "在 src/semver.mjs 中实现并导出一个函数 satisfies(version, range)，判断一个语义化版本号是否落在给定的版本范围内。\n\n版本号约定（为简化忽略 prerelease 与 build 元数据）：\n- 合法版本号形如 \"X.Y.Z\"，三段均为非负十进制整数，例如 \"1.2.3\"、\"0.0.0\"、\"10.20.30\"。\n- 必须严格校验：恰好三段、各段为纯数字（仅 0-9）、不接受前导加号、空白、\"v\" 前缀、含小数点之外的字符、段数不为 3、含 prerelease/build（如 \"1.2.3-beta\"、\"1.2.3+x\"）等。带前导零的数字段（如 \"01\"、\"1.02.3\"）一律视为非法。任何非法版本号都要抛出错误（throw）。version 参数必须是字符串，否则抛错。\n\n比较规则：按 major、minor、patch 依次做数值比较（不是字符串比较）。\n\nrange 参数必须是字符串，否则抛错。range 经过 trim 后支持以下语法（注意所有数值比较都是语义化版本的数值比较）：\n1. 精确匹配：\"1.2.3\" —— 等价于 version 必须恰好等于该版本。\n2. 比较符：\">=1.2.0\"、\">1.0.0\"、\"<2.0.0\"、\"<=1.2.3\"、\"=1.2.3\"。比较符与版本号之间可以没有空格，但本题中比较符与版本之间不允许出现空白字符（如 \">= 1.2.0\" 视为非法）。支持的比较符仅有：>=、<=、>、<、=（注意 >= 与 <= 是两字符，必须正确区分，不能把 \">=1.2.0\" 误判成 \">\" 加 \"=1.2.0\"）。\n3. 插入符 caret \"^1.2.3\"：允许不改变最左侧非零段的更新。具体：\n   - ^1.2.3 => >=1.2.3 <2.0.0\n   - ^0.2.3 => >=0.2.3 <0.3.0\n   - ^0.0.3 => >=0.0.3 <0.0.4\n   - ^0.0.0 => >=0.0.0 <0.0.1\n   - ^1.0.0 => >=1.0.0 <2.0.0\n4. 波浪号 tilde \"~1.2.3\"：允许 patch 级更新，即 ~1.2.3 => >=1.2.3 <1.3.0；~0.2.3 => >=0.2.3 <0.3.0；~1.0.0 => >=1.0.0 <1.1.0。\n5. 空格分隔的 AND：以一个或多个空白字符分隔的多个比较符子句，全部满足才算匹配，例如 \">=1.2.0 <1.5.0\" 表示同时满足 >=1.2.0 与 <1.5.0。AND 的每个子句必须是“比较符 + 版本号”形式；精确版本、caret、tilde 不能作为 AND 子句的一部分参与组合（即只有第 2 类比较符子句能用空格 AND 组合）。\n\n非法 range（无法解析、版本号非法、空字符串、未知比较符、caret/tilde/精确版本与其它子句用空格组合、出现非法空白等）一律抛出错误。\n\n返回布尔值 true/false。只允许修改 src/semver.mjs。",
+  "allowedFiles": ["src/semver.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "caret|tilde|\\^|0\\.x|边界|comparator|比较符"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

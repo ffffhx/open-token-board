@@ -1,0 +1,32 @@
+{
+  "id": "normalize-refactor",
+  "title": "重构用户记录规范化逻辑",
+  "shortTitle": "normalizeUser 重构",
+  "kind": "refactor",
+  "difficulty": "medium",
+  "prompt": "src/user.mjs 中有四个函数（saveUser、importUsers、updateUser、sanitizeUser），它们各自内联重复了对用户记录的规范化逻辑，但存在不一致之处（例如某些函数遗漏了 role 的默认值、使用了错误的取整方式或漏掉了大小写转换）。\n\n请将规范化逻辑抽取为一个**导出函数 `normalizeUser(raw)`**，统一处理以下四条规则：\n- `name`：去掉首尾空白并转为小写，若结果为空字符串则设为 `\"anonymous\"`\n- `email`：去掉首尾空白并转为小写\n- `role`：只允许 `\"admin\"` | `\"editor\"` | `\"viewer\"`，不合法时设为 `\"viewer\"`\n- `score`：用 `Math.floor` 取整，然后限制在 `[0, 100]` 范围内\n\n让 saveUser、importUsers、updateUser、sanitizeUser 均复用 `normalizeUser`，对外行为与正确规范化规则保持一致。只允许修改 `src/user.mjs`。",
+  "allowedFiles": ["src/user.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "normalizeUser|重复|不一致|inline|floor|toLowerCase|role.*viewer|viewer.*role"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 150,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

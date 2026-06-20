@@ -1,0 +1,32 @@
+{
+  "id": "async-pool",
+  "title": "受限并发的异步任务池 runPool",
+  "shortTitle": "async-pool",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/async-pool.mjs 中实现并以具名导出（export function）提供 `runPool(tasks, limit)`，用于受限并发地执行一组异步任务。\n\n参数约定：\n- tasks 是一个「thunk 数组」：每个元素是一个无参函数，调用后返回一个 Promise（也可能直接返回非 Promise 的同步值）。\n- limit 是允许「同时处于运行中」状态的任务数上限。\n\n行为契约：\n- runPool 返回一个 Promise。所有任务成功时，resolve 成一个与输入 **顺序一致** 的结果数组：results[i] 必须对应 tasks[i] 的返回值，而不是按完成先后排列。\n- 任意时刻并发数都不得超过 limit；当有任务完成腾出名额时应及时补位启动后续任务，保持尽量接近 limit 的并发度（既不能超过，也不应无谓地低于）。\n- 失败语义：若有任务失败（其 Promise 拒绝，或同步抛出），runPool 应以 **按输入下标最小** 的那个错误对象进行 reject——即使该错误对象在时间上不是最先产生的。\n- 失败后，已经启动、尚在进行中的任务要被允许自然结束（settle），不能产生任何未处理的 Promise 拒绝（unhandledRejection）；同时不应再启动那些尚未开始的任务。\n- 边界情况：tasks 为空数组时，无论 limit 取何值都直接 resolve 成 []；tasks 非空但 limit <= 0 时无法启动任何任务，应判定为非法用法并 reject。\n- thunk 同步抛出异常时，应作为「该下标任务失败」处理并纳入上面的失败语义，而不能让 runPool 本身同步抛出。\n\n当前文件是抛出 \"not implemented\" 的桩代码（stub），请用正确实现替换。只允许修改 src/async-pool.mjs，使用 Node 内置能力即可，不要引入第三方依赖。完成后请简要说明你的实现思路与关键边界处理（并发补位、按输入顺序收集结果、首个错误的选取、让在飞任务 settle 而不触发未处理拒绝）。",
+  "allowedFiles": ["src/async-pool.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "并发|concurren|limit|顺序|order|index|下标|reject|settle|unhandled|池|pool|补位|nextIndex|running"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

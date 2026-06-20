@@ -1,0 +1,31 @@
+{
+  "id": "state-machine-trace",
+  "title": "状态机事件序列追踪",
+  "shortTitle": "状态机追踪",
+  "kind": "code-reading",
+  "difficulty": "medium",
+  "prompt": "请阅读 src/machine.mjs 和 src/transitions.mjs，这是一个自动售货机状态机的实现。\n\n状态机初始状态为 IDLE，初始上下文为 { balance: 0, price: 0 }（单位：分）。\n\n请模拟以下事件序列，追踪每一步的状态变化：\n\n1. INSERT，payload: { amount: 100 }\n2. SELECT，payload: { price: 150 }\n3. INSERT，payload: { amount: 60 }\n4. SELECT，payload: { price: 150 }\n5. TIMEOUT（无 payload）\n6. DONE（无 payload）\n7. SELECT，payload: { price: 80 }\n8. CONFIRM（无 payload）\n\n注意：\n- dispatch 函数会在查询迁移目标之前先更新 context（balance/price）。\n- 迁移表中某些状态对应函数（guard），函数接受当前 context 并返回目标状态名。\n- 如果当前状态不存在某个事件的迁移，该事件被忽略，状态不变。\n\n请将第 8 步结束后的最终状态名（全大写英文字母，例如 IDLE）写入 ANSWER.txt。",
+  "allowedFiles": ["ANSWER.txt"],
+  "verify": {
+    "cmd": "node verify/verify.mjs"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 30,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 150,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

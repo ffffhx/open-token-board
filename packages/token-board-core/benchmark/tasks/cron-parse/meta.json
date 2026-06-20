@@ -1,0 +1,32 @@
+{
+  "id": "cron-parse",
+  "title": "Cron 表达式下一次触发时间（UTC）",
+  "shortTitle": "Cron nextRun",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/cron.mjs 中实现并具名导出函数 `nextRun(expr, fromEpochSec)`（即 `export function nextRun(...)`）。\n\n功能：给定一个 5 字段 cron 表达式 expr 和一个 UTC 起始时刻 fromEpochSec（epoch 秒，可能带非零秒数），返回**严格大于** fromEpochSec 的、下一个与 expr 匹配的 UTC 时刻，结果同样以 epoch 秒返回，且其秒数必须为 0（cron 以分钟为最小粒度）。注意：当 fromEpochSec 恰好落在某个匹配的整分钟上时，也必须返回它之后的下一个匹配时刻，绝不能返回它自身。所有时间一律按 UTC 计算，不要使用本地时区。\n\n表达式格式：以任意空白分隔的 5 个字段，依次为 `minute hour dom month dow`（分 时 日 月 周）。字段取值范围：minute 0-59，hour 0-23，dom（day-of-month）1-31，month 1-12，dow（day-of-week）0-6，其中 0 表示周日（Sunday），6 表示周六。\n\n每个字段支持以下语法（可用逗号组合成列表，列表内每一项可以是下列任意一种）：\n- `*`：该字段全部取值。\n- 单个数值，例如 `5`。\n- 范围 `a-b`（闭区间，要求 a <= b）。\n- 步长：`*/n` 表示在该字段整个范围内每隔 n 取一个；`a-b/n` 表示在范围 a..b 内每隔 n 取一个；`a/n` 等价于 `a-(该字段最大值)/n`。步长 n 必须为正整数。\n- 列表 `a,b,c`：把若干项并起来，每一项都可以是上述形式（含范围、步长）。\n\nday-of-month 与 day-of-week 的组合规则（标准 cron 语义）：当 dom 与 dow **两者都被限制**（即都不是 `*`）时，某一天只要 **dom 匹配或 dow 匹配其一**即算匹配（OR 关系）；否则（至少一方为 `*`）该天必须同时满足 dom 与 dow（其中为 `*` 的一方恒为真）。\n\n错误处理：当表达式非法时必须**抛出异常**，包括但不限于：字段数量不是 5、字段为空、出现非数字内容、数值越界（超出该字段允许范围）、范围方向相反（a>b）、步长为 0 或非正整数、出现多余的 `/` 或 `-`、空的列表项、负数或小数等。无需对“语法合法但永远不会命中”的表达式（例如 2 月 30 日）做特殊处理。\n\n性能：实现需在合理时间内（远小于 60 秒）返回，请避免逐秒暴力枚举等低效做法。\n\n当前 src/cron.mjs 为抛出 \"not implemented\" 的桩代码，请用正确实现替换。只允许修改 src/cron.mjs。完成后请简要说明你的实现思路与关键边界处理（严格大于、秒归零、dom/dow 的 OR 规则、月/日与跨年翻转）。",
+  "allowedFiles": ["src/cron.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "cron|dom|dow|UTC|步长|step|范围|range|翻转|rollover|严格大于|OR|越界|闰年|leap"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

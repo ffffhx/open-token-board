@@ -1,0 +1,32 @@
+{
+  "id": "dijkstra-path",
+  "title": "有向图最短路径（字典序最小路径）",
+  "shortTitle": "Dijkstra路径",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/dijkstra.mjs 中实现并以具名导出（export function）导出函数 `shortestPath(n, edges, src, dst)`，求单源最短路径。\n\n图模型：\n- 节点编号为 0..n-1。\n- edges 是有向边数组，每条边形如 [u, v, w]，表示一条从 u 指向 v、权重为 w 的有向边。\n- w 是非负整数（可以为 0）。图中可能存在重边（同一对 (u, v) 有多条边，取其中权重最小者参与最短路）以及自环（u === v）。\n\n返回值：\n- 若 dst 从 src 不可达，返回 null。\n- 否则返回对象 { dist, path }：dist 为从 src 到 dst 的最短总权重（整数）；path 为从 src 到 dst（含两端）的节点编号数组。\n- 当 src === dst 时，最短距离为 0，路径为 [src]（即便存在以 src 为端点的边或自环也不改变这一结果）。\n\n等价最短路径的决胜规则（务必实现）：\n- 在所有「总权重等于最短距离」的路径中，返回「节点编号序列字典序最小」的那一条。\n- 字典序比较规则：逐位比较两个路径的节点编号；在第一个不同的位置上编号较小者更小；若一个路径是另一个的前缀，则较短者更小。\n- 注意：决胜只在「总权重相等」时才生效；总权重更小的路径始终优先，绝不能因为字典序而选择总权重更大的路径。\n\n输入校验（必须抛出异常的情形）：\n- n 不是正整数。\n- src 或 dst 不是整数，或不在 [0, n-1] 范围内。\n- 任意边的端点 u 或 v 不是整数或越界（不在 [0, n-1]）。\n- 任意边的权重 w 不是整数，或为负数。\n\n请保证算法在较大规模图（数千节点、上万条边）上能在限定时间内完成，避免指数级回溯。当前文件是抛出异常的桩代码（stub），请用正确实现替换。只允许修改 src/dijkstra.mjs。修改完成后请简要说明你的实现思路与关键的边界处理（不可达判定、字典序决胜、零权边与重边/自环处理、输入校验）。",
+  "allowedFiles": ["src/dijkstra.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "Dijkstra|最短路|字典序|lex|priority|堆|heap|relax|松弛|不可达|reachable|tie|决胜|非负|权重"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

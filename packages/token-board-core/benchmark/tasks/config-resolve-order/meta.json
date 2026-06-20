@@ -1,0 +1,32 @@
+{
+  "id": "config-resolve-order",
+  "title": "配置合并优先级溯源",
+  "shortTitle": "配置优先级",
+  "kind": "code-reading",
+  "difficulty": "medium",
+  "prompt": "阅读 src/defaults.mjs、src/env.mjs 和 src/resolve.mjs 三个文件，理解配置合并逻辑：系统按照「defaults → env 层 → userOverrides」的优先级（从低到高）合并最终配置，其中 env 层需根据 envMapping 进行类型转换（number/boolean/string）。\n\n请计算以下 5 个配置键的最终解析值：\n  - maxRetries\n  - enableCache\n  - cacheSize\n  - port\n  - host\n\n将结果以一个 JSON 对象写入 ANSWER.txt，格式示例：\n{\"maxRetries\":3,\"enableCache\":true,\"cacheSize\":128,\"port\":3000,\"host\":\"localhost\"}\n\n注意：类型要正确（数字写数字，布尔写 true/false，字符串写字符串），不要有多余空格或换行。",
+  "allowedFiles": ["ANSWER.txt"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "优先级|覆盖|userOverrides|env|转换|boolean|parseInt|高|低|precedence"
+  },
+  "timeoutSeconds": 180,
+  "weights": {
+    "tests": 40,
+    "firstPass": 20,
+    "scopeControl": 15,
+    "instructionFollowing": 15,
+    "rootCause": 5,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 60,
+    "targetDurationSeconds": 90,
+    "maxDurationSeconds": 300,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 30,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

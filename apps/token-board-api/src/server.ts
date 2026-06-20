@@ -81,6 +81,7 @@ function positiveNumberEnv(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 const DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
+const DEFAULT_BENCHMARK_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const SESSION_COOKIE_NAME = "token_board_session";
 const WEB_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_WEB_SESSION_TTL_SECONDS || 30 * 24 * 60 * 60);
 const AGENT_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_AGENT_SESSION_TTL_SECONDS || 180 * 24 * 60 * 60);
@@ -299,6 +300,23 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     sendJson(request, response, 200, {
       authenticated: Boolean(identity),
       user: identity,
+    });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/benchmark/access") {
+    const identity = readWebIdentity(request);
+    sendJson(request, response, 200, {
+      authenticated: Boolean(identity),
+      allowed: Boolean(identity && isGithubIdentityAllowed(identity, benchmarkAllowedGithubLogins())),
+      user: identity
+        ? {
+            userId: identity.userId,
+            displayName: identity.displayName,
+            githubLogin: identity.githubLogin,
+            avatarUrl: identity.avatarUrl,
+          }
+        : null,
     });
     return;
   }
@@ -1280,6 +1298,15 @@ function selectionExplainAllowedGithubLogins() {
     .filter(Boolean);
 
   return logins.length ? logins : DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS;
+}
+
+function benchmarkAllowedGithubLogins() {
+  const logins = (process.env.TOKEN_BOARD_BENCHMARK_ALLOWED_GITHUB_LOGINS || process.env.BENCHMARK_ALLOWED_GITHUB_LOGINS || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return logins.length ? logins : DEFAULT_BENCHMARK_ALLOWED_GITHUB_LOGINS;
 }
 
 function allowedReturnOrigins(request: IncomingMessage) {

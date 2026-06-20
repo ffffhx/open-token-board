@@ -1,0 +1,32 @@
+{
+  "id": "markdown-inline",
+  "title": "行内 Markdown 转 HTML 渲染器",
+  "shortTitle": "Markdown行内渲染",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/md.mjs 中实现并以具名导出（export function）方式导出函数 `renderInline(md)`，把一段「行内（inline）」Markdown 字符串转换为 HTML 字符串并返回。只允许修改 src/md.mjs。当前文件是抛出异常的桩代码，请用正确实现替换。\n\n输入：md 为字符串。若 md 不是字符串，必须抛出异常。输入为空字符串时返回空字符串。\n\n需要支持的语法（自左向右单遍扫描，按下面规则确定地解析）：\n\n1) HTML 转义：纯文本中的特殊字符必须转义为实体——`&` -> `&amp;`、`<` -> `&lt;`、`>` -> `&gt;`。注意必须先替换 `&`，否则会把后续生成的实体（如 `&lt;`）里的 `&` 再次转义；例如输入 `&amp;` 应输出 `&amp;amp;`。其它字符（包括 Unicode、emoji、代理对）原样保留。\n\n2) 反斜杠转义（优先级最高，在任何标记判定之前处理）：`\\` 后紧跟下列任一字符时，该字符按「字面量」输出（随后若它是 `&`/`<`/`>` 仍按规则 1 转义，但本集合不含这些）：`*` `_` `` ` `` `[` `]` `\\` `(` `)`。可转义字符即上述集合。若 `\\` 后面不是可转义字符（或 `\\` 在末尾），则反斜杠自身作为普通字面字符输出。例如 `\\*` -> `*`，`\\\\` -> `\\`，`a\\b` -> `a\\b`，`\\&` -> `\\&amp;`。\n\n3) 行内代码：以单个反引号 `` ` `` 定界，最近的下一个反引号为闭合。代码内部不解析任何 Markdown，也不处理反斜杠转义，只对其内容做规则 1 的 HTML 转义。输出形如 `<code>...</code>`。若找不到闭合反引号，则该反引号按字面量处理。例如 `` `*x*` `` -> `<code>*x*</code>`。\n\n4) 强调：`**...**` 与 `__...__` 渲染为 `<strong>...</strong>`；`*...*` 与 `_..._` 渲染为 `<em>...</em>`。匹配采用「最近匹配」：开标记向右寻找同种类（同字符、同长度语义）的最近闭合标记；其中 `**`/`__` 只能由相同的双字符闭合（途中遇到的单个同字符不作为闭合，跳过继续找）。强调内部的内容需要递归按行内规则继续解析（即支持粗体内嵌斜体、代码、链接等嵌套）。若一个标记找不到与之匹配的闭合标记，则该标记按字面量处理（输出转义后的原字符）。在寻找闭合标记时，必须跳过被反斜杠转义的字符与代码段内部的同名字符。\n\n5) 链接：形如 `[text](url)`。`[` 与其匹配的 `]` 之间为链接文本（支持嵌套的成对 `[]`、以及转义的 `\\]`；其内部的代码段中的 `]` 不计入配对）；紧接着必须是 `(`，到与之匹配的 `)` 之间为 URL（支持成对 `()` 与转义 `\\(`、`\\)`）。链接文本需递归按行内规则解析；URL 需做转义：`&` -> `&amp;`、`<` -> `&lt;`、`>` -> `&gt;`、`\"` -> `&quot;`。输出形如 `<a href=\"URL\">TEXT_HTML</a>`。若 `]` 未闭合、或 `]` 后不是 `(`、或 `)` 未闭合等语法不完整，则起始的 `[` 按字面量处理。文本与 URL 都可以为空（`[](u)`、`[t]()` 合法）。\n\n6) 其余字符作为纯文本，按规则 1 处理。\n\n实现需对较长输入（数万字符级别）保持线性、不卡顿。修改完成后请简要说明你的解析思路与关键的边界处理（转义顺序、代码段不解析、强调最近匹配与不平衡回退、链接括号配对）。",
+  "allowedFiles": ["src/md.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "转义|escape|强调|emphasis|strong|em|code|代码|link|链接|backslash|反斜杠|amp|nearest|最近|平衡|literal|字面"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

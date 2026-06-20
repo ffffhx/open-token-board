@@ -1,0 +1,32 @@
+{
+  "id": "form-validate",
+  "title": "表单校验器的多处谓词 Bug",
+  "shortTitle": "表单校验",
+  "kind": "ui-typecheck",
+  "difficulty": "medium",
+  "prompt": "src/validate-form.mjs 导出了 validateForm(fields) 函数，用于校验表单字段数组，返回错误列表（每项含 field 和 code）。字段对象结构如下：\n\n```\n{ name, value, required?, minLength?, maxLength?, pattern? }\n```\n\n错误码规则：\n- \"required\"：字段标记为必填（required: true），且 **trim 后** 的值为空字符串时报错；触发后跳过其余校验。\n- \"minLength\"：trim 后的长度 **严格小于** minLength 时报错。\n- \"maxLength\"：trim 后的长度 **严格大于** maxLength 时报错。\n- \"pattern\"：trim 后的值 **不匹配** pattern 时报错。\n\n当前实现存在若干谓词 Bug，导致部分规则判断方向相反或未正确 trim。请修复 src/validate-form.mjs，使其行为符合上述规则。只允许修改 src/validate-form.mjs，并简要说明你发现的根因。",
+  "allowedFiles": ["src/validate-form.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "trim|required|minLength|谓词|比较符|反了|inverted|operator|<|>"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

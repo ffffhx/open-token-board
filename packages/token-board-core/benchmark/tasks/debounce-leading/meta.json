@@ -1,0 +1,32 @@
+{
+  "id": "debounce-leading",
+  "title": "防抖前沿触发的 bug 修复",
+  "shortTitle": "防抖前沿",
+  "kind": "typescript-fix",
+  "difficulty": "medium",
+  "prompt": "src/debounce.mjs 里的 shouldFire(events, waitMs, {leading}) 是一个纯函数版防抖调度器。它接受已排序的事件时间戳数组 events（毫秒），以及等待时长 waitMs 和选项 {leading}，返回哪些时间戳会实际触发回调。规则：相邻间隔 < waitMs 的事件属于同一个【爆发组】；间隔 >= waitMs 则分为不同组。leading=false（后沿，默认）：每个爆发组的最后一个事件触发；leading=true（前沿）：每个爆发组的第一个事件触发。当前代码在 leading=true 时存在 bug，行为与 leading=false 完全相同（总是触发最后一个事件）。请修复这个 bug，使 leading=true 时正确地在每个爆发组的第一个事件处触发。只允许修改 src/debounce.mjs，并简要说明根因。",
+  "allowedFiles": ["src/debounce.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "前沿|leading|第一个|first|复制|copy.paste|相同|identical|trailing"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "long-enum-map",
+  "title": "HTTP 状态码映射表中的错误数值",
+  "shortTitle": "状态码 Bug",
+  "kind": "long-context",
+  "difficulty": "high",
+  "prompt": "src/status-codes.mjs 是一个包含约 50 条 HTTP 状态码映射的长文件，并导出 codeOf(key) 和 describe(code) 两个函数。其中某一条目的数字值填写错误，导致 codeOf 对该键返回错误的数字、describe 对正确数字无法找到对应键名。请仔细阅读整个映射表，找出与标准 HTTP 规范不符的那一条，将其改为正确的数值。只允许修改 src/status-codes.mjs，并简要说明你找到的错误条目及正确值。",
+  "allowedFiles": ["src/status-codes.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "422|UNPROCESSABLE|Unprocessable|unprocessable|错误|误填|误写|wrong|incorrect"
+  },
+  "timeoutSeconds": 420,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 30,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 6,
+    "maxCommandWaitSeconds": 60,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

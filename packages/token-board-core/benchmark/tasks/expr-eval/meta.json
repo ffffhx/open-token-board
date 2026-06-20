@@ -1,0 +1,32 @@
+{
+  "id": "expr-eval",
+  "title": "递归下降算术表达式求值器",
+  "shortTitle": "表达式求值",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "在 src/expr.mjs 中实现并导出一个具名函数 evaluate(str)，对一个算术表达式字符串求值并返回 number。\n\n语法与语义要求：\n- 支持二元运算符 + - * / ，圆括号 ( )，以及一元正号/负号（前缀 + / -，可连续叠加，如 \"- -3\"、\"+-+-2\"、\"2*-3\"）。\n- 数字为十进制，可含小数：允许形如 12、12.5、.5；但 5.（小数点后无数字）、1.2.3（多个小数点）、单独的 . 均为非法。负数通过一元负号表达，词法层面不把负号并入数字。\n- 运算符优先级：一元正负号 > 乘除（* /）> 加减（+ -）。乘除与加减都是左结合，例如 10-2-3 = 5，100/10/2 = 5，1-2+3 = 2。\n- 括号可任意嵌套，改变求值顺序。\n- 表达式中可包含任意空白（空格、制表符、换行等），空白不影响结果。\n\n错误处理（必须 throw 一个 Error 实例，而不是返回 NaN 或其它值）：\n- 除以 0（包括括号子表达式结果为 0 的情况）必须抛错。\n- 下列非法输入必须抛错：空字符串或全空白、括号不匹配（缺失或多余）、空括号 ()、以二元运算符开头或结尾、两个二元运算符相邻（如 1**2、1//2、1+*2）、两个数字相邻（如 1 2）、相邻括号的隐式乘法（如 (1+2)(3)）、出现未知字符（字母、@、& 等）、非法数字（如 5.、1.2.3）。\n- 注意：一元正负号是合法的，例如 1+ +2 = 3、1- -2 = 3、6/ -2 = -3，这些不应被误判为非法。\n\n实现约束：只允许修改 src/expr.mjs；只能使用 Node 内置能力，不得引入任何依赖、不得联网。建议用递归下降解析，先做词法分析再解析。完成后简要说明你的优先级与结合性是如何保证的。",
+  "allowedFiles": ["src/expr.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "递归下降|优先级|结合|precedence|associat|一元|unary|词法|token"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

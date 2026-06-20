@@ -1,0 +1,32 @@
+{
+  "id": "topo-sort",
+  "title": "拓扑排序（有向无环图，升序打破平局）",
+  "shortTitle": "拓扑排序",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/topo.mjs 中实现 topoSort(nodes, edges) 函数，并以命名导出的方式导出。\n\n函数签名：\n  export function topoSort(nodes, edges)\n\n参数说明：\n- nodes：字符串数组，表示图中所有节点的 ID（不重复）。\n- edges：二元组数组，每个元素为 [from, to]，表示从 from 指向 to 的有向边。\n\n返回值：\n- 若图中**没有环**，返回一个字符串数组，表示合法的拓扑顺序（所有 nodes 中的节点都必须出现且仅出现一次）。\n- 若图中**存在环**，返回 null（不要抛出异常）。\n\n平局处理（tie-break）规则：\n- 当同一时刻有多个节点入度为 0（可合法排在下一位），**必须按节点 ID 的字典升序**选取下一个节点。\n  这样可以保证相同的图输入始终产生相同的拓扑序列。\n\n示例：\n- nodes=[\"a\",\"b\",\"c\"], edges=[[\"a\",\"b\"],[\"a\",\"c\"]] => [\"a\",\"b\",\"c\"]\n  （a 必须在 b、c 之前；b 和 c 之间没有依赖，按字典序 b < c，故 b 先输出）\n- nodes=[\"a\",\"b\"], edges=[[\"a\",\"b\"],[\"b\",\"a\"]] => null（存在环）\n\n只允许修改 src/topo.mjs 文件。",
+  "allowedFiles": ["src/topo.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "Kahn|BFS|入度|in.?degree|拓扑|topo|cycle|环|DFS|深度"
+  },
+  "timeoutSeconds": 420,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 480,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "template-render",
+  "title": "迷你模板引擎 render(tpl, data)",
+  "shortTitle": "模板引擎",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "在 src/template.mjs 中实现并导出 `export function render(tpl, data)`，一个迷你模板引擎，把模板字符串 tpl 用数据 data 渲染成字符串。只允许修改 src/template.mjs。\n\n语法与精确语义：\n\n1) 插值 `{{path}}`：把 path 解析出的值转成字符串后输出，并做 HTML 转义。path 支持点号嵌套（如 `a.b.c`），逐级进入对象 / 数组（数组用数字下标，如 `arr.0`；字符串可访问其属性如 `s.length`）。path 两侧空白要忽略。\n   - 缺失路径（任一级为 null/undefined 或在非对象上继续取属性）=> 输出空串。\n   - 值为 null 或 undefined => 空串；NaN => 空串；其余数字 / 布尔 / 字符串按 String() 输出。\n   - 空插值 `{{}}`（去空白后为空）=> 空串。\n\n2) HTML 转义（仅对 `{{ }}` 插值生效）：把 `&`→`&amp;`、`<`→`&lt;`、`>`→`&gt;`、`\"`→`&quot;`、`'`(U+0027)→`&#39;`。注意 `&` 必须先于其它字符替换，避免二次转义。\n\n3) 原样插值 `{{{path}}}`（三重花括号）：与插值相同地解析 path，但不做 HTML 转义；缺失同样输出空串。\n\n4) 条件区块 `{{#if path}}...{{/if}}`：当 path 的值为真值时渲染区块内部，否则整段输出空。真值判定：falsy（false / null / undefined / 0 / NaN / 空字符串）为假；空数组 `[]` 也视为假；非空数组、对象 `{}`、非空字符串、非零数字为真。\n\n5) 循环区块 `{{#each path}}...{{/each}}`：path 必须解析为数组才迭代，否则整段输出空（缺失或非数组都视为空）。迭代时区块内部的『当前上下文』为当前元素：`{{.}}` 表示当前元素本身，`{{.field}}` / `{{field}}` 表示当前元素的字段，`{{@index}}` 表示当前下标（从 0 开始）。`@index` 仅在 each 内部有意义，在外部解析为空串。\n\n6) 普通文本与字面量花括号原样输出（例如单个 `{`、`}`，或 `{{}}` 之外不构成标签的内容）。\n\n7) 嵌套：if / each 可以任意层级互相嵌套；内层 each 的当前上下文会覆盖外层。\n\n8) 标签必须正确配对：出现未闭合的 `{{#if}}` / `{{#each}}`、孤立的 `{{/if}}` / `{{/each}}`、或类型不匹配（如 `{{#if}}...{{/each}}`）时，必须抛出错误（throw）。当 tpl 不是字符串时也抛错。\n\n请保证实现纯函数、确定性、零依赖（仅用 Node 内置能力）。完成后简要说明你的解析与转义策略。",
+  "allowedFiles": ["src/template.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "转义|escape|嵌套|nest|配对|闭合|stack|栈|context|上下文|each|tokenize|解析"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

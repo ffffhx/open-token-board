@@ -1,0 +1,32 @@
+{
+  "id": "min-edit-script",
+  "title": "最短编辑脚本（数组 diff，确定性 tie-break）",
+  "shortTitle": "最短编辑脚本",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/edit-script.mjs 中实现并以具名导出（export function）提供函数 `computeEditScript(a, b)`，计算把数组 a 变成数组 b 的「最短编辑脚本」。\n\n返回值是一个操作数组，每个操作是下列三种之一：\n- `{ type: \"keep\", value }`：保留 a 中的一个元素（它同时对应 b 中相同的元素）。\n- `{ type: \"del\", value }`：删除 a 中的一个元素。\n- `{ type: \"ins\", value }`：插入一个 b 中的元素。\n\n要求：\n1. 把脚本依次应用到 a 必须精确得到 b：keep / del 都要按顺序对应 a 当前位置的元素，ins 则插入给定 value。\n2. 脚本必须是「最短」的：保留（keep）的数量要等于 a 与 b 的最长公共子序列（LCS）长度，因此删除 + 插入的总数等于经典的（只含增删、不含替换的）编辑距离。\n3. 在所有最短脚本中，结果必须是确定的（deterministic）：当某个位置既需要删除又需要插入时，删除排在插入之前。\n\n元素是否相等使用 `Object.is` 判定（因此 NaN 等于 NaN，而 +0 与 -0 视为不同）。a、b 可能为空数组，元素可为任意值。\n\n当前文件是一个朴素且不正确的桩实现（只处理公共前缀，剩余部分直接全删再全插），请用正确实现替换它。只允许修改 src/edit-script.mjs。完成后请简要说明你的实现思路（如何保证最短，以及如何实现确定性的 tie-break）。",
+  "allowedFiles": ["src/edit-script.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "LCS|最长公共子序列|编辑距离|edit distance|最短|tie-?break|确定性|del|ins|Object\\.is|DP|动态规划"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

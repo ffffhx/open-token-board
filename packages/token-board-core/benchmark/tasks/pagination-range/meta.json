@@ -1,0 +1,32 @@
+{
+  "id": "pagination-range",
+  "title": "分页切片与总页数的 off-by-one bug",
+  "shortTitle": "分页工具函数",
+  "kind": "ui-typecheck",
+  "difficulty": "low",
+  "prompt": "src/pagination.mjs 中有两个导出函数：\n\n1. getPageItems(items, page, pageSize)：返回第 page 页（从 1 开始）的元素数组，每页最多 pageSize 条。\n2. pageCount(total, pageSize)：根据总条数 total 和每页大小 pageSize，返回总页数（整数）。\n\n目前这两个函数都存在 bug，导致结果不正确。请修复它们，要求：\n- getPageItems 返回正确的切片，第 1 页取第 0~pageSize-1 项，第 2 页取第 pageSize~2*pageSize-1 项，以此类推；若该页无数据则返回空数组。\n- pageCount 返回能覆盖所有数据所需的最少页数；total 为 0 时返回 0。\n\n只允许修改 src/pagination.mjs，并简要说明两处 bug 的根因。",
+  "allowedFiles": ["src/pagination.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "off.?by|slice|ceil|Math\\.ceil|向上取整|多取|少取|页码|start|end|index"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 18,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 100,
+    "maxDurationSeconds": 360,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 30,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

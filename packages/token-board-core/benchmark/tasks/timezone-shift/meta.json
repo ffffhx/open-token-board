@@ -1,0 +1,32 @@
+{
+  "id": "timezone-shift",
+  "title": "时区偏移符号错误 bug",
+  "shortTitle": "时区显示修复",
+  "kind": "ambiguity-control",
+  "difficulty": "high",
+  "prompt": "src/format-time.mjs 里的 formatTime(utcMs, offsetMinutes) 负责把 UTC 毫秒数转换成本地时间字符串（HH:MM 格式）。offsetMinutes 是相对于 UTC 的偏移分钟数，例如 东八区（UTC+8）传入 480，西五区（UTC-5）传入 -300。\n\n现在该函数显示的时间不对——请找出 bug 并修复。\n\n注意：同目录下还有 src/format-date.mjs，该文件与本次 bug 无关，不得修改。\n\n只允许修改 src/format-time.mjs，并在回复中简要说明 bug 的根因。",
+  "allowedFiles": ["src/format-time.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "符号|offset|偏移|加减|minus|subtract|negate|\\-offset|\\+offset|反了|wrong.?sign|sign"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

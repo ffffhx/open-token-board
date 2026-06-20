@@ -1,0 +1,32 @@
+{
+  "id": "ts-range-merge",
+  "title": "区间标签的非连续合并 bug",
+  "shortTitle": "区间合并",
+  "kind": "typescript-fix",
+  "difficulty": "low",
+  "prompt": "src/range-label.mjs 里的 compactRangeLabel 用来把一组整数压缩成区间标签，例如 [1,2,3,5,7,8] 应得到 \"1-3, 5, 7-8\"。现在它在非连续的数字上会错误地合并成一个大区间。请修复这个 bug，让只有真正连续（差值为 1）的数字才合并。只允许修改 src/range-label.mjs，并简要说明根因。",
+  "allowedFiles": ["src/range-label.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "连续|差值|相邻|off.?by|prev|\\+ ?1|consecutive"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 18,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 100,
+    "maxDurationSeconds": 360,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 30,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

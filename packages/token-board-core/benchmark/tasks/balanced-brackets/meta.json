@@ -1,0 +1,32 @@
+{
+  "id": "balanced-brackets",
+  "title": "括号匹配合法性检测",
+  "shortTitle": "括号匹配",
+  "kind": "algorithm",
+  "difficulty": "low",
+  "prompt": "请在 src/brackets.mjs 中实现 isBalanced(str) 函数，并以具名导出的方式导出。\n\n该函数接收一个字符串，判断其中的括号（圆括号 ()、方括号 []、花括号 {}）是否合法匹配。\n\n规则：\n- 每个左括号必须有对应的同类右括号正确关闭；\n- 括号必须按正确的顺序嵌套（先开后关）；\n- 字符串中的非括号字符一律忽略；\n- 合法时返回 true，不合法时返回 false。\n\n示例：\n- \"()\" => true\n- \"([{}])\" => true\n- \"(abc[def])\" => true（忽略字母）\n- \"([)]\" => false（交叉嵌套）\n- \"((\" => false（未闭合）\n- \")\" => false（无匹配的右括号）",
+  "allowedFiles": ["src/brackets.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "栈|stack|匹配|嵌套|nest|close|open|对应"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 15,
+    "maxFirstActionSeconds": 60,
+    "targetDurationSeconds": 80,
+    "maxDurationSeconds": 300,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 30,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

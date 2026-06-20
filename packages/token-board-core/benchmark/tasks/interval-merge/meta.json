@@ -1,0 +1,32 @@
+{
+  "id": "interval-merge",
+  "title": "合并重叠区间",
+  "shortTitle": "区间合并",
+  "kind": "algorithm",
+  "difficulty": "medium",
+  "prompt": "请在 src/intervals.mjs 中实现 `mergeIntervals(intervals)` 函数。\n\n函数接受一个二维数组，每个元素为 `[start, end]`（均为整数，start <= end）。函数需要合并所有重叠或相邻（即两个区间端点相触）的区间，返回合并后按 start 升序排列的区间数组。\n\n例如：\n- `mergeIntervals([[1,3],[2,6],[8,10],[15,18]])` 返回 `[[1,6],[8,10],[15,18]]`\n- `mergeIntervals([[1,4],[4,5]])` 返回 `[[1,5]]`（相邻区间合并）\n- `mergeIntervals([[1,4],[0,4]])` 返回 `[[0,4]]`（需先排序）\n- 空数组 `[]` 返回 `[]`\n\n目前实现会抛出 \"not implemented\" 错误，请完整实现该函数。只允许修改 src/intervals.mjs。",
+  "allowedFiles": ["src/intervals.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "排序|sort|重叠|overlap|相邻|adjacent|touch|end.*start|start.*end"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

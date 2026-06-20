@@ -1,0 +1,32 @@
+{
+  "id": "long-router-bug",
+  "title": "路由表中的错误 handler 名称",
+  "shortTitle": "路由 handler 错误",
+  "kind": "long-context",
+  "difficulty": "high",
+  "prompt": "src/routes.mjs 定义了约 40 条 URL 路径到处理函数名称的映射，并导出 matchRoute(path) 函数。\n\n当前路由表中**恰好有一条映射写错了 handler 名称**，导致调用 matchRoute 时返回错误的函数名。\n\n命名约定为：\n- GET  /resource        → getResourceList\n- GET  /resource/:id    → getResourceById\n- POST /resource/create → createResource\n- PUT  /resource/:id/update   → updateResource\n- DELETE /resource/:id/delete → deleteResource\n\n请仔细阅读整个路由表，找到与命名约定不符的那一条，将其 handler 字段改为正确的名称。只允许修改 src/routes.mjs，并简要说明你找到的错误在哪里。",
+  "allowedFiles": ["src/routes.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "updateRole|roles.*update|update.*role|handler.*错|错误.*handler"
+  },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 30,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 480,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 15,
+    "floorOutputTokensPerSecond": 5
+  }
+}

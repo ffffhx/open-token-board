@@ -1,0 +1,32 @@
+{
+  "id": "extract-dup-logic",
+  "title": "提取重复的总量计算逻辑",
+  "shortTitle": "消除重复计算",
+  "kind": "refactor",
+  "difficulty": "medium",
+  "prompt": "src/report.mjs 中有三个导出函数：generateTextReport、generateJsonReport、checkBudget。它们内部各自独立写了一段计算 totalInput、totalOutput、totalRequests、totalTokens 的循环逻辑，代码完全重复，且其中一处在复制粘贴时引入了细微的 bug（totalRequests 累加了错误的字段）。\n\n请完成以下重构任务（只允许修改 src/report.mjs）：\n1. 提取一个私有辅助函数，统一计算上述四个汇总值。\n2. 让三个导出函数都调用该辅助函数，消除重复。\n3. 修正复制粘贴引入的 bug，使三个函数行为一致且正确。\n\n最终行为要求：\n- generateTextReport 返回的字符串合计行中，请求数须等于所有记录 requests 字段之和。\n- generateJsonReport 返回的 summary.totalRequests 须等于所有记录 requests 字段之和。\n- checkBudget 返回的 totalTokens 须等于所有记录 inputTokens + outputTokens 之和，exceeded 字段须正确反映是否超预算。",
+  "allowedFiles": ["src/report.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "重复|复制|粘贴|dup|copy|totalRequests|outputTokens|r\\.requests"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

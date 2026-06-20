@@ -1,0 +1,32 @@
+{
+  "id": "mini-regex",
+  "title": "迷你正则匹配引擎（回溯实现）",
+  "shortTitle": "Mini Regex",
+  "kind": "algorithm",
+  "difficulty": "high",
+  "prompt": "请在 src/regex.mjs 中实现一个迷你正则匹配引擎，并以具名导出（export function）导出函数 `isMatch(pattern, text)`，返回布尔值。\n\n核心语义：当且仅当 `pattern` 能够**完整匹配整个 `text`**（即从头到尾，不允许只匹配子串）时返回 true，否则返回 false。这等价于在两端都有锚点。例如 `abc` 不匹配 `abcd`，也不匹配 `ab`。空模式只匹配空文本。\n\n模式由若干「元素 + 可选量词」组成。元素有三种：\n- 普通字面量字符：匹配它自身这一个字符。\n- `.`（点）：匹配任意单个字符（但不匹配空，必须正好消费一个字符）。\n- 字符类 `[...]`：匹配方括号内描述的字符集合中的任意单个字符。\n  - 列举：`[abc]` 匹配 a、b 或 c。\n  - 范围：`[a-z]`、`[0-9]`、`[A-Za-z0-9]`，可多段拼接。范围按字符的 Unicode 码点闭区间判定。\n  - 否定：以 `^` 紧跟在 `[` 之后表示取反，如 `[^abc]` 匹配除 a、b、c 之外的任意单个字符，`[^a-z]` 匹配任意非小写字母字符。`^` 只有作为类内第一个字符时才表示否定。\n  - 位于类首或类尾的 `-` 视为字面量连字符（如 `[-a]`、`[a-]` 都包含字符 `-`）。\n\n量词紧跟在某个元素之后，作用于其**前面那个单一元素**（字面量、`.` 或整个字符类）：\n- `*`：前导元素出现零次或多次。\n- `+`：前导元素出现一次或多次。\n- `?`：前导元素出现零次或一次。\n\n匹配采用回溯实现，量词为贪婪语义但允许回溯以达成整体匹配。例如 `a*a` 能匹配 `a`、`aa`、`aaaaa`；`[^@]+@[^@]+` 能匹配 `user@host`。\n\n字符与文本均按 Unicode 码点处理：`.` 与单个类元素应当各匹配恰好一个码点（含位于基本多文种平面之外的字符 / emoji）。\n\n非法 pattern 必须**抛出异常**（throw），至少包括以下情形：\n- 量词前面没有可重复的元素，例如模式以 `*`、`+`、`?` 开头，或出现连续量词如 `a**`、`a*+`。\n- 字符类未闭合（缺少 `]`），例如 `[abc`、`[a-z`、`[`。\n- 空字符类 `[]` 或空否定类 `[^]`。\n- 落单的 `]`（没有与之匹配的 `[`）。\n- 字符类中范围逆序（如 `[z-a]`，左端码点大于右端）。\n\n注意：合法缓存/匹配判断不要把 `false`、空串这类结果误判，函数应严格返回布尔 true/false；只有在 pattern 非法时才抛错。本引擎不支持反斜杠转义，`.`、`*`、`+`、`?`、`[`、`]` 一律按上述元字符语义解释。\n\n当前文件是抛出 \"not implemented\" 的桩代码，请用正确实现替换。只允许修改 src/regex.mjs。完成后请简要说明实现思路与关键的边界处理（完整匹配锚定、贪婪回溯、字符类与否定、非法模式的抛错点）。",
+  "allowedFiles": ["src/regex.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "回溯|backtrack|贪婪|greedy|字符类|class|锚定|anchor|量词|quantifier|码点|codePoint|未闭合|malformed|isMatch"
+  },
+  "timeoutSeconds": 600,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 25,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 45,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

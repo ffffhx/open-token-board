@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AppNavLinks } from "@/components/app-nav-links";
+import { PrivateBenchmarkLink } from "@/components/private-benchmark-link";
 import { TokenBoardLogo } from "@/components/token-board-logo";
 
 const NPX_INSTALL_COMMAND = "npx --yes token-board-agent install";
@@ -163,7 +164,7 @@ function HeroSection() {
           <a href="#privacy" className="hidden rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/10 hover:text-white lg:inline-flex">
             隐私
           </a>
-          <AppNavLinks active="home" theme="dark" />
+          <AppNavLinks active="home" hideHome theme="dark" />
         </div>
       </nav>
 
@@ -187,12 +188,7 @@ function HeroSection() {
             >
               了解使用流程
             </a>
-            <Link
-              href="/bench"
-              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
-            >
-              查看 Codex 评测
-            </Link>
+            <PrivateBenchmarkLink className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15" />
           </div>
         </div>
 

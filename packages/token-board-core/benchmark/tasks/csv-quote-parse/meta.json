@@ -1,0 +1,32 @@
+{
+  "id": "csv-quote-parse",
+  "title": "CSV 带引号字段解析 bug",
+  "shortTitle": "CSV 引号解析",
+  "kind": "typescript-fix",
+  "difficulty": "medium",
+  "prompt": "src/csv.mjs 里的 parseCsvLine(line) 函数负责把一行 CSV 文本拆分成字段数组。\n\n当前实现直接按逗号 split，存在以下问题：\n1. 被双引号包裹的字段内部如果含有逗号，会被错误地切断；\n2. 被双引号包裹的字段内部如果含有 \"\"（两个连续双引号，表示一个转义的双引号字符），没有被正确还原为单个 \" 字符；\n3. 字段外层的双引号本身不应出现在返回值中。\n\n请修复 src/csv.mjs，使其正确支持 RFC 4180 的引号规则：\n- 被 \" 包裹的字段，内部逗号视为普通字符；\n- 被 \" 包裹的字段，\"\" 还原为单个 \"；\n- 字段两端的包裹引号不出现在结果里；\n- 不带引号的字段行为不变。\n\n只允许修改 src/csv.mjs，并简要说明根因。",
+  "allowedFiles": ["src/csv.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "split|引号|quoted|quote|逗号|comma|RFC|转义|escape"
+  },
+  "timeoutSeconds": 300,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 120,
+    "maxDurationSeconds": 420,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

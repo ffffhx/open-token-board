@@ -1,0 +1,30 @@
+{
+  "id": "ui-stat-panel",
+  "title": "还原一个数据统计面板",
+  "shortTitle": "统计面板还原",
+  "kind": "ui-restore",
+  "difficulty": "medium",
+  "prompt": "在 index.html 里用纯 HTML + 内联 CSS（不使用任何外部库/框架/图片/字体文件）还原下面这个「数据统计面板」。要求像素级贴近这个设计：\n\n整体：深色页面背景 #0f172a，面板在视口中水平+垂直居中。字体统一用系统无衬线字体栈（-apple-system, Segoe UI, Roboto, sans-serif）。\n面板：宽 640px，白色背景，圆角 16px，内边距 24px，带柔和阴影（0 10px 40px rgba(0,0,0,.3)）。\n标题行：面板顶部一行，左右两端对齐。左边是标题「Performance Overview」18px 粗体(font-weight:700) 深色 #0f172a；右边是一个胶囊徽章，文案「Last 7 days」12px 粗体(font-weight:600) 颜色 #475569，背景 #f1f5f9，圆角 999px，内边距 4px 12px。标题行底部有一条 1px 分隔线 #e2e8f0，分隔线与标题行之间留 16px 下内边距。\n卡片行：分隔线下方 20px(margin-top) 处，水平排列 3 张等宽卡片(flex:1)，卡片之间间距 16px。每张卡片：背景 #f8fafc，1px 边框 #e2e8f0，圆角 12px，内边距 16px。\n每张卡片内部从上到下三部分：\n1) 标签：11px 粗体(font-weight:600)，全大写(text-transform:uppercase)，字间距 letter-spacing:.06em，颜色 #94a3b8。\n2) 数字：标签下方 8px(margin-top)，28px 粗体(font-weight:700)，颜色 #0f172a。\n3) 变化行：数字下方 6px(margin-top)，13px 粗体(font-weight:600)。正向用绿色 #16a34a 并以实心上箭头 ▲(U+25B2) 开头，负向用红色 #dc2626 并以实心下箭头 ▼(U+25BC) 开头。\n三张卡片的内容分别是：\n- 第一张：标签「Revenue」，数字「$48.2k」，变化「▲ +12.4%」(绿色)。\n- 第二张：标签「Active Users」，数字「9,318」，变化「▼ -3.1%」(红色)。\n- 第三张：标签「Conversion」，数字「4.7%」，变化「▲ +0.8%」(绿色)。\n\n只允许修改 index.html。目标是渲染出来跟设计稿尽可能一致。",
+  "allowedFiles": ["index.html"],
+  "verify": { "type": "ui" },
+  "viewport": { "width": 900, "height": 640 },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 60,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

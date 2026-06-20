@@ -1,0 +1,30 @@
+{
+  "id": "ui-pricing-tier",
+  "title": "还原一张定价套餐卡",
+  "shortTitle": "定价卡还原",
+  "kind": "ui-restore",
+  "difficulty": "medium",
+  "prompt": "在 index.html 里用纯 HTML + 内联 CSS（不使用任何外部库/框架/图片/字体文件）还原下面这张「Pro 定价套餐卡」。要求像素级贴近这个设计：\n\n整体：浅灰页面背景 #f1f5f9，卡片在视口中水平+垂直居中。字体统一用系统无衬线字体栈。\n卡片：相对定位，宽 340px，白色背景，1px 边框 #e2e8f0，圆角 20px，内边距 32px，柔和阴影 0 20px 50px rgba(99,102,241,.15)。\n角标徽章：卡片右上角绝对定位（top:20px、right:20px），文案「Most popular」，背景 #eef2ff、文字色 #6366f1、字号 11px、粗体 700、字母间距 0.5px、大写（text-transform:uppercase）、内边距 5px 12px、圆角 999px（胶囊形）。\n套餐名：一行「Pro」，14px、粗体 700、颜色 #6366f1、大写、字母间距 1px。\n价格：套餐名下方 12px 处一行，基线对齐（align-items:baseline），左边大号金额「$24」48px、字重 800、颜色 #0f172a、line-height:1；紧跟右边「/month」15px、字重 500、颜色 #94a3b8，两者间距 4px。\n标语：价格下方 10px 处一段「Everything you need to scale your team and ship faster.」14px、行高 1.5、颜色 #64748b。\n分隔线：标语下方一条整宽水平分隔线，高 1px、颜色 #e2e8f0、上下外边距各 24px。\n功能列表：分隔线下方竖排 5 行功能，每行用 flex 横向排列、垂直居中、左侧勾选标记与文字间距 12px、行间下外边距 14px（最后一行无下外边距）；文字 14px、颜色 #334155。每行左侧勾选标记是一个 20×20 的圆（border-radius:50%）、浅绿背景 #dcfce7、绿色对勾字符 ✓（&#10003;）12px、粗体 700、颜色 #16a34a、内部水平垂直居中。5 行文案依次为「Unlimited projects」「Up to 20 team members」「Advanced analytics」「Priority support」「Custom integrations」。\n按钮：最下方一个整宽 CTA 按钮，与功能列表间距 28px，文案「Get started」，indigo 背景 #6366f1、白色文字、15px、粗体 700、无边框、圆角 12px、纵向内边距 13px。\n\n只允许修改 index.html。目标是渲染出来跟设计稿尽可能一致。",
+  "allowedFiles": ["index.html"],
+  "verify": { "type": "ui" },
+  "viewport": { "width": 900, "height": 640 },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 60,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

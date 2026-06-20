@@ -1,0 +1,32 @@
+{
+  "id": "lru-cache",
+  "title": "实现 LRU 缓存",
+  "shortTitle": "LRU Cache",
+  "kind": "algorithm",
+  "difficulty": "medium",
+  "prompt": "请在 src/lru.mjs 中实现一个 LRU（最近最少使用）缓存类，导出为默认导出（export default）。\n\n要求：\n- 构造函数：`new LRU(capacity)`，capacity 为正整数，表示缓存最大容量。\n- `get(key)`：返回键对应的值；若键不存在则返回 `undefined`。调用 get 后，该键变为最近使用。\n- `put(key, value)`：写入键值对。若键已存在则更新值并标记为最近使用；若键不存在且缓存已满，则先淘汰最久未使用的条目，再写入新条目。\n\n注意：key 可以是任意类型（字符串、数字等），value 可以是任意值（包括 `null`、`0`、空字符串等，这些值都是合法的缓存值，不应视为「不存在」）。\n\n当前文件是一个未实现的桩代码（stub），会直接抛出异常，请将其替换为正确实现。只允许修改 src/lru.mjs。",
+  "allowedFiles": ["src/lru.mjs"],
+  "verify": {
+    "cmd": "node verify/verify.mjs",
+    "rootCauseRegex": "LRU|最近|淘汰|evict|least.?recent|capacity|双向链表|Map|LinkedList|HashMap"
+  },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 90,
+    "targetDurationSeconds": 140,
+    "maxDurationSeconds": 480,
+    "targetCommandWaitSeconds": 4,
+    "maxCommandWaitSeconds": 40,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}

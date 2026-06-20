@@ -1,0 +1,30 @@
+{
+  "id": "ui-profile-card",
+  "title": "还原一张社交资料卡",
+  "shortTitle": "资料卡还原",
+  "kind": "ui-restore",
+  "difficulty": "medium",
+  "prompt": "在 index.html 里用纯 HTML + 内联 CSS（不使用任何外部库/框架/图片）还原下面这张「个人资料卡」。要求像素级贴近这个设计：\n\n整体：深色页面背景 #0f172a，卡片在视口中水平+垂直居中。\n卡片：宽 360px，白色背景，圆角 16px，内边距 24px，带柔和阴影（0 10px 40px rgba(0,0,0,.3)）。\n顶部一行：左边一个 48×48 的圆形头像，用 135deg 从 #6366f1 到 #a855f7 的线性渐变填充；右边竖排两行——姓名「Ada Lovelace」16px 粗体深色(#0f172a)，下面 handle「@ada」13px 灰色(#64748b)；头像与文字间距 12px。\n简介：姓名行下方 16px 处，一段文字「First programmer. Working on analytical engines and poetical science.」14px、行高 1.5、颜色 #334155。\n数据行：简介下方有一条 1px 顶部分隔线(#e2e8f0)，其上 20px、其下 16px 间距；分隔线下方水平排列两组统计，每组上面是粗体数字 18px(#0f172a)、下面是 12px 灰标签(#94a3b8)，两组分别是「1.2k / Following」「8.4k / Followers」，组间距 24px。\n按钮：最下方一个整宽按钮，文案「Follow」，indigo 背景 #6366f1，白色文字 14px 粗体，圆角 10px，纵向内边距 10px，与上方数据行间距 20px。\n字体统一用系统无衬线字体栈。\n\n只允许修改 index.html。目标是渲染出来跟设计稿尽可能一致。",
+  "allowedFiles": ["index.html"],
+  "verify": { "type": "ui" },
+  "viewport": { "width": 900, "height": 640 },
+  "timeoutSeconds": 360,
+  "weights": {
+    "tests": 30,
+    "firstPass": 20,
+    "scopeControl": 20,
+    "instructionFollowing": 15,
+    "rootCause": 10,
+    "pathEfficiency": 5
+  },
+  "speedTargets": {
+    "targetFirstActionSeconds": 20,
+    "maxFirstActionSeconds": 120,
+    "targetDurationSeconds": 180,
+    "maxDurationSeconds": 600,
+    "targetCommandWaitSeconds": 5,
+    "maxCommandWaitSeconds": 60,
+    "targetOutputTokensPerSecond": 18,
+    "floorOutputTokensPerSecond": 6
+  }
+}
