@@ -55,6 +55,7 @@ import {
   type SnapshotShareStore,
 } from "@open-token-board/core/snapshot-share-storage";
 import { buildTokenUsageSnapshotFromEvents } from "@open-token-board/core/snapshot";
+import { buildDailyReportCard, sendFeishuCard, type DailyReportConfig } from "./daily-report";
 
 const PORT = Number(process.env.TOKEN_BOARD_PORT || 8787);
 const HOST = process.env.TOKEN_BOARD_HOST || "127.0.0.1";
@@ -86,6 +87,25 @@ const SESSION_COOKIE_NAME = "token_board_session";
 const WEB_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_WEB_SESSION_TTL_SECONDS || 30 * 24 * 60 * 60);
 const AGENT_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_AGENT_SESSION_TTL_SECONDS || 180 * 24 * 60 * 60);
 const OAUTH_STATE_TTL_SECONDS = 15 * 60;
+
+// --- Daily Feishu (Lark) report -------------------------------------------
+// A whole-board digest pushed once a day to a Feishu custom-bot webhook.
+// Disabled unless a webhook URL is configured, so existing deployments are unaffected.
+const FEISHU_WEBHOOK_URL = process.env.TOKEN_BOARD_FEISHU_WEBHOOK_URL || "";
+const FEISHU_WEBHOOK_SECRET = process.env.TOKEN_BOARD_FEISHU_WEBHOOK_SECRET || "";
+const DAILY_REPORT_AT = process.env.TOKEN_BOARD_DAILY_REPORT_AT || "09:00"; // local HH:MM
+const DAILY_REPORT_TZ_OFFSET_MIN = Number.isFinite(Number(process.env.TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET))
+  ? Number(process.env.TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET)
+  : 480; // UTC+8 (Asia/Shanghai) by default
+const DAILY_REPORT_RANGE: TokenBoardRange = isTokenBoardRange(process.env.TOKEN_BOARD_DAILY_REPORT_RANGE || "")
+  ? (process.env.TOKEN_BOARD_DAILY_REPORT_RANGE as TokenBoardRange)
+  : "1D";
+const DAILY_REPORT_SITE_URL = process.env.TOKEN_BOARD_DAILY_REPORT_SITE_URL || "";
+const DAILY_REPORT_TRIGGER_TOKEN = process.env.TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN || "";
+const DAILY_REPORT_STATE_FILE =
+  process.env.TOKEN_BOARD_DAILY_REPORT_STATE_FILE || path.join(path.dirname(DATA_FILE), "daily-report-state.json");
+const DAILY_REPORT_ENABLED =
+  (process.env.TOKEN_BOARD_DAILY_REPORT_ENABLED ?? (FEISHU_WEBHOOK_URL ? "true" : "false")) === "true";
 let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
@@ -98,6 +118,8 @@ let leaderboardSnapshotRefreshTimer: NodeJS.Timeout | undefined;
 let leaderboardSnapshotWriteTimer: NodeJS.Timeout | undefined;
 let leaderboardSnapshotLastRefreshAt = "";
 let leaderboardSnapshotLastError = "";
+let dailyReportTimer: NodeJS.Timeout | undefined;
+let dailyReportLastSentDayKey = "";
 
 async function main() {
   authSecret(); // fail fast if the auth secret is missing/placeholder
@@ -112,6 +134,7 @@ async function main() {
     );
   }
   startLeaderboardSnapshotRefreshLoop();
+  startDailyFeishuReportLoop();
 
   const server = createServer((request, response) => {
     void routeRequest(request, response).catch((error) => {
@@ -182,6 +205,26 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       githubAuth: Boolean(process.env.GITHUB_CLIENT_ID),
       generatedAt: new Date().toISOString(),
     });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/internal/daily-report/run") {
+    // Manual trigger for testing / backfill. Gated behind a dedicated token so it
+    // is invisible (404) unless explicitly configured.
+    if (!DAILY_REPORT_TRIGGER_TOKEN) {
+      sendJson(request, response, 404, { error: "Not found" });
+      return;
+    }
+    if (readBearerToken(request) !== DAILY_REPORT_TRIGGER_TOKEN) {
+      sendJson(request, response, 401, { error: "Unauthorized" });
+      return;
+    }
+    if (!FEISHU_WEBHOOK_URL) {
+      sendJson(request, response, 400, { error: "Feishu webhook is not configured" });
+      return;
+    }
+    const result = await runDailyReport("manual");
+    sendJson(request, response, result.sent ? 200 : 202, result);
     return;
   }
 
@@ -1494,6 +1537,134 @@ async function readLiveUsageLeaderboard({
     records: events.length,
     summary: buildTokenLeaderboard(events, { range, metric, now }),
   };
+}
+
+// --- Daily Feishu report scheduler ----------------------------------------
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+/** Local calendar day (YYYY-MM-DD) for the configured timezone offset. */
+function localDayKey(now: Date, offsetMin: number): string {
+  const local = new Date(now.getTime() + offsetMin * 60_000);
+  return `${local.getUTCFullYear()}-${pad2(local.getUTCMonth() + 1)}-${pad2(local.getUTCDate())}`;
+}
+
+function parseDailyReportTime(value: string): { hour: number; minute: number } {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (match) {
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return { hour, minute };
+  }
+  return { hour: 9, minute: 0 };
+}
+
+/** UTC instant of the next local HH:MM (today if still ahead, else tomorrow). */
+function nextDailyReportTime(now: Date): Date {
+  const { hour, minute } = parseDailyReportTime(DAILY_REPORT_AT);
+  const offsetMs = DAILY_REPORT_TZ_OFFSET_MIN * 60_000;
+  const local = new Date(now.getTime() + offsetMs);
+  let targetUtcMs =
+    Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), hour, minute, 0, 0) - offsetMs;
+  if (targetUtcMs <= now.getTime()) targetUtcMs += 24 * 60 * 60 * 1000;
+  return new Date(targetUtcMs);
+}
+
+function startDailyFeishuReportLoop() {
+  if (!DAILY_REPORT_ENABLED) return;
+  if (!FEISHU_WEBHOOK_URL) {
+    console.warn("daily report enabled but TOKEN_BOARD_FEISHU_WEBHOOK_URL is missing; not scheduling");
+    return;
+  }
+  void loadDailyReportState().finally(() => {
+    scheduleNextDailyReport();
+    console.log(
+      `daily Feishu report: enabled at ${DAILY_REPORT_AT} (UTC${DAILY_REPORT_TZ_OFFSET_MIN >= 0 ? "+" : ""}${DAILY_REPORT_TZ_OFFSET_MIN / 60}h), ` +
+        `range=${DAILY_REPORT_RANGE}, next=${nextDailyReportTime(new Date()).toISOString()}`,
+    );
+  });
+}
+
+function scheduleNextDailyReport() {
+  if (dailyReportTimer) clearTimeout(dailyReportTimer);
+  const now = new Date();
+  const delay = Math.max(1_000, nextDailyReportTime(now).getTime() - now.getTime());
+  dailyReportTimer = setTimeout(() => {
+    void runDailyReport("schedule")
+      .catch((error) => console.error("daily report (schedule) failed:", error))
+      .finally(scheduleNextDailyReport);
+  }, delay);
+}
+
+async function runDailyReport(
+  trigger: "schedule" | "manual",
+): Promise<{ sent: boolean; reason?: string; status?: number; activeUsers?: number }> {
+  const now = new Date();
+  const dayKey = localDayKey(now, DAILY_REPORT_TZ_OFFSET_MIN);
+  if (trigger === "schedule" && dailyReportLastSentDayKey === dayKey) {
+    return { sent: false, reason: "already-sent-today" };
+  }
+
+  const { summary } = await readLiveUsageLeaderboard({ range: DAILY_REPORT_RANGE, metric: "tokens", now });
+  if (!summary || summary.activeUsers === 0) {
+    if (trigger === "schedule") {
+      dailyReportLastSentDayKey = dayKey;
+      await saveDailyReportState();
+    }
+    console.log(`daily report (${trigger}): no active users for ${dayKey}, skipped`);
+    return { sent: false, reason: "no-data", activeUsers: 0 };
+  }
+
+  const config: DailyReportConfig = {
+    webhookUrl: FEISHU_WEBHOOK_URL,
+    secret: FEISHU_WEBHOOK_SECRET || undefined,
+    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+    siteUrl: DAILY_REPORT_SITE_URL || undefined,
+  };
+  const card = buildDailyReportCard(summary, {
+    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+    siteUrl: DAILY_REPORT_SITE_URL || undefined,
+  });
+  const result = await sendFeishuCard(card, config);
+
+  if (result.ok) {
+    dailyReportLastSentDayKey = dayKey;
+    await saveDailyReportState();
+    console.log(`daily report (${trigger}): sent for ${dayKey} (status=${result.status})`);
+    return { sent: true, status: result.status, activeUsers: summary.activeUsers };
+  }
+
+  console.error(
+    `daily report (${trigger}): send failed (status=${result.status}, code=${result.code ?? "?"}, msg=${result.msg ?? "?"})`,
+  );
+  return { sent: false, reason: "send-failed", status: result.status, activeUsers: summary.activeUsers };
+}
+
+async function loadDailyReportState() {
+  try {
+    const raw = await fs.readFile(DAILY_REPORT_STATE_FILE, "utf8");
+    const parsed = JSON.parse(raw) as { lastSentDayKey?: unknown };
+    if (parsed && typeof parsed.lastSentDayKey === "string") {
+      dailyReportLastSentDayKey = parsed.lastSentDayKey;
+    }
+  } catch {
+    // No state yet (or unreadable) — start fresh.
+  }
+}
+
+async function saveDailyReportState() {
+  try {
+    await fs.mkdir(path.dirname(DAILY_REPORT_STATE_FILE), { recursive: true });
+    await fs.writeFile(
+      DAILY_REPORT_STATE_FILE,
+      JSON.stringify({ lastSentDayKey: dailyReportLastSentDayKey }),
+      "utf8",
+    );
+  } catch (error) {
+    console.error("failed to persist daily report state:", error);
+  }
 }
 
 async function readLeaderboardSnapshot({
