@@ -68,15 +68,23 @@ export function buildDailyReportCard(
   const end = formatDateLabel(summary.endAt, tzOffsetMinutes);
   const dateRange = start && end ? (start === end ? end : `${start}–${end}`) : "";
 
-  const topUsers = summary.users.slice(0, 3);
-  const topLines = topUsers.length
-    ? topUsers
-        .map(
-          (user, index) =>
-            `${MEDALS[index] ?? `#${user.rank}`} **${escapeMd(user.displayName)}** · ${formatCompact(user.tokens)} tokens (${pct(user.share)})`,
-        )
+  const MAX_DETAIL = 10;
+  const detailUsers = summary.users.slice(0, MAX_DETAIL);
+  const detailLines = detailUsers.length
+    ? detailUsers
+        .map((user, index) => {
+          const medal = MEDALS[index] ?? `#${user.rank}`;
+          const head = `${medal} **${escapeMd(user.displayName)}** · ${formatCompact(user.tokens)} tokens (${pct(user.share)})`;
+          const model = user.topModel ? escapeMd(user.topModel) : "—";
+          const tool = user.topTool ? ` / ${escapeMd(user.topTool)}` : "";
+          // Per-user detail line: cost · sessions · top model/tool.
+          const sub = `　└ ${formatUsd(user.costUsd)} · ${formatCompact(user.sessions)} 会话 · ${model}${tool}`;
+          return `${head}\n${sub}`;
+        })
         .join("\n")
     : "_今日暂无上榜数据_";
+  const restCount = summary.users.length - detailUsers.length;
+  const detailFooter = restCount > 0 ? `\n_…等共 ${summary.users.length} 位选手_` : "";
 
   const elements: Array<Record<string, unknown>> = [
     {
@@ -96,7 +104,7 @@ export function buildDailyReportCard(
       ],
     },
     { tag: "hr" },
-    { tag: "div", text: { tag: "lark_md", content: `🏆 **Top 3**\n${topLines}` } },
+    { tag: "div", text: { tag: "lark_md", content: `🏆 **排行榜 · 个人明细**\n${detailLines}${detailFooter}` } },
   ];
 
   if (summary.topModel || summary.topTool) {
