@@ -1,8 +1,12 @@
+import type { TokenLeaderboardSummary } from "@open-token-board/core";
 import Link from "next/link";
 
 import { AppNavLinks } from "@/components/app-nav-links";
 import { PrivateBenchmarkLink } from "@/components/private-benchmark-link";
 import { TokenBoardLogo } from "@/components/token-board-logo";
+import { formatTokens } from "@/components/token-leaderboard/utils";
+
+const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
 
 const NPX_INSTALL_COMMAND = "npx --yes token-board-agent install";
 const NPX_STATUS_COMMAND = "npx --yes token-board-agent status";
@@ -147,7 +151,38 @@ export function TokenBoardWebsite() {
   );
 }
 
-function HeroSection() {
+type HeroStat = { label: string; value: string; meta: string };
+
+async function loadHeroStats(): Promise<HeroStat[] | null> {
+  const base = (process.env.NEXT_PUBLIC_TOKEN_BOARD_API_URL || DEFAULT_API_URL).replace(/\/+$/, "");
+  try {
+    const response = await fetch(`${base}/api/usage/stats?range=7D&metric=tokens`, {
+      // Landing page is cacheable; refresh the hero highlights every few minutes.
+      next: { revalidate: 300 },
+    });
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as {
+      summary?: TokenLeaderboardSummary;
+    } & Partial<TokenLeaderboardSummary>;
+    const summary = payload.summary ?? (payload as TokenLeaderboardSummary);
+    const leader = summary?.users?.[0];
+    if (!summary || !leader || summary.activeUsers <= 0) {
+      return null;
+    }
+    return [
+      { label: "当前榜首", value: leader.displayName, meta: `${formatTokens(leader.tokens)} tokens` },
+      { label: "7 日总量", value: formatTokens(summary.totalTokens), meta: `${summary.activeUsers} 人活跃` },
+      { label: "高频模型", value: summary.topModel || "—", meta: summary.topTool || "rolling 7D" },
+    ];
+  } catch {
+    return null;
+  }
+}
+
+async function HeroSection() {
+  const stats = await loadHeroStats();
   return (
     <section className="relative min-h-[78svh] overflow-hidden bg-slate-950 text-white">
       <HeroDashboardScene />
@@ -192,11 +227,13 @@ function HeroSection() {
           </div>
         </div>
 
-        <div className="mt-10 hidden max-w-4xl gap-3 sm:grid sm:grid-cols-3">
-          <HeroMetric label="当前榜首" value="Syfyivan" meta="1.8B tokens" />
-          <HeroMetric label="区间记录" value="23,116" meta="rolling 7D" />
-          <HeroMetric label="高频模型" value="gpt-5.5" meta="Codex CLI" />
-        </div>
+        {stats ? (
+          <div className="mt-10 hidden max-w-4xl gap-3 sm:grid sm:grid-cols-3">
+            {stats.map((stat) => (
+              <HeroMetric key={stat.label} label={stat.label} value={stat.value} meta={stat.meta} />
+            ))}
+          </div>
+        ) : null}
       </div>
     </section>
   );
