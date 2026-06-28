@@ -423,7 +423,6 @@ export function LeaderboardMobileCard({
           {user.topModel}
         </span>
         <span>{formatNumber(user.records)} records</span>
-        <span>{formatNumber(user.activeDays)}d active</span>
         {user.lastReportedAt ? <span>最近 {formatRelativeTime(user.lastReportedAt)}</span> : null}
         {user.deltaTokens !== null ? <span>{formatSignedPercent(user.deltaTokens)} 较上一周期</span> : null}
       </div>
@@ -719,7 +718,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           ) : null}
           {user.lastReportedAt ? (
             <span className="text-xs text-stone-400" title={`最近上报：${formatShortDate(user.lastReportedAt)}`}>
-              {formatNumber(user.records)} records · {formatNumber(user.activeDays)}d
+              {formatNumber(user.records)} records
             </span>
           ) : null}
         </div>
