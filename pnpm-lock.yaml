@@ -41,6 +41,9 @@ importers:
       '@open-token-board/core':
         specifier: workspace:*
         version: link:../../packages/token-board-core
+      html-to-image:
+        specifier: ^1.11.13
+        version: 1.11.13
       next:
         specifier: ^15.3.0
         version: 15.5.18(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -119,6 +122,8 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
+
+  tools/eval-runner: {}
 
   tools/token-board-agent-npx: {}
 
@@ -687,6 +692,9 @@ packages:
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
+
+  html-to-image@1.11.13:
+    resolution: {integrity: sha512-cuOPoI7WApyhBElTTb9oqsawRvZ0rHhaHwghRLlTuffoD1B2aDemlCruLeZrUIIdvG7gs9xeELEPm6PhuASqrg==}
 
   htmlparser2@10.1.0:
     resolution: {integrity: sha512-VTZkM9GWRAtEpveh7MSF6SjjrpNVNNVJfFup7xTY3UpFtm67foy9HDVXneLtFVt4pMz5kZtgNcvCniNFb1hlEQ==}
@@ -1346,6 +1354,8 @@ snapshots:
       resolve-pkg-maps: 1.0.0
 
   graceful-fs@4.2.11: {}
+
+  html-to-image@1.11.13: {}
 
   htmlparser2@10.1.0:
     dependencies:

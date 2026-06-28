@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import {
@@ -157,7 +158,14 @@ export function AccountUsagePanel({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Link
+            href={`/card?user=${encodeURIComponent(user.displayName)}&range=${range}`}
+            className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
+          >
+            📊 生成我的战报卡 · 一键导出图片分享 →
+          </Link>
+
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <AccountStatCard
               label="预估费用"
               value={formatUsd(user.costUsd)}
@@ -414,7 +422,7 @@ function AccountLoadingState() {
           <Skeleton className="h-12" />
         </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
         {Array.from({ length: 9 }, (_, index) => (
           <div key={index} className="min-h-28 space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
             <Skeleton className="h-3 w-16" />
