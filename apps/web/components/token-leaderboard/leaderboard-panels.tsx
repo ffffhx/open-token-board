@@ -25,6 +25,7 @@ import {
   formatUtcRange,
   formatUsd,
   getUserMetricValue,
+  latestReportedAt,
   normalizeDailyUsageSeries,
   sanitizeSvgId,
 } from "./utils";
@@ -63,10 +64,11 @@ export function TrustEvidenceBar({
   sourceLabel: string;
   summary: TokenLeaderboardSummary;
 }) {
+  const dataAsOf = latestReportedAt(summary);
   const evidence: string[] = error
     ? [`读取失败：${error}`, "可重试或检查 agent 上报", "不展示伪数据"]
     : [
-        `统计截至 ${formatShortDate(summary.endAt)}`,
+        dataAsOf ? `数据截至 ${formatShortDate(dataAsOf)}` : "区间内暂无上报数据",
         `数据源 ${sourceLabel}`,
         `全库/可用 ${formatNumber(recordCount)}`,
         `当前${range} ${formatNumber(rangeRecordCount)}`,

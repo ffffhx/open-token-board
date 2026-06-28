@@ -42,6 +42,13 @@ const FETCH_MAX_RETRIES = readNonNegativeIntegerEnv(
 );
 const FETCH_RETRY_BASE_DELAY_MS = readNumberEnv("TOKEN_BOARD_FETCH_RETRY_BASE_DELAY_MS", 1_000);
 const FETCH_RETRY_MAX_DELAY_MS = readNumberEnv("TOKEN_BOARD_FETCH_RETRY_MAX_DELAY_MS", 10_000);
+// Probe reachability before each watch cycle so a flaky endpoint fails fast instead
+// of burning the per-cycle watchdog budget on long upload retries.
+const HEALTHCHECK_ENABLED = process.env.TOKEN_BOARD_HEALTHCHECK !== "false";
+const HEALTHCHECK_TIMEOUT_MS = readNumberEnv("TOKEN_BOARD_HEALTHCHECK_TIMEOUT_MS", 10_000);
+// Final backstop on tracked uploaded-event IDs (the working set is normally pruned
+// to the active collection window — see pruneUploadedIds).
+const UPLOADED_ID_CAP = readNumberEnv("TOKEN_BOARD_UPLOADED_ID_CAP", 50_000);
 
 async function main() {
   const command = process.argv[2] || "upload";
@@ -100,7 +107,9 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
   const force = options.force === true || process.env.TOKEN_BOARD_FORCE_RESYNC === "1";
   const stateMatches = uploadStateMatchesConfig(state, config);
   const uploadedIds = force || !stateMatches ? new Set<string>() : new Set(state.uploadedIds || []);
-  const events = (await collectAndSanitize(config)).filter((event) => !uploadedIds.has(event.id));
+  const collected = await collectAndSanitize(config);
+  const collectedIds = new Set(collected.map((event) => event.id));
+  const events = collected.filter((event) => !uploadedIds.has(event.id));
   const userConfig = await collectCurrentUserConfig();
 
   if (!events.length) {
@@ -125,7 +134,7 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
     await writeState(config.stateFile, {
       apiUrl: config.apiUrl,
       userId: config.userId || "local",
-      uploadedIds: [...new Set([...uploadedIds, ...events.map((event) => event.id)])].slice(-50_000),
+      uploadedIds: pruneUploadedIds(uploadedIds, collectedIds, events),
       lastUploadedAt: new Date().toISOString(),
     });
   }
@@ -241,17 +250,72 @@ async function loadOrLoginConfig() {
 }
 
 async function watch(config: AgentConfig) {
+  // Per-cycle watchdog: abandon a stuck upload pass instead of wedging the loop
+  // forever. Defaults to twice the poll interval (min 10m) so a large legitimate
+  // backlog still has room to finish.
+  const cycleTimeoutMs = readNumberEnv(
+    "TOKEN_BOARD_CYCLE_TIMEOUT_MS",
+    Math.max(config.intervalMs * 2, 10 * 60 * 1000)
+  );
   logInfo(`Token usage agent watching every ${Math.round(config.intervalMs / 1000)}s.`);
 
   while (true) {
     try {
-      await uploadOnce(config);
+      if (HEALTHCHECK_ENABLED && !(await checkApiHealth(config.apiUrl))) {
+        logError(`API health check failed for ${config.apiUrl}; skipping this cycle.`);
+      } else {
+        await withWatchdog(uploadOnce(config), cycleTimeoutMs, "upload cycle");
+      }
     } catch (error) {
       logError(error instanceof Error ? error.message : String(error));
     }
 
-    await new Promise((resolve) => setTimeout(resolve, config.intervalMs));
+    await sleep(config.intervalMs);
   }
+}
+
+function withWatchdog<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const watchdog = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} exceeded ${ms}ms watchdog; abandoning this cycle to keep the loop alive`));
+    }, ms);
+  });
+  return Promise.race([promise, watchdog]).finally(() => clearTimeout(timer));
+}
+
+async function checkApiHealth(apiUrl: string) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTHCHECK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${apiUrl}/api/usage/health`, { method: "GET", signal: controller.signal });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Prune tracked uploaded-event IDs to the active collection window: keep only
+// previously-uploaded IDs still being scanned, then add the freshly uploaded ones.
+// Keeps the state file bounded by time instead of accreting forever.
+function pruneUploadedIds(
+  previousIds: Set<string>,
+  collectedIds: Set<string>,
+  newlyUploadedEvents: Array<{ id: string }>
+) {
+  const retained: string[] = [];
+  for (const id of previousIds) {
+    if (collectedIds.has(id)) {
+      retained.push(id);
+    }
+  }
+  for (const event of newlyUploadedEvents) {
+    retained.push(event.id);
+  }
+  return [...new Set(retained)].slice(-UPLOADED_ID_CAP);
 }
 
 async function postIngest(
@@ -295,8 +359,7 @@ async function requestJsonWithRetry(url: string, options: RequestInit, label: st
 
   for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
     try {
-      const response = await fetchWithTimeout(url, options);
-      const text = await response.text();
+      const { response, text } = await fetchTextWithTimeout(url, options);
       const payload = parseJsonPayload(text);
 
       if (response.ok) {
@@ -327,12 +390,17 @@ async function requestJsonWithRetry(url: string, options: RequestInit, label: st
   throw lastError || new Error(`${label} failed`);
 }
 
-async function fetchWithTimeout(url: string, options: RequestInit) {
+async function fetchTextWithTimeout(url: string, options: RequestInit) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    // Read the body under the same abort timer. A stalled body (headers arrive but
+    // the stream never finishes — common on flaky reverse proxies) would otherwise
+    // hang here with no timeout, wedging the whole watch loop.
+    const text = await response.text();
+    return { response, text };
   } catch (error) {
     if (isAbortError(error)) {
       const timeoutError = new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`) as FetchJsonError;

@@ -40,6 +40,27 @@ export function formatUtcRange(startAt: string, endAt: string) {
   return `${formatUtcDateTime(startAt)} - ${formatUtcDateTime(endAt)}`;
 }
 
+// The window's `endAt` is just "now", so it makes empty/stale ranges look fresh.
+// The latest `lastReportedAt` across ranked users is the real data freshness cutoff.
+export function latestReportedAt(summary: TokenLeaderboardSummary): string {
+  let latest = 0;
+  let latestIso = "";
+
+  for (const user of summary.users) {
+    if (!user.lastReportedAt) {
+      continue;
+    }
+
+    const time = new Date(user.lastReportedAt).getTime();
+    if (Number.isFinite(time) && time > latest) {
+      latest = time;
+      latestIso = user.lastReportedAt;
+    }
+  }
+
+  return latestIso;
+}
+
 export function formatDecimal(value: number) {
   return new Intl.NumberFormat("zh-CN", {
     maximumFractionDigits: 1,

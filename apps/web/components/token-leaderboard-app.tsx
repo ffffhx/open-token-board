@@ -71,6 +71,7 @@ import {
   getUserMetricValue,
   isTokenAccountUsageProfile,
   isTokenLeaderboardSummary,
+  latestReportedAt,
   normalizeApiBaseUrl,
   normalizeRemoteAccountProfile,
   normalizeRemoteSummary,
@@ -789,7 +790,7 @@ export function TokenLeaderboardApp({
                   <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <Skeleton className="h-3 w-48 align-middle" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。
                 </p>
                 <p>
-                  <strong className="text-stone-900">统计截至</strong>：{formatShortDate(summary.endAt)}。
+                  <strong className="text-stone-900">数据截至</strong>：{latestReportedAt(summary) ? `${formatShortDate(latestReportedAt(summary))}（最后一条上报）` : "当前区间暂无上报数据"}。
                 </p>
                 <p>
                   <strong className="text-stone-900">费用是估算值</strong>：按公开模型单价计算，不等同于账号额度或实际账单。

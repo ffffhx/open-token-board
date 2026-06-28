@@ -24,13 +24,27 @@ const FETCH_MAX_RETRIES = readNonNegativeInteger(
 );
 const FETCH_RETRY_BASE_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_BASE_DELAY_MS, 1_000);
 const FETCH_RETRY_MAX_DELAY_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_RETRY_MAX_DELAY_MS, 10_000);
+// Per-cycle watchdog: if a single upload pass (collect + post) outlives this, the
+// watch loop abandons it and moves on instead of wedging forever. Defaults to twice
+// the poll interval (min 10m) so a large legitimate backlog still has room to finish.
+const CYCLE_TIMEOUT_MS = readPositiveNumber(
+  process.env.TOKEN_BOARD_CYCLE_TIMEOUT_MS,
+  Math.max(INTERVAL_MS * 2, 10 * 60 * 1000)
+);
+// Lightweight reachability probe before each cycle so a flaky endpoint fails fast
+// (one short request) instead of burning the watchdog budget on long upload retries.
+const HEALTHCHECK_ENABLED = process.env.TOKEN_BOARD_HEALTHCHECK !== "false";
+const HEALTHCHECK_TIMEOUT_MS = readPositiveNumber(process.env.TOKEN_BOARD_HEALTHCHECK_TIMEOUT_MS, 10_000);
+// Upper bound on tracked uploaded-event IDs kept in the state file (final backstop;
+// the working set is normally pruned to the active collection window — see pruneUploadedIds).
+const UPLOADED_ID_CAP = readPositiveNumber(process.env.TOKEN_BOARD_UPLOADED_ID_CAP, 50_000);
 const BATCH_SIZE = 1000;
 const CODEX_RATE_LIMIT_LOOKBACK_DAYS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_DAYS, 14);
 const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_MAX_FILES, 2000);
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.14";
+const VERSION = "0.4.15";
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
@@ -233,9 +247,13 @@ async function main() {
     logInfo(`Token usage agent watching every ${Math.round(INTERVAL_MS / 1000)}s.`);
 
     while (true) {
-      await uploadOnce(config).catch((error) => {
-        logError(error instanceof Error ? error.message : String(error));
-      });
+      if (HEALTHCHECK_ENABLED && !(await checkApiHealth())) {
+        logError(`API health check failed for ${API_URL}; skipping this cycle.`);
+      } else {
+        await withWatchdog(uploadOnce(config), CYCLE_TIMEOUT_MS, "upload cycle").catch((error) => {
+          logError(error instanceof Error ? error.message : String(error));
+        });
+      }
       await sleep(INTERVAL_MS);
     }
   }
@@ -549,6 +567,7 @@ async function uploadOnce(config, options = {}) {
   const stateMatches = uploadStateMatchesConfig(state, config);
   const uploadedIds = force || !stateMatches ? new Set() : new Set(Array.isArray(state.uploadedIds) ? state.uploadedIds : []);
   const collectedEvents = await collectLocalUsageEvents(config);
+  const collectedIds = new Set(collectedEvents.map((event) => event.id));
   const events = collectedEvents.filter((event) => !uploadedIds.has(event.id));
   const userConfig = await collectUserConfig();
 
@@ -577,7 +596,7 @@ async function uploadOnce(config, options = {}) {
   await writeJson(STATE_FILE, {
     apiUrl: API_URL,
     userId: config.userId,
-    uploadedIds: [...new Set([...uploadedIds, ...events.map((event) => event.id)])].slice(-50_000),
+    uploadedIds: pruneUploadedIds(uploadedIds, collectedIds, events),
     lastUploadedAt: new Date().toISOString(),
   });
 
@@ -612,7 +631,7 @@ async function replaceRemoteUsage(config) {
   await writeJson(STATE_FILE, {
     apiUrl: API_URL,
     userId: config.userId,
-    uploadedIds: collectedEvents.map((event) => event.id).slice(-50_000),
+    uploadedIds: collectedEvents.map((event) => event.id).slice(-UPLOADED_ID_CAP),
     lastUploadedAt: new Date().toISOString(),
   });
 
@@ -2118,6 +2137,24 @@ function chunk(items, size) {
   return chunks;
 }
 
+// Prune the tracked uploaded-event IDs to the active collection window: keep only
+// previously-uploaded IDs that are still being scanned (drop ones that have aged
+// out of the time window and will never reappear), then add the freshly uploaded
+// IDs. This keeps the state file bounded by time instead of accreting forever;
+// UPLOADED_ID_CAP is only a final safety backstop for very heavy windows.
+function pruneUploadedIds(previousIds, collectedIds, newlyUploadedEvents) {
+  const retained = [];
+  for (const id of previousIds) {
+    if (collectedIds.has(id)) {
+      retained.push(id);
+    }
+  }
+  for (const event of newlyUploadedEvents) {
+    retained.push(event.id);
+  }
+  return [...new Set(retained)].slice(-UPLOADED_ID_CAP);
+}
+
 function sha256(value) {
   return createHash("sha256").update(String(value)).digest("hex");
 }
@@ -2127,8 +2164,7 @@ async function requestJsonWithRetry(url, options, label) {
 
   for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt += 1) {
     try {
-      const response = await fetchWithTimeout(url, options);
-      const text = await response.text();
+      const { response, text } = await fetchTextWithTimeout(url, options);
       const payload = parseJsonPayload(text);
 
       if (response.ok) {
@@ -2161,12 +2197,17 @@ async function requestJsonWithRetry(url, options, label) {
   throw lastError || new Error(`${label} failed`);
 }
 
-async function fetchWithTimeout(url, options) {
+async function fetchTextWithTimeout(url, options) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    // Read the body under the same abort timer. A stalled body (headers arrive but
+    // the stream never finishes — common on flaky reverse proxies) would otherwise
+    // hang forever here, which is what previously wedged the whole watch loop.
+    const text = await response.text();
+    return { response, text };
   } catch (error) {
     if (isAbortError(error)) {
       const timeoutError = new Error(`Request timed out after ${FETCH_TIMEOUT_MS}ms`);
@@ -2177,6 +2218,33 @@ async function fetchWithTimeout(url, options) {
     throw error;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function withWatchdog(promise, ms, label) {
+  let timer;
+  const watchdog = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} exceeded ${ms}ms watchdog; abandoning this cycle to keep the loop alive`));
+    }, ms);
+  });
+  return Promise.race([Promise.resolve(promise), watchdog]).finally(() => clearTimeout(timer));
+}
+
+async function checkApiHealth() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTHCHECK_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${API_URL}/api/usage/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
