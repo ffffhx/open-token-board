@@ -44,7 +44,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.15";
+const VERSION = "0.4.16";
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
@@ -1617,12 +1617,17 @@ async function analyzeLocalCodexRateLimits(codexHome) {
     }
   }
 
+  // Isolate one rate-limit bucket: different limit_ids (base plan vs Spark/experimental
+  // models) carry separate quotas, and mixing them corrupts the latest percentage and
+  // the capacity estimate.
+  const { events: bucketEvents, otherBuckets } = selectCodexPrimaryBucket(events);
+
   const windows = [];
   const fiveHour = buildCodexRateWindow(
     "5h",
     CODEX_RATE_WINDOW_5H_MINUTES,
     "5 小时",
-    events,
+    bucketEvents,
     now,
     (event) => event.pct5,
     (event) => event.reset5,
@@ -1631,7 +1636,7 @@ async function analyzeLocalCodexRateLimits(codexHome) {
     "weekly",
     CODEX_RATE_WINDOW_WEEKLY_MINUTES,
     "每周",
-    events,
+    bucketEvents,
     now,
     (event) => event.pctW,
     (event) => event.resetW,
@@ -1661,6 +1666,9 @@ async function analyzeLocalCodexRateLimits(codexHome) {
   const notes = [];
   if (files.length === 0) {
     notes.push(`未在 ${scannedDirs.join("、")} 找到最近 ${CODEX_RATE_LIMIT_LOOKBACK_DAYS} 天的会话日志。`);
+  }
+  if (otherBuckets.length > 0) {
+    notes.push(`检测到多个限额桶，仅展示主计划；已忽略 ${otherBuckets.join("、")}（Spark 等实验模型额度单独计算）。`);
   }
   if (windows.length > 0) {
     notes.push(
@@ -1758,9 +1766,17 @@ async function parseCodexRateLimitFile(filePath, events) {
       let reset5 = null;
       let pctW = null;
       let resetW = null;
+      let limitId = null;
+      let limitName = null;
 
       if (typeof rateLimits.plan_type === "string" && rateLimits.plan_type.trim()) {
         plan = rateLimits.plan_type.trim().slice(0, 40);
+      }
+      if (typeof rateLimits.limit_id === "string") {
+        limitId = rateLimits.limit_id;
+      }
+      if (typeof rateLimits.limit_name === "string") {
+        limitName = rateLimits.limit_name;
       }
 
       for (const slotKey of ["primary", "secondary"]) {
@@ -1780,7 +1796,7 @@ async function parseCodexRateLimitFile(filePath, events) {
         }
       }
 
-      events.push({ ts, sessionId, cumTotal, lastTotal, pct5, reset5, pctW, resetW });
+      events.push({ ts, sessionId, cumTotal, lastTotal, limitId, limitName, pct5, reset5, pctW, resetW });
     }
   } catch {
     return plan;
@@ -1886,33 +1902,37 @@ function currentCodexRateRun(events, pickPct) {
 }
 
 function estimateCodexRateCapacityTokens(events, pickPct) {
-  const bySession = new Map();
+  // used_percent is account-global (shared across every session), but a session's
+  // cumTotal only covers its own tokens. Dividing a global pct change by one session's
+  // token delta underestimates capacity — catastrophically for the weekly window, which
+  // spans many concurrent sessions (~90x too low in practice). Estimate globally: merge
+  // all sessions on one timeline and pair each global pct rise with the per-turn tokens
+  // (lastTotal, cross-session additive) consumed over that span — same unit as the
+  // displayed "consumed this window".
+  const points = [];
   for (const event of events) {
     const pct = pickPct(event);
-    if (pct === null || event.cumTotal === null) {
+    if (pct === null) {
       continue;
     }
-    const list = bySession.get(event.sessionId) || [];
-    list.push({ ts: event.ts, cum: event.cumTotal, pct });
-    bySession.set(event.sessionId, list);
+    points.push({ ts: event.ts, pct, tok: event.lastTotal });
   }
+  points.sort((a, b) => a.ts - b.ts);
 
   const ratios = [];
-  for (const list of bySession.values()) {
-    list.sort((a, b) => a.ts - b.ts);
-    let runStart = 0;
-    for (let index = 1; index <= list.length; index += 1) {
-      const broke = index === list.length || list[index].pct < list[index - 1].pct - 0.5;
-      if (broke) {
-        const start = list[runStart];
-        const end = list[index - 1];
-        const dPct = end.pct - start.pct;
-        const dTok = end.cum - start.cum;
-        if (dPct >= 20 && dTok > 0) {
-          ratios.push((dTok / dPct) * 100);
-        }
-        runStart = index;
+  let runStart = 0;
+  for (let index = 1; index <= points.length; index += 1) {
+    const broke = index === points.length || points[index].pct < points[index - 1].pct - 0.5;
+    if (broke) {
+      const dPct = points[index - 1].pct - points[runStart].pct;
+      let dTok = 0;
+      for (let j = runStart + 1; j <= index - 1; j += 1) {
+        dTok += points[j].tok;
       }
+      if (dPct >= 20 && dTok > 0) {
+        ratios.push((dTok / dPct) * 100);
+      }
+      runStart = index;
     }
   }
 
@@ -1920,6 +1940,48 @@ function estimateCodexRateCapacityTokens(events, pickPct) {
     return null;
   }
   return Math.round(percentile(ratios, 0.8));
+}
+
+// Pick one rate-limit bucket: different limit_ids (base plan "codex" vs experimental
+// models like "codex_bengalfox"/Spark) have separate quotas; mixing them corrupts both
+// the latest percentage and the capacity estimate. Prefer the base plan (limit_name
+// null), most-recently-active; fold in legacy events that predate limit_id.
+function selectCodexPrimaryBucket(events) {
+  const rated = events.filter((event) => event.pct5 !== null || event.pctW !== null);
+  if (rated.length === 0) {
+    return { events, otherBuckets: [] };
+  }
+
+  const latestByBucket = new Map();
+  for (const event of rated) {
+    if (event.limitId === null || event.limitId === undefined) {
+      continue;
+    }
+    const baseplan = event.limitName === null || event.limitName === undefined;
+    const current = latestByBucket.get(event.limitId);
+    if (!current || event.ts > current.ts) {
+      latestByBucket.set(event.limitId, { ts: event.ts, baseplan });
+    } else if (baseplan && !current.baseplan) {
+      latestByBucket.set(event.limitId, { ts: current.ts, baseplan: true });
+    }
+  }
+
+  if (latestByBucket.size <= 1) {
+    return { events, otherBuckets: [] };
+  }
+
+  const ranked = [...latestByBucket.entries()].sort((a, b) => {
+    if (a[1].baseplan !== b[1].baseplan) {
+      return a[1].baseplan ? -1 : 1;
+    }
+    return b[1].ts - a[1].ts;
+  });
+  const chosenId = ranked[0][0];
+  const otherBuckets = ranked.slice(1).map(([id]) => id);
+  const filtered = events.filter(
+    (event) => event.limitId === chosenId || event.limitId === null || event.limitId === undefined,
+  );
+  return { events: filtered, otherBuckets };
 }
 
 async function readCodexConfigSummary(codexHome) {

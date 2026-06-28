@@ -91,6 +91,10 @@ interface RawEvent {
   sessionId: string;
   cumTotal: number | null;
   lastTotal: number;
+  /** rate_limits.limit_id —— 区分主计划与 Spark 等独立配额桶；null 视为旧版基础计划。 */
+  limitId: string | null;
+  /** rate_limits.limit_name —— 基础账号计划为 null，实验模型（如 GPT-5.3-Codex-Spark）非 null。 */
+  limitName: string | null;
   pct5: number | null;
   reset5: number | null;
   pctW: number | null;
@@ -189,8 +193,12 @@ async function parseFile(filePath: string, events: RawEvent[]): Promise<string |
       let reset5: number | null = null;
       let pctW: number | null = null;
       let resetW: number | null = null;
+      let limitId: string | null = null;
+      let limitName: string | null = null;
       if (rateLimits) {
         if (typeof rateLimits.plan_type === "string") plan = rateLimits.plan_type;
+        if (typeof rateLimits.limit_id === "string") limitId = rateLimits.limit_id;
+        if (typeof rateLimits.limit_name === "string") limitName = rateLimits.limit_name;
         for (const slotKey of ["primary", "secondary"] as const) {
           const slot = rateLimits[slotKey] as Record<string, unknown> | null;
           if (!slot) continue;
@@ -208,7 +216,7 @@ async function parseFile(filePath: string, events: RawEvent[]): Promise<string |
         }
       }
 
-      events.push({ ts, sessionId, cumTotal, lastTotal, pct5, reset5, pctW, resetW });
+      events.push({ ts, sessionId, cumTotal, lastTotal, limitId, limitName, pct5, reset5, pctW, resetW });
     }
   } catch {
     // ignore stream errors on a single file
@@ -231,33 +239,70 @@ function estimateCapacityTokens(
   events: RawEvent[],
   pickPct: (e: RawEvent) => number | null,
 ): number | null {
-  const bySession = new Map<string, Array<{ ts: number; cum: number; pct: number }>>();
-  for (const event of events) {
-    const pct = pickPct(event);
-    if (pct === null || event.cumTotal === null) continue;
-    const list = bySession.get(event.sessionId) ?? [];
-    list.push({ ts: event.ts, cum: event.cumTotal, pct });
-    bySession.set(event.sessionId, list);
-  }
+  // used_percent is account-global (shared across every session), but a single
+  // session's cumTotal only covers its own tokens. Dividing a global pct change by
+  // one session's token delta underestimates capacity — catastrophically for the
+  // weekly window, which spans many concurrent sessions (observed ~90x too low).
+  // Estimate globally instead: merge all sessions on one timeline and pair each
+  // global pct rise with the per-turn tokens (lastTotal, cross-session additive)
+  // consumed over that same span. lastTotal is also the unit used for the displayed
+  // "consumed this window", so capacity and consumption stay in the same currency.
+  const points = events
+    .map((event) => ({ ts: event.ts, pct: pickPct(event), tok: event.lastTotal }))
+    .filter((point): point is { ts: number; pct: number; tok: number } => point.pct !== null)
+    .sort((a, b) => a.ts - b.ts);
 
   const ratios: number[] = [];
-  for (const list of bySession.values()) {
-    list.sort((a, b) => a.ts - b.ts);
-    let runStart = 0;
-    for (let i = 1; i <= list.length; i += 1) {
-      const broke = i === list.length || list[i].pct < list[i - 1].pct - 0.5;
-      if (broke) {
-        const start = list[runStart];
-        const end = list[i - 1];
-        const dPct = end.pct - start.pct;
-        const dTok = end.cum - start.cum;
-        if (dPct >= 20 && dTok > 0) ratios.push((dTok / dPct) * 100);
-        runStart = i;
-      }
+  let runStart = 0;
+  for (let i = 1; i <= points.length; i += 1) {
+    // A drop in pct marks a window reset (or an early top-up); end the run there.
+    const broke = i === points.length || points[i].pct < points[i - 1].pct - 0.5;
+    if (broke) {
+      const dPct = points[i - 1].pct - points[runStart].pct;
+      let dTok = 0;
+      for (let j = runStart + 1; j <= i - 1; j += 1) dTok += points[j].tok;
+      if (dPct >= 20 && dTok > 0) ratios.push((dTok / dPct) * 100);
+      runStart = i;
     }
   }
   if (ratios.length < 3) return null;
   return Math.round(percentile(ratios, 0.8));
+}
+
+/**
+ * 选出主配额桶并过滤事件：Codex 会对不同模型上报不同的 limit_id（如基础计划 "codex"
+ * 与实验模型 "codex_bengalfox"/Spark），它们配额互不相同。把多个桶混在一起会让最新
+ * 百分比与容量估算都失真，所以只保留一个桶。优先基础计划（limit_name 为空），取其中
+ * 最近活跃的；旧版无 limit_id 的事件并入该桶。返回过滤后的事件与被忽略的其它桶名。
+ */
+function selectPrimaryBucket(events: RawEvent[]): { events: RawEvent[]; otherBuckets: string[] } {
+  const rated = events.filter((event) => event.pct5 !== null || event.pctW !== null);
+  if (rated.length === 0) return { events, otherBuckets: [] };
+
+  const latestByBucket = new Map<string, { ts: number; baseplan: boolean }>();
+  for (const event of rated) {
+    if (event.limitId === null) continue;
+    const current = latestByBucket.get(event.limitId);
+    const baseplan = event.limitName === null;
+    if (!current || event.ts > current.ts) {
+      latestByBucket.set(event.limitId, { ts: event.ts, baseplan });
+    } else if (baseplan && !current.baseplan) {
+      latestByBucket.set(event.limitId, { ...current, baseplan });
+    }
+  }
+
+  if (latestByBucket.size <= 1) return { events, otherBuckets: [] };
+
+  const ranked = [...latestByBucket.entries()].sort((a, b) => {
+    if (a[1].baseplan !== b[1].baseplan) return a[1].baseplan ? -1 : 1; // base plan first
+    return b[1].ts - a[1].ts; // then most recent
+  });
+  const chosenId = ranked[0][0];
+  const otherBuckets = ranked.slice(1).map(([id]) => id);
+
+  // Keep the chosen bucket plus legacy events with no limit_id (predate the split).
+  const filtered = events.filter((event) => event.limitId === chosenId || event.limitId === null);
+  return { events: filtered, otherBuckets };
 }
 
 /** 找出某窗口「当前这一段」（自上次重置以来）的 pct 观测点。 */
@@ -392,12 +437,20 @@ export async function analyzeCodexRateLimits(
     notes.push(`未在 ${scannedDirs.join("、")} 找到最近 ${lookbackDays} 天的会话日志。`);
   }
 
+  // Isolate one rate-limit bucket: different limit_ids (base plan vs Spark/experimental
+  // models) have separate quotas, and mixing them corrupts both the latest percentage
+  // and the capacity estimate.
+  const { events: bucketEvents, otherBuckets } = selectPrimaryBucket(events);
+  if (otherBuckets.length > 0) {
+    notes.push(`检测到多个限额桶，仅展示主计划；已忽略 ${otherBuckets.join("、")}（Spark 等实验模型额度单独计算）。`);
+  }
+
   const windows: CodexRateWindow[] = [];
   const w5 = buildWindow(
     "5h",
     WINDOW_MINUTES_5H,
     "5 小时",
-    events,
+    bucketEvents,
     now,
     burnLookbackHours,
     (e) => e.pct5,
@@ -407,7 +460,7 @@ export async function analyzeCodexRateLimits(
     "weekly",
     WINDOW_MINUTES_WEEKLY,
     "每周",
-    events,
+    bucketEvents,
     now,
     burnLookbackHours,
     (e) => e.pctW,
