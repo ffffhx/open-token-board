@@ -1,0 +1,55 @@
+name: Publish agent to npm
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "tools/token-board-agent-npx/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+concurrency:
+  group: "publish-agent"
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tools/token-board-agent-npx
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Resolve versions
+        id: versions
+        run: |
+          NAME="$(node -p "require('./package.json').name")"
+          LOCAL="$(node -p "require('./package.json').version")"
+          PUBLISHED="$(npm view "$NAME" version 2>/dev/null || echo "")"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "local=$LOCAL" >> "$GITHUB_OUTPUT"
+          echo "published=$PUBLISHED" >> "$GITHUB_OUTPUT"
+          if [ "$LOCAL" = "$PUBLISHED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$NAME@$LOCAL already published, skipping."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Publishing $NAME: $PUBLISHED -> $LOCAL"
+          fi
+
+      - name: Publish
+        if: steps.versions.outputs.changed == 'true'
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
