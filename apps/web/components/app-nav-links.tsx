@@ -3,13 +3,15 @@
 import Link from "next/link";
 
 import { usePrivateBenchmarkAccess } from "@/components/private-benchmark-access";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-type AppNavPage = "home" | "board" | "limits" | "bench";
+type AppNavPage = "home" | "board" | "card" | "limits" | "bench";
 type AppNavTheme = "light" | "dark";
 
 const navItems: Array<{ key: AppNavPage; href: string; label: string }> = [
   { key: "home", href: "/", label: "首页" },
   { key: "board", href: "/board", label: "Token 榜单" },
+  { key: "card", href: "/card", label: "战报" },
   { key: "limits", href: "/limits", label: "额度" },
   { key: "bench", href: "/bench", label: "AI 评测" },
 ];
@@ -58,6 +60,13 @@ export function AppNavLinks({
           </Link>
         );
       })}
+      <ThemeToggle
+        className={
+          theme === "dark"
+            ? "border-white/20 bg-white/10 text-slate-300 hover:border-white/30 hover:bg-white/15 hover:text-white"
+            : undefined
+        }
+      />
     </nav>
   );
 }
