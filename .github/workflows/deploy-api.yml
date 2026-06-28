@@ -55,11 +55,29 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.TOKEN_BOARD_FEISHU_WEBHOOK_URL }}
+          DAILY_REPORT_TRIGGER_TOKEN: ${{ secrets.TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN }}
         run: |
           ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts \
-            "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' bash -se" <<'REMOTE'
+            "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' FEISHU_WEBHOOK_URL='$FEISHU_WEBHOOK_URL' DAILY_REPORT_TRIGGER_TOKEN='$DAILY_REPORT_TRIGGER_TOKEN' bash -se" <<'REMOTE'
           set -euo pipefail
           cd "${DEPLOY_PATH:-/home/deploy/token-board-service}"
+
+          # 配置每日飞书战报的 env（仅当提供 webhook 时；幂等更新主机 .env，只改这几个键）
+          if [ -n "${FEISHU_WEBHOOK_URL:-}" ]; then
+            touch .env
+            sed -i -e '/^TOKEN_BOARD_FEISHU_WEBHOOK_URL=/d' \
+                   -e '/^TOKEN_BOARD_DAILY_REPORT_AT=/d' \
+                   -e '/^TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET=/d' \
+                   -e '/^TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN=/d' .env
+            {
+              echo "TOKEN_BOARD_FEISHU_WEBHOOK_URL=${FEISHU_WEBHOOK_URL}"
+              echo "TOKEN_BOARD_DAILY_REPORT_AT=09:00"
+              echo "TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET=480"
+              [ -n "${DAILY_REPORT_TRIGGER_TOKEN:-}" ] && echo "TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN=${DAILY_REPORT_TRIGGER_TOKEN}"
+            } >> .env
+            echo "daily report env configured in .env"
+          fi
 
           # 备份当前镜像，便于回滚：docker tag token-board-service:backup-previous token-board-service:latest
           if docker image inspect token-board-service:latest >/dev/null 2>&1; then
@@ -67,7 +85,7 @@ jobs:
           fi
 
           docker compose build token-board
-          docker compose up -d token-board
+          docker compose up -d --force-recreate token-board
 
           # 健康检查：服务监听 127.0.0.1:8789
           for i in $(seq 1 15); do
