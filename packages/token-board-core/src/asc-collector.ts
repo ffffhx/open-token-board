@@ -57,6 +57,10 @@ function buildDiscoverOptions(config: TokenUsageCollectorConfig): DiscoverOption
     roots,
     sinceMs: sinceHours > 0 ? sinceHours * 60 * 60 * 1000 : null,
     maxFiles: config.maxFiles ?? DEFAULT_MAX_FILES,
+    // token-board counts real spend, including per-subagent/workflow transcripts
+    // that ASC excludes by default. The old collector counted these too, so this
+    // keeps the session/token set aligned (leaving only the dedup correction).
+    includeSubagentTranscripts: true,
   };
 
   // ASC's maxBytes is an admission filter; beyond it the parser truncates a
