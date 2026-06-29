@@ -9,6 +9,7 @@
     "./auth": "./src/token-board-auth.ts",
     "./automation": "./src/token-board-automation.ts",
     "./collector": "./src/token-usage-collector.ts",
+    "./asc-collector": "./src/asc-collector.ts",
     "./leaderboard": "./src/token-leaderboard.ts",
     "./selection-explainer": "./src/selection-explainer.ts",
     "./snapshot": "./src/token-usage-snapshot.ts",

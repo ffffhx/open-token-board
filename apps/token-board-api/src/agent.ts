@@ -13,6 +13,7 @@ import {
   collectTokenBoardUserConfig,
   type TokenUsageCollectorConfig,
 } from "@open-token-board/core/collector";
+import { collectLocalTokenUsageViaAsc } from "@open-token-board/core/asc-collector";
 import type { TokenBoardUserConfig } from "@open-token-board/core";
 
 type AgentConfig = TokenUsageCollectorConfig & {
@@ -155,7 +156,13 @@ function uploadStateMatchesConfig(state: AgentState, config: AgentConfig) {
 }
 
 export async function collectAndSanitize(config: AgentConfig) {
-  const rawEvents = await collectLocalTokenUsage(config);
+  // Default to the agent-session-core collector: it dedups duplicate content-block
+  // rows the legacy collector double-counts (~2.2x on Claude) and keeps >5MB sessions
+  // the legacy collector silently drops. Set TOKEN_BOARD_COLLECTOR=legacy to roll back.
+  const useLegacy = process.env.TOKEN_BOARD_COLLECTOR === "legacy";
+  const rawEvents = useLegacy
+    ? await collectLocalTokenUsage(config)
+    : await collectLocalTokenUsageViaAsc(config);
   const user: TokenBoardUploadUser = {
     userId: config.userId || "local",
     displayName: config.displayName || config.userId || os.userInfo().username || "Local User",
