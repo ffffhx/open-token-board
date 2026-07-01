@@ -97,8 +97,8 @@ importers:
   packages/token-board-core:
     dependencies:
       agent-session-core:
-        specifier: file:../../../agent-session-core
-        version: file:../agent-session-core
+        specifier: ^0.1.0
+        version: 0.1.0
       pg:
         specifier: ^8.20.0
         version: 8.21.0
@@ -631,8 +631,8 @@ packages:
   '@types/sanitize-html@2.16.1':
     resolution: {integrity: sha512-n9wjs8bCOTyN/ynwD8s/nTcTreIHB1vf31vhLMGqUPNHaweKC4/fAl4Dj+hUlCTKYgm4P3k83fmiFfzkZ6sgMA==}
 
-  agent-session-core@file:../agent-session-core:
-    resolution: {directory: ../agent-session-core, type: directory}
+  agent-session-core@0.1.0:
+    resolution: {integrity: sha512-UP6cZ6a2aFJ4qTElZUvaWAd/vQoyqODIpZ+p3FEljRt91U0uOrFHAFSo8VOeUYOLVP1Fs+GzYjIISt77ijxkug==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -1284,7 +1284,7 @@ snapshots:
     dependencies:
       htmlparser2: 10.1.0
 
-  agent-session-core@file:../agent-session-core: {}
+  agent-session-core@0.1.0: {}
 
   caniuse-lite@1.0.30001793: {}
 

@@ -17,7 +17,7 @@
     "./storage": "./src/token-board-storage.ts"
   },
   "dependencies": {
-    "agent-session-core": "file:../../../agent-session-core",
+    "agent-session-core": "^0.1.0",
     "pg": "^8.20.0"
   },
   "scripts": {
