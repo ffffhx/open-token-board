@@ -44,7 +44,11 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.16";
+const VERSION = "0.4.17";
+// Reject any single event above this many tokens: no real API call approaches it, but
+// a cumulative usage counter mis-read as one call (e.g. Trae's stats file) can blow
+// past it. Mirrors the server-side cap in token-board-automation.ts.
+const MAX_EVENT_TOTAL_TOKENS = 50_000_000;
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
@@ -141,25 +145,10 @@ const DEFAULT_SOURCE_TARGETS = [
       appDataPath("Cursor", "logs"),
     ],
   },
-  {
-    source: "trae",
-    tool: "Trae",
-    paths: [
-      appSupportPath("Trae", "User", "globalStorage"),
-      appSupportPath("Trae CN", "User", "globalStorage"),
-      appSupportPath("Trae", "logs"),
-      appSupportPath("Trae CN", "logs"),
-      appSupportPath("Trae", "ModularData", "ai-agent"),
-      appSupportPath("Trae CN", "ModularData", "ai-agent"),
-      configPath("Trae", "User", "globalStorage"),
-      configPath("Trae CN", "User", "globalStorage"),
-      appDataPath("Trae", "User", "globalStorage"),
-      appDataPath("Trae CN", "User", "globalStorage"),
-      homePath(".trae"),
-      homePath(".trae-cn"),
-      homePath(".trae-aicc-internal"),
-    ],
-  },
+  // Trae removed in 0.4.17: its globalStorage holds a *cumulative* usage stats file
+  // whose running counters (billions of tokens) the generic JSON scanner mis-read as
+  // single API calls, poisoning the leaderboard. There is no reliable per-call Trae
+  // transcript to parse, so the source is dropped rather than mis-counted.
 ];
 let invalidUsageWarningCount = 0;
 
@@ -580,7 +569,7 @@ async function uploadOnce(config, options = {}) {
         ? "No token usage events collected for resync."
         : "No new token usage events to upload."
     );
-    logInfo("Checked Codex, Claude Code, Cursor, Trae, and custom usage paths for recent token logs.");
+    logInfo("Checked Codex, Claude Code, Cursor, and custom usage paths for recent token logs.");
     return;
   }
 
@@ -1050,6 +1039,13 @@ function usageRecordToEvent(usage, context) {
 
   if (totalTokens <= 0) {
     throw new Error("missing input/output token fields; total_tokens fallback is disabled");
+  }
+
+  // Defense-in-depth against cumulative counters mis-read as a single call (the same
+  // check the server enforces): a real API call cannot exceed a model's context window
+  // plus cache. 50M is ~200x the largest real single-call record ever observed.
+  if (totalTokens > MAX_EVENT_TOTAL_TOKENS) {
+    throw new Error(`single-event token count ${totalTokens} exceeds ${MAX_EVENT_TOTAL_TOKENS}; likely a cumulative counter, not one call`);
   }
 
   const timestamp = normalizeTimestamp(context.timestamp || textFromFields(usage, ["timestamp", "createdAt", "created_at", "date", "time"]));
