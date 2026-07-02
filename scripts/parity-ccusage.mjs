@@ -30,13 +30,15 @@ const argDays = (() => {
 // KNOWN, non-bug reasons our number legitimately differs from ccusage's:
 //  - Claude subagents: we count per-subagent/workflow transcripts as real spend;
 //    ccusage excludes them, so our Claude totals can be HIGHER on subagent-heavy days.
-//  - Codex: ccusage OVER-counts codex vs the physical token count. Verified 2026-07-02:
-//    a day whose codex session files hold 12,723,175 cumulative tokens (== Codex's own
-//    total_token_usage == our collector) is reported by ccusage as 93,872,178 (7.4x).
-//    So for codex, OUR number is ground truth and ccusage is NOT a valid oracle; we do
-//    not flag codex divergence as a collector bug. ccusage is a reliable oracle for
-//    Claude only (settled Claude days match it to <1%).
-const KNOWN_DELTAS = "Claude: ours>=ccusage w/ subagents. Codex: ccusage over-counts; OUR number is truth.";
+//  - Codex DAY-ATTRIBUTION (not an accounting error): ccusage and we agree per-session
+//    (verified: session 019f20cd == 6,015,686 both) and in grand total (verified
+//    2026-07-03: all-time codex ours 7,918,540,087 vs ccusage 7,766,030,575, ~2%). But
+//    a session RESUMED across days (an old huge rollout appended-to later) is bucketed
+//    differently: we credit each turn to its own timestamp; ccusage leans toward the
+//    resume/last-activity day. So a single day's codex can differ a lot (07-02: ours
+//    12.7M vs ccusage 93.9M) while totals match. Neither is "wrong"; it's a definitional
+//    choice. We therefore never fail the check on codex daily divergence.
+const KNOWN_DELTAS = "Claude: ours>=ccusage w/ subagents. Codex: per-session & totals match; daily differs by resumed-session attribution.";
 
 function ymdInTz(iso) {
   // Asia/Shanghai is UTC+8 with no DST; shift then slice for a stable YYYY-MM-DD.
@@ -107,12 +109,12 @@ for (const key of keys) {
   const diff = o - c;
   const rel = c > 0 ? Math.abs(diff) / c : o > 0 ? 1 : 0;
   const isClaude = model.startsWith("claude");
-  // ccusage is a valid oracle for Claude ONLY. For codex it over-counts (see header),
-  // so codex divergence is informational, never a collector-bug flag.
-  // On Claude, "ours higher" is expected (subagents); only under-count is a real flag.
+  // Codex per-day divergence is resumed-session day-attribution (see header), not an
+  // accounting bug — informational, never a failure. On Claude, "ours higher" is
+  // expected (subagents); only an under-count is a real flag.
   let flag = "";
   if (!isClaude) {
-    flag = rel > TOLERANCE ? "codex:ccusage-inflated" : "";
+    flag = rel > TOLERANCE ? "codex:day-attribution" : "";
   } else if (rel > TOLERANCE && diff < 0) {
     flag = "UNDER";
     flagged++;
@@ -122,5 +124,5 @@ for (const key of keys) {
   );
 }
 console.log(`\n  ${flagged} Claude cell(s) UNDER-counting vs ccusage beyond tolerance (real drift).`);
-console.log(`  (codex:ccusage-inflated rows are expected — see header — and never fail the check.)\n`);
+console.log(`  (codex:day-attribution rows are expected — see header — and never fail the check.)\n`);
 process.exit(flagged > 0 ? 1 : 0);
