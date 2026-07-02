@@ -27,6 +27,12 @@ export type TokenBoardPrivacyOptions = {
   hashSessionId?: boolean;
   includeSessionTitle?: boolean;
   maxEventAgeDays?: number;
+  // Upper bound on a single event's totalTokens. A real API call cannot exceed a
+  // model's context window plus cache reads (observed real max is ~250K); anything
+  // orders of magnitude larger is a collector bug feeding a *cumulative* counter as
+  // one call (e.g. Trae's stats file). Reject those so one bad source can't poison
+  // the board. Override per-deploy if a future model legitimately approaches it.
+  maxEventTotalTokens?: number;
 };
 
 export type TokenBoardIngestPayload = {
@@ -47,6 +53,9 @@ export type TokenBoardIngestResult = {
 };
 
 const DEFAULT_MAX_EVENT_AGE_DAYS = 120;
+// 50M is ~200x the largest real single-call record ever observed on the board, yet
+// still catches billion-token cumulative counters mis-reported as one event.
+const DEFAULT_MAX_EVENT_TOTAL_TOKENS = 50_000_000;
 
 export function hashUploadToken(token: string) {
   return `sha256:${sha256(token)}`;
@@ -111,6 +120,7 @@ export function sanitizeIngestEvents(
   const now = Date.now();
   const maxAgeDays = options.maxEventAgeDays ?? DEFAULT_MAX_EVENT_AGE_DAYS;
   const minTime = now - maxAgeDays * 24 * 60 * 60 * 1000;
+  const maxTotalTokens = options.maxEventTotalTokens ?? DEFAULT_MAX_EVENT_TOTAL_TOKENS;
 
   const entries = events.flatMap((event, index) => {
     try {
@@ -124,6 +134,13 @@ export function sanitizeIngestEvents(
 
       if (normalized.totalTokens <= 0) {
         errors.push(`第 ${index + 1} 条记录没有 token 用量`);
+        return [];
+      }
+
+      if (maxTotalTokens > 0 && normalized.totalTokens > maxTotalTokens) {
+        errors.push(
+          `第 ${index + 1} 条记录 token 用量 ${normalized.totalTokens} 超出单条上限 ${maxTotalTokens}（疑似累计计数被误报为单次调用）`
+        );
         return [];
       }
 
