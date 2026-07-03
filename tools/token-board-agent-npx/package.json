@@ -1,6 +1,6 @@
 {
   "name": "token-board-agent",
-  "version": "0.4.18",
+  "version": "0.4.19",
   "description": "Local token usage and Codex quota uploader for Open Token Board.",
   "keywords": [
     "ai",
