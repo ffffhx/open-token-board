@@ -30,15 +30,20 @@ const argDays = (() => {
 // KNOWN, non-bug reasons our number legitimately differs from ccusage's:
 //  - Claude subagents: we count per-subagent/workflow transcripts as real spend;
 //    ccusage excludes them, so our Claude totals can be HIGHER on subagent-heavy days.
-//  - Codex DAY-ATTRIBUTION (not an accounting error): ccusage and we agree per-session
-//    (verified: session 019f20cd == 6,015,686 both) and in grand total (verified
-//    2026-07-03: all-time codex ours 7,918,540,087 vs ccusage 7,766,030,575, ~2%). But
-//    a session RESUMED across days (an old huge rollout appended-to later) is bucketed
-//    differently: we credit each turn to its own timestamp; ccusage leans toward the
-//    resume/last-activity day. So a single day's codex can differ a lot (07-02: ours
-//    12.7M vs ccusage 93.9M) while totals match. Neither is "wrong"; it's a definitional
-//    choice. We therefore never fail the check on codex daily divergence.
-const KNOWN_DELTAS = "Claude: ours>=ccusage w/ subagents. Codex: per-session & totals match; daily differs by resumed-session attribution.";
+//  - Codex ccusage OVER-COUNT (verified 2026-07-03, supersedes the earlier
+//    "day-attribution" framing): on sessions where ccusage disagrees with us, the raw
+//    rollout is the arbiter. Session 019f20dd has 367 token_count snapshots and ZERO
+//    compaction resets, so its final cumulative counter (18,593,462) IS the physical
+//    session total; we report exactly that, while ccusage reports 36,898,014 — exactly
+//    the sum of the file's overlapping last_token_usage rows (its known double-count
+//    bug class, ccusage#884/#897/#988). tokscale (independent impl) matches us to the
+//    token on clean days and per-root. So on codex WE are ground truth and codex
+//    divergence never fails the check.
+//  - History: before agent-session-core 0.1.1 our codex numbers could also be LOW
+//    because only ~/.codex was scanned; sessions under $CODEX_HOME / the Orca runtime
+//    home (hardlink-mirrored, then diverging after 2026-07-02) were missed. Fixed by
+//    scanning all codex homes with (dev,inode) dedup.
+const KNOWN_DELTAS = "Claude: ours>=ccusage w/ subagents. Codex: ccusage inflates via last_token_usage double-count; ours matches the physical cumulative counters (tokscale agrees).";
 
 function ymdInTz(iso) {
   // Asia/Shanghai is UTC+8 with no DST; shift then slice for a stable YYYY-MM-DD.
@@ -109,12 +114,12 @@ for (const key of keys) {
   const diff = o - c;
   const rel = c > 0 ? Math.abs(diff) / c : o > 0 ? 1 : 0;
   const isClaude = model.startsWith("claude");
-  // Codex per-day divergence is resumed-session day-attribution (see header), not an
-  // accounting bug — informational, never a failure. On Claude, "ours higher" is
+  // Codex per-day divergence is ccusage's last_token_usage over-count (see header),
+  // not our bug — informational, never a failure. On Claude, "ours higher" is
   // expected (subagents); only an under-count is a real flag.
   let flag = "";
   if (!isClaude) {
-    flag = rel > TOLERANCE ? "codex:day-attribution" : "";
+    flag = rel > TOLERANCE ? "codex:ccusage-overcount" : "";
   } else if (rel > TOLERANCE && diff < 0) {
     flag = "UNDER";
     flagged++;

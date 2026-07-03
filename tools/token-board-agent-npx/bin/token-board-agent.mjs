@@ -126,7 +126,22 @@ const DEFAULT_SOURCE_TARGETS = [
   {
     source: "codex",
     tool: "Codex CLI",
-    paths: [homePath(".codex", "sessions"), homePath(".codex", "archived_sessions"), homePath(".codex", "projects")],
+    // Codex sessions can live under more than one home: ~/.codex (plain CLI),
+    // $CODEX_HOME (the CLI honours it; once set, NEW sessions stop appearing
+    // under ~/.codex entirely), and the Orca app's runtime home (for runs that
+    // don't inherit the interactive shell's $CODEX_HOME, e.g. launchd/cron).
+    // Overlapping copies between these homes are hardlinks; the collector
+    // dedups files by (dev, inode) so listing them all never double-counts.
+    paths: [
+      homePath(".codex", "sessions"),
+      homePath(".codex", "archived_sessions"),
+      homePath(".codex", "projects"),
+      ...(process.env.CODEX_HOME
+        ? [path.join(process.env.CODEX_HOME, "sessions"), path.join(process.env.CODEX_HOME, "archived_sessions")]
+        : []),
+      appSupportPath("orca", "codex-runtime-home", "home", "sessions"),
+      appSupportPath("orca", "codex-runtime-home", "home", "archived_sessions"),
+    ],
   },
   {
     source: "claude-code",
@@ -654,6 +669,24 @@ async function collectLocalUsageEvents(config) {
     files.push(...targetFiles);
   }
 
+  // Dedup by (dev, inode): the same physical file reachable via several roots
+  // (Orca hardlink-mirrors ~/.codex sessions into its runtime home) must be
+  // parsed once. Earlier-listed roots win, keeping event ids stable across runs.
+  const seenInodes = new Set();
+  const uniqueFiles = files.filter((file) => {
+    if (!(file.ino > 0)) {
+      return true;
+    }
+    const key = `${file.dev}:${file.ino}`;
+    if (seenInodes.has(key)) {
+      return false;
+    }
+    seenInodes.add(key);
+    return true;
+  });
+  files.length = 0;
+  files.push(...uniqueFiles);
+
   files.sort((a, b) => b.mtimeMs - a.mtimeMs);
 
   const events = [];
@@ -755,7 +788,7 @@ async function collectFiles(inputPath, target, files, minMtime, depth) {
   if (stat.isFile()) {
     const maxFileBytes = maxUsageFileBytes(inputPath, target);
     if (stat.size <= maxFileBytes && stat.mtimeMs >= minMtime && isUsageFile(inputPath)) {
-      files.push({ path: inputPath, mtimeMs: stat.mtimeMs, target });
+      files.push({ path: inputPath, mtimeMs: stat.mtimeMs, target, dev: stat.dev, ino: stat.ino });
     }
     return;
   }
