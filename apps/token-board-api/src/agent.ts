@@ -99,8 +99,77 @@ async function main() {
     return;
   }
 
+  if (command === "replace") {
+    await replaceAll(config);
+    return;
+  }
+
   printHelp();
   process.exitCode = 1;
+}
+
+// Full-history rewrite: POST the first batch to /api/usage/replace (the server
+// DELETES every event of this user, then inserts the batch), then stream the
+// remaining batches through the normal idempotent /api/usage/ingest. Use with a
+// collection window wide enough to cover everything worth keeping
+// (TOKEN_BOARD_SINCE_HOURS / TOKEN_BOARD_MAX_FILES / TOKEN_BOARD_MAX_FILE_BYTES) —
+// server-side history outside the freshly collected set is gone afterwards.
+async function replaceAll(config: AgentConfig) {
+  const collected = await collectAndSanitize(config);
+  if (!collected.length) {
+    throw new Error("Refusing to replace server history with an EMPTY collection; check collector config.");
+  }
+
+  const userConfig = await collectCurrentUserConfig();
+  const batches = chunkEvents(collected, INGEST_BATCH_SIZE);
+  logInfo(`Replacing server history with ${collected.length} freshly collected events (${batches.length} batches).`);
+
+  const first = await postReplace(config, batches[0], userConfig);
+  logInfo(`Replace batch 1/${batches.length}: deleted=${first.deleted ?? "?"} accepted=${first.accepted}`);
+
+  const result = { accepted: first.accepted ?? 0, duplicates: first.duplicates ?? 0, records: first.records ?? 0 };
+  for (let index = 1; index < batches.length; index += 1) {
+    const batchResult = await postIngest(config, batches[index], null);
+    result.accepted += batchResult.accepted;
+    result.duplicates += batchResult.duplicates;
+    result.records = batchResult.records;
+    if (index % 10 === 0 || index === batches.length - 1) {
+      logInfo(`Ingest batch ${index + 1}/${batches.length}: accepted so far=${result.accepted}`);
+    }
+  }
+
+  await writeState(config.stateFile, {
+    apiUrl: config.apiUrl,
+    userId: config.userId || "local",
+    uploadedIds: collected.map((event) => event.id).slice(-UPLOADED_ID_CAP),
+    lastUploadedAt: new Date().toISOString(),
+  });
+
+  logInfo(
+    `Replace complete. accepted=${result.accepted} duplicates=${result.duplicates} server records=${result.records}`
+  );
+  return result;
+}
+
+async function postReplace(
+  config: AgentConfig,
+  events: Awaited<ReturnType<typeof collectAndSanitize>>,
+  userConfig?: TokenBoardUserConfig | null
+) {
+  const bearerToken = config.agentToken || config.uploadToken;
+
+  if (!bearerToken) {
+    throw new Error("Missing agent token. Run `token-board-agent login`.");
+  }
+
+  return requestJsonWithRetry(`${config.apiUrl}/api/usage/replace`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${bearerToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(createIngestPayload(events, clientInfo(), userConfig)),
+  }, "Replace") as Promise<{ accepted: number; duplicates: number; records: number; deleted?: number }>;
 }
 
 export async function uploadOnce(config: AgentConfig, options: { force?: boolean } = {}) {
@@ -647,6 +716,7 @@ Local repo equivalents:
   pnpm token:agent collect
   pnpm token:agent upload
   pnpm token:agent resync
+  pnpm token:agent replace
   pnpm token:agent watch`);
 }
 
