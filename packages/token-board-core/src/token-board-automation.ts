@@ -33,6 +33,12 @@ export type TokenBoardPrivacyOptions = {
   // one call (e.g. Trae's stats file). Reject those so one bad source can't poison
   // the board. Override per-deploy if a future model legitimately approaches it.
   maxEventTotalTokens?: number;
+  // Sources rejected wholesale at ingest. Trae has no per-call transcript — its
+  // globalStorage only holds cumulative counters, which old agents re-upload as
+  // fresh "calls" on every scan (the 50M single-event cap can't catch these: each
+  // slice is small, the poison is the endless re-ingestion). Server-side blocking
+  // is the only guard that reaches agents that predate the client-side removal.
+  blockedSources?: string[];
 };
 
 export type TokenBoardIngestPayload = {
@@ -56,6 +62,7 @@ const DEFAULT_MAX_EVENT_AGE_DAYS = 120;
 // 50M is ~200x the largest real single-call record ever observed on the board, yet
 // still catches billion-token cumulative counters mis-reported as one event.
 const DEFAULT_MAX_EVENT_TOTAL_TOKENS = 50_000_000;
+const DEFAULT_BLOCKED_SOURCES = ["trae"];
 
 export function hashUploadToken(token: string) {
   return `sha256:${sha256(token)}`;
@@ -121,6 +128,9 @@ export function sanitizeIngestEvents(
   const maxAgeDays = options.maxEventAgeDays ?? DEFAULT_MAX_EVENT_AGE_DAYS;
   const minTime = now - maxAgeDays * 24 * 60 * 60 * 1000;
   const maxTotalTokens = options.maxEventTotalTokens ?? DEFAULT_MAX_EVENT_TOTAL_TOKENS;
+  const blockedSources = new Set(
+    (options.blockedSources ?? DEFAULT_BLOCKED_SOURCES).map((item) => item.trim().toLowerCase()).filter(Boolean)
+  );
 
   const entries = events.flatMap((event, index) => {
     try {
@@ -141,6 +151,12 @@ export function sanitizeIngestEvents(
         errors.push(
           `第 ${index + 1} 条记录 token 用量 ${normalized.totalTokens} 超出单条上限 ${maxTotalTokens}（疑似累计计数被误报为单次调用）`
         );
+        return [];
+      }
+
+      const rawSource = sanitizeLabel(normalized.source, 60).toLowerCase();
+      if (blockedSources.has(rawSource)) {
+        errors.push(`第 ${index + 1} 条记录来源 ${rawSource} 已被屏蔽（该来源没有可靠的逐调用用量数据）`);
         return [];
       }
 

@@ -1316,6 +1316,12 @@ function ingestPrivacyOptions() {
     hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
     includeSessionTitle: process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE !== "false",
     maxEventAgeDays: positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120),
+    // Comma-separated source blocklist; defaults to "trae" (cumulative counters,
+    // no per-call data — old agents keep re-uploading them as fresh calls).
+    blockedSources: (process.env.TOKEN_BOARD_BLOCKED_SOURCES ?? "trae")
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
   };
 }
 
