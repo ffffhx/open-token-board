@@ -86,7 +86,7 @@ TOKEN_BOARD_HASH_SESSION_ID=true npx --yes token-board-agent upload
 
 Defaults:
 
-- API: `https://124-221-36-36.anyip.dev/token-board`
+- API: `https://124-221-36-36.anyip.dev:8443/token-board`
 - Leaderboard: `https://ffffhx.github.io/open-token-board/board/`
 - Config file: `~/.token-board-agent.json`
 - State file: `~/.token-board-agent-state.json`
