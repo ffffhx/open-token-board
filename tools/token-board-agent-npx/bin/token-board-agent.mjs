@@ -8,7 +8,7 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
-const API_URL = (process.env.TOKEN_BOARD_API_URL || "https://8-218-149-148.anyip.dev/token-board").replace(/\/+$/, "");
+const API_URL = (process.env.TOKEN_BOARD_API_URL || "https://124-221-36-36.anyip.dev/token-board").replace(/\/+$/, "");
 const LEADERBOARD_URL = process.env.TOKEN_BOARD_LEADERBOARD_URL || "https://ffffhx.github.io/open-token-board/board/";
 const CONFIG_FILE = process.env.TOKEN_BOARD_AGENT_CONFIG || path.join(os.homedir(), ".token-board-agent.json");
 const STATE_FILE = process.env.TOKEN_BOARD_AGENT_STATE_FILE || path.join(os.homedir(), ".token-board-agent-state.json");
