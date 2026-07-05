@@ -30,6 +30,9 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+          # 仓库根有 pnpm-lock.yaml，setup-node 默认会去找 pnpm 做缓存；
+          # 本 job 只用 npm，禁用缓存避免 "Unable to locate executable file: pnpm"。
+          package-manager-cache: false
 
       - name: Resolve versions
         id: versions
