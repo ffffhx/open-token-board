@@ -120,7 +120,7 @@ export function AccountUsagePanel({
                 <button
                   type="button"
                   onClick={() => onExport?.("csv")}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                  className="inline-flex min-h-11 items-center gap-1 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <Icon name="download" />
                   CSV
@@ -128,7 +128,7 @@ export function AccountUsagePanel({
                 <button
                   type="button"
                   onClick={() => onExport?.("json")}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                  className="inline-flex min-h-11 items-center gap-1 rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
                 >
                   <Icon name="file" />
                   JSON
@@ -547,7 +547,7 @@ function AccountGoalsPanel({
               type="button"
               onClick={() => void applyTemplate("daily_streak", 7)}
               disabled={saving}
-              className="inline-flex min-h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {goalsDict.templates.dailyStreak}
             </button>
@@ -555,7 +555,7 @@ function AccountGoalsPanel({
               type="button"
               onClick={() => void applyTemplate("weekly_tokens", 50_000_000)}
               disabled={saving}
-              className="inline-flex min-h-9 items-center rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {goalsDict.templates.weeklyTokens}
             </button>
@@ -568,9 +568,11 @@ function AccountGoalsPanel({
           <label className="block">
             <span className="text-xs font-semibold text-slate-500">{goalsDict.labels.type}</span>
             <select
+              autoComplete="off"
+              name="goal-type"
               value={draft.type}
               onChange={(event) => setDraft((value) => ({ ...value, type: event.target.value as TokenGoalType }))}
-              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className="mt-1 h-11 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
             >
               {GOAL_TYPES.map((type) => (
                 <option key={type} value={type}>
@@ -584,11 +586,14 @@ function AccountGoalsPanel({
             <div className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
               <input
                 type="number"
+                autoComplete="off"
+                inputMode={draft.type === "weekly_cost_cap" ? "decimal" : "numeric"}
                 min="1"
+                name="goal-target"
                 step={draft.type === "weekly_cost_cap" ? "0.01" : "1"}
                 value={draft.target}
                 onChange={(event) => setDraft((value) => ({ ...value, target: event.target.value }))}
-                className="h-10 min-w-0 border-0 bg-transparent px-3 text-sm font-medium text-slate-900 outline-none"
+                className="h-11 min-w-0 border-0 bg-transparent px-3 text-sm font-medium text-slate-900 outline-none"
               />
               <span className="flex items-center justify-center border-l border-slate-200 px-2 text-xs font-semibold text-slate-500">
                 {goalSuffix(draft.type, goalsDict)}
@@ -600,7 +605,7 @@ function AccountGoalsPanel({
               type="button"
               onClick={() => void saveDraft()}
               disabled={saving || (!draft.id && !canAdd)}
-              className="inline-flex min-h-10 items-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 items-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? goalsDict.actions.saving : draft.id ? goalsDict.actions.saveChanges : goalsDict.actions.addGoal}
             </button>
@@ -611,7 +616,7 @@ function AccountGoalsPanel({
                   setDraft(emptyGoalDraft());
                   setError("");
                 }}
-                className="inline-flex min-h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+                className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
               >
                 {goalsDict.actions.cancel}
               </button>
@@ -645,13 +650,14 @@ function GoalProgressRow({
   const tone = goalTone(evaluation);
   const percent = Math.max(0, Math.min(100, Math.round(evaluation.percent * 100)));
   const chainText = goalChainText(evaluation, goalsDict);
+  const goalName = formatGoalName(evaluation.goal, goalsDict);
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">{formatGoalName(evaluation.goal, goalsDict)}</p>
+            <p className="text-sm font-semibold text-slate-900">{goalName}</p>
             <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${goalStatusClass(evaluation.status)}`}>
               {goalsDict.status[evaluation.status]}
             </span>
@@ -663,7 +669,7 @@ function GoalProgressRow({
             type="button"
             onClick={onEdit}
             disabled={saving}
-            className="inline-flex min-h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {goalsDict.actions.edit}
           </button>
@@ -671,14 +677,21 @@ function GoalProgressRow({
             type="button"
             onClick={onDelete}
             disabled={saving}
-            className="inline-flex min-h-8 items-center rounded-md border border-rose-200 bg-white px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center rounded-md border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {goalsDict.actions.delete}
           </button>
         </div>
       </div>
       <div className="mt-3 grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3">
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+        <div
+          aria-label={goalsDict.progress.progressAria(goalName, String(percent))}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={percent}
+          className="h-2.5 overflow-hidden rounded-full bg-slate-200"
+          role="progressbar"
+        >
           <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, percent)}%` }} />
         </div>
         <span className="text-right font-mono text-xs font-semibold text-slate-500">{percent}%</span>
@@ -752,6 +765,7 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
   const current = translateLevel(level.current, dict);
   const next = level.next ? translateLevel(level.next, dict) : null;
   const progressPercent = Math.round(level.progress * 100);
+  const progressValue = next ? Math.max(0, Math.min(100, progressPercent)) : 100;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -787,12 +801,19 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
           <span>{next ? dict.board.account.nextLevel(next.name) : dict.board.account.maxLevel}</span>
           <span className="font-mono">{next ? `${progressPercent}%` : "MAX"}</span>
         </div>
-        <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner dark:bg-slate-900">
+        <div
+          aria-label={dict.board.account.levelProgressAria(current.name, String(progressValue))}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={progressValue}
+          className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner dark:bg-slate-900"
+          role="progressbar"
+        >
           <div
             className="h-full rounded-full"
             style={{
               backgroundColor: current.color,
-              width: `${Math.max(next ? 4 : 100, progressPercent)}%`,
+              width: `${Math.max(next ? 4 : 100, progressValue)}%`,
             }}
           />
         </div>
@@ -1419,9 +1440,10 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
         <>
           <div className="mt-4 overflow-x-auto">
             <table className="w-full min-w-[58rem] table-fixed border-separate border-spacing-0 text-left text-sm">
+              <caption className="sr-only">{dict.board.account.sessionTableCaption}</caption>
               <thead className="text-xs text-slate-500">
                 <tr>
-                  <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">Session</th>
+                  <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.session}</th>
                   <th className="w-[10rem] border-b border-slate-200 px-3 py-2 text-right font-semibold" aria-sort="descending">
                     {dict.board.account.totalTokenSorted}
                   </th>
@@ -1436,6 +1458,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                 {visibleSessions.map((session) => {
                   const hasTitle = Boolean(session.title);
                   const title = session.title || formatSessionLabel(session.id);
+                  const tokenSharePercent = Math.round((session.tokens / maxTokens) * 100);
 
                   return (
                     <tr key={session.id} className="group">
@@ -1477,10 +1500,17 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                         >
                           {dict.board.account.cacheReadWriteShort(formatTokens(session.cachedInputTokens), formatTokens(session.cacheCreationInputTokens))}
                         </p>
-                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          aria-label={dict.board.account.sessionTokenProgressAria(title, String(tokenSharePercent))}
+                          aria-valuemax={100}
+                          aria-valuemin={0}
+                          aria-valuenow={tokenSharePercent}
+                          className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200"
+                          role="progressbar"
+                        >
                           <div
                             className="h-full rounded-full bg-blue-600"
-                            style={{ width: `${Math.max(2, (session.tokens / maxTokens) * 100)}%` }}
+                            style={{ width: `${Math.max(2, tokenSharePercent)}%` }}
                           />
                         </div>
                       </td>
@@ -1513,7 +1543,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
               <button
                 type="button"
                 onClick={showMoreSessions}
-                className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 sm:w-auto"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 sm:w-auto"
               >
                 {dict.board.account.showMore}
               </button>

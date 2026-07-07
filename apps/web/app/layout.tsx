@@ -37,7 +37,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <a
+          href="#main-content"
+          className="sr-only fixed left-4 top-4 z-[200] rounded-lg bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-lg focus:not-sr-only"
+        >
+          跳到主要内容 / Skip to content
+        </a>
+        <div id="main-content">
+          <I18nProvider>{children}</I18nProvider>
+        </div>
       </body>
     </html>
   );

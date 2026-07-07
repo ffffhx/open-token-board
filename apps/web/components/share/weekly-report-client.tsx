@@ -112,7 +112,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             type="button"
             onClick={download}
             disabled={exporting}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             {exporting ? dict.common.actions.generating : dict.share.client.saveImage}
           </button>
@@ -120,7 +120,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             type="button"
             onClick={copy}
             disabled={exporting}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
           >
             {dict.share.client.copyImage}
           </button>

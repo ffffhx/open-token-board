@@ -255,6 +255,13 @@ summary:focus-visible {
   outline-offset: 2px;
 }
 
+svg [role="button"]:focus-visible {
+  outline: none;
+  stroke: var(--accent);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
 ::selection {
   background: rgba(37, 99, 235, 0.18);
 }

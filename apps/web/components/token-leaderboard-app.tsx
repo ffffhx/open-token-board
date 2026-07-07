@@ -579,7 +579,7 @@ export function TokenLeaderboardApp({
             <button
               type="button"
               onClick={() => openUsageExport("leaderboard", "csv")}
-              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-2 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
             >
               <Icon name="download" />
               CSV
@@ -587,7 +587,7 @@ export function TokenLeaderboardApp({
             <button
               type="button"
               onClick={() => openUsageExport("leaderboard", "json")}
-              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-2 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+              className="inline-flex min-h-11 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
             >
               <Icon name="file" />
               JSON
@@ -616,6 +616,7 @@ export function TokenLeaderboardApp({
       </div>
       <div className="hidden overflow-x-auto sm:block">
         <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
+          <caption className="sr-only">{dict.board.leaderboard.tableCaption}</caption>
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
               <th className="px-4 py-3">{dict.board.leaderboard.columns.rank}</th>
@@ -786,6 +787,8 @@ export function TokenLeaderboardApp({
                   <div className="grid gap-2 rounded-lg border border-blue-600/15 bg-[var(--otb-energy-gradient-subtle)] p-2 shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                     <input
                       type="date"
+                      autoComplete="off"
+                      name="custom-start-date"
                       value={customFrom}
                       onChange={(event) => setCustomFrom(event.target.value)}
                       className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"
@@ -793,6 +796,8 @@ export function TokenLeaderboardApp({
                     />
                     <input
                       type="date"
+                      autoComplete="off"
+                      name="custom-end-date"
                       value={customTo}
                       onChange={(event) => setCustomTo(event.target.value)}
                       className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"

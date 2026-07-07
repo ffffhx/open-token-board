@@ -103,7 +103,7 @@ export function InstallGuideDialog({
                     role="radio"
                     aria-checked={selected}
                     onClick={() => onPlatformChange(item)}
-                    className={`min-h-10 rounded-lg px-3 text-sm font-semibold transition ${
+                    className={`min-h-11 rounded-lg px-3 text-sm font-semibold transition ${
                       selected
                         ? "bg-slate-950 text-white shadow-sm"
                         : "text-stone-500 hover:bg-stone-950/6 hover:text-stone-900"
@@ -141,7 +141,7 @@ export function InstallGuideDialog({
                 <button
                   type="button"
                   onClick={() => onCopy(stepCommand, step.commandLabel ?? copy.commandFallback)}
-                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/16"
+                  className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-white/10 px-3 text-xs font-semibold text-white transition hover:bg-white/16"
                 >
                   <Icon name="download" />
                   {copy.copyCommand}
@@ -171,7 +171,7 @@ export function InstallGuideDialog({
               <button
                 type="button"
                 onClick={onLogin}
-                className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-stone-950/12 bg-white px-3 font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-stone-950/12 bg-white px-3 font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
               >
                 <Icon name="github" />
                 {dict.common.actions.githubLogin}

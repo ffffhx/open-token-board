@@ -208,13 +208,22 @@ function formatLimitNote(note: string, copy: Dictionary["limits"]): string {
   return match ? copy.page.agentSyncedNote(match[1]) : note;
 }
 
-function ProgressBar({ usedPercent, height = "h-2.5" }: { usedPercent: number; height?: string }) {
+function ProgressBar({ ariaLabel, usedPercent, height = "h-2.5" }: { ariaLabel: string; usedPercent: number; height?: string }) {
   const tone = toneFor(usedPercent);
+  const widthPercent = Math.min(100, Math.max(0, usedPercent));
+  const valueNow = Math.round(Math.min(100, Math.max(0, usedPercent)));
   return (
-    <div className={`${height} w-full overflow-hidden rounded-full ${tone.track}`}>
+    <div
+      aria-label={ariaLabel}
+      aria-valuemax={100}
+      aria-valuemin={0}
+      aria-valuenow={valueNow}
+      className={`${height} w-full overflow-hidden rounded-full ${tone.track}`}
+      role="progressbar"
+    >
       <div
         className={`h-full rounded-full ${tone.bar} transition-[width] duration-700`}
-        style={{ width: `${Math.min(100, Math.max(0, usedPercent))}%` }}
+        style={{ width: `${widthPercent}%` }}
       />
     </div>
   );
@@ -262,7 +271,10 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
       </div>
 
       <div className="mt-4">
-        <ProgressBar usedPercent={w.usedPercent} />
+        <ProgressBar
+          ariaLabel={copy.window.progressAria(limitWindowLabel(w, copy), w.usedPercent.toFixed(0), w.remainingPercent.toFixed(0))}
+          usedPercent={w.usedPercent}
+        />
       </div>
       <p className="mt-2 text-xs text-slate-500">
         <span className={`font-semibold ${tone.text}`}>{windowSummary.used}</span>
@@ -650,8 +662,8 @@ function TeamToolQuota({
       </div>
       {snapshot ? (
         <div className="mt-3 space-y-2.5">
-          <TeamWindowBar label="5h" window={fiveHour} now={now} />
-          <TeamWindowBar label={dict.limits.team.weekShort} window={weekly} now={now} />
+          <TeamWindowBar label="5h" tool={title} window={fiveHour} now={now} />
+          <TeamWindowBar label={dict.limits.team.weekShort} tool={title} window={weekly} now={now} />
         </div>
       ) : (
         <p className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-400">{dict.limits.team.noSnapshot}</p>
@@ -662,10 +674,12 @@ function TeamToolQuota({
 
 function TeamWindowBar({
   label,
+  tool,
   window,
   now,
 }: {
   label: string;
+  tool: string;
   window: TeamRateLimitWindowSnapshot | null;
   now: number;
 }) {
@@ -688,7 +702,11 @@ function TeamWindowBar({
     <div className="space-y-1.5">
       <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 text-xs">
         <span className="font-mono font-semibold text-slate-500">{label}</span>
-        <ProgressBar usedPercent={window.usedPercent} height="h-2" />
+        <ProgressBar
+          ariaLabel={copy.team.progressAria(tool, label, window.usedPercent.toFixed(0), window.remainingPercent.toFixed(0))}
+          usedPercent={window.usedPercent}
+          height="h-2"
+        />
         <span className={`text-right font-mono font-semibold ${tone.text}`}>{window.usedPercent.toFixed(0)}%</span>
       </div>
       <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 pl-10 text-[11px] leading-4 text-slate-500">
