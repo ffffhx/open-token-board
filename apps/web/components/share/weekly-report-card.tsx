@@ -7,6 +7,8 @@ import {
   formatTokens,
   formatUsd,
 } from "@/components/token-leaderboard/utils";
+import { useI18n } from "@/i18n";
+import type { Dictionary } from "@/i18n/dictionaries";
 
 export type WeeklyReport = {
   displayName: string;
@@ -29,18 +31,6 @@ export type WeeklyReport = {
   vibe: { emoji: string; title: string; subtitle: string };
 };
 
-const RANGE_LABEL: Record<string, string> = {
-  "1D": "近 24 小时",
-  "7D": "近 7 天",
-  "30D": "近 30 天",
-  "90D": "近 90 天",
-  week: "本周",
-  month: "本月",
-  lastweek: "上周",
-  lastmonth: "上月",
-  custom: "自定义区间",
-};
-
 function shortDate(iso: string): string {
   // iso is YYYY-MM-DD
   const [, m, d] = iso.split("-");
@@ -48,29 +38,30 @@ function shortDate(iso: string): string {
   return `${Number(m)}/${Number(d)}`;
 }
 
-function pickVibe(user: TokenLeaderboardUser): WeeklyReport["vibe"] {
+function pickVibe(user: TokenLeaderboardUser, dict: Dictionary["share"]["report"]): WeeklyReport["vibe"] {
   const model = user.topModel.toLowerCase();
   if (user.rank === 1) {
-    return { emoji: "👑", title: "榜单霸主", subtitle: "本区间消耗第一，无人能及" };
+    return dict.vibes.champion;
   }
   if (user.share >= 0.3) {
-    return { emoji: "🔥", title: "全场焦点", subtitle: `一个人贡献了全榜 ${Math.round(user.share * 100)}% 的 token` };
+    return dict.vibes.spotlight(user.share);
   }
   if (model.includes("opus")) {
-    return { emoji: "🧠", title: "重度 Opus 玩家", subtitle: "把最强模型用到飞起" };
+    return dict.vibes.opus;
   }
   if (user.activeDays >= 7) {
-    return { emoji: "🗓️", title: "全勤选手", subtitle: "这段时间没有一天掉线" };
+    return dict.vibes.attendance;
   }
   if (user.sessions >= 1000) {
-    return { emoji: "⚡", title: "高频冲刺", subtitle: `${formatNumber(user.sessions)} 个会话，手速惊人` };
+    return dict.vibes.sprint(formatNumber(user.sessions));
   }
-  return { emoji: "🚀", title: "稳定输出", subtitle: "保持节奏，持续编码" };
+  return dict.vibes.steady;
 }
 
 export function buildWeeklyReport(
   summary: TokenLeaderboardSummary,
   query: string | undefined,
+  dict: Dictionary["share"]["report"],
 ): WeeklyReport | null {
   const users = summary.users ?? [];
   if (users.length === 0) return null;
@@ -100,11 +91,11 @@ export function buildWeeklyReport(
     share: user.share,
     deltaTokens: user.deltaTokens,
     daily: (user.daily ?? []).map((p) => ({ date: p.date, tokens: p.tokens })),
-    rangeLabel: RANGE_LABEL[summary.range] ?? summary.range,
+    rangeLabel: dict.ranges[summary.range as keyof typeof dict.ranges] ?? summary.range,
     startLabel: shortDate(user.daily?.[0]?.date ?? ""),
     endLabel: shortDate(user.daily?.[user.daily.length - 1]?.date ?? ""),
     peakDay: peak ? { label: shortDate(peak.date), tokens: peak.tokens } : null,
-    vibe: pickVibe(user),
+    vibe: pickVibe(user, dict),
   };
 }
 
@@ -157,9 +148,11 @@ function StatBox({ label, value }: { label: string; value: string }) {
 }
 
 export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
+  const { dict } = useI18n();
+  const reportCopy = dict.share.report;
   const initial = report.displayName.trim().slice(0, 1).toUpperCase() || "U";
   const deltaText =
-    report.deltaTokens === null ? "新上榜" : `环比 ${formatSignedPercent(report.deltaTokens)}`;
+    report.deltaTokens === null ? reportCopy.newEntry : reportCopy.delta(formatSignedPercent(report.deltaTokens));
   const deltaTone =
     report.deltaTokens === null
       ? "text-slate-300"
@@ -190,23 +183,23 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold">{report.displayName}</p>
           <p className="text-xs text-slate-400">
-            {report.rangeLabel}战报 · 共 {report.totalUsers} 位选手
+            {reportCopy.userCount(report.rangeLabel, report.totalUsers)}
           </p>
         </div>
         <span className="ml-auto rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-center">
           <span className="block font-mono text-xl font-bold leading-none text-amber-200">#{report.rank}</span>
-          <span className="mt-1 block text-[10px] text-amber-200/80">超过 {Math.round(report.percentile * 100)}%</span>
+          <span className="mt-1 block text-[10px] text-amber-200/80">{reportCopy.exceeds(Math.round(report.percentile * 100))}</span>
         </span>
       </div>
 
       <div className="relative mt-6">
-        <p className="text-xs uppercase tracking-wide text-slate-400">{report.rangeLabel}消耗</p>
+        <p className="text-xs uppercase tracking-wide text-slate-400">{reportCopy.usageTitle(report.rangeLabel)}</p>
         <p className="mt-1 font-mono text-5xl font-bold leading-none text-white">
           {formatTokens(report.tokens)}
           <span className="ml-2 align-baseline text-base font-medium text-slate-400">tokens</span>
         </p>
         <p className="mt-2 text-sm">
-          <span className="text-blue-300">占全榜 {Math.round(report.share * 100)}%</span>
+          <span className="text-blue-300">{reportCopy.shareText(report.share)}</span>
           <span className="mx-2 text-slate-600">·</span>
           <span className={deltaTone}>{deltaText}</span>
         </p>
@@ -217,9 +210,9 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
       </div>
 
       <div className="relative mt-5 grid grid-cols-3 gap-2">
-        <StatBox label="估算成本" value={formatUsd(report.costUsd)} />
-        <StatBox label="会话数" value={formatNumber(report.sessions)} />
-        <StatBox label="活跃天数" value={`${report.activeDays} 天`} />
+        <StatBox label={reportCopy.estimatedCost} value={formatUsd(report.costUsd)} />
+        <StatBox label={reportCopy.sessions} value={formatNumber(report.sessions)} />
+        <StatBox label={reportCopy.activeDays} value={reportCopy.activeDaysValue(report.activeDays)} />
       </div>
 
       <div className="relative mt-5 space-y-2 text-sm">
@@ -232,13 +225,13 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-            <p className="text-[11px] text-slate-400">主力模型</p>
+            <p className="text-[11px] text-slate-400">{reportCopy.topModel}</p>
             <p className="truncate font-mono text-sm font-semibold text-white">{report.topModel}</p>
             <p className="truncate text-[11px] text-slate-500">{report.topTool}</p>
           </div>
           {report.peakDay ? (
             <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5">
-              <p className="text-[11px] text-slate-400">最肝的一天</p>
+              <p className="text-[11px] text-slate-400">{reportCopy.hardestDay}</p>
               <p className="font-mono text-sm font-semibold text-white">{report.peakDay.label}</p>
               <p className="text-[11px] text-slate-500">{formatTokens(report.peakDay.tokens)} tokens</p>
             </div>
@@ -248,7 +241,7 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
 
       <footer className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-3 text-[11px] text-slate-500">
         <span className="font-mono">open-token-board</span>
-        <span>AI 编码 Token 排行榜</span>
+        <span>{reportCopy.footer}</span>
       </footer>
     </article>
   );

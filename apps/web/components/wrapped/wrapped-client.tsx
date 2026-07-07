@@ -17,12 +17,16 @@ import {
   formatUsd,
   normalizeApiBaseUrl,
 } from "@/components/token-leaderboard/utils";
+import { useI18n } from "@/i18n";
+import type { Dictionary } from "@/i18n/dictionaries";
 
 type LoadState = "empty" | "error" | "loading" | "not-found" | "ready";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
+  const { dict } = useI18n();
+  const copy = dict.wrapped;
   const searchParams = useSearchParams();
   const quickPeriods = useMemo(() => buildQuickPeriods(new Date()), []);
   const requestedLogin = normalizeProfileLogin(searchParams.get("login") || searchParams.get("user"));
@@ -43,7 +47,7 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     if (!normalizedApiBaseUrl) {
       setState("error");
       setWrapped(null);
-      setError("未配置 Token Board API，无法读取 Wrapped。");
+      setError(copy.states.apiMissing);
       return;
     }
 
@@ -68,7 +72,7 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       })
       .then((payload) => {
         if (!isWrappedResponse(payload)) {
-          throw new Error("后端返回格式不正确");
+          throw new Error(copy.states.invalidShape);
         }
 
         if (active) {
@@ -87,14 +91,14 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
           setError("");
         } else {
           setState("error");
-          setError(fetchError instanceof Error ? fetchError.message : "读取失败");
+          setError(fetchError instanceof Error ? fetchError.message : copy.states.readFailed);
         }
       });
 
     return () => {
       active = false;
     };
-  }, [normalizedApiBaseUrl, requestedLogin, requestedPeriod]);
+  }, [copy.states.apiMissing, copy.states.invalidShape, copy.states.readFailed, normalizedApiBaseUrl, requestedLogin, requestedPeriod]);
 
   if (state === "ready" && wrapped) {
     return <WrappedStory quickPeriods={quickPeriods} wrapped={wrapped} />;
@@ -105,7 +109,7 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       <WrappedTopBar login={requestedLogin} period={requestedPeriod} quickPeriods={quickPeriods} />
       <section className="mx-auto flex min-h-[100svh] max-w-4xl flex-col items-center justify-center px-5 py-24 text-center">
         {state === "loading" ? (
-          <div className="w-full max-w-xl space-y-4" role="status" aria-label="正在加载 Wrapped">
+          <div className="w-full max-w-xl space-y-4" role="status" aria-label={copy.states.loadingAria}>
             <div className="otb-skeleton h-5 w-36 rounded-full bg-[#171018]/15 dark:bg-white/15" />
             <div className="otb-skeleton h-24 rounded-lg bg-[#171018]/15 dark:bg-white/15" />
             <div className="otb-skeleton h-40 rounded-lg bg-[#171018]/10 dark:bg-white/10" />
@@ -117,14 +121,14 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
               Open Token Board Wrapped
             </p>
             <h1 className="mt-4 text-4xl font-black leading-tight text-[#171018] sm:text-6xl dark:text-[#fff8e7]">
-              {emptyTitle(state)}
+              {emptyTitle(state, copy)}
             </h1>
             <p className="mt-5 text-base leading-7 text-[#5c4a50] dark:text-[#d8c9cf]">
-              {emptyDescription(state, requestedLogin, requestedPeriod, error)}
+              {emptyDescription(state, requestedLogin, requestedPeriod, error, copy)}
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-2">
               {requestedLogin ? (
-                quickPeriodItems(quickPeriods).map((item) => (
+                quickPeriodItems(quickPeriods, copy.periods).map((item) => (
                   <Link
                     key={item.period}
                     href={wrappedHref(requestedLogin, item.period)}
@@ -138,7 +142,7 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
                   href="/board"
                   className="inline-flex min-h-11 items-center rounded-lg bg-[#171018] px-5 text-sm font-semibold text-white transition hover:bg-[#e03a6f] dark:bg-[#fff8e7] dark:text-[#171018] dark:hover:bg-[#ffb0ca]"
                 >
-                  去榜单找一个用户
+                  {copy.states.findUser}
                 </Link>
               )}
             </div>
@@ -156,41 +160,44 @@ function WrappedStory({
   quickPeriods: ReturnType<typeof buildQuickPeriods>;
   wrapped: TokenWrappedResponse;
 }) {
+  const { dict, locale } = useI18n();
+  const copy = dict.wrapped;
   const topModel = wrapped.topModels[0];
   const topProject = wrapped.topProjects[0];
+  const periodLabel = formatWrappedPeriodLabel(wrapped.period.value, locale);
 
   return (
     <main className="relative min-h-[100svh] overflow-hidden bg-[#fff8e7] text-[#171018] dark:bg-[#110a16] dark:text-[#fff8e7]">
       <WrappedTopBar login={wrapped.user.login} period={wrapped.period.value} quickPeriods={quickPeriods} />
       <TokenPulseBackdrop />
 
-      <StorySection accent="rose" eyebrow={`${wrapped.period.label} · @${wrapped.user.githubLogin}`}>
+      <StorySection accent="rose" eyebrow={`${periodLabel} · @${wrapped.user.githubLogin}`}>
         <div className="max-w-4xl">
           <h1 className="text-5xl font-black leading-[0.95] sm:text-7xl lg:text-8xl">
-            你把这个周期烧成了
+            {copy.story.opener}
           </h1>
           <p className="mt-6 break-words font-mono text-6xl font-black leading-none text-[#e03a6f] sm:text-8xl lg:text-9xl dark:text-[#ff7aa7]">
             {formatTokens(wrapped.totals.tokens)}
           </p>
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
-            <SignalStat label="团队排名" value={wrapped.ranking.rank ? `#${wrapped.ranking.rank}` : "--"} meta={`${wrapped.ranking.team} · ${formatNumber(wrapped.ranking.totalUsers)} 人`} />
-            <SignalStat label="估算费用" value={formatUsd(wrapped.totals.costUsd)} meta="非实际账单" />
-            <SignalStat label="会话数" value={formatNumber(wrapped.totals.sessions)} meta={`${formatNumber(wrapped.totals.activeDays)} 个活跃日`} />
+            <SignalStat label={copy.story.rank} value={wrapped.ranking.rank ? `#${wrapped.ranking.rank}` : "--"} meta={`${wrapped.ranking.team} · ${dict.common.units.people(formatNumber(wrapped.ranking.totalUsers))}`} />
+            <SignalStat label={copy.story.estimatedCost} value={formatUsd(wrapped.totals.costUsd)} meta={copy.story.notActualBill} />
+            <SignalStat label={copy.story.sessions} value={formatNumber(wrapped.totals.sessions)} meta={copy.story.activeDaysMeta(formatNumber(wrapped.totals.activeDays))} />
           </div>
         </div>
       </StorySection>
 
-      <StorySection accent="gold" eyebrow="峰值日">
+      <StorySection accent="gold" eyebrow={copy.story.peakDay}>
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center">
           <div>
             <p className="text-lg font-semibold text-[#765e13] dark:text-[#ffe08a]">
-              {wrapped.peakDay.date ? `${formatDayLabel(wrapped.peakDay.date)} 是最疯狂的一天` : "这个周期没有峰值日"}
+              {wrapped.peakDay.date ? copy.story.peakDaySentence(formatDayLabel(wrapped.peakDay.date, locale)) : copy.story.noPeakDay}
             </p>
             <p className="mt-5 font-mono text-6xl font-black leading-none text-[#c58a00] sm:text-8xl dark:text-[#ffd45a]">
               {formatTokens(wrapped.peakDay.tokens)}
             </p>
             <p className="mt-6 max-w-2xl text-2xl font-black leading-tight sm:text-4xl">
-              {wrapped.peakDay.tokens > 0 ? tokenMetaphor(wrapped.peakDay.tokens) : "安静得像刚新建的空仓库。"}
+              {wrapped.peakDay.tokens > 0 ? tokenMetaphor(wrapped.peakDay.tokens, copy.metaphors) : copy.story.quietRepo}
             </p>
           </div>
           <div className="rounded-lg border border-[#171018]/15 bg-white/55 p-4 shadow-[0_30px_80px_rgba(23,16,24,0.16)] backdrop-blur dark:border-white/15 dark:bg-white/10">
@@ -199,39 +206,39 @@ function WrappedStory({
         </div>
       </StorySection>
 
-      <StorySection accent="cyan" eyebrow="主力配置">
+      <StorySection accent="cyan" eyebrow={copy.story.mainConfig}>
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-start">
           <div>
             <h2 className="text-4xl font-black leading-tight sm:text-6xl">
-              主力模型是
+              {copy.story.mainModelTitle}
               <span className="mt-3 block break-words font-mono text-[#00a7a0] dark:text-[#6ff7ee]">
                 {topModel?.name ?? "--"}
               </span>
             </h2>
             <p className="mt-5 text-xl font-semibold leading-8 text-[#3e5657] dark:text-[#c5f7f2]">
-              {topModel ? `它吃掉了 ${formatPercent(topModel.share)} 的 token。` : "模型还没有形成偏好。"}
+              {topModel ? copy.story.modelShare(formatPercent(topModel.share)) : copy.story.noModelPreference}
             </p>
           </div>
           <div className="space-y-5">
-            <BreakdownBlock title="模型前三" items={wrapped.topModels} color="#00a7a0" />
-            <BreakdownBlock title="项目前三" items={wrapped.topProjects} color="#e03a6f" />
+            <BreakdownBlock title={copy.story.topModels} items={wrapped.topModels} color="#00a7a0" />
+            <BreakdownBlock title={copy.story.topProjects} items={wrapped.topProjects} color="#e03a6f" />
             <p className="text-sm font-semibold text-[#5c4a50] dark:text-[#d8c9cf]">
-              {topProject ? `项目火力集中在「${topProject.name}」，占 ${formatPercent(topProject.share)}。` : "项目还没有可展示的分布。"}
+              {topProject ? copy.story.projectShare(topProject.name, formatPercent(topProject.share)) : copy.story.noProjectDistribution}
             </p>
           </div>
         </div>
       </StorySection>
 
-      <StorySection accent="ink" eyebrow="节奏与荣誉">
+      <StorySection accent="ink" eyebrow={copy.story.rhythmHonor}>
         <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.75fr)] lg:items-center">
           <div>
             <h2 className="text-4xl font-black leading-tight sm:text-6xl">
-              你不是偶尔出现，<br />你是在持续加热。
+              {copy.story.rhythmTitle}
             </h2>
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
-              <SignalStat label="活跃天数" value={`${formatNumber(wrapped.totals.activeDays)}d`} meta={`${formatNumber(wrapped.period.days)} 天窗口`} />
-              <SignalStat label="最长连续" value={`${formatNumber(wrapped.streak.days)}d`} meta={formatDateRange(wrapped.streak.startDate, wrapped.streak.endDate)} />
-              <SignalStat label="深夜比例" value={formatPercent(wrapped.night.ratio)} meta={`0-6 点 · ${formatTokens(wrapped.night.tokens)}`} />
+              <SignalStat label={copy.story.activeDays} value={`${formatNumber(wrapped.totals.activeDays)}d`} meta={copy.story.activeDaysWindow(formatNumber(wrapped.period.days))} />
+              <SignalStat label={copy.story.longestStreak} value={`${formatNumber(wrapped.streak.days)}d`} meta={formatDateRange(wrapped.streak.startDate, wrapped.streak.endDate, locale)} />
+              <SignalStat label={copy.story.nightRatio} value={formatPercent(wrapped.night.ratio)} meta={copy.story.nightMeta(formatTokens(wrapped.night.tokens))} />
             </div>
           </div>
           <HonorStrip wrapped={wrapped} />
@@ -252,7 +259,8 @@ function WrappedTopBar({
   period: string;
   quickPeriods: ReturnType<typeof buildQuickPeriods>;
 }) {
-  const items = quickPeriodItems(quickPeriods);
+  const { dict } = useI18n();
+  const items = quickPeriodItems(quickPeriods, dict.wrapped.periods);
 
   return (
     <header className="fixed inset-x-0 top-0 z-30 border-b border-[#171018]/10 bg-[#fff8e7]/82 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-[#110a16]/82">
@@ -261,7 +269,7 @@ function WrappedTopBar({
           <TokenBoardLogoMark className="size-7 shrink-0" decorative />
           <span className="truncate">Open Token Board</span>
         </Link>
-        <nav aria-label="Wrapped 周期" className="flex gap-2 overflow-x-auto pb-1 sm:justify-end sm:pb-0">
+        <nav aria-label={dict.wrapped.periods.aria} className="flex gap-2 overflow-x-auto pb-1 sm:justify-end sm:pb-0">
           {items.map((item) => {
             const selected = item.period === period;
             return (
@@ -334,6 +342,7 @@ function BreakdownBlock({
   items: Array<{ name: string; share: number; tokens: number }>;
   title: string;
 }) {
+  const { dict } = useI18n();
   return (
     <section className="rounded-lg border border-[#171018]/12 bg-white/60 p-4 backdrop-blur dark:border-white/12 dark:bg-white/10">
       <h3 className="text-sm font-black">{title}</h3>
@@ -354,7 +363,7 @@ function BreakdownBlock({
           ))
         ) : (
           <p className="rounded-lg border border-[#171018]/10 px-3 py-5 text-center text-sm font-semibold text-[#6d5b62] dark:border-white/10 dark:text-[#c8b8bf]">
-            暂无数据
+            {dict.common.states.noData}
           </p>
         )}
       </div>
@@ -363,28 +372,35 @@ function BreakdownBlock({
 }
 
 function HonorStrip({ wrapped }: { wrapped: TokenWrappedResponse }) {
+  const { dict, locale } = useI18n();
+  const copy = dict.wrapped;
   const badges = wrapped.achievements.newBadges;
   const levelUps = wrapped.achievements.levelUps;
+  const levelBefore = translateLevel(wrapped.achievements.levelBefore, dict);
+  const levelAfter = translateLevel(wrapped.achievements.levelAfter, dict);
 
   return (
     <section className="rounded-lg border border-[#171018]/12 bg-white/60 p-5 backdrop-blur dark:border-white/12 dark:bg-white/10">
-      <p className="text-sm font-black text-[#5c4a50] dark:text-[#d8c9cf]">本周期新荣誉</p>
+      <p className="text-sm font-black text-[#5c4a50] dark:text-[#d8c9cf]">{copy.story.newHonors}</p>
       <div className="mt-4 space-y-3">
         {levelUps.map((level) => (
           <div key={level.id} className="rounded-lg border border-[#171018]/10 bg-[#171018] p-3 text-white dark:border-white/10 dark:bg-[#fff8e7] dark:text-[#171018]">
-            <p className="font-mono text-xs font-black">升级到 {level.name}</p>
-            <p className="mt-1 text-xs opacity-70">{formatShortDateOnly(level.reachedAt)}</p>
+            <p className="font-mono text-xs font-black">{copy.story.levelUp(translateLevel(level, dict).name)}</p>
+            <p className="mt-1 text-xs opacity-70">{formatShortDateOnly(level.reachedAt, locale)}</p>
           </div>
         ))}
-        {badges.map((badge) => (
-          <div key={badge.id} className="rounded-lg border border-[#e03a6f]/25 bg-[#e03a6f]/10 p-3 dark:border-[#ff7aa7]/35 dark:bg-[#ff7aa7]/12">
-            <p className="font-mono text-xs font-black">{badge.name}</p>
-            <p className="mt-1 text-xs text-[#6d5b62] dark:text-[#d8c9cf]">{badge.description}</p>
-          </div>
-        ))}
+        {badges.map((badge) => {
+          const translated = translateBadge(badge, dict);
+          return (
+            <div key={badge.id} className="rounded-lg border border-[#e03a6f]/25 bg-[#e03a6f]/10 p-3 dark:border-[#ff7aa7]/35 dark:bg-[#ff7aa7]/12">
+              <p className="font-mono text-xs font-black">{translated.name}</p>
+              <p className="mt-1 text-xs text-[#6d5b62] dark:text-[#d8c9cf]">{translated.description}</p>
+            </div>
+          );
+        })}
         {!levelUps.length && !badges.length ? (
           <p className="rounded-lg border border-[#171018]/10 px-3 py-6 text-center text-sm font-semibold text-[#6d5b62] dark:border-white/10 dark:text-[#c8b8bf]">
-            没有新徽章，但等级从 {wrapped.achievements.levelBefore.name} 走到了 {wrapped.achievements.levelAfter.name}。
+            {copy.story.noNewHonor(levelBefore.name, levelAfter.name)}
           </p>
         ) : null}
       </div>
@@ -393,14 +409,20 @@ function HonorStrip({ wrapped }: { wrapped: TokenWrappedResponse }) {
 }
 
 function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
+  const { dict } = useI18n();
+  const shareCopy = dict.wrapped.share;
   const [exporting, setExporting] = useState(false);
-  const [hint, setHint] = useState("导出后发到群里，看看谁的周期更离谱。");
+  const [hint, setHint] = useState(shareCopy.initialHint);
   const [pageUrl, setPageUrl] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setPageUrl(window.location.href);
   }, []);
+
+  useEffect(() => {
+    setHint(shareCopy.initialHint);
+  }, [shareCopy.initialHint]);
 
   const download = useCallback(async () => {
     if (!cardRef.current) return;
@@ -413,13 +435,13 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
       link.download = `token-wrapped-${safeFileName(wrapped.user.login)}-${safeFileName(wrapped.period.value)}.png`;
       link.href = dataUrl;
       link.click();
-      setHint("PNG 已生成。");
+      setHint(shareCopy.pngReady);
     } catch {
-      setHint("生成图片失败，可以直接对分享卡截图。");
+      setHint(shareCopy.pngFailed);
     } finally {
       setExporting(false);
     }
-  }, [wrapped.period.value, wrapped.user.login]);
+  }, [shareCopy.pngFailed, shareCopy.pngReady, wrapped.period.value, wrapped.user.login]);
 
   const copy = useCallback(async () => {
     if (!cardRef.current) return;
@@ -432,13 +454,13 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
         throw new Error("clipboard unsupported");
       }
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setHint("已复制图片。");
+      setHint(shareCopy.imageCopied);
     } catch {
-      setHint("当前浏览器不支持复制图片，请改用保存 PNG。");
+      setHint(shareCopy.imageCopyUnsupported);
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [shareCopy.imageCopied, shareCopy.imageCopyUnsupported]);
 
   return (
     <section className="relative z-10 flex min-h-[100svh] snap-start items-center px-5 py-24 sm:px-8">
@@ -449,8 +471,8 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
           </div>
         </div>
         <div>
-          <p className="font-mono text-xs font-black uppercase text-[#e03a6f] dark:text-[#ff7aa7]">分享卡</p>
-          <h2 className="mt-4 text-4xl font-black leading-tight">把这份 Wrapped 带走</h2>
+          <p className="font-mono text-xs font-black uppercase text-[#e03a6f] dark:text-[#ff7aa7]">{shareCopy.eyebrow}</p>
+          <h2 className="mt-4 text-4xl font-black leading-tight">{shareCopy.title}</h2>
           <div className="mt-6 space-y-3">
             <button
               type="button"
@@ -458,7 +480,7 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
               disabled={exporting}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-lg bg-[#171018] px-5 text-sm font-black text-white transition hover:bg-[#e03a6f] disabled:opacity-60 dark:bg-[#fff8e7] dark:text-[#171018] dark:hover:bg-[#ffb0ca]"
             >
-              {exporting ? "生成中…" : "保存 PNG"}
+              {exporting ? dict.common.actions.generating : shareCopy.savePng}
             </button>
             <button
               type="button"
@@ -466,7 +488,7 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
               disabled={exporting}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-lg border border-[#171018]/15 bg-white/60 px-5 text-sm font-black transition hover:border-[#e03a6f] hover:text-[#e03a6f] disabled:opacity-60 dark:border-white/15 dark:bg-white/10 dark:hover:border-[#ff7aa7] dark:hover:text-[#ffb0ca]"
             >
-              复制图片
+              {shareCopy.copyImage}
             </button>
           </div>
           <p className="mt-4 min-h-6 text-sm font-semibold leading-6 text-[#6d5b62] dark:text-[#c8b8bf]" aria-live="polite">
@@ -479,8 +501,11 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
 }
 
 function WrappedShareCard({ pageUrl, wrapped }: { pageUrl: string; wrapped: TokenWrappedResponse }) {
+  const { dict, locale } = useI18n();
+  const copy = dict.wrapped.share;
   const topModel = wrapped.topModels[0]?.name ?? "--";
   const topProject = wrapped.topProjects[0]?.name ?? "--";
+  const periodLabel = formatWrappedPeriodLabel(wrapped.period.value, locale);
 
   return (
     <article className="overflow-hidden rounded-lg bg-[#171018] p-5 text-[#fff8e7] shadow-2xl">
@@ -488,7 +513,7 @@ function WrappedShareCard({ pageUrl, wrapped }: { pageUrl: string; wrapped: Toke
         <div className="min-w-0">
           <p className="font-mono text-xs font-black uppercase text-[#ff7aa7]">Token Wrapped</p>
           <h3 className="mt-2 truncate text-2xl font-black">{wrapped.user.displayName}</h3>
-          <p className="mt-1 truncate font-mono text-xs text-[#c8b8bf]">@{wrapped.user.githubLogin} · {wrapped.period.label}</p>
+          <p className="mt-1 truncate font-mono text-xs text-[#c8b8bf]">@{wrapped.user.githubLogin} · {periodLabel}</p>
         </div>
         <div className="rounded-lg border border-[#ffd45a]/35 bg-[#ffd45a]/12 px-3 py-2 text-right">
           <p className="font-mono text-2xl font-black text-[#ffd45a]">{wrapped.ranking.rank ? `#${wrapped.ranking.rank}` : "--"}</p>
@@ -497,19 +522,19 @@ function WrappedShareCard({ pageUrl, wrapped }: { pageUrl: string; wrapped: Toke
       </header>
 
       <div className="mt-7">
-        <p className="text-xs font-black text-[#c8b8bf]">总消耗</p>
+        <p className="text-xs font-black text-[#c8b8bf]">{copy.totalUsage}</p>
         <p className="mt-2 break-words font-mono text-5xl font-black leading-none text-[#ff7aa7]">
           {formatTokens(wrapped.totals.tokens)}
         </p>
         <p className="mt-3 text-sm font-semibold text-[#d8c9cf]">
-          {formatNumber(wrapped.totals.sessions)} 会话 · {formatNumber(wrapped.totals.activeDays)} 活跃日 · {formatUsd(wrapped.totals.costUsd)}
+          {copy.cardStats(formatNumber(wrapped.totals.sessions), formatNumber(wrapped.totals.activeDays), formatUsd(wrapped.totals.costUsd))}
         </p>
       </div>
 
       <div className="mt-6 grid grid-cols-3 gap-2">
-        <ShareMetric label="主力模型" value={topModel} />
-        <ShareMetric label="最热项目" value={topProject} />
-        <ShareMetric label="深夜占比" value={formatPercent(wrapped.night.ratio)} />
+        <ShareMetric label={copy.topModel} value={topModel} />
+        <ShareMetric label={copy.topProject} value={topProject} />
+        <ShareMetric label={copy.nightShare} value={formatPercent(wrapped.night.ratio)} />
       </div>
 
       <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.06] p-3">
@@ -556,6 +581,7 @@ function MiniDailyGraphic({
 }
 
 function MiniBars({ daily }: { daily: TokenDailyUsagePoint[] }) {
+  const { dict } = useI18n();
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
   const width = 320;
   const height = 104;
@@ -563,7 +589,7 @@ function MiniBars({ daily }: { daily: TokenDailyUsagePoint[] }) {
   const barWidth = Math.max(2, (width - gap * (daily.length - 1)) / daily.length);
 
   return (
-    <svg className="block h-28 w-full" role="img" aria-label="周期每日 token 柱状图" viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+    <svg className="block h-28 w-full" role="img" aria-label={dict.wrapped.share.dailyBarsAria} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
       {daily.map((point, index) => {
         const barHeight = point.tokens > 0 ? Math.max(3, (point.tokens / maxTokens) * (height - 8)) : 2;
         const x = index * (barWidth + gap);
@@ -579,6 +605,7 @@ function MiniBars({ daily }: { daily: TokenDailyUsagePoint[] }) {
 }
 
 function MiniHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
+  const { dict } = useI18n();
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
   const cell = 5;
   const gap = 1;
@@ -587,7 +614,7 @@ function MiniHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
   const height = 7 * (cell + gap) - gap;
 
   return (
-    <svg className="block h-24 w-full" role="img" aria-label="周期每日 token 热力图" viewBox={`0 0 ${width} ${height}`}>
+    <svg className="block h-24 w-full" role="img" aria-label={dict.wrapped.share.dailyHeatmapAria} viewBox={`0 0 ${width} ${height}`}>
       {daily.map((point, index) => {
         const intensity = point.tokens / maxTokens;
         return (
@@ -648,11 +675,11 @@ function buildQuickPeriods(now: Date) {
   };
 }
 
-function quickPeriodItems(quickPeriods: ReturnType<typeof buildQuickPeriods>) {
+function quickPeriodItems(quickPeriods: ReturnType<typeof buildQuickPeriods>, labels: Dictionary["wrapped"]["periods"]) {
   return [
-    { label: "本月", period: quickPeriods.thisMonth },
-    { label: "上月", period: quickPeriods.lastMonth },
-    { label: "今年", period: quickPeriods.thisYear },
+    { label: labels.thisMonth, period: quickPeriods.thisMonth },
+    { label: labels.lastMonth, period: quickPeriods.lastMonth },
+    { label: labels.thisYear, period: quickPeriods.thisYear },
   ];
 }
 
@@ -668,42 +695,66 @@ function wrappedHref(login: string, period: string) {
   return `/wrapped/?login=${encodeURIComponent(login)}&period=${encodeURIComponent(period)}`;
 }
 
-function tokenMetaphor(tokens: number) {
+function tokenMetaphor(tokens: number, metaphors: Dictionary["wrapped"]["metaphors"]) {
   const variants = [
-    `相当于把《红楼梦》读了 ${formatCompact(Math.max(0.1, tokens / 900_000))} 遍。`,
-    `够把一份 20 万字需求文档来回喂给模型 ${formatNumber(Math.max(1, Math.round(tokens / 260_000)))} 轮。`,
-    `差不多能塞进 ${formatNumber(Math.max(1, Math.round(tokens / 180_000)))} 本 300 页技术书草稿。`,
+    metaphors.novel(formatCompact(Math.max(0.1, tokens / 900_000))),
+    metaphors.spec(formatNumber(Math.max(1, Math.round(tokens / 260_000)))),
+    metaphors.books(formatNumber(Math.max(1, Math.round(tokens / 180_000)))),
   ];
 
   return variants[Math.abs(Math.round(tokens)) % variants.length];
 }
 
-function formatDayLabel(value: string) {
-  const [, month, day] = value.split("-");
-  return month && day ? `${Number(month)} 月 ${Number(day)} 日` : value;
+function formatDayLabel(value: string, locale: string) {
+  const parsed = parseDay(value);
+  if (!parsed) return value;
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: "UTC" }).format(parsed);
 }
 
-function formatDateRange(startDate: string | null, endDate: string | null) {
+function formatDateRange(startDate: string | null, endDate: string | null, locale: string) {
   if (!startDate || !endDate || startDate === endDate) {
-    return startDate ? formatDayLabel(startDate) : "--";
+    return startDate ? formatDayLabel(startDate, locale) : "--";
   }
 
-  return `${formatDayLabel(startDate)} - ${formatDayLabel(endDate)}`;
+  return `${formatDayLabel(startDate, locale)} - ${formatDayLabel(endDate, locale)}`;
 }
 
-function formatShortDateOnly(value: string) {
+function formatShortDateOnly(value: string, locale: string) {
   const parsed = new Date(value);
   if (!Number.isFinite(parsed.getTime())) {
     return value;
   }
 
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(locale, {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   }).format(parsed);
+}
+
+function formatWrappedPeriodLabel(value: string, locale: string) {
+  const monthMatch = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(value);
+  if (monthMatch) {
+    return new Intl.DateTimeFormat(locale, { month: "long", timeZone: "UTC", year: "numeric" }).format(
+      new Date(Date.UTC(Number(monthMatch[1]), Number(monthMatch[2]) - 1, 1))
+    );
+  }
+
+  if (/^\d{4}$/.test(value)) {
+    return new Intl.DateTimeFormat(locale, { timeZone: "UTC", year: "numeric" }).format(
+      new Date(Date.UTC(Number(value), 0, 1))
+    );
+  }
+
+  return value;
+}
+
+function parseDay(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
 }
 
 function shanghaiParts(value: Date) {
@@ -726,17 +777,27 @@ function wrappedHeatColor(intensity: number) {
   return "#ffd45a";
 }
 
-function emptyTitle(state: LoadState) {
-  if (state === "not-found") return "没有找到这个用户";
-  if (state === "error") return "Wrapped 加载失败";
-  return "这个周期还没点火";
+function translateLevel<T extends { id: string; name: string }>(level: T, dict: Dictionary): T {
+  const translated = dict.board.achievements.levels[level.id as keyof typeof dict.board.achievements.levels];
+  return translated ? { ...level, name: translated.name } : level;
 }
 
-function emptyDescription(state: LoadState, login: string, period: string, error: string) {
-  if (state === "not-found") return `当前后端没有 @${login || "该用户"} 的公开 token 记录。`;
-  if (state === "error") return error || "请稍后刷新再试。";
-  if (!login) return "请从公开主页或榜单进入，或在地址栏使用 /wrapped?login=github_login。";
-  return `@${login} 在 ${period} 暂时没有可生成 Wrapped 的记录。`;
+function translateBadge<T extends { description: string; id: string; name: string }>(badge: T, dict: Dictionary): T {
+  const translated = dict.board.achievements.badges[badge.id as keyof typeof dict.board.achievements.badges];
+  return translated ? { ...badge, description: translated.description, name: translated.name } : badge;
+}
+
+function emptyTitle(state: LoadState, copy: Dictionary["wrapped"]) {
+  if (state === "not-found") return copy.states.notFoundTitle;
+  if (state === "error") return copy.states.errorTitle;
+  return copy.states.emptyTitle;
+}
+
+function emptyDescription(state: LoadState, login: string, period: string, error: string, copy: Dictionary["wrapped"]) {
+  if (state === "not-found") return copy.states.notFoundDescription(login);
+  if (state === "error") return error || copy.states.errorDescription;
+  if (!login) return copy.states.missingLoginDescription;
+  return copy.states.emptyDescription(login, period);
 }
 
 function safeFileName(name: string) {

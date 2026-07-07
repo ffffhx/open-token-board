@@ -9,17 +9,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buildWeeklyReport, WeeklyReportCard, type WeeklyReport } from "@/components/share/weekly-report-card";
 import { EmptyStatePanel, Skeleton } from "@/components/token-leaderboard/shared-ui";
 import { normalizeApiBaseUrl } from "@/components/token-leaderboard/utils";
+import { useI18n } from "@/i18n";
 
 const VALID_RANGES = new Set(["1D", "7D", "30D", "90D", "WEEK", "MONTH", "LASTWEEK", "LASTMONTH"]);
 
 type LoadState = "loading" | "ready" | "empty" | "error";
 
 function safeFileName(name: string): string {
-  const cleaned = name.replace(/[^\w一-龥-]+/g, "_").replace(/^_+|_+$/g, "");
+  const cleaned = name.replace(/[^\w\p{Script=Han}-]+/gu, "_").replace(/^_+|_+$/g, "");
   return cleaned || "report";
 }
 
 export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
+  const { dict } = useI18n();
   const searchParams = useSearchParams();
   const user = searchParams.get("user") ?? undefined;
   const rangeParam = (searchParams.get("range") || "7D").toUpperCase();
@@ -46,7 +48,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       .then((payload) => {
         if (cancelled) return;
         const summary = payload.summary ?? (payload as TokenLeaderboardSummary);
-        const built = summary ? buildWeeklyReport(summary, user) : null;
+        const built = summary ? buildWeeklyReport(summary, user, dict.share.report) : null;
         if (built) {
           setReport(built);
           setState("ready");
@@ -60,7 +62,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     return () => {
       cancelled = true;
     };
-  }, [normalizedApiBaseUrl, range, user]);
+  }, [dict.share.report, normalizedApiBaseUrl, range, user]);
 
   const download = useCallback(async () => {
     if (!cardRef.current || !report) return;
@@ -72,13 +74,13 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       link.download = `token-report-${safeFileName(report.displayName)}.png`;
       link.href = dataUrl;
       link.click();
-      setHint("已生成图片，去下载里查看吧。");
+      setHint(dict.share.client.imageReady);
     } catch {
-      setHint("生成图片失败，可以直接对卡片截图。");
+      setHint(dict.share.client.imageFailed);
     } finally {
       setExporting(false);
     }
-  }, [report]);
+  }, [dict.share.client.imageFailed, dict.share.client.imageReady, report]);
 
   const copy = useCallback(async () => {
     if (!cardRef.current) return;
@@ -91,13 +93,13 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         throw new Error("clipboard unsupported");
       }
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setHint("已复制到剪贴板，直接粘贴到飞书/微信即可。");
+      setHint(dict.share.client.copied);
     } catch {
-      setHint("当前浏览器不支持复制图片，改用「保存为图片」。");
+      setHint(dict.share.client.copyUnsupported);
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [dict.share.client.copied, dict.share.client.copyUnsupported]);
 
   if (state === "ready" && report) {
     return (
@@ -112,7 +114,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             disabled={exporting}
             className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
-            {exporting ? "生成中…" : "保存为图片"}
+            {exporting ? dict.common.actions.generating : dict.share.client.saveImage}
           </button>
           <button
             type="button"
@@ -120,15 +122,15 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             disabled={exporting}
             className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
           >
-            复制图片
+            {dict.share.client.copyImage}
           </button>
         </div>
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="min-h-5 text-sm text-slate-600" aria-live="polite">
-            {hint || "导出后发到飞书、微信或群里，晒一晒你的战报。"}
+            {hint || dict.share.client.defaultHint}
           </p>
           <Link href="/board" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
-            查看完整榜单 →
+            {dict.share.client.fullBoard}
           </Link>
         </div>
       </>
@@ -137,7 +139,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   if (state === "loading") {
     return (
-      <div className="h-[560px] w-[420px] max-w-full rounded-lg" aria-label="加载战报中" role="status">
+      <div className="h-[560px] w-[420px] max-w-full rounded-lg" aria-label={dict.share.client.loadingAria} role="status">
         <Skeleton className="h-full w-full rounded-lg" />
       </div>
     );
@@ -146,14 +148,14 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   return (
     <div className="w-full max-w-xl">
       <EmptyStatePanel
-        title={state === "empty" ? "这张战报还没开打" : "暂时拿不到战报数据"}
-        description={state === "empty" ? "该用户在当前区间没有记录，换一个用户名或时间区间试试。" : "榜单后端不可达，稍后再试。"}
+        title={state === "empty" ? dict.share.client.emptyTitle : dict.share.client.errorTitle}
+        description={state === "empty" ? dict.share.client.emptyDescription : dict.share.client.errorDescription}
         action={
           <Link
             href="/board"
             className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
-            返回榜单
+            {dict.common.actions.backToBoard}
           </Link>
         }
       />

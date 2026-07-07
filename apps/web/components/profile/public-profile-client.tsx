@@ -17,24 +17,16 @@ import {
   formatUsd,
   normalizeApiBaseUrl,
 } from "@/components/token-leaderboard/utils";
+import { useI18n } from "@/i18n";
 
 import type { PublicProfileNamedUsage, PublicProfileResponse } from "./types";
 import { normalizeProfileLogin } from "./utils";
 
 type LoadState = "empty" | "error" | "loading" | "not-found" | "ready";
 
-const RANGE_LABELS = {
-  "1D": "24 小时",
-  "7D": "7 天",
-  "30D": "30 天",
-  "90D": "90 天",
-  week: "本周",
-  month: "本月",
-  lastweek: "上周",
-  lastmonth: "上月",
-};
-
 export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
+  const { dict } = useI18n();
+  const copy = dict.profile;
   const searchParams = useSearchParams();
   const requestedLogin = normalizeProfileLogin(searchParams.get("login") || searchParams.get("user"));
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
@@ -53,7 +45,7 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     if (!normalizedApiBaseUrl) {
       setProfile(null);
       setState("error");
-      setError("未配置 Token Board API，无法读取公开个人主页。");
+      setError(copy.errors.apiMissing);
       return;
     }
 
@@ -77,7 +69,7 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       })
       .then((payload) => {
         if (!isPublicProfileResponse(payload)) {
-          throw new Error("后端返回格式不正确");
+          throw new Error(copy.errors.invalidShape);
         }
 
         if (active) {
@@ -96,14 +88,14 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
           setError("");
         } else {
           setState("error");
-          setError(fetchError instanceof Error ? fetchError.message : "读取失败");
+          setError(fetchError instanceof Error ? fetchError.message : copy.errors.readFailed);
         }
       });
 
     return () => {
       active = false;
     };
-  }, [normalizedApiBaseUrl, requestedLogin]);
+  }, [copy.errors.apiMissing, copy.errors.invalidShape, copy.errors.readFailed, normalizedApiBaseUrl, requestedLogin]);
 
   return (
     <main className="mx-auto min-h-[100svh] max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8">
@@ -123,17 +115,17 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         <ProfileEmpty
           title={
             state === "empty"
-              ? "缺少 GitHub login"
+              ? copy.errors.emptyTitle
               : state === "not-found"
-                ? "没有找到这个用户的上报数据"
-                : "公开个人主页加载失败"
+                ? copy.errors.notFoundTitle
+                : copy.errors.loadFailedTitle
           }
           description={
             state === "empty"
-              ? "请从榜单用户名进入，或在地址栏使用 /u?login=github_login。"
+              ? copy.errors.emptyDescription
               : state === "not-found"
-                ? `当前后端没有 @${requestedLogin || "该用户"} 的公开 token 记录。`
-                : error || "请稍后刷新再试。"
+                ? copy.errors.notFoundDescription(requestedLogin || "")
+                : error || copy.errors.retryLater
           }
         />
       )}
@@ -142,6 +134,8 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 }
 
 function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile: PublicProfileResponse }) {
+  const { dict } = useI18n();
+  const profileCopy = dict.profile;
   const [shareVisible, setShareVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [hint, setHint] = useState("");
@@ -168,8 +162,8 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
 
   const showShareCard = useCallback(() => {
     setShareVisible(true);
-    setHint("分享卡已生成，可以保存为 PNG。");
-  }, []);
+    setHint(profileCopy.hints.shareReady);
+  }, [profileCopy.hints.shareReady]);
 
   const download = useCallback(async () => {
     if (!cardRef.current) return;
@@ -182,13 +176,13 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
       link.download = `token-profile-${safeFileName(profile.user.login)}.png`;
       link.href = dataUrl;
       link.click();
-      setHint("PNG 已生成。");
+      setHint(profileCopy.hints.pngReady);
     } catch {
-      setHint("生成图片失败，可以直接对分享卡截图。");
+      setHint(profileCopy.hints.pngFailed);
     } finally {
       setExporting(false);
     }
-  }, [profile.user.login]);
+  }, [profileCopy.hints.pngFailed, profileCopy.hints.pngReady, profile.user.login]);
 
   const copy = useCallback(async () => {
     if (!cardRef.current) return;
@@ -201,13 +195,13 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
         throw new Error("clipboard unsupported");
       }
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setHint("已复制图片。");
+      setHint(profileCopy.hints.imageCopied);
     } catch {
-      setHint("当前浏览器不支持复制图片，请改用保存 PNG。");
+      setHint(profileCopy.hints.imageCopyUnsupported);
     } finally {
       setExporting(false);
     }
-  }, []);
+  }, [profileCopy.hints.imageCopied, profileCopy.hints.imageCopyUnsupported]);
 
   const copyBadgeMarkdown = useCallback(async () => {
     const badgeUrl = `${apiBaseUrl}/api/badge?login=${encodeURIComponent(profile.user.login)}&style=weekly`;
@@ -216,11 +210,11 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
 
     try {
       await navigator.clipboard.writeText(markdown);
-      setHint("已复制徽章 Markdown。");
+      setHint(profileCopy.hints.badgeCopied);
     } catch {
-      setHint("当前浏览器不支持复制文本，请稍后重试。");
+      setHint(profileCopy.hints.textCopyUnsupported);
     }
-  }, [apiBaseUrl, pageUrl, profile.user.login]);
+  }, [apiBaseUrl, pageUrl, profile.user.login, profileCopy.hints.badgeCopied, profileCopy.hints.textCopyUnsupported]);
 
   return (
     <div className="space-y-5 py-6">
@@ -247,8 +241,8 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
                 {profile.user.displayName}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-500">
-                {profileData.joinedAt ? `加入统计 ${formatShortDate(profileData.joinedAt)}` : "等待更多统计"}
-                {profileData.lastReportedAt ? ` · 最近上报 ${formatShortDate(profileData.lastReportedAt)}` : ""}
+                {profileData.joinedAt ? profileCopy.header.joined(formatShortDate(profileData.joinedAt)) : profileCopy.header.waitingStats}
+                {profileData.lastReportedAt ? ` · ${profileCopy.header.lastReported(formatShortDate(profileData.lastReportedAt))}` : ""}
               </p>
             </div>
           </div>
@@ -261,9 +255,9 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
         <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <p className="text-sm text-slate-600">
-              主力模型 <span className="font-mono font-semibold text-slate-950">{topModel}</span>
+              {profileCopy.header.topModel} <span className="font-mono font-semibold text-slate-950">{topModel}</span>
               <span className="mx-2 text-slate-300">/</span>
-              常用工具 <span className="font-mono font-semibold text-slate-950">{topTool}</span>
+              {profileCopy.header.topTool} <span className="font-mono font-semibold text-slate-950">{topTool}</span>
             </p>
             <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
               <button
@@ -272,7 +266,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
                 className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <Icon name="download" />
-                生成分享卡
+                {profileCopy.header.generateShareCard}
               </button>
               <button
                 type="button"
@@ -280,13 +274,13 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-600/20 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-600/35 hover:bg-blue-50 hover:shadow-md"
               >
                 <Icon name="copy" />
-                复制徽章
+                {profileCopy.header.copyBadge}
               </button>
               <Link
                 href={`/wrapped/?login=${encodeURIComponent(profile.user.login)}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 hover:shadow-md"
               >
-                查看 Wrapped
+                {profileCopy.header.viewWrapped}
               </Link>
             </div>
           </div>
@@ -294,12 +288,12 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ProfileStat label="总消耗 Token" meta="加入以来" tone="ink" value={formatTokens(totals.tokens)} />
-        <ProfileStat label="估算费用" meta="非实际账单" tone="gold" value={formatUsd(totals.costUsd)} />
-        <ProfileStat label="活跃天数" meta={`${formatNumber(totals.records)} 条记录`} tone="green" value={`${formatNumber(totals.activeDays)}d`} />
+        <ProfileStat label={profileCopy.stats.totalTokens} meta={profileCopy.stats.sinceJoined} tone="ink" value={formatTokens(totals.tokens)} />
+        <ProfileStat label={profileCopy.stats.estimatedCost} meta={profileCopy.stats.notActualBill} tone="gold" value={formatUsd(totals.costUsd)} />
+        <ProfileStat label={profileCopy.stats.activeDays} meta={profileCopy.stats.records(formatNumber(totals.records))} tone="green" value={`${formatNumber(totals.activeDays)}d`} />
         <ProfileStat
-          label="会话数"
-          meta={`读缓存 ${formatPercent(cacheHitRate)} · 写 ${formatTokens(totals.cacheCreationInputTokens)}`}
+          label={profileCopy.stats.sessions}
+          meta={profileCopy.stats.cacheMeta(formatPercent(cacheHitRate), formatTokens(totals.cacheCreationInputTokens))}
           tone="blue"
           value={formatNumber(totals.sessions)}
         />
@@ -311,8 +305,8 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <BreakdownPanel title="模型分布" items={profileData.models} meta={`${profileData.models.length} 个模型`} />
-        <BreakdownPanel title="工具分布" items={profileData.tools} meta={`${profileData.tools.length} 个工具`} />
+        <BreakdownPanel title={profileCopy.sections.modelDistribution} items={profileData.models} meta={dict.common.units.models(formatNumber(profileData.models.length))} />
+        <BreakdownPanel title={profileCopy.sections.toolDistribution} items={profileData.tools} meta={dict.common.units.tools(formatNumber(profileData.tools.length))} />
       </div>
 
       {shareVisible ? (
@@ -336,7 +330,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
               className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:opacity-60"
             >
               {exporting ? <LoadingSpinner tone="light" /> : <Icon name="download" />}
-              保存 PNG
+              {exporting ? dict.common.actions.generating : dict.common.actions.savePng}
             </button>
             <button
               type="button"
@@ -344,7 +338,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
               disabled={exporting}
               className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 disabled:opacity-60"
             >
-              复制图片
+              {dict.common.actions.copyImage}
             </button>
             <p className="min-h-5 text-sm leading-6 text-slate-500" aria-live="polite">
               {hint}
@@ -357,9 +351,10 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
 }
 
 function RankBadge({ ranking }: { ranking: PublicProfileResponse["profile"]["rankings"][number] }) {
+  const { dict } = useI18n();
   return (
     <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 shadow-sm">
-      <p className="text-xs font-semibold text-slate-500">{RANGE_LABELS[ranking.range]}</p>
+      <p className="text-xs font-semibold text-slate-500">{dict.profile.ranges[ranking.range]}</p>
       <p className="mt-2 font-mono text-xl font-semibold text-slate-950">
         {ranking.rank ? `#${ranking.rank}` : "--"}
         <span className="ml-1 text-sm text-slate-400">/ {formatNumber(ranking.totalUsers)}</span>
@@ -401,18 +396,19 @@ function ProfileStat({
 }
 
 function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
+  const { dict, locale } = useI18n();
   const [hovered, setHovered] = useState<{ date: string; tokens: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const cells = useMemo(() => buildContributionCells(daily), [daily]);
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
-  const monthLabels = useMemo(() => buildMonthLabels(cells), [cells]);
+  const monthLabels = useMemo(() => buildMonthLabels(cells, locale), [cells, locale]);
   const cellSize = 11;
   const gap = 3;
   const left = 30;
   const top = 22;
   const width = left + 53 * (cellSize + gap) - gap;
   const height = top + 7 * (cellSize + gap) - gap;
-  const weekdays = ["", "周一", "", "周三", "", "周五", ""];
+  const weekdays = useMemo(() => weekdayLabels(locale), [locale]);
 
   useEffect(() => {
     const node = scrollRef.current;
@@ -425,16 +421,16 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
     <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold">年度贡献热力图</h2>
-          <p className="mt-1 text-xs text-slate-500">近 365 天 · Asia/Shanghai</p>
+          <h2 className="text-base font-semibold">{dict.profile.sections.heatmapTitle}</h2>
+          <p className="mt-1 text-xs text-slate-500">{dict.profile.sections.heatmapMeta}</p>
         </div>
         <div className="min-h-6 text-right font-mono text-xs text-slate-500">
-          {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : "少 → 多"}
+          {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : `${dict.profile.sections.less} → ${dict.profile.sections.more}`}
         </div>
       </div>
       <div ref={scrollRef} className="mt-4 max-w-full overflow-x-auto pb-1">
         <svg
-          aria-label="近 365 天 Token 用量热力图"
+          aria-label={dict.profile.sections.heatmapAria}
           className="block"
           height={height}
           role="img"
@@ -478,26 +474,27 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
         </svg>
       </div>
       <div className="mt-3 flex items-center justify-end gap-1.5 text-xs text-slate-500">
-        <span>少</span>
+        <span>{dict.profile.sections.less}</span>
         {[0, 1, 2, 3, 4].map((level) => (
           <span key={level} className="size-3 rounded-[3px] border border-slate-200" style={{ backgroundColor: heatColor(level) }} />
         ))}
-        <span>多</span>
+        <span>{dict.profile.sections.more}</span>
       </div>
     </section>
   );
 }
 
 function DailyUsageBars({ daily, peakDay }: { daily: TokenDailyUsagePoint[]; peakDay: TokenDailyUsagePoint | null }) {
+  const { dict } = useI18n();
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">近 30 天趋势</h2>
+          <h2 className="text-base font-semibold">{dict.profile.sections.last30Trend}</h2>
           <p className="mt-1 text-xs text-slate-500">
-            峰值 {peakDay ? `${peakDay.date.slice(5)} · ${formatTokens(peakDay.tokens)}` : "--"}
+            {dict.profile.sections.peak(peakDay ? `${peakDay.date.slice(5)} · ${formatTokens(peakDay.tokens)}` : "--")}
           </p>
         </div>
       </div>
@@ -531,6 +528,7 @@ function BreakdownPanel({
   meta: string;
   title: string;
 }) {
+  const { dict } = useI18n();
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -557,7 +555,7 @@ function BreakdownPanel({
           ))
         ) : (
           <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-            暂无数据
+            {dict.profile.sections.noData}
           </p>
         )}
       </div>
@@ -578,6 +576,7 @@ function ProfileShareCard({
   primaryRanking: PublicProfileResponse["profile"]["rankings"][number] | undefined;
   profile: PublicProfileResponse;
 }) {
+  const { dict } = useI18n();
   const totals = profile.profile.totals;
   const rankLabel = primaryRanking?.rank ? `#${primaryRanking.rank}` : "--";
 
@@ -593,25 +592,25 @@ function ProfileShareCard({
         </div>
         <div className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-right">
           <p className="font-mono text-3xl font-semibold text-amber-200">{rankLabel}</p>
-          <p className="text-xs text-amber-100/70">{primaryRanking ? RANGE_LABELS[primaryRanking.range] : "当前排名"}</p>
+          <p className="text-xs text-amber-100/70">{primaryRanking ? dict.profile.ranges[primaryRanking.range] : dict.profile.sections.currentRank}</p>
         </div>
       </header>
 
       <div className="mt-6 grid grid-cols-[minmax(0,1fr)_16rem] gap-5">
         <div>
-          <p className="text-xs font-semibold uppercase text-slate-400">累计消耗</p>
+          <p className="text-xs font-semibold uppercase text-slate-400">{dict.profile.sections.cumulativeUsage}</p>
           <p className="mt-2 font-mono text-5xl font-semibold leading-none">{formatTokens(totals.tokens)}</p>
           <p className="mt-2 text-sm text-slate-400">
-            {formatNumber(totals.sessions)} sessions · {formatNumber(totals.activeDays)} active days · {formatUsd(totals.costUsd)}
+            {dict.profile.share.sessionsActiveDaysCost(formatNumber(totals.sessions), formatNumber(totals.activeDays), formatUsd(totals.costUsd))}
           </p>
           <div className="mt-5 grid grid-cols-3 gap-2">
-            <ShareMetric label="主力模型" value={profile.profile.models[0]?.name ?? "--"} />
-            <ShareMetric label="常用工具" value={profile.profile.tools[0]?.name ?? "--"} />
-            <ShareMetric label="峰值日期" value={peakDay ? peakDay.date.slice(5) : "--"} />
+            <ShareMetric label={dict.profile.share.topModel} value={profile.profile.models[0]?.name ?? "--"} />
+            <ShareMetric label={dict.profile.share.topTool} value={profile.profile.tools[0]?.name ?? "--"} />
+            <ShareMetric label={dict.profile.share.peakDate} value={peakDay ? peakDay.date.slice(5) : "--"} />
           </div>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-          <p className="text-xs font-semibold text-slate-400">年度热力图</p>
+          <p className="text-xs font-semibold text-slate-400">{dict.profile.sections.shareHeatmap}</p>
           <div className="mt-3">
             <ContributionHeatmapMini daily={daily} />
           </div>
@@ -665,8 +664,9 @@ function ContributionHeatmapMini({ daily }: { daily: TokenDailyUsagePoint[] }) {
 }
 
 function ProfileLoading() {
+  const { dict } = useI18n();
   return (
-    <div className="space-y-5 py-6" role="status" aria-label="正在加载公开个人主页">
+    <div className="space-y-5 py-6" role="status" aria-label={dict.profile.sections.loadingAria}>
       <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-4">
           <Skeleton className="size-16 rounded-lg" />
@@ -688,6 +688,7 @@ function ProfileLoading() {
 }
 
 function ProfileEmpty({ description, title }: { description: string; title: string }) {
+  const { dict } = useI18n();
   return (
     <section className="mx-auto mt-10 max-w-2xl">
       <EmptyStatePanel
@@ -698,7 +699,7 @@ function ProfileEmpty({ description, title }: { description: string; title: stri
             href="/board"
             className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
-            返回榜单
+            {dict.common.actions.backToBoard}
           </Link>
         }
       />
@@ -753,10 +754,11 @@ function buildContributionCells(daily: TokenDailyUsagePoint[]): ContributionCell
   return cells;
 }
 
-function buildMonthLabels(cells: ContributionCell[]) {
+function buildMonthLabels(cells: ContributionCell[], locale: string) {
   const labels: Array<{ month: string; x: number }> = [];
   const seen = new Set<string>();
   const cellStep = 14;
+  const formatter = new Intl.DateTimeFormat(locale, { month: "short", timeZone: "UTC" });
 
   for (const cell of cells) {
     if (cell.weekday !== 0) {
@@ -775,12 +777,20 @@ function buildMonthLabels(cells: ContributionCell[]) {
 
     seen.add(monthKey);
     labels.push({
-      month: `${date.getUTCMonth() + 1}月`,
+      month: formatter.format(date),
       x: cell.week * cellStep,
     });
   }
 
   return labels;
+}
+
+function weekdayLabels(locale: string) {
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  return [null, 1, null, 3, null, 5, null].map((weekday) => {
+    if (weekday === null) return "";
+    return formatter.format(new Date(Date.UTC(2024, 0, weekday)));
+  });
 }
 
 function heatLevel(tokens: number, maxTokens: number) {
