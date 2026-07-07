@@ -54,6 +54,9 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       messages: 18,
       sessionId: "alice-recent-a",
       sessionTitle: "Board polish",
+      errorCount: 2,
+      interruptedCount: 0,
+      toolCallCount: 60,
     }),
     usageEvent("alice-recent-evening", identities.alice, {
       timestamp: clock.daysAgo(1, 21),
@@ -69,6 +72,9 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       messages: 9,
       sessionId: "alice-recent-b",
       sessionTitle: "Chart drilldown",
+      errorCount: 0,
+      interruptedCount: 0,
+      toolCallCount: 45,
     }),
     usageEvent("bob-current-month-base", identities.bob, {
       timestamp: currentMonthDay1,
@@ -84,6 +90,9 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       messages: 21,
       sessionId: "bob-month-a",
       sessionTitle: "Month opening migration",
+      errorCount: 6,
+      interruptedCount: 1,
+      toolCallCount: 80,
     }),
     usageEvent("cara-recent", identities.cara, {
       timestamp: clock.daysAgo(2, 15),
@@ -99,6 +108,9 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       messages: 14,
       sessionId: "cara-recent-a",
       sessionTitle: "Badge layout",
+      errorCount: 1,
+      interruptedCount: 0,
+      toolCallCount: 35,
     }),
     usageEvent("drew-recent-small", identities.drew, {
       timestamp: clock.daysAgo(3, 11),
@@ -215,6 +227,9 @@ function usageEvent(
     source: string;
     timestamp: Date;
     tool: string;
+    errorCount?: number;
+    interruptedCount?: number;
+    toolCallCount?: number;
   }
 ): TokenUsageEvent {
   return {
@@ -236,6 +251,9 @@ function usageEvent(
     messages: value.messages,
     sessionId: value.sessionId,
     sessionTitle: value.sessionTitle,
+    ...(value.errorCount === undefined ? {} : { errorCount: value.errorCount }),
+    ...(value.interruptedCount === undefined ? {} : { interruptedCount: value.interruptedCount }),
+    ...(value.toolCallCount === undefined ? {} : { toolCallCount: value.toolCallCount }),
   };
 }
 

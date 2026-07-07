@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { after, before, describe, it } from "node:test";
 
 import {
   evaluateTokenGoals,
   type TokenGoal,
 } from "../../packages/token-board-core/src/token-goals";
-import type { TokenUsageEvent } from "../../packages/token-board-core/src/token-leaderboard";
+import {
+  buildTokenLeaderboard,
+  type TokenUsageEvent,
+} from "../../packages/token-board-core/src/token-leaderboard";
+import { parseUsageFile } from "../../packages/token-board-core/src/token-usage-collector";
 import { startTokenBoardHarness, type TokenBoardHarness } from "../support/harness";
 
 let harness: TokenBoardHarness;
@@ -34,6 +41,8 @@ describe("usage stats", () => {
     assert.equal(typeof leader.level.current.name, "string");
     assert.ok(Array.isArray(leader.badges));
     assert.equal(typeof leader.personalBests.singleDay.tokens, "number");
+    assert.equal(typeof payload.summary.efficiency.qualifiedUsers.errorRate, "number");
+    assert.equal(typeof leader.efficiency.errorRate.status, "string");
   });
 
   it("covers calendar month range", async () => {
@@ -70,6 +79,8 @@ describe("account, public profile, and wrapped", () => {
     assert.ok(payload.profile.records > 0);
     assert.ok(payload.profile.config.rateLimits.available);
     assert.ok(Array.isArray(payload.profile.goals));
+    assert.equal(typeof payload.profile.efficiency.errorRate.status, "string");
+    assert.equal(typeof payload.profile.user.efficiency.tokensPerSession.status, "string");
   });
 
   it("guards /api/usage/goals and rejects invalid goals", async () => {
@@ -191,6 +202,112 @@ describe("goal evaluation", () => {
   });
 });
 
+describe("efficiency metrics", () => {
+  it("aggregates ready, insufficient, and legacy quality signals", () => {
+    const now = new Date("2026-07-08T04:00:00.000Z");
+    const events = [
+      ...qualitySessions("alice", now, { errorCount: 1, interruptedCount: 0, toolCallCount: 10 }),
+      ...qualitySessions("bob", now, { errorCount: 2, interruptedCount: (index) => (index < 2 ? 1 : 0), toolCallCount: 10 }),
+      qualityUsage("small", now, { errorCount: 1, interruptedCount: 0, toolCallCount: 20 }),
+      qualityUsage("legacy", now, {}),
+    ];
+    const summary = buildTokenLeaderboard(events, { range: "7D", metric: "tokens", now });
+    const alice = leaderboardUser(summary.users, "alice");
+    const bob = leaderboardUser(summary.users, "bob");
+    const small = leaderboardUser(summary.users, "small");
+    const legacy = leaderboardUser(summary.users, "legacy");
+
+    assert.equal(alice.efficiency.errorRate.status, "ready");
+    assert.equal(alice.efficiency.errorRate.value, 0.1);
+    assert.equal(alice.efficiency.errorRate.comparison, "lower");
+    assert.equal(bob.efficiency.errorRate.value, 0.2);
+    assert.ok(summary.efficiency.errorRateMedian !== null);
+    assert.ok(Math.abs(summary.efficiency.errorRateMedian - 0.15) < 1e-9);
+    assert.equal(alice.efficiency.interruptionRate.value, 0);
+    assert.equal(bob.efficiency.interruptionRate.value, 0.2);
+    assert.equal(small.efficiency.errorRate.status, "insufficient");
+    assert.equal(legacy.efficiency.errorRate.status, "no_data");
+  });
+
+  it("extracts Claude and Codex quality counters from transcript fixtures", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "open-token-board-quality-"));
+
+    try {
+      const claudePath = path.join(dir, "claude.jsonl");
+      await writeJsonl(claudePath, [
+        {
+          type: "assistant",
+          timestamp: "2026-07-08T01:00:00.000Z",
+          message: {
+            role: "assistant",
+            usage: { input_tokens: 100, output_tokens: 20 },
+            content: [{ type: "tool_result", is_error: true }],
+          },
+        },
+        {
+          type: "user",
+          timestamp: "2026-07-08T01:01:00.000Z",
+          message: { role: "user", content: "[Request interrupted by user]" },
+        },
+      ]);
+
+      const codexPath = path.join(dir, "codex.jsonl");
+      await writeJsonl(codexPath, [
+        {
+          type: "session_meta",
+          timestamp: "2026-07-08T02:00:00.000Z",
+          payload: { model: "gpt-5-codex", cwd: "/tmp/open-token-board" },
+        },
+        {
+          type: "event_msg",
+          timestamp: "2026-07-08T02:01:00.000Z",
+          payload: { type: "mcp_tool_call_end", result: { Ok: { isError: true } } },
+        },
+        {
+          type: "event_msg",
+          timestamp: "2026-07-08T02:02:00.000Z",
+          payload: { type: "turn_aborted" },
+        },
+        {
+          type: "event_msg",
+          timestamp: "2026-07-08T02:03:00.000Z",
+          payload: {
+            type: "token_count",
+            id: "codex-quality-session",
+            info: { last_token_usage: { input_tokens: 200, output_tokens: 30, total_tokens: 230 } },
+          },
+        },
+      ]);
+
+      const [claude] = await parseUsageFile(claudePath, {
+        displayName: "fixture-user",
+        filePath: claudePath,
+        source: "claude-code",
+        team: "Test",
+        tool: "Claude Code",
+        userId: "github:fixture-user",
+      });
+      const [codex] = await parseUsageFile(codexPath, {
+        displayName: "fixture-user",
+        filePath: codexPath,
+        source: "codex",
+        team: "Test",
+        tool: "Codex CLI",
+        userId: "github:fixture-user",
+      });
+
+      assert.equal(claude.errorCount, 1);
+      assert.equal(claude.toolCallCount, 1);
+      assert.equal(claude.interruptedCount, 1);
+      assert.equal(codex.errorCount, 1);
+      assert.equal(codex.toolCallCount, 1);
+      assert.equal(codex.interruptedCount, 1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("export and badge", () => {
   it("exports leaderboard csv with BOM and expected row count", async () => {
     const stats = await getJson(`/api/usage/stats?range=7D&metric=tokens&now=${nowParam()}`);
@@ -298,6 +415,11 @@ describe("ingest validation", () => {
     assert.equal(payload.ok, true);
     assert.equal(payload.accepted, 1);
   });
+
+  it("rejects invalid quality counters", async () => {
+    await assertIngestRejected([ingestEvent({ errorCount: 3, toolCallCount: 2 })]);
+    await assertIngestRejected([ingestEvent({ interruptedCount: 2 })]);
+  });
 });
 
 async function assertIngestRejected(events: unknown[]) {
@@ -382,6 +504,68 @@ function usage(id: string, timestamp: string, tokens: number, costUsd = 0): Toke
     costUsd,
     messages: 1,
   };
+}
+
+function qualitySessions(
+  user: string,
+  now: Date,
+  counts: {
+    errorCount: number | ((index: number) => number);
+    interruptedCount: number | ((index: number) => number);
+    toolCallCount: number | ((index: number) => number);
+  }
+) {
+  return Array.from({ length: 10 }, (_, index) =>
+    qualityUsage(user, new Date(now.getTime() - (index + 1) * 60_000), {
+      errorCount: valueAt(counts.errorCount, index),
+      interruptedCount: valueAt(counts.interruptedCount, index),
+      toolCallCount: valueAt(counts.toolCallCount, index),
+    })
+  );
+}
+
+function qualityUsage(
+  user: string,
+  timestamp: Date,
+  counts: Partial<Pick<TokenUsageEvent, "errorCount" | "interruptedCount" | "toolCallCount">>
+): TokenUsageEvent {
+  const tokens = 1_000;
+
+  return {
+    id: `${user}-${timestamp.getTime()}-${counts.toolCallCount ?? "legacy"}`,
+    userId: `github:${user}`,
+    displayName: user,
+    team: "Quality",
+    source: "codex",
+    model: "gpt-5-codex",
+    project: "quality",
+    tool: "Codex CLI",
+    timestamp: timestamp.toISOString(),
+    inputTokens: tokens,
+    cacheCreationInputTokens: 0,
+    cachedInputTokens: 0,
+    outputTokens: 0,
+    reasoningOutputTokens: 0,
+    totalTokens: tokens,
+    costUsd: 0,
+    messages: 1,
+    sessionId: `${user}-${timestamp.getTime()}`,
+    ...counts,
+  };
+}
+
+function valueAt(value: number | ((index: number) => number), index: number) {
+  return typeof value === "function" ? value(index) : value;
+}
+
+function leaderboardUser(users: ReturnType<typeof buildTokenLeaderboard>["users"], name: string) {
+  const user = users.find((item) => item.displayName === name);
+  assert.ok(user, `Expected leaderboard user ${name}`);
+  return user;
+}
+
+async function writeJsonl(filePath: string, records: unknown[]) {
+  await writeFile(filePath, `${records.map((record) => JSON.stringify(record)).join("\n")}\n`);
 }
 
 async function getJson(path: string, init?: RequestInit) {
