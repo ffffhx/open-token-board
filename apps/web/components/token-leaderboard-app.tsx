@@ -777,25 +777,25 @@ export function TokenLeaderboardApp({
                       />
                     </div>
                   </div>
-                  <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                  <div className="grid gap-2 rounded-lg border border-blue-600/15 bg-[var(--otb-energy-gradient-subtle)] p-2 shadow-sm sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                     <input
                       type="date"
                       value={customFrom}
                       onChange={(event) => setCustomFrom(event.target.value)}
-                      className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                      className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"
                       aria-label="自定义开始日期"
                     />
                     <input
                       type="date"
                       value={customTo}
                       onChange={(event) => setCustomTo(event.target.value)}
-                      className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                      className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"
                       aria-label="自定义结束日期"
                     />
                     <button
                       type="button"
                       onClick={applyCustomRange}
-                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+                      className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
                       自定义
                     </button>

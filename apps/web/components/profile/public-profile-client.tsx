@@ -259,33 +259,36 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
           </div>
         </div>
         <div className="border-t border-slate-200 bg-slate-50 px-5 py-4 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <p className="text-sm text-slate-600">
               主力模型 <span className="font-mono font-semibold text-slate-950">{topModel}</span>
               <span className="mx-2 text-slate-300">/</span>
               常用工具 <span className="font-mono font-semibold text-slate-950">{topTool}</span>
             </p>
-            <button
-              type="button"
-              onClick={showShareCard}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              <Icon name="download" />
-              生成分享卡
-            </button>
-            <button
-              type="button"
-              onClick={copyBadgeMarkdown}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-            >
-              复制徽章 Markdown
-            </button>
-            <Link
-              href={`/wrapped/?login=${encodeURIComponent(profile.user.login)}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
-            >
-              查看 Wrapped
-            </Link>
+            <div className="grid gap-2 sm:grid-cols-3 xl:min-w-[34rem]">
+              <button
+                type="button"
+                onClick={showShareCard}
+                className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <Icon name="download" />
+                生成分享卡
+              </button>
+              <button
+                type="button"
+                onClick={copyBadgeMarkdown}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-600/20 bg-white px-4 text-sm font-semibold text-blue-700 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-600/35 hover:bg-blue-50 hover:shadow-md"
+              >
+                <Icon name="copy" />
+                复制徽章
+              </button>
+              <Link
+                href={`/wrapped/?login=${encodeURIComponent(profile.user.login)}`}
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-300 hover:bg-amber-100 hover:shadow-md"
+              >
+                查看 Wrapped
+              </Link>
+            </div>
           </div>
         </div>
       </section>
