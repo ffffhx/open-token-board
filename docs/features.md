@@ -102,7 +102,7 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor，�
 | 方法 | 路径 | 参数 / Body | 鉴权要求 | 说明 |
 | --- | --- | --- | --- | --- |
 | `OPTIONS` | 任意路径 | 无 | 无 | CORS preflight。 |
-| `GET` | `/api/usage/health` | 无 | 无 | 服务状态、记录数、存储类型、计价 override 文件、未匹配模型、榜单快照状态。 |
+| `GET` | `/api/usage/health` | 无 | 无 | 服务状态、事件总数、存储后端、最近写入、JSON 备份状态、计价 override 文件、未匹配模型、榜单快照状态。 |
 | `POST` | `/api/internal/daily-report/run` | Query `kind=daily|weekly` | Bearer `TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN` | 手动触发飞书日报/周报；未配置 trigger token 时返回 404。 |
 | `GET` | `/api/usage/rate-limits` | Query `days`，最大 90 | 可选网页登录 | 有登录用户快照时返回该用户 Codex 快照，否则回退 API 服务所在机器。 |
 | `GET` | `/api/usage/claude-rate-limits` | 无 | 可选网页登录 | 有登录用户快照时返回 Claude Code 快照，否则 `available:false`。 |

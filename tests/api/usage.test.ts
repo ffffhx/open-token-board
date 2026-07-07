@@ -366,7 +366,13 @@ describe("rate limit and health", () => {
 
     assert.equal(payload.ok, true);
     assert.equal(payload.records, harness.fixture.events.length);
+    assert.equal(payload.eventsTotal, harness.fixture.events.length);
     assert.equal(payload.storage, "file");
+    assert.equal(payload.storageBackend.type, "file");
+    assert.equal(payload.storageBackend.eventCount, harness.fixture.events.length);
+    assert.equal(typeof payload.storageBackend.lastWriteAt, "string");
+    assert.equal(payload.storageBackend.backups.enabled, true);
+    assert.equal(typeof payload.storageBackend.backups.retained, "number");
     assert.equal(payload.snapshotShareStorage, "file");
     assert.equal(typeof payload.pricing.unmatchedModels.length, "number");
     assert.equal(typeof payload.leaderboardSnapshots.refreshing, "boolean");

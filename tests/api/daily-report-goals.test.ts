@@ -12,9 +12,11 @@ import {
 } from "../../packages/token-board-core/src/token-leaderboard";
 
 import {
+  buildDailyReportCard,
   buildReportStateSnapshot,
   buildWeeklyReportCard,
   detectDailyReportEvents,
+  type DailyQuotaAlertSection,
 } from "../../apps/token-board-api/src/daily-report";
 
 describe("daily report goal events", () => {
@@ -94,6 +96,55 @@ describe("weekly report goal scorecard", () => {
   });
 });
 
+describe("daily report quota alerts", () => {
+  it("renders quota alerts with remaining percent and eta", () => {
+    const card = buildDailyReportCard(dailySummary(), {
+      tzOffsetMinutes: 480,
+      quotaAlerts: quotaAlerts({
+        alerts: [
+          {
+            userId: "github:alice",
+            displayName: "alice",
+            remainingPercent: 8,
+            etaAt: "2026-07-08T12:30:00.000Z",
+            toolLabel: "Codex",
+          },
+        ],
+      }),
+    });
+    const text = JSON.stringify(card);
+
+    assert.match(text, /额度预警/);
+    assert.match(text, /alice/);
+    assert.match(text, /剩余 8%/);
+    assert.match(text, /预计 7\/8 20:30 耗尽/);
+  });
+
+  it("omits quota alert section when there are no alerts", () => {
+    const card = buildDailyReportCard(dailySummary(), {
+      tzOffsetMinutes: 480,
+      quotaAlerts: quotaAlerts(),
+    });
+
+    assert.doesNotMatch(JSON.stringify(card), /额度预警/);
+  });
+
+  it("renders stale quota snapshots separately without alerting", () => {
+    const card = buildDailyReportCard(dailySummary(), {
+      tzOffsetMinutes: 480,
+      quotaAlerts: quotaAlerts({
+        staleUsers: [{ userId: "github:bob", displayName: "bob", ageHours: 31 }],
+      }),
+    });
+    const text = JSON.stringify(card);
+
+    assert.match(text, /额度预警/);
+    assert.match(text, /数据过旧/);
+    assert.match(text, /bob 31h/);
+    assert.doesNotMatch(text, /剩余/);
+  });
+});
+
 function snapshot(events: TokenUsageEvent[], goal: TokenGoal | null, now: Date) {
   const dailySummary = buildTokenLeaderboard(events, { range: "1D", metric: "tokens", now });
   const weeklySummary = buildTokenLeaderboard(events, { range: "7D", metric: "tokens", now });
@@ -106,6 +157,23 @@ function snapshot(events: TokenUsageEvent[], goal: TokenGoal | null, now: Date) 
     dayKey: now.toISOString().slice(0, 10),
     goalEvaluationsByUser: new Map([["github:alice", evaluations]]),
   });
+}
+
+function dailySummary() {
+  return buildTokenLeaderboard([usage("daily-quota", "2026-07-08T02:00:00.000Z", 2_000)], {
+    range: "1D",
+    metric: "tokens",
+    now: new Date("2026-07-08T04:00:00.000Z"),
+  });
+}
+
+function quotaAlerts(value: Partial<DailyQuotaAlertSection> = {}): DailyQuotaAlertSection {
+  return {
+    thresholdPercent: 25,
+    alerts: [],
+    staleUsers: [],
+    ...value,
+  };
 }
 
 function tokenGoal(type: TokenGoal["type"], target: number, createdAt: string): TokenGoal {
