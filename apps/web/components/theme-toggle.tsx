@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { useI18n } from "@/i18n";
+
 type Theme = "light" | "dark";
 
 function applyTheme(theme: Theme) {
@@ -21,6 +23,7 @@ const DEFAULT_TONE =
   "border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:text-blue-700";
 
 export function ThemeToggle({ className }: { className?: string }) {
+  const { dict } = useI18n();
   const [theme, setTheme] = useState<Theme | null>(null);
 
   useEffect(() => {
@@ -57,8 +60,8 @@ export function ThemeToggle({ className }: { className?: string }) {
       onClick={toggle}
       role="switch"
       aria-checked={isDark}
-      aria-label={isDark ? "切换到亮色模式" : "切换到暗色模式"}
-      title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
+      aria-label={isDark ? dict.common.theme.toLight : dict.common.theme.toDark}
+      title={isDark ? dict.common.theme.toLight : dict.common.theme.toDark}
       className={[
         "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border transition hover:-translate-y-0.5 hover:shadow-sm",
         className ?? DEFAULT_TONE,

@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 
+import { LanguageToggle } from "@/components/language-toggle";
 import { usePrivateBenchmarkAccess } from "@/components/private-benchmark-access";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useI18n } from "@/i18n";
 
 type AppNavPage = "home" | "board" | "card" | "limits" | "bench";
 type AppNavTheme = "light" | "dark";
 
-const navItems: Array<{ key: AppNavPage; href: string; label: string }> = [
-  { key: "home", href: "/", label: "首页" },
-  { key: "board", href: "/board", label: "Token 榜单" },
-  { key: "card", href: "/card", label: "战报" },
-  { key: "limits", href: "/limits", label: "额度" },
-  { key: "bench", href: "/bench", label: "AI 评测" },
+const navItems: Array<{ key: AppNavPage; href: string }> = [
+  { key: "home", href: "/" },
+  { key: "board", href: "/board" },
+  { key: "card", href: "/card" },
+  { key: "limits", href: "/limits" },
+  { key: "bench", href: "/bench" },
 ];
 
 function classes(...values: Array<string | false | undefined>): string {
@@ -31,6 +33,7 @@ export function AppNavLinks({
   hideHome?: boolean;
   theme?: AppNavTheme;
 }) {
+  const { dict } = useI18n();
   const benchmarkAccess = usePrivateBenchmarkAccess();
   const visibleItems = navItems.filter((item) => {
     if (hideHome && item.key === "home") return false;
@@ -38,7 +41,7 @@ export function AppNavLinks({
   });
 
   return (
-    <nav aria-label="页面导航" className={classes("flex flex-wrap items-center gap-2", className)}>
+    <nav aria-label={dict.common.nav.ariaLabel} className={classes("flex flex-wrap items-center gap-2", className)}>
       {visibleItems.map((item) => {
         const isActive = item.key === active;
         return (
@@ -57,10 +60,17 @@ export function AppNavLinks({
                 "border border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm",
             )}
           >
-            {item.label}
+            {dict.common.nav[item.key]}
           </Link>
         );
       })}
+      <LanguageToggle
+        className={
+          theme === "dark"
+            ? "border-white/20 bg-white/10 text-slate-300 hover:border-white/30 hover:bg-white/15 hover:text-white"
+            : undefined
+        }
+      />
       <ThemeToggle
         className={
           theme === "dark"
