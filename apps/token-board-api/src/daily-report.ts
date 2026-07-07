@@ -2,8 +2,11 @@ import { createHmac } from "node:crypto";
 
 import {
   buildTokenAchievementSummariesByUser,
+  type TokenGoalEvaluation,
+  type TokenGoalType,
   type TokenAchievementBadge,
   type TokenLeaderboardSummary,
+  type WeeklyTokenGoalScorecard,
   type TokenUsageEvent,
 } from "@open-token-board/core";
 
@@ -63,10 +66,24 @@ export type ReportUserSnapshot = {
     daily?: number;
     weekly?: number;
   };
+  goals: ReportGoalSnapshot[];
+};
+
+export type ReportGoalSnapshot = {
+  id: string;
+  type: TokenGoalType;
+  target: number;
+  status: TokenGoalEvaluation["status"];
+  progress: number;
+  percent: number;
+  consecutiveSuccessCount: number;
+  unit: TokenGoalEvaluation["unit"];
+  windowKey: string;
+  windowEndAt: string;
 };
 
 export type DailyReportEvent = {
-  type: "pb" | "level" | "badge" | "overtake";
+  type: "pb" | "level" | "badge" | "overtake" | "goal";
   priority: number;
   content: string;
 };
@@ -189,9 +206,9 @@ export function buildDailyReportCard(
 export function buildWeeklyReportCard(
   summary: TokenLeaderboardSummary,
   previousSummary: TokenLeaderboardSummary,
-  options: { tzOffsetMinutes: number; siteUrl?: string; highlights?: WeeklyReportHighlight[] },
+  options: { tzOffsetMinutes: number; siteUrl?: string; highlights?: WeeklyReportHighlight[]; goalScorecard?: WeeklyTokenGoalScorecard },
 ): Record<string, unknown> {
-  const { tzOffsetMinutes, siteUrl, highlights = [] } = options;
+  const { tzOffsetMinutes, siteUrl, highlights = [], goalScorecard } = options;
   const start = formatDateLabel(summary.startAt, tzOffsetMinutes);
   const end = formatDateLabel(summary.endAt, tzOffsetMinutes);
   const dateRange = start && end ? (start === end ? end : `${start}–${end}`) : "";
@@ -221,6 +238,11 @@ export function buildWeeklyReportCard(
     { tag: "hr" },
     { tag: "div", text: { tag: "lark_md", content: `🔥 **本周荣誉**\n${formatWeeklyHighlightLines(highlights)}` } },
   ];
+
+  if (goalScorecard && goalScorecard.usersWithGoals > 0) {
+    elements.push({ tag: "hr" });
+    elements.push({ tag: "div", text: { tag: "lark_md", content: `🎯 **目标成绩单**\n${formatWeeklyGoalScorecard(goalScorecard)}` } });
+  }
 
   const topUsers = summary.users.slice(0, 5);
   if (topUsers.length) {
@@ -261,21 +283,23 @@ export function buildReportStateSnapshot({
   weeklySummary,
   generatedAt,
   dayKey,
+  goalEvaluationsByUser,
 }: {
   dailySummary: TokenLeaderboardSummary;
   weeklySummary: TokenLeaderboardSummary;
   generatedAt: string;
   dayKey: string;
+  goalEvaluationsByUser?: Map<string, TokenGoalEvaluation[]>;
 }): ReportStateSnapshot {
   const users = new Map<string, ReportUserSnapshot>();
 
   for (const user of weeklySummary.users) {
-    users.set(user.userId, snapshotUser(user, 0, undefined, user.rank));
+    users.set(user.userId, snapshotUser(user, 0, undefined, user.rank, goalEvaluationsByUser?.get(user.userId) ?? []));
   }
 
   for (const user of dailySummary.users) {
     const existing = users.get(user.userId);
-    users.set(user.userId, snapshotUser(user, user.tokens, user.rank, existing?.ranks.weekly));
+    users.set(user.userId, snapshotUser(user, user.tokens, user.rank, existing?.ranks.weekly, goalEvaluationsByUser?.get(user.userId) ?? []));
   }
 
   return {
@@ -298,6 +322,7 @@ export function detectDailyReportEvents(
   const pbEvents: DailyReportEvent[] = [];
   const levelEvents: DailyReportEvent[] = [];
   const badgeEvents: DailyReportEvent[] = [];
+  const goalEvents: DailyReportEvent[] = [];
   const overtakeEvents: DailyReportEvent[] = [];
 
   for (const user of current.users) {
@@ -338,6 +363,33 @@ export function detectDailyReportEvents(
         content: `🎖️ ${escapeMd(user.displayName)} 新点亮「${escapeMd(badge.icon ? `${badge.icon} ${badge.name}` : badge.name)}」`,
       });
     }
+
+    const priorGoals = new Map((prior.goals ?? []).map((goal) => [goal.id, goal]));
+    for (const goal of user.goals ?? []) {
+      const priorGoal = priorGoals.get(goal.id);
+      if (isDailyGoalType(goal.type) && goal.status === "achieved" && isGoalMilestone(goal.consecutiveSuccessCount)) {
+        if ((priorGoal?.consecutiveSuccessCount ?? 0) < goal.consecutiveSuccessCount) {
+          goalEvents.push({
+            type: "goal",
+            priority: 2_500 + goal.consecutiveSuccessCount,
+            content: `🎯 ${escapeMd(user.displayName)} 连续 ${goal.consecutiveSuccessCount} 天达成「${escapeMd(formatGoalName(goal.type, goal.target))}」目标`,
+          });
+        }
+      }
+
+      if (
+        goal.type === "weekly_tokens" &&
+        goal.status === "achieved" &&
+        priorGoal?.status !== "achieved" &&
+        Date.parse(goal.windowEndAt) > Date.parse(current.generatedAt)
+      ) {
+        goalEvents.push({
+          type: "goal",
+          priority: 2_400 + Math.min(100, goal.percent * 100),
+          content: `🎯 ${escapeMd(user.displayName)} 提前达成本周目标「${escapeMd(formatGoalName(goal.type, goal.target))}」`,
+        });
+      }
+    }
   }
 
   overtakeEvents.push(...detectOvertakeEvents(current, previous, "daily"));
@@ -347,6 +399,7 @@ export function detectDailyReportEvents(
     ...topEvents(pbEvents, 3),
     ...topEvents(levelEvents, 3),
     ...topEvents(badgeEvents, 3),
+    ...topEvents(goalEvents, 4),
     ...topEvents(overtakeEvents, 3),
   ].sort((left, right) => right.priority - left.priority);
 }
@@ -405,6 +458,7 @@ function snapshotUser(
   dailyTokens: number,
   dailyRank: number | undefined,
   weeklyRank: number | undefined,
+  goals: TokenGoalEvaluation[],
 ): ReportUserSnapshot {
   return {
     userId: user.userId,
@@ -428,6 +482,22 @@ function snapshotUser(
       ...(dailyRank ? { daily: dailyRank } : {}),
       ...(weeklyRank ? { weekly: weeklyRank } : {}),
     },
+    goals: goals.map(snapshotGoal),
+  };
+}
+
+function snapshotGoal(evaluation: TokenGoalEvaluation): ReportGoalSnapshot {
+  return {
+    id: evaluation.goal.id,
+    type: evaluation.goal.type,
+    target: evaluation.goal.target,
+    status: evaluation.status,
+    progress: evaluation.progress,
+    percent: evaluation.percent,
+    consecutiveSuccessCount: evaluation.consecutiveSuccessCount,
+    unit: evaluation.unit,
+    windowKey: evaluation.window.key,
+    windowEndAt: evaluation.window.endAt,
   };
 }
 
@@ -504,6 +574,18 @@ function formatWeeklyHighlightLines(highlights: WeeklyReportHighlight[]) {
   return highlights.map((event) => event.content).join("\n");
 }
 
+function formatWeeklyGoalScorecard(scorecard: WeeklyTokenGoalScorecard) {
+  const summary = `本周 ${scorecard.usersWithGoals} 人设置 ${scorecard.goalCount} 个目标：达成 ${scorecard.achievedGoals} 个，未达成 ${scorecard.failedGoals} 个${scorecard.pendingGoals ? `，进行中 ${scorecard.pendingGoals} 个` : ""}。`;
+  const userSummary = `达成全部目标 ${scorecard.achievedUsers} 人；有目标未达成 ${scorecard.failedUsers} 人。`;
+  const praise = scorecard.praise.length
+    ? `\n连续达成：${scorecard.praise
+        .map((item) => `${escapeMd(item.displayName)} 连续 ${item.consecutiveSuccessCount} 周「${escapeMd(formatGoalName(item.goal.type, item.goal.target))}」`)
+        .join("；")}`
+    : "";
+
+  return `${summary}\n${userSummary}${praise}`;
+}
+
 function formatWeeklyTrend(summary: TokenLeaderboardSummary, tzOffsetMinutes: number) {
   const points = summary.daily.slice(-7);
   const maxTokens = Math.max(...points.map((point) => point.tokens), 0);
@@ -546,6 +628,21 @@ function badgePriority(category: TokenAchievementBadge["category"], id: string) 
   if (category === "rhythm") return 60;
   if (category === "model") return 50;
   return 40;
+}
+
+function isDailyGoalType(type: TokenGoalType) {
+  return type === "daily_tokens" || type === "daily_streak";
+}
+
+function isGoalMilestone(value: number) {
+  return value === 3 || value === 7 || value === 14 || value === 30;
+}
+
+function formatGoalName(type: TokenGoalType, target: number) {
+  if (type === "daily_tokens") return `每日 ≥ ${formatCompact(target)}`;
+  if (type === "weekly_tokens") return `本周 ≥ ${formatCompact(target)}`;
+  if (type === "weekly_cost_cap") return `本周花费 ≤ ${formatUsd(target)}`;
+  return `连续活跃 ${Math.round(target)} 天`;
 }
 
 function topEvents<T extends { priority: number }>(events: T[], limit: number): T[] {

@@ -1,6 +1,7 @@
 import { benchmark } from "./benchmark";
 import { board } from "./board";
 import { common } from "./common";
+import { goals } from "./goals";
 import { landing } from "./landing";
 import { limits } from "./limits";
 import { profile } from "./profile";
@@ -11,6 +12,7 @@ export const zh = {
   benchmark,
   board,
   common,
+  goals,
   landing,
   limits,
   profile,

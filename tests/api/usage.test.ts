@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 
+import {
+  evaluateTokenGoals,
+  type TokenGoal,
+} from "../../packages/token-board-core/src/token-goals";
+import type { TokenUsageEvent } from "../../packages/token-board-core/src/token-leaderboard";
 import { startTokenBoardHarness, type TokenBoardHarness } from "../support/harness";
 
 let harness: TokenBoardHarness;
@@ -64,6 +69,64 @@ describe("account, public profile, and wrapped", () => {
     assert.equal(payload.user.githubLogin, harness.fixture.primaryLogin);
     assert.ok(payload.profile.records > 0);
     assert.ok(payload.profile.config.rateLimits.available);
+    assert.ok(Array.isArray(payload.profile.goals));
+  });
+
+  it("guards /api/usage/goals and rejects invalid goals", async () => {
+    const unauthorized = await request("/api/usage/goals");
+    assert.equal(unauthorized.status, 401);
+
+    const invalid = await request(`/api/usage/goals?now=${nowParam()}`, {
+      method: "PUT",
+      headers: {
+        cookie: harness.sessionCookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        goals: [
+          { type: "daily_tokens", target: 1000 },
+          { type: "weekly_tokens", target: 2000 },
+          { type: "weekly_cost_cap", target: 10 },
+          { type: "daily_streak", target: 3 },
+        ],
+      }),
+    });
+    const payload = await invalid.json();
+    assert.equal(invalid.status, 400);
+    assert.equal(payload.error, "Invalid goals");
+  });
+
+  it("saves goals and includes evaluated goals in /api/usage/me", async () => {
+    const saved = await getJson(`/api/usage/goals?now=${nowParam()}`, {
+      method: "PUT",
+      headers: {
+        cookie: harness.sessionCookie,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        goals: [
+          { type: "daily_tokens", target: 1_000 },
+          { type: "weekly_tokens", target: 1_000 },
+          { type: "weekly_cost_cap", target: 100 },
+        ],
+      }),
+    });
+
+    assert.equal(saved.goals.length, 3);
+    assert.equal(saved.evaluations[0].goal.type, "daily_tokens");
+    assert.equal(saved.evaluations[1].goal.type, "weekly_tokens");
+    assert.equal(saved.evaluations[2].status, "in_progress");
+
+    const goals = await getJson(`/api/usage/goals?now=${nowParam()}`, {
+      headers: { cookie: harness.sessionCookie },
+    });
+    assert.equal(goals.evaluations.length, 3);
+
+    const me = await getJson(`/api/usage/me?range=7D&now=${nowParam()}`, {
+      headers: { cookie: harness.sessionCookie },
+    });
+    assert.equal(me.profile.goals.length, 3);
+    assert.equal(me.profile.goals[0].goal.type, "daily_tokens");
   });
 
   it("returns public user 200 and 404", async () => {
@@ -90,6 +153,41 @@ describe("account, public profile, and wrapped", () => {
 
     const missing = await request(`/api/usage/wrapped?login=missing-token-user&period=${harness.fixture.currentMonthPeriod}`);
     assert.equal(missing.status, 404);
+  });
+});
+
+describe("goal evaluation", () => {
+  it("evaluates daily token and active streak chains in Asia/Shanghai", () => {
+    const now = new Date("2026-07-08T04:00:00.000Z");
+    const goals: TokenGoal[] = [
+      goal("daily_tokens", 1_000, "2026-07-06T00:00:00.000Z"),
+      goal("daily_streak", 3, "2026-07-06T00:00:00.000Z"),
+    ];
+    const events = [
+      usage("u-1", "2026-07-06T02:00:00.000Z", 1_200),
+      usage("u-2", "2026-07-07T02:00:00.000Z", 1_300),
+      usage("u-3", "2026-07-08T02:00:00.000Z", 1_400),
+    ];
+
+    const [daily, streak] = evaluateTokenGoals(goals, events, { now });
+
+    assert.equal(daily.status, "achieved");
+    assert.equal(daily.consecutiveSuccessCount, 3);
+    assert.equal(streak.status, "achieved");
+    assert.equal(streak.progress, 3);
+  });
+
+  it("fails weekly cost caps immediately after the cap is exceeded", () => {
+    const now = new Date("2026-07-08T04:00:00.000Z");
+    const [cap] = evaluateTokenGoals(
+      [goal("weekly_cost_cap", 10, "2026-07-06T00:00:00.000Z")],
+      [usage("cost-1", "2026-07-08T02:00:00.000Z", 1_000, 12)],
+      { now }
+    );
+
+    assert.equal(cap.status, "failed");
+    assert.equal(cap.progress, 12);
+    assert.equal(cap.unit, "week");
   });
 });
 
@@ -251,6 +349,38 @@ function ingestEvent(overrides: Record<string, unknown> = {}) {
     messages: 2,
     sessionId: `ingest-${ingestSequence}`,
     ...overrides,
+  };
+}
+
+function goal(type: TokenGoal["type"], target: number, createdAt: string): TokenGoal {
+  return {
+    id: `${type}-${target}`,
+    type,
+    target,
+    createdAt,
+    updatedAt: createdAt,
+  };
+}
+
+function usage(id: string, timestamp: string, tokens: number, costUsd = 0): TokenUsageEvent {
+  return {
+    id,
+    userId: "github:test-goals",
+    displayName: "test-goals",
+    team: "Test",
+    source: "codex",
+    model: "gpt-5-codex",
+    project: "goals",
+    tool: "Codex CLI",
+    timestamp,
+    inputTokens: tokens,
+    cacheCreationInputTokens: 0,
+    cachedInputTokens: 0,
+    outputTokens: 0,
+    reasoningOutputTokens: 0,
+    totalTokens: tokens,
+    costUsd,
+    messages: 1,
   };
 }
 

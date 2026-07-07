@@ -84,8 +84,8 @@ import {
   normalizeRemoteSummary,
 } from "./token-leaderboard/utils";
 
-// 模块级缓存：路由切换（榜单 ↔ 额度 ↔ 其它页面）会卸载本组件，但这两个 Map
-// 不随之销毁。切回来时先用缓存立即渲染，再在后台静默刷新，避免每次都从骨架屏重拉。
+// Module-level cache survives route switches so returning users see the last
+// loaded data immediately while a background refresh catches up.
 const statsCache = new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>();
 const accountCache = new Map<string, TokenAccountUsageProfile>();
 function statsCacheKey(base: string, rangeKey: string, metric: TokenBoardMetric): string {
@@ -170,7 +170,7 @@ export function TokenLeaderboardApp({
   const [appliedCustomRange, setAppliedCustomRange] = useState<AppliedCustomRange | null>(null);
   const isCustomRange = Boolean(appliedCustomRange);
   const statsRangeKey = isCustomRange ? customRangeKey(appliedCustomRange) : range;
-  // 首次渲染就读缓存：切回榜单时直接显示上次数据，而不是先闪一帧骨架屏。
+  // Seed the first render from cache to avoid flashing skeletons on return.
   const initialStats = statsCache.get(statsCacheKey(normalizedApiBaseUrl, statsRangeKey, metric)) ?? null;
   const [status, setStatus] = useState(
     initialStats
@@ -239,7 +239,7 @@ export function TokenLeaderboardApp({
     const cached = statsCache.get(cacheKey);
 
     if (cached) {
-      // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
+      // Show cached data immediately; the request below refreshes it silently.
       setRemoteSummary(cached.summary);
       setRemoteRecordCount(cached.records);
       setDataLoadState("ready");
@@ -284,7 +284,7 @@ export function TokenLeaderboardApp({
         setStatus(dict.board.status.backendRows(formatNumber(records ?? summary.users.length)));
       })
       .catch((error) => {
-        // 后台刷新失败时继续展示缓存数据，不打断用户
+        // Keep cached data visible if the background refresh fails.
         if (!active || statsCache.has(cacheKey)) {
           return;
         }
@@ -342,7 +342,7 @@ export function TokenLeaderboardApp({
     const cached = accountCache.get(cacheKey);
 
     if (cached) {
-      // 已加载过的区间先用缓存立即展示，下面的请求只做后台静默刷新
+      // Show cached data immediately; the request below refreshes it silently.
       setAccountProfile(cached);
       setAccountLoadState("ready");
       setAccountError("");
@@ -377,7 +377,7 @@ export function TokenLeaderboardApp({
         setAccountLoadState("ready");
       })
       .catch((error) => {
-        // 后台刷新失败时继续展示缓存数据，不打断用户
+        // Keep cached data visible if the background refresh fails.
         if (!active || accountCache.has(cacheKey)) {
           return;
         }
@@ -1002,6 +1002,7 @@ export function TokenLeaderboardApp({
         <RateLimitPanel apiBaseUrl={normalizedApiBaseUrl} />
 
         <AccountUsagePanel
+          apiBaseUrl={normalizedApiBaseUrl}
           apiEnabled={Boolean(normalizedApiBaseUrl)}
           error={accountError}
           loadState={accountLoadState}

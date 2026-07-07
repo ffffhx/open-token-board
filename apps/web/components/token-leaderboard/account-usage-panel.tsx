@@ -8,6 +8,9 @@ import {
   getTokenConsumptionTokens,
   type TokenAccountUsageProfile,
   type TokenBoardRange,
+  type TokenGoal,
+  type TokenGoalEvaluation,
+  type TokenGoalType,
 } from "@open-token-board/core";
 
 import { useI18n, type Dictionary } from "@/i18n";
@@ -40,6 +43,7 @@ const WEEKDAY_VALUE_TO_INDEX: Record<string, number> = {
 };
 
 export function AccountUsagePanel({
+  apiBaseUrl,
   apiEnabled,
   error,
   loadState,
@@ -49,6 +53,7 @@ export function AccountUsagePanel({
   range,
   viewer,
 }: {
+  apiBaseUrl: string;
   apiEnabled: boolean;
   error: string;
   loadState: AccountLoadState;
@@ -70,6 +75,11 @@ export function AccountUsagePanel({
   const accountTokensPerSession = user?.sessions ? accountConsumptionTokens / user.sessions : 0;
   const dashboardProfile = profile && user ? profile : null;
   const wrappedLogin = viewer?.user?.githubLogin || viewer?.user?.displayName || user?.displayName || "";
+  const [goalEvaluations, setGoalEvaluations] = useState<TokenGoalEvaluation[]>([]);
+
+  useEffect(() => {
+    setGoalEvaluations(profile?.goals ?? []);
+  }, [profile?.goals]);
 
   if (apiEnabled && viewer && !viewer.authenticated) {
     return (
@@ -208,6 +218,11 @@ export function AccountUsagePanel({
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
+          <AccountGoalsPanel
+            apiBaseUrl={apiBaseUrl}
+            goals={goalEvaluations}
+            onGoalsChange={setGoalEvaluations}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <AccountStatCard
@@ -389,6 +404,346 @@ function translateBadge(badge: TokenAccountUsageProfile["badges"][number], dict:
         name: translated.name,
       }
     : badge;
+}
+
+type GoalPayload = Partial<TokenGoal> & {
+  type: TokenGoalType;
+  target: number;
+};
+
+type GoalDraft = {
+  id: string | null;
+  target: string;
+  type: TokenGoalType;
+};
+
+const GOAL_TYPES: TokenGoalType[] = ["daily_streak", "daily_tokens", "weekly_tokens", "weekly_cost_cap"];
+const MAX_GOALS = 3;
+
+function AccountGoalsPanel({
+  apiBaseUrl,
+  goals,
+  onGoalsChange,
+}: {
+  apiBaseUrl: string;
+  goals: TokenGoalEvaluation[];
+  onGoalsChange: (goals: TokenGoalEvaluation[]) => void;
+}) {
+  const { dict } = useI18n();
+  const goalsDict = dict.goals;
+  const [draft, setDraft] = useState<GoalDraft>(() => emptyGoalDraft());
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const currentGoals = goals.map((item) => item.goal);
+  const canAdd = currentGoals.length < MAX_GOALS;
+
+  function startAdd(type: TokenGoalType, target: number) {
+    setDraft({ id: null, type, target: String(target) });
+    setError("");
+  }
+
+  function startEdit(goal: TokenGoal) {
+    setDraft({ id: goal.id, type: goal.type, target: String(goal.target) });
+    setError("");
+  }
+
+  async function saveDraft() {
+    if (!apiBaseUrl) {
+      setError(goalsDict.errors.apiMissing);
+      return;
+    }
+
+    const target = Number(draft.target);
+    if (!Number.isFinite(target) || target <= 0) {
+      setError(goalsDict.errors.invalidTarget);
+      return;
+    }
+
+    const nextGoal: GoalPayload = {
+      ...(currentGoals.find((goal) => goal.id === draft.id) ?? {}),
+      type: draft.type,
+      target,
+    };
+    const nextGoals = draft.id
+      ? currentGoals.map((goal) => (goal.id === draft.id ? nextGoal : goal))
+      : [...currentGoals, nextGoal];
+
+    await saveGoals(nextGoals);
+  }
+
+  async function applyTemplate(type: TokenGoalType, target: number) {
+    if (!canAdd) {
+      return;
+    }
+
+    await saveGoals([...currentGoals, { type, target }]);
+  }
+
+  async function deleteGoal(goalId: string) {
+    await saveGoals(currentGoals.filter((goal) => goal.id !== goalId));
+  }
+
+  async function saveGoals(nextGoals: GoalPayload[]) {
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/usage/goals`, {
+        method: "PUT",
+        cache: "no-store",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goals: nextGoals }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        errors?: string[];
+        evaluations?: TokenGoalEvaluation[];
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.errors?.[0] || payload.error || `HTTP ${response.status}`);
+      }
+
+      onGoalsChange(Array.isArray(payload.evaluations) ? payload.evaluations : []);
+      setDraft(emptyGoalDraft());
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : "";
+      setError(message && !/[\u4e00-\u9fff]/.test(message) ? message : goalsDict.errors.saveFailed);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-950">{goalsDict.title}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{goalsDict.description}</p>
+        </div>
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
+          {goalsDict.count(formatNumber(currentGoals.length), formatNumber(MAX_GOALS))}
+        </span>
+      </div>
+
+      {goals.length ? (
+        <div className="mt-4 space-y-3">
+          {goals.map((evaluation) => (
+            <GoalProgressRow
+              key={evaluation.goal.id}
+              evaluation={evaluation}
+              onDelete={() => void deleteGoal(evaluation.goal.id)}
+              onEdit={() => startEdit(evaluation.goal)}
+              saving={saving}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4">
+          <p className="text-sm font-medium text-slate-700">{goalsDict.emptyTitle}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void applyTemplate("daily_streak", 7)}
+              disabled={saving}
+              className="inline-flex min-h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {goalsDict.templates.dailyStreak}
+            </button>
+            <button
+              type="button"
+              onClick={() => void applyTemplate("weekly_tokens", 50_000_000)}
+              disabled={saving}
+              className="inline-flex min-h-9 items-center rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {goalsDict.templates.weeklyTokens}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canAdd || draft.id ? (
+        <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[minmax(10rem,0.9fr)_minmax(8rem,0.8fr)_auto] lg:items-end">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-500">{goalsDict.labels.type}</span>
+            <select
+              value={draft.type}
+              onChange={(event) => setDraft((value) => ({ ...value, type: event.target.value as TokenGoalType }))}
+              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            >
+              {GOAL_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {goalsDict.types[type].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-500">{goalsDict.labels.target}</span>
+            <div className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+              <input
+                type="number"
+                min="1"
+                step={draft.type === "weekly_cost_cap" ? "0.01" : "1"}
+                value={draft.target}
+                onChange={(event) => setDraft((value) => ({ ...value, target: event.target.value }))}
+                className="h-10 min-w-0 border-0 bg-transparent px-3 text-sm font-medium text-slate-900 outline-none"
+              />
+              <span className="flex items-center justify-center border-l border-slate-200 px-2 text-xs font-semibold text-slate-500">
+                {goalSuffix(draft.type, goalsDict)}
+              </span>
+            </div>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void saveDraft()}
+              disabled={saving || (!draft.id && !canAdd)}
+              className="inline-flex min-h-10 items-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? goalsDict.actions.saving : draft.id ? goalsDict.actions.saveChanges : goalsDict.actions.addGoal}
+            </button>
+            {draft.id ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(emptyGoalDraft());
+                  setError("");
+                }}
+                className="inline-flex min-h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              >
+                {goalsDict.actions.cancel}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function GoalProgressRow({
+  evaluation,
+  onDelete,
+  onEdit,
+  saving,
+}: {
+  evaluation: TokenGoalEvaluation;
+  onDelete: () => void;
+  onEdit: () => void;
+  saving: boolean;
+}) {
+  const { dict } = useI18n();
+  const goalsDict = dict.goals;
+  const tone = goalTone(evaluation);
+  const percent = Math.max(0, Math.min(100, Math.round(evaluation.percent * 100)));
+  const chainText = goalChainText(evaluation, goalsDict);
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">{formatGoalName(evaluation.goal, goalsDict)}</p>
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${goalStatusClass(evaluation.status)}`}>
+              {goalsDict.status[evaluation.status]}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">{goalProgressText(evaluation, goalsDict)}</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={saving}
+            className="inline-flex min-h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {goalsDict.actions.edit}
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={saving}
+            className="inline-flex min-h-8 items-center rounded-md border border-rose-200 bg-white px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {goalsDict.actions.delete}
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3">
+        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+          <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, percent)}%` }} />
+        </div>
+        <span className="text-right font-mono text-xs font-semibold text-slate-500">{percent}%</span>
+      </div>
+      <p className="mt-2 truncate text-xs text-slate-500" title={chainText}>
+        {chainText}
+      </p>
+    </div>
+  );
+}
+
+function emptyGoalDraft(): GoalDraft {
+  return { id: null, type: "daily_streak", target: "7" };
+}
+
+function goalSuffix(type: TokenGoalType, goalsDict: Dictionary["goals"]) {
+  return goalsDict.types[type].suffix;
+}
+
+function formatGoalName(goal: Pick<TokenGoal, "type" | "target">, goalsDict: Dictionary["goals"]) {
+  if (goal.type === "daily_tokens") return goalsDict.names.dailyTokens(formatTokens(goal.target));
+  if (goal.type === "weekly_tokens") return goalsDict.names.weeklyTokens(formatTokens(goal.target));
+  if (goal.type === "weekly_cost_cap") return goalsDict.names.weeklyCostCap(formatUsd(goal.target));
+  return goalsDict.names.dailyStreak(formatNumber(goal.target));
+}
+
+function goalProgressText(evaluation: TokenGoalEvaluation, goalsDict: Dictionary["goals"]) {
+  const window = formatGoalWindow(evaluation, goalsDict);
+
+  if (evaluation.goal.type === "weekly_cost_cap") {
+    return goalsDict.progress.generic(formatUsd(evaluation.progress), formatUsd(evaluation.target), window);
+  }
+
+  if (evaluation.goal.type === "daily_streak") {
+    return goalsDict.progress.dailyStreak(formatNumber(evaluation.progress), formatNumber(evaluation.target), window);
+  }
+
+  return goalsDict.progress.generic(formatTokens(evaluation.progress), formatTokens(evaluation.target), window);
+}
+
+function formatGoalWindow(evaluation: TokenGoalEvaluation, goalsDict: Dictionary["goals"]) {
+  return evaluation.unit === "week" ? goalsDict.window.week(evaluation.window.key) : goalsDict.window.day(evaluation.window.key);
+}
+
+function goalStatusClass(status: TokenGoalEvaluation["status"]) {
+  if (status === "achieved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "failed") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function goalTone(evaluation: TokenGoalEvaluation) {
+  if (evaluation.status === "achieved") return "bg-emerald-500";
+  if (evaluation.status === "failed") return "bg-rose-500";
+  if (evaluation.goal.type === "weekly_cost_cap" && evaluation.percent >= 0.8) return "bg-amber-500";
+  if (evaluation.percent >= 0.8) return "bg-emerald-500";
+  if (evaluation.percent >= 0.4) return "bg-amber-500";
+  return "bg-blue-600";
+}
+
+function goalChainText(evaluation: TokenGoalEvaluation, goalsDict: Dictionary["goals"]) {
+  if (evaluation.consecutiveSuccessCount <= 0) {
+    return goalsDict.chain.waiting;
+  }
+
+  return goalsDict.chain.success(formatNumber(evaluation.consecutiveSuccessCount), evaluation.unit);
 }
 
 function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {

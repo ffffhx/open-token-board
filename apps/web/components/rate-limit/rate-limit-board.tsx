@@ -64,9 +64,9 @@ interface TeamRateLimitReport {
   users: TeamRateLimitUser[];
 }
 
-// 模块级缓存：在路由切换（额度 ↔ 榜单 ↔ 其它页面）后仍保留上一次的额度快照。
-// 组件卸载时这里不会被清空，切回来时能立即用旧数据渲染，再在后台静默刷新，
-// 而不是每次都从空白 loading 重新拉取。
+// Module-level cache keeps the last quota snapshot across route switches.
+// Returning to the page can render cached data immediately while refreshing in
+// the background.
 const rateLimitReportCache = new Map<string, CodexRateLimitReport>();
 const teamRateLimitReportCache = new Map<string, TeamRateLimitReport>();
 function rateLimitCacheKey(base: string, endpoint: string): string {
@@ -322,7 +322,7 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
       return;
     }
     const cacheKey = rateLimitCacheKey(base, endpoint);
-    // 已有缓存时不回到 loading，保持旧数据展示直到新数据到达。
+    // Keep cached data visible until fresh data arrives.
     if (!rateLimitReportCache.has(cacheKey)) setState("loading");
     try {
       const res = await fetch(`${base}${endpoint}`, { cache: "no-store", credentials: "include" });
@@ -334,15 +334,15 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
       setState("ready");
       setError(null);
     } catch (err) {
-      // 已有缓存时后台刷新失败不打断展示，继续显示旧快照。
+      // Keep the old snapshot visible if a background refresh fails.
       if (rateLimitReportCache.has(cacheKey)) return;
       setState("error");
       setError(err instanceof Error ? err.message : dict.limits.status.requestFailed);
     }
   }, [base, dict.limits.status.apiMissing, dict.limits.status.requestFailed, endpoint, enabled]);
 
-  // 切换数据源（Codex ↔ Claude）时，用对应缓存立即回填；没缓存才回到 loading。
-  // 既避免把上一个工具的额度显示在新标题下，也避免每次都从空白重新加载。
+  // Switching sources seeds from the matching cache when possible, then falls
+  // back to loading only when that source has no cached data.
   useEffect(() => {
     if (!enabled) {
       setReport(null);
@@ -701,8 +701,8 @@ function TeamWindowBar({
 }
 
 /**
- * 嵌入式额度面板：用于 /board 个人区域。未登录、未安装 agent 或还没有
- * 额度快照时静默隐藏，避免给公开榜单的访客显示报错。
+ * Embedded quota panel for the personal area on /board. It stays hidden when
+ * auth, agent setup, or quota snapshots are unavailable.
  */
 export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
   const { dict } = useI18n();
@@ -831,8 +831,8 @@ function LimitEmptyExtra({ config, report }: { config: TabConfig; report: CodexR
 }
 
 /**
- * 全页额度面板：/limits 路由。Codex 与 Claude Code 合并为一个页面，用页内分段
- * 切换数据源。`initialTab` 让 /claude-limits 旧链接预选 Claude 标签。
+ * Full quota page for /limits. Codex and Claude Code share this page, and
+ * `initialTab` keeps the legacy /claude-limits link focused on Claude.
  */
 export function RateLimitBoard({
   apiBaseUrl,
@@ -848,8 +848,8 @@ export function RateLimitBoard({
   const personalData = useRateLimitReport(apiBaseUrl, config.endpoint, tab !== "team");
   const teamData = useTeamRateLimitReport(apiBaseUrl, tab === "team");
   const { report, state, error, now, base } = personalData;
-  // null = 尚未确定登录态；用它区分「未登录」与「已登录但还没有 agent 快照」，
-  // 避免给已登录用户显示误导性的「GitHub 登录」按钮。
+  // null means auth is still unknown, which keeps the UI from showing a
+  // misleading GitHub sign-in button to authenticated users with no snapshot.
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {

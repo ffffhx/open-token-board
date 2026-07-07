@@ -3,6 +3,8 @@ import {
   getTokenConsumptionTokens,
   type TokenAccountUsageProfile,
   type TokenBoardMetric,
+  type TokenGoal,
+  type TokenGoalEvaluation,
   type TokenLeaderboardSummary,
   type TokenLeaderboardUser,
 } from "@open-token-board/core";
@@ -300,6 +302,7 @@ export function normalizeRemoteAccountProfile(profile: TokenAccountUsageProfile)
     ...achievements,
     config: normalizeRemoteUserConfig(profile.config),
     daily: normalizeDailyUsageSeries(profile.daily),
+    goals: normalizeRemoteGoalEvaluations(profile.goals),
     sessions: Array.isArray(profile.sessions) ? profile.sessions.map(normalizeRemoteSession) : [],
     user: profile.user
       ? (() => {
@@ -343,6 +346,7 @@ export function normalizeRemoteUserConfig(config: TokenAccountUsageProfile["conf
   return {
     updatedAt: typeof config.updatedAt === "string" ? config.updatedAt : new Date().toISOString(),
     agent: config.agent,
+    goals: normalizeRemoteGoals(config.goals),
     codex: config.codex
       ? {
           model: typeof config.codex.model === "string" ? config.codex.model : undefined,
@@ -356,6 +360,67 @@ export function normalizeRemoteUserConfig(config: TokenAccountUsageProfile["conf
         }
       : undefined,
   };
+}
+
+function normalizeRemoteGoals(goals: unknown): TokenGoal[] | undefined {
+  if (!Array.isArray(goals)) {
+    return undefined;
+  }
+
+  return goals.flatMap((goal) => {
+    if (!goal || typeof goal !== "object" || Array.isArray(goal)) {
+      return [];
+    }
+
+    const record = goal as Partial<TokenGoal>;
+    if (
+      typeof record.id !== "string" ||
+      typeof record.type !== "string" ||
+      typeof record.target !== "number" ||
+      !Number.isFinite(record.target)
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        id: record.id,
+        type: record.type,
+        target: record.target,
+        createdAt: typeof record.createdAt === "string" ? record.createdAt : new Date().toISOString(),
+        updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : new Date().toISOString(),
+      } as TokenGoal,
+    ];
+  });
+}
+
+function normalizeRemoteGoalEvaluations(goals: unknown): TokenGoalEvaluation[] {
+  if (!Array.isArray(goals)) {
+    return [];
+  }
+
+  return goals.flatMap((evaluation) => {
+    if (!evaluation || typeof evaluation !== "object" || Array.isArray(evaluation)) {
+      return [];
+    }
+
+    const record = evaluation as TokenGoalEvaluation;
+    const normalizedGoals = normalizeRemoteGoals([record.goal]);
+    if (!normalizedGoals?.length) {
+      return [];
+    }
+
+    return [
+      {
+        ...record,
+        goal: normalizedGoals[0],
+        progress: finiteNumberOrZero(record.progress),
+        target: finiteNumberOrZero(record.target),
+        percent: Math.max(0, Math.min(1, finiteNumberOrZero(record.percent))),
+        consecutiveSuccessCount: finiteNumberOrZero(record.consecutiveSuccessCount),
+      },
+    ];
+  });
 }
 
 export function normalizeRemoteSession(session: TokenAccountUsageProfile["sessions"][number]): TokenAccountUsageProfile["sessions"][number] {

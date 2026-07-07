@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   description: zh.common.metadata.claudeLimitsDescription,
 };
 
-// 旧链接 /claude-limits 保留可用：复用合并后的额度面板，默认预选 Claude Code 标签。
+// Keep the legacy /claude-limits URL working by preselecting Claude Code.
 export default function ClaudeLimitsPage() {
   return (
     <RateLimitBoard

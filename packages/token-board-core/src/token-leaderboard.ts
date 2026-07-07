@@ -1,4 +1,5 @@
 import type { CodexRateLimitReport } from "./codex-rate-limits";
+import type { TokenGoal, TokenGoalEvaluation } from "./token-goals";
 import {
   buildEmptyTokenAchievementSummary,
   buildTokenAchievementSummariesByUser,
@@ -241,6 +242,7 @@ export type TokenBoardUserConfig = {
   rateLimits?: CodexRateLimitReport;
   /** Claude Code 订阅额度(来自状态栏快照,复用 Codex 报告结构)。 */
   claudeCodeRateLimits?: CodexRateLimitReport;
+  goals?: TokenGoal[];
 };
 
 export type TokenUsageActivityCell = {
@@ -274,6 +276,7 @@ export type TokenAccountUsageProfile = {
   topHour: string;
   topWeekday: string;
   config: TokenBoardUserConfig | null;
+  goals: TokenGoalEvaluation[];
 };
 
 export type TokenLeaderboardWindow = {
@@ -573,6 +576,7 @@ export function buildTokenAccountUsageProfile(
     topHour: topActivityHour(accountEntries),
     topWeekday: topActivityWeekday(accountEntries),
     config: null,
+    goals: [],
   };
 }
 
