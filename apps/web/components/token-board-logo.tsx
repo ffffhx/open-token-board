@@ -17,7 +17,14 @@ export function TokenBoardLogoMark({
       viewBox="0 0 64 64"
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect width="64" height="64" rx="16" fill="#2563EB" />
+      <defs>
+        <linearGradient id="otb-logo-energy" x1="8" x2="56" y1="8" y2="58" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#2F5BFF" />
+          <stop offset=".52" stopColor="#8A3FFC" />
+          <stop offset="1" stopColor="#00B8D9" />
+        </linearGradient>
+      </defs>
+      <rect width="64" height="64" rx="16" fill="url(#otb-logo-energy)" />
       <path
         d="M23 20h16c7.2 0 13 5.8 13 13s-5.8 13-13 13H23"
         stroke="#FFFFFF"
@@ -26,7 +33,7 @@ export function TokenBoardLogoMark({
       />
       <path
         d="M24 25l-8 8 8 8"
-        stroke="#BFDBFE"
+        stroke="#DCE7FF"
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth="6"

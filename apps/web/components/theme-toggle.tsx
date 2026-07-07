@@ -60,7 +60,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label={isDark ? "切换到亮色模式" : "切换到暗色模式"}
       title={isDark ? "切换到亮色模式" : "切换到暗色模式"}
       className={[
-        "inline-flex min-h-10 min-w-10 items-center justify-center rounded-lg border transition",
+        "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border transition hover:-translate-y-0.5 hover:shadow-sm",
         className ?? DEFAULT_TONE,
       ].join(" ")}
     >

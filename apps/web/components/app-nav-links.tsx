@@ -47,13 +47,14 @@ export function AppNavLinks({
             href={item.href}
             aria-current={isActive ? "page" : undefined}
             className={classes(
-              "inline-flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-semibold transition",
-              theme === "dark" && isActive && "border border-white/20 bg-white/10 text-white",
+              "relative inline-flex min-h-11 items-center justify-center rounded-lg px-3 text-sm font-semibold transition",
+              isActive && "after:absolute after:inset-x-3 after:bottom-1 after:h-0.5 after:rounded-full after:bg-current",
+              theme === "dark" && isActive && "border border-white/20 bg-white/10 text-white shadow-sm",
               theme === "dark" && !isActive && "text-slate-300 hover:bg-white/10 hover:text-white",
-              theme === "light" && isActive && "border border-blue-200 bg-blue-50 text-blue-700",
+              theme === "light" && isActive && "border border-blue-200 bg-blue-50 text-blue-700 shadow-sm",
               theme === "light" &&
                 !isActive &&
-                "border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700",
+                "border border-slate-200 bg-white text-slate-600 hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm",
             )}
           >
             {item.label}

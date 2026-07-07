@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ToastState } from "./types";
 
 export function Toast({ toast }: { toast: ToastState | null }) {
@@ -7,15 +9,15 @@ export function Toast({ toast }: { toast: ToastState | null }) {
 
   const tone =
     toast.tone === "error"
-      ? "border-red-600/40 bg-red-50 text-red-900 shadow-sm ring-red-600/10"
-      : "border-blue-600/40 bg-blue-50 text-blue-900 shadow-sm ring-blue-600/10";
+      ? "border-red-600/40 bg-red-50 text-red-900 shadow-sm ring-red-600/10 dark:border-red-400/35 dark:bg-red-950/80 dark:text-red-100"
+      : "border-blue-600/40 bg-blue-50 text-blue-900 shadow-sm ring-blue-600/10 dark:border-blue-300/35 dark:bg-blue-950/80 dark:text-blue-100";
 
   return (
     <div
       key={toast.id}
       role="status"
       aria-live="polite"
-      className={`pointer-events-none fixed left-1/2 top-1/2 z-[100] flex min-h-12 min-w-[11rem] max-w-[min(15rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-lg border px-4 py-3 text-center text-sm font-semibold leading-5 ring-4 backdrop-blur-xl ${tone}`}
+      className={`otb-toast-pop pointer-events-none fixed left-1/2 top-5 z-[100] flex min-h-12 min-w-[11rem] max-w-[min(18rem,calc(100vw-2rem))] -translate-x-1/2 items-center justify-center rounded-lg border px-4 py-3 text-center text-sm font-semibold leading-5 ring-4 backdrop-blur-xl ${tone}`}
     >
       {toast.message}
     </div>
@@ -48,8 +50,70 @@ export function Skeleton({ className = "" }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-block rounded-md bg-slate-200/80 motion-safe:animate-pulse ${className}`}
+      className={`otb-skeleton inline-block rounded-md ${className}`}
     />
+  );
+}
+
+export function EmptyStateIllustration({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      viewBox="0 0 180 132"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M31 90c10-27 23-41 40-42 13-1 21 7 31 5 10-3 14-18 29-17 14 1 25 16 28 36"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="7"
+        opacity=".12"
+      />
+      <rect
+        height="54"
+        rx="12"
+        stroke="currentColor"
+        strokeWidth="3"
+        width="116"
+        x="32"
+        y="54"
+        opacity=".28"
+      />
+      <path d="M52 88h24M52 75h42M104 75h24" stroke="currentColor" strokeLinecap="round" strokeWidth="5" opacity=".34" />
+      <path
+        d="M116 98c10-2 18-11 19-23"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeWidth="5"
+        opacity=".34"
+      />
+      <path d="M88 39l9-17 9 17 18 7-18 7-9 17-9-17-18-7 18-7Z" fill="currentColor" opacity=".13" />
+      <path d="M97 22v48M70 46h54" stroke="currentColor" strokeLinecap="round" strokeWidth="3" opacity=".3" />
+      <circle cx="44" cy="38" r="4" fill="currentColor" opacity=".18" />
+      <circle cx="142" cy="43" r="5" fill="currentColor" opacity=".16" />
+      <circle cx="139" cy="113" r="3" fill="currentColor" opacity=".2" />
+    </svg>
+  );
+}
+
+export function EmptyStatePanel({
+  action,
+  description,
+  title,
+}: {
+  action?: ReactNode;
+  description: ReactNode;
+  title: string;
+}) {
+  return (
+    <div className="otb-panel-muted rounded-lg px-5 py-8 text-center text-slate-600 dark:text-slate-300">
+      <EmptyStateIllustration className="mx-auto h-28 w-40 text-blue-600 dark:text-blue-300" />
+      <p className="mt-2 text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+      {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
+    </div>
   );
 }
 
@@ -91,9 +155,12 @@ export function Avatar({ name, index }: { name: string; index: number }) {
   );
 }
 
-export function Icon({ name }: { name: "close" | "download" | "file" | "github" | "guide" | "logout" | "refresh" | "terminal" | "upload" }) {
+export function Icon({ name }: { name: "arrow" | "check" | "close" | "copy" | "download" | "file" | "github" | "guide" | "logout" | "refresh" | "terminal" | "upload" }) {
   const paths = {
+    arrow: "M5 12h14m0 0-5-5m5 5-5 5",
+    check: "m5 12 4 4L19 6",
     close: "M18 6 6 18M6 6l12 12",
+    copy: "M8 8h10v12H8V8Zm-4 8V4h10",
     download: "M12 3v10m0 0 4-4m-4 4-4-4M5 17v2h14v-2",
     file: "M7 3h7l4 4v14H7V3Zm7 0v5h5",
     github:

@@ -1,13 +1,48 @@
 @import "tailwindcss";
 
+@theme {
+  --color-otb-page: var(--page);
+  --color-otb-surface: var(--surface);
+  --color-otb-surface-muted: var(--surface-muted);
+  --color-otb-ink: var(--ink);
+  --color-otb-muted: var(--muted);
+  --color-otb-energy: var(--otb-energy);
+  --color-otb-energy-strong: var(--otb-energy-strong);
+  --color-otb-energy-soft: var(--otb-energy-soft);
+  --radius-otb-card: var(--otb-radius-card);
+  --radius-otb-control: var(--otb-radius-control);
+  --shadow-otb-card: var(--otb-shadow-card);
+  --shadow-otb-lift: var(--otb-shadow-lift);
+}
+
 :root {
   color-scheme: light;
   --surface: #ffffff;
-  --surface-muted: #f8fafc;
-  --page: #eef2f7;
-  --ink: #0f172a;
-  --muted: #64748b;
-  --accent: #2563eb;
+  --surface-muted: #f5f7fb;
+  --page: #edf2f8;
+  --ink: #0b1220;
+  --muted: #4b5870;
+  --accent: #2f5bff;
+  --otb-energy: #2f5bff;
+  --otb-energy-strong: #8a3ffc;
+  --otb-energy-cyan: #00b8d9;
+  --otb-energy-soft: #e7edff;
+  --otb-energy-gradient: linear-gradient(135deg, #2f5bff 0%, #8a3ffc 52%, #00b8d9 100%);
+  --otb-energy-gradient-subtle: linear-gradient(135deg, rgba(47, 91, 255, 0.12), rgba(138, 63, 252, 0.1) 52%, rgba(0, 184, 217, 0.12));
+  --otb-gold: #b86b00;
+  --otb-gold-soft: #fff4cc;
+  --otb-silver: #607086;
+  --otb-silver-soft: #eef3f8;
+  --otb-bronze: #a4571c;
+  --otb-bronze-soft: #fff0e4;
+  --otb-border: rgba(11, 18, 32, 0.1);
+  --otb-border-strong: rgba(11, 18, 32, 0.16);
+  --otb-shadow-card: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --otb-shadow-lift: 0 22px 55px rgba(47, 91, 255, 0.16);
+  --otb-radius-card: 0.5rem;
+  --otb-radius-control: 0.625rem;
+  --otb-transition-duration: 180ms;
+  --otb-transition-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /*
@@ -137,8 +172,24 @@
   --surface-muted: oklch(13.5% 0.02 256);
   --page: oklch(11% 0.015 256);
   --ink: oklch(96% 0.005 247);
-  --muted: oklch(60% 0.03 257);
-  --accent: oklch(70.7% 0.165 254.624);
+  --muted: oklch(73% 0.034 257);
+  --accent: oklch(72% 0.18 266);
+  --otb-energy: oklch(72% 0.18 266);
+  --otb-energy-strong: oklch(73% 0.2 302);
+  --otb-energy-cyan: oklch(78% 0.16 205);
+  --otb-energy-soft: oklch(24% 0.08 268);
+  --otb-energy-gradient: linear-gradient(135deg, oklch(72% 0.18 266) 0%, oklch(73% 0.2 302) 52%, oklch(78% 0.16 205) 100%);
+  --otb-energy-gradient-subtle: linear-gradient(135deg, oklch(72% 0.18 266 / 0.18), oklch(73% 0.2 302 / 0.14) 52%, oklch(78% 0.16 205 / 0.16));
+  --otb-gold: oklch(84% 0.16 82);
+  --otb-gold-soft: oklch(25% 0.075 70);
+  --otb-silver: oklch(75% 0.035 250);
+  --otb-silver-soft: oklch(24% 0.025 255);
+  --otb-bronze: oklch(76% 0.13 55);
+  --otb-bronze-soft: oklch(24% 0.055 50);
+  --otb-border: oklch(98% 0.004 247 / 0.12);
+  --otb-border-strong: oklch(98% 0.004 247 / 0.2);
+  --otb-shadow-card: 0 18px 45px rgba(0, 0, 0, 0.26);
+  --otb-shadow-lift: 0 22px 55px oklch(72% 0.18 266 / 0.16);
 }
 
 html {
@@ -206,6 +257,138 @@ summary:focus-visible {
 
 ::selection {
   background: rgba(37, 99, 235, 0.18);
+}
+
+:where(.font-mono, .otb-number, [data-number]) {
+  font-variant-numeric: tabular-nums;
+}
+
+:where(button, a, [role="button"], [role="tab"], [role="radio"]) {
+  transition-duration: var(--otb-transition-duration);
+  transition-timing-function: var(--otb-transition-ease);
+}
+
+.otb-panel {
+  border: 1px solid var(--otb-border);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--otb-shadow-card);
+}
+
+.otb-panel-muted {
+  border: 1px solid var(--otb-border);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--surface-muted) 92%, transparent), color-mix(in srgb, var(--surface) 94%, transparent));
+}
+
+.otb-card-hover {
+  transition:
+    transform var(--otb-transition-duration) var(--otb-transition-ease),
+    box-shadow var(--otb-transition-duration) var(--otb-transition-ease),
+    border-color var(--otb-transition-duration) var(--otb-transition-ease),
+    background-color var(--otb-transition-duration) var(--otb-transition-ease);
+}
+
+.otb-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--otb-shadow-lift);
+}
+
+.otb-energy-text {
+  background: var(--otb-energy-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.otb-energy-bg {
+  background: var(--otb-energy-gradient);
+}
+
+.otb-energy-bar {
+  background: var(--otb-energy-gradient);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--otb-energy) 35%, transparent);
+}
+
+.otb-stat-number {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.otb-stat-unit {
+  color: var(--muted);
+  font-size: 0.45em;
+  font-weight: 700;
+}
+
+.otb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+}
+
+.otb-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--surface) 72%, transparent), transparent);
+  animation: otb-shimmer 1.35s infinite;
+}
+
+.otb-leader-breathe {
+  animation: otb-leader-breathe 2.8s var(--otb-transition-ease) infinite;
+}
+
+.otb-toast-pop {
+  animation: otb-toast-pop 180ms var(--otb-transition-ease);
+}
+
+@keyframes otb-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes otb-leader-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--otb-gold) 28%, transparent), 0 12px 34px rgba(184, 107, 0, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--otb-gold) 46%, transparent), 0 18px 44px rgba(184, 107, 0, 0.18);
+  }
+}
+
+@keyframes otb-toast-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -0.25rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .otb-card-hover:hover {
+    transform: none;
+  }
 }
 
 .token-trend-segment,
