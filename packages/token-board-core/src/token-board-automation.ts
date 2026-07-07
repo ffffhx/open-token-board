@@ -378,7 +378,7 @@ export function isTokenBoardRange(value: string): value is TokenBoardRange {
 }
 
 export function isTokenBoardMetric(value: string): value is TokenBoardMetric {
-  return value === "tokens" || value === "cost" || value === "sessions" || value === "messages";
+  return value === "tokens" || value === "cost" || value === "sessions" || value === "messages" || value === "users";
 }
 
 function stableTokenEventId(event: TokenUsageEvent) {

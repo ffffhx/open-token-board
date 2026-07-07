@@ -117,7 +117,7 @@ let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
 const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
-const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages"];
+const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages", "users"];
 const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const PUBLIC_PROFILE_DAILY_DAYS = 365;
 const PUBLIC_PROFILE_TOP_LIMIT = 8;
