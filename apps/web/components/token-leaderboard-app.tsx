@@ -793,10 +793,10 @@ export function TokenLeaderboardApp({
                   <strong className="text-stone-900">数据截至</strong>：{latestReportedAt(summary) ? `${formatShortDate(latestReportedAt(summary))}（最后一条上报）` : "当前区间暂无上报数据"}。
                 </p>
                 <p>
-                  <strong className="text-stone-900">费用是估算值</strong>：按公开模型单价计算，不等同于账号额度或实际账单。
+                  <strong className="text-stone-900">费用是估算值</strong>：按 input、output、cache write、cache read 四分类公开单价计算，不等同于账号额度或实际账单。
                 </p>
                 <p>
-                  <strong className="text-stone-900">Token 主口径</strong>：总消耗 Token = 输入上下文（input）+ 输出 Token；缓存命中是输入上下文的子集，推理 token 在个人视图单独展开。
+                  <strong className="text-stone-900">Token 主口径</strong>：总消耗 Token = 输入上下文（input）+ 输出 Token；cache read 和 cache write 都是输入上下文的子项，单独展示但不额外加总，推理 token 在个人视图单独展开。
                 </p>
                 <p>
                   <strong className="text-stone-900">隐私边界</strong>：只展示 token、模型、工具、项目 basename 与会话短标题，不展示完整 prompt 文本。

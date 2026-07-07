@@ -121,11 +121,14 @@ export function getUserMetricValue(user: TokenLeaderboardUser, metric: TokenBoar
 
 export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric: TokenBoardMetric): TokenLeaderboardSummary {
   const users = summary.users
-    .map((user) => ({
-      ...user,
-      daily: normalizeDailyUsageSeries(user.daily),
-      tokens: getTokenConsumptionTokens(user),
-    }))
+    .map((user) => {
+      const normalizedUser = normalizeRemoteLeaderboardUser(user);
+      return {
+        ...normalizedUser,
+        daily: normalizeDailyUsageSeries(normalizedUser.daily),
+        tokens: getTokenConsumptionTokens(normalizedUser),
+      };
+    })
     .sort((left, right) => getUserMetricValue(right, metric) - getUserMetricValue(left, metric) || left.displayName.localeCompare(right.displayName))
     .map((user, index) => ({ ...user, rank: index + 1 }));
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
@@ -179,12 +182,31 @@ export function normalizeRemoteAccountProfile(profile: TokenAccountUsageProfile)
     daily: normalizeDailyUsageSeries(profile.daily),
     sessions: Array.isArray(profile.sessions) ? profile.sessions.map(normalizeRemoteSession) : [],
     user: profile.user
-      ? {
-          ...profile.user,
-          daily: normalizeDailyUsageSeries(profile.user.daily),
-          tokens: getTokenConsumptionTokens(profile.user),
-        }
+      ? (() => {
+          const normalizedUser = normalizeRemoteLeaderboardUser(profile.user);
+          return {
+            ...normalizedUser,
+            daily: normalizeDailyUsageSeries(normalizedUser.daily),
+            tokens: getTokenConsumptionTokens(normalizedUser),
+          };
+        })()
       : null,
+  };
+}
+
+function normalizeRemoteLeaderboardUser(user: TokenLeaderboardUser): TokenLeaderboardUser {
+  return {
+    ...user,
+    inputTokens: finiteNumberOrZero(user.inputTokens),
+    cacheCreationInputTokens: finiteNumberOrZero(user.cacheCreationInputTokens),
+    cachedInputTokens: finiteNumberOrZero(user.cachedInputTokens),
+    outputTokens: finiteNumberOrZero(user.outputTokens),
+    reasoningOutputTokens: finiteNumberOrZero(user.reasoningOutputTokens),
+    costUsd: finiteNumberOrZero(user.costUsd),
+    sessions: finiteNumberOrZero(user.sessions),
+    messages: finiteNumberOrZero(user.messages),
+    records: finiteNumberOrZero(user.records),
+    activeDays: finiteNumberOrZero(user.activeDays),
   };
 }
 
@@ -217,6 +239,7 @@ export function normalizeRemoteSession(session: TokenAccountUsageProfile["sessio
     title: typeof session.title === "string" && session.title.trim() ? session.title.trim() : undefined,
     tokens: Number.isFinite(session.tokens) ? session.tokens : 0,
     inputTokens: Number.isFinite(session.inputTokens) ? session.inputTokens : 0,
+    cacheCreationInputTokens: Number.isFinite(session.cacheCreationInputTokens) ? session.cacheCreationInputTokens : 0,
     cachedInputTokens: Number.isFinite(session.cachedInputTokens) ? session.cachedInputTokens : 0,
     outputTokens: Number.isFinite(session.outputTokens) ? session.outputTokens : 0,
     reasoningOutputTokens: Number.isFinite(session.reasoningOutputTokens) ? session.reasoningOutputTokens : 0,
@@ -231,6 +254,10 @@ export function normalizeRemoteSession(session: TokenAccountUsageProfile["sessio
 
 export function finiteNumberOrUndefined(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function finiteNumberOrZero(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 export function formatMetricValue(value: number, metric: TokenBoardMetric) {
