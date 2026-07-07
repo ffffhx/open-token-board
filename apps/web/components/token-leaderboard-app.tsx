@@ -533,7 +533,7 @@ export function TokenLeaderboardApp({
       </div>
       <div className="hidden overflow-x-auto sm:block">
         <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
-          <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500 dark:bg-slate-900 dark:text-slate-400">
+          <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
               <th className="px-4 py-3">排名</th>
               <th className="px-4 py-3">用户</th>
@@ -645,7 +645,7 @@ export function TokenLeaderboardApp({
   );
 
   return (
-    <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8 dark:text-slate-50">
+    <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8">
       <div className="space-y-4">
         <header className="otb-panel overflow-hidden rounded-lg px-5 py-5 sm:px-6 lg:px-7">
           <div className="space-y-5">

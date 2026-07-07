@@ -375,6 +375,7 @@ function ProfileStat({
 
 function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
   const [hovered, setHovered] = useState<{ date: string; tokens: number } | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const cells = useMemo(() => buildContributionCells(daily), [daily]);
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
   const monthLabels = useMemo(() => buildMonthLabels(cells), [cells]);
@@ -386,8 +387,15 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
   const height = top + 7 * (cellSize + gap) - gap;
   const weekdays = ["", "周一", "", "周三", "", "周五", ""];
 
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (node) {
+      node.scrollLeft = node.scrollWidth;
+    }
+  }, [cells.length]);
+
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold">年度贡献热力图</h2>
@@ -397,7 +405,7 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
           {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : "少 → 多"}
         </div>
       </div>
-      <div className="mt-4 overflow-x-auto pb-1">
+      <div ref={scrollRef} className="mt-4 max-w-full overflow-x-auto pb-1">
         <svg
           aria-label="近 365 天 Token 用量热力图"
           className="block"

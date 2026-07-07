@@ -154,14 +154,14 @@ export function SegmentedControl({
 
   return (
     <div
-      className="relative grid w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1 shadow-inner dark:border-slate-700 dark:bg-slate-900"
+      className="relative grid w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1 shadow-inner"
       role="radiogroup"
       aria-label={label}
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
       <span
         aria-hidden="true"
-        className="absolute bottom-1 top-1 z-0 rounded-lg bg-white shadow-sm transition-transform dark:bg-slate-800"
+        className="absolute bottom-1 top-1 z-0 rounded-lg bg-white shadow-sm transition-transform"
         style={{
           left: "0.25rem",
           width: `calc((100% - 0.5rem) / ${items.length})`,
@@ -180,10 +180,10 @@ export function SegmentedControl({
           onClick={() => onChange(item.key)}
           className={`relative z-10 min-h-11 rounded-lg px-2 text-sm font-semibold transition ${
             value === item.key
-              ? "text-slate-950 dark:text-slate-50"
+              ? "text-slate-950"
               : item.disabled
                 ? "cursor-not-allowed text-slate-400"
-                : "text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+                : "text-slate-600 hover:text-slate-950"
           }`}
         >
           {item.label}
@@ -209,14 +209,14 @@ export function StatTile({
   tone: "ink" | "mint" | "blue" | "gold";
 }) {
   const tones = {
-    ink: "border-slate-950 bg-slate-950 text-white dark:border-slate-700 dark:bg-slate-900",
-    mint: "border-blue-600/20 bg-blue-50 text-blue-900 dark:border-blue-400/25 dark:bg-blue-950/40 dark:text-blue-100",
-    blue: "border-sky-600/18 bg-sky-50 text-sky-900 dark:border-sky-400/25 dark:bg-sky-950/40 dark:text-sky-100",
-    gold: "border-amber-600/18 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-950/40 dark:text-amber-100",
+    ink: "border-slate-950 bg-slate-950 text-white",
+    mint: "border-blue-600/20 bg-blue-50 text-blue-900",
+    blue: "border-sky-600/18 bg-sky-50 text-sky-900",
+    gold: "border-amber-600/18 bg-amber-50 text-amber-900",
   };
   const className = `otb-card-hover min-h-32 rounded-lg border p-4 text-left shadow-sm transition ${
     tones[tone]
-  } ${active ? "ring-2 ring-blue-600/35 ring-offset-2 ring-offset-white dark:ring-blue-300/30 dark:ring-offset-slate-950" : ""}`;
+  } ${active ? "ring-2 ring-blue-600/35 ring-offset-2 ring-offset-white" : ""}`;
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -362,9 +362,9 @@ export function DailyTokenTrendChart({
                 title={`${segment.label}：点击高亮，再次点击隐藏；隐藏后点击恢复`}
                 className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
                   isHidden
-                    ? "border-slate-200 bg-slate-50 text-slate-400 line-through dark:border-slate-800 dark:bg-slate-900"
+                    ? "border-slate-200 bg-slate-50 text-slate-400 line-through"
                     : isFocused
-                      ? "border-blue-600/35 bg-blue-50 text-blue-900 shadow-sm dark:border-blue-300/35 dark:bg-blue-950/40 dark:text-blue-100"
+                      ? "border-blue-600/35 bg-blue-50 text-blue-900 shadow-sm"
                       : focusedKey
                         ? "border-stone-950/10 bg-white text-stone-500 opacity-65 hover:opacity-100"
                         : "border-stone-950/10 bg-white text-stone-700 hover:border-blue-600/25 hover:bg-blue-50"
@@ -388,7 +388,7 @@ export function DailyTokenTrendChart({
       ) : null}
 
       <div
-        className="relative rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(47,91,255,0.06),transparent)] px-2 pb-3 pt-4 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(96,165,250,0.08),transparent)]"
+        className="relative rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(47,91,255,0.06),transparent)] px-2 pb-3 pt-4 dark:bg-[linear-gradient(180deg,rgba(96,165,250,0.08),transparent)]"
         onMouseLeave={() => setHoveredPointIndex(null)}
       >
         <svg
@@ -533,7 +533,7 @@ export function DailyTokenTrendChart({
         {hoveredPoint ? (
           <div
             role="tooltip"
-            className={`pointer-events-none absolute top-2 z-30 min-w-[12rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-100 shadow-sm backdrop-blur dark:border-blue-300/20 dark:bg-slate-950/95 dark:text-slate-50 ${hoverAlignClass}`}
+            className={`pointer-events-none absolute top-2 z-30 min-w-[12rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-100 shadow-sm backdrop-blur ${hoverAlignClass}`}
             style={{ left: `${hoveredX}%` }}
             data-token-trend-tooltip={hoveredPoint.date}
           >
@@ -896,35 +896,35 @@ export function SortableColumnHeader({
 function rankVisual(rank: number) {
   if (rank === 1) {
     return {
-      badgeClass: "border-amber-500/45 bg-[linear-gradient(135deg,var(--otb-gold-soft),#ffffff)] text-amber-900 dark:bg-[linear-gradient(135deg,var(--otb-gold-soft),rgba(15,23,42,0.92))] dark:text-amber-100",
+      badgeClass: "border-amber-500/45 bg-[linear-gradient(135deg,var(--otb-gold-soft),#ffffff)] text-amber-900 dark:bg-[linear-gradient(135deg,var(--otb-gold-soft),rgba(15,23,42,0.92))]",
       mobileCardClass: "otb-leader-breathe border-amber-500/35 bg-[linear-gradient(135deg,rgba(255,244,204,0.95),rgba(255,255,255,0.88))] dark:bg-[linear-gradient(135deg,rgba(120,75,10,0.3),rgba(15,23,42,0.94))]",
-      modelClass: "border-amber-500/30 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-950/40 dark:text-amber-100",
+      modelClass: "border-amber-500/30 bg-amber-50 text-amber-900",
       rowClass: "otb-leader-breathe bg-[linear-gradient(90deg,rgba(255,244,204,0.7),transparent_62%)] dark:bg-[linear-gradient(90deg,rgba(120,75,10,0.22),transparent_62%)]",
     };
   }
 
   if (rank === 2) {
     return {
-      badgeClass: "border-slate-400/40 bg-[linear-gradient(135deg,var(--otb-silver-soft),#ffffff)] text-slate-700 dark:bg-[linear-gradient(135deg,var(--otb-silver-soft),rgba(15,23,42,0.92))] dark:text-slate-100",
+      badgeClass: "border-slate-400/40 bg-[linear-gradient(135deg,var(--otb-silver-soft),#ffffff)] text-slate-700 dark:bg-[linear-gradient(135deg,var(--otb-silver-soft),rgba(15,23,42,0.92))]",
       mobileCardClass: "border-slate-300/60 bg-[linear-gradient(135deg,rgba(238,243,248,0.92),rgba(255,255,255,0.86))] dark:bg-[linear-gradient(135deg,rgba(75,85,99,0.24),rgba(15,23,42,0.94))]",
-      modelClass: "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100",
+      modelClass: "border-slate-300 bg-slate-50 text-slate-700",
       rowClass: "bg-[linear-gradient(90deg,rgba(238,243,248,0.72),transparent_58%)] dark:bg-[linear-gradient(90deg,rgba(75,85,99,0.2),transparent_58%)]",
     };
   }
 
   if (rank === 3) {
     return {
-      badgeClass: "border-orange-500/35 bg-[linear-gradient(135deg,var(--otb-bronze-soft),#ffffff)] text-orange-900 dark:bg-[linear-gradient(135deg,var(--otb-bronze-soft),rgba(15,23,42,0.92))] dark:text-orange-100",
+      badgeClass: "border-orange-500/35 bg-[linear-gradient(135deg,var(--otb-bronze-soft),#ffffff)] text-orange-900 dark:bg-[linear-gradient(135deg,var(--otb-bronze-soft),rgba(15,23,42,0.92))]",
       mobileCardClass: "border-orange-300/55 bg-[linear-gradient(135deg,rgba(255,240,228,0.92),rgba(255,255,255,0.86))] dark:bg-[linear-gradient(135deg,rgba(124,58,18,0.24),rgba(15,23,42,0.94))]",
-      modelClass: "border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-500/30 dark:bg-orange-950/35 dark:text-orange-100",
+      modelClass: "border-orange-300 bg-orange-50 text-orange-900",
       rowClass: "bg-[linear-gradient(90deg,rgba(255,240,228,0.72),transparent_58%)] dark:bg-[linear-gradient(90deg,rgba(124,58,18,0.2),transparent_58%)]",
     };
   }
 
   return {
-    badgeClass: "border-stone-950/10 bg-white text-stone-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300",
-    mobileCardClass: "border-stone-950/10 bg-white dark:border-white/10 dark:bg-slate-950",
-    modelClass: "border-stone-950/10 bg-slate-50 text-stone-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200",
+    badgeClass: "border-stone-950/10 bg-white text-stone-500",
+    mobileCardClass: "border-stone-950/10 bg-white",
+    modelClass: "border-stone-950/10 bg-slate-50 text-stone-700",
     rowClass: "",
   };
 }
@@ -963,13 +963,13 @@ export function LeaderboardMobileCard({
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700 dark:text-slate-50 dark:group-hover/profile-link:text-blue-300">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
         </Link>
         <div className="shrink-0 text-right">
-          <p className="otb-stat-number font-mono text-xl font-black text-stone-950 dark:text-slate-50">{metricValue}</p>
+          <p className="otb-stat-number font-mono text-xl font-black text-stone-950">{metricValue}</p>
           <p className="text-xs text-stone-500">{metricLabel} ↓</p>
         </div>
       </div>
@@ -1007,7 +1007,7 @@ function MetricMini({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-stone-500">{label}</p>
-      <p className="otb-stat-number mt-1 truncate font-mono font-black text-stone-900 dark:text-slate-50" title={value}>{value}</p>
+      <p className="otb-stat-number mt-1 truncate font-mono font-black text-stone-900" title={value}>{value}</p>
     </div>
   );
 }
@@ -1247,7 +1247,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
   const rankStyle = rankVisual(user.rank);
 
   return (
-    <tr className={`transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-900/70 ${rankStyle.rowClass}`}>
+    <tr className={`transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm ${rankStyle.rowClass}`}>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1.5">
           <span className={`inline-flex justify-center rounded-full border px-2 py-1 font-mono text-xs font-black ${rankStyle.badgeClass} ${user.rank === 1 ? "min-w-12 text-sm" : "min-w-10"}`}>
@@ -1266,7 +1266,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700 dark:text-slate-50 dark:group-hover/profile-link:text-blue-300">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
@@ -1277,12 +1277,12 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           <DailyUsageSparkline fixedWidth daily={daily} label={`${user.displayName} 用量趋势`} range={range} />
         </td>
       ) : null}
-      <td className="otb-stat-number px-4 py-3 text-right font-mono text-base font-black text-stone-950 dark:text-slate-50" title={cacheBreakdownTitle}>
+      <td className="otb-stat-number px-4 py-3 text-right font-mono text-base font-black text-stone-950" title={cacheBreakdownTitle}>
         {formatTokens(consumptionTokens)}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatUsd(user.costUsd)}</td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatNumber(user.sessions)}</td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatNumber(user.activeDays)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatUsd(user.costUsd)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.activeDays)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${rankStyle.modelClass}`}>
@@ -1312,7 +1312,7 @@ function LevelSymbol({ level }: { level: TokenLeaderboardUser["level"] }) {
 
   return (
     <span
-      className="inline-flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold leading-none dark:bg-slate-950/30"
+      className="inline-flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold leading-none"
       style={{
         backgroundColor: `${current.color}18`,
         borderColor: `${current.color}55`,
@@ -1334,7 +1334,7 @@ function RankDeltaBadge({
 }) {
   if (previousRank === null) {
     return (
-      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500">
         新上榜
       </span>
     );
@@ -1342,7 +1342,7 @@ function RankDeltaBadge({
 
   if (!rankDelta) {
     return (
-      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500">
         持平
       </span>
     );
@@ -1354,8 +1354,8 @@ function RankDeltaBadge({
     <span
       className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold ${
         isUp
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
-          : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300"
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+          : "border-red-200 bg-red-50 text-red-700"
       }`}
       title={`上一周期 #${previousRank}`}
     >

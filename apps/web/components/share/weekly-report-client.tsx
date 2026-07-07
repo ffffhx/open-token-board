@@ -102,7 +102,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   if (state === "ready" && report) {
     return (
       <>
-        <div ref={cardRef} className="w-fit">
+        <div ref={cardRef} className="w-full max-w-[420px]">
           <WeeklyReportCard report={report} />
         </div>
         <div className="flex flex-wrap items-center justify-center gap-2">

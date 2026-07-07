@@ -343,6 +343,24 @@ summary:focus-visible {
   animation: otb-toast-pop 180ms var(--otb-transition-ease);
 }
 
+.otb-fixed-dark-card {
+  color-scheme: dark;
+  --color-white: #ffffff;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-500: #3b82f6;
+  --color-blue-900: #1e3a8a;
+  --color-violet-600: #7c3aed;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-emerald-300: #6ee7b7;
+  --color-rose-300: #fda4af;
+}
+
 @keyframes otb-shimmer {
   100% {
     transform: translateX(100%);

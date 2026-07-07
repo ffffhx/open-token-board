@@ -163,7 +163,7 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
         : "text-rose-300";
 
   return (
-    <article className="relative w-[420px] max-w-full overflow-hidden rounded-lg bg-[linear-gradient(135deg,#0b1220_0%,#141a33_48%,#07111f_100%)] p-6 text-white shadow-2xl ring-1 ring-white/10">
+    <article className="otb-fixed-dark-card relative w-[420px] max-w-full overflow-hidden rounded-lg bg-[linear-gradient(135deg,#0b1220_0%,#141a33_48%,#07111f_100%)] p-6 text-white shadow-2xl ring-1 ring-white/10">
       <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl" />
 
       <header className="relative flex items-center justify-between">
