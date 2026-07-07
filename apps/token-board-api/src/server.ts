@@ -453,6 +453,8 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     profile.percentile = rank !== null && totalUsers > 0 ? (totalUsers - rank) / totalUsers : null;
     if (profile.user && rankedUser) {
       profile.user.rank = rankedUser.rank;
+      profile.user.previousRank = previousRank;
+      profile.user.rankDelta = profile.rankDelta;
       profile.user.share = rankedUser.share;
       profile.user.deltaTokens = rankedUser.deltaTokens;
     }
@@ -1749,21 +1751,19 @@ async function refreshLeaderboardSnapshotsNow(reason: string) {
   const nextCache = new Map<string, LeaderboardSnapshotEntry>();
 
   for (const range of LEADERBOARD_SNAPSHOT_RANGES) {
-    const { records, summary } = await readLiveUsageLeaderboard({
-      range,
-      metric: "tokens",
-      now: new Date(refreshedAt),
-    });
-
     for (const metric of LEADERBOARD_SNAPSHOT_METRICS) {
-      const metricSummary = summaryForMetric(summary, metric);
+      const { records, summary } = await readLiveUsageLeaderboard({
+        range,
+        metric,
+        now: new Date(refreshedAt),
+      });
       nextCache.set(leaderboardSnapshotKey(range, metric), {
         generatedAt: refreshedAt,
         key: leaderboardSnapshotKey(range, metric),
         metric,
         range,
         records,
-        summary: metricSummary,
+        summary,
       });
     }
   }
@@ -1858,31 +1858,6 @@ function normalizeLeaderboardSnapshotEntry(value: unknown): LeaderboardSnapshotE
     records: Number.isFinite(entry.records) ? Number(entry.records) : 0,
     summary: entry.summary as TokenLeaderboardSummary,
   };
-}
-
-function summaryForMetric(summary: TokenLeaderboardSummary, metric: TokenBoardMetric): TokenLeaderboardSummary {
-  return {
-    ...summary,
-    users: [...summary.users]
-      .sort((left, right) => leaderboardMetricValue(right, metric) - leaderboardMetricValue(left, metric) || left.displayName.localeCompare(right.displayName))
-      .map((user, index) => ({ ...user, rank: index + 1 })),
-  };
-}
-
-function leaderboardMetricValue(user: TokenLeaderboardSummary["users"][number], metric: TokenBoardMetric) {
-  if (metric === "cost") {
-    return user.costUsd;
-  }
-
-  if (metric === "sessions") {
-    return user.sessions;
-  }
-
-  if (metric === "messages") {
-    return user.messages;
-  }
-
-  return user.tokens;
 }
 
 function leaderboardSnapshotKey(range: TokenBoardRange, metric: TokenBoardMetric) {
