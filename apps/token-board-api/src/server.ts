@@ -30,16 +30,22 @@ import {
 } from "@open-token-board/core/automation";
 import {
   buildTokenAchievementSummary,
+  buildWeeklyTokenGoalScorecard,
   createCustomTokenLeaderboardWindow,
   buildTokenAccountUsageProfile,
   buildTokenLevelProgress,
   buildTokenLeaderboard,
+  evaluateTokenGoals,
   getTokenConsumptionTokens,
   getUnmatchedTokenPricingModels,
+  normalizeStoredTokenGoals,
+  sanitizeTokenGoals,
   TOKEN_LEVELS,
   type TokenAccountUsageProfile,
   type TokenBoardMetric,
   type TokenBoardRange,
+  type TokenBoardUserConfig,
+  type TokenGoal,
   type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
   type TokenLeaderboardWindow,
@@ -509,6 +515,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  if (url.pathname === "/api/usage/goals") {
+    await handleUsageGoals(request, response, url);
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/usage/summary") {
     const now = parseNow(url.searchParams.get("now"));
     const ownerUserId = normalizeOptionalText(url.searchParams.get("userId")) || normalizeOptionalText(process.env.TOKEN_BOARD_SUMMARY_USER_ID);
@@ -942,6 +953,7 @@ async function buildUsageMePayload(
     profile.user.deltaTokens = rankedUser.deltaTokens;
   }
   const userConfig = await store.getUserConfig(identity.userId);
+  const goals = normalizeStoredTokenGoals(userConfig?.goals);
 
   return {
     schemaVersion: 1,
@@ -953,8 +965,81 @@ async function buildUsageMePayload(
     profile: {
       ...profile,
       config: userConfig,
+      goals: evaluateTokenGoals(goals, userEvents, { now }),
     },
   };
+}
+
+async function handleUsageGoals(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const identity = readWebIdentity(request);
+
+  if (!identity) {
+    sendJson(request, response, 401, { error: "GitHub login required" });
+    return;
+  }
+
+  if (request.method !== "GET" && request.method !== "PUT") {
+    sendJson(request, response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  const store = usageStore();
+  const now = parseNow(url.searchParams.get("now"));
+
+  if (request.method === "GET") {
+    const userConfig = await store.getUserConfig(identity.userId);
+    const goals = normalizeStoredTokenGoals(userConfig?.goals);
+    const userEvents = await store.listEventsForUser(identity.userId);
+
+    sendJson(request, response, 200, {
+      schemaVersion: 1,
+      goals,
+      evaluations: evaluateTokenGoals(goals, userEvents, { now }),
+    });
+    return;
+  }
+
+  let body: unknown;
+  try {
+    body = await readJsonBody(request);
+  } catch {
+    sendJson(request, response, 400, { error: "Body must be valid JSON" });
+    return;
+  }
+
+  const rawGoals = Array.isArray(body)
+    ? body
+    : body && typeof body === "object" && !Array.isArray(body)
+      ? (body as { goals?: unknown }).goals
+      : undefined;
+  const validation = sanitizeTokenGoals(rawGoals, {
+    now,
+    createId: createTokenGoalId,
+  });
+
+  if (validation.errors.length) {
+    sendJson(request, response, 400, {
+      error: "Invalid goals",
+      errors: validation.errors,
+    });
+    return;
+  }
+
+  const existingConfig = await store.getUserConfig(identity.userId);
+  const updatedConfig: TokenBoardUserConfig = {
+    ...(existingConfig ?? { updatedAt: now.toISOString() }),
+    updatedAt: now.toISOString(),
+    goals: validation.goals,
+  };
+
+  await store.upsertUserConfig(identity.userId, updatedConfig);
+  const userEvents = await store.listEventsForUser(identity.userId);
+
+  sendJson(request, response, 200, {
+    schemaVersion: 1,
+    goals: validation.goals,
+    evaluations: evaluateTokenGoals(validation.goals, userEvents, { now }),
+  });
 }
 
 type UsageMeExportPayload = Awaited<ReturnType<typeof buildUsageMePayload>> & {
@@ -1163,6 +1248,10 @@ function achievedBadgeNames(badges: TokenLeaderboardUser["badges"]) {
     .filter((badge) => badge.achieved)
     .map((badge) => badge.name)
     .join("|");
+}
+
+function createTokenGoalId() {
+  return `goal_${randomBytes(8).toString("hex")}`;
 }
 
 function stringifyCsv(columns: string[], rows: CsvRow[]) {
@@ -2254,7 +2343,7 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (userConfig) {
-    await store.upsertUserConfig(identity.userId, userConfig);
+    await store.upsertUserConfig(identity.userId, await mergeUserConfigForIngest(store, identity.userId, userConfig));
   }
   const result = await store.insertEvents(sanitized.entries);
   if (result.accepted > 0) {
@@ -2333,7 +2422,7 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   if (userConfig) {
-    await store.upsertUserConfig(identity.userId, userConfig);
+    await store.upsertUserConfig(identity.userId, await mergeUserConfigForIngest(store, identity.userId, userConfig));
   }
   const deleted = sanitized.entries.length ? await store.deleteEventsForUser(identity.userId) : { deleted: 0, records: await store.countEvents() };
   const inserted = await store.insertEvents(sanitized.entries);
@@ -2370,6 +2459,21 @@ function extractUserConfigFromIngestBody(body: unknown) {
       : {};
 
   return sanitizeTokenBoardUserConfig(record.userConfig ?? record.config, client);
+}
+
+async function mergeUserConfigForIngest(
+  store: TokenUsageStore,
+  userId: string,
+  nextConfig: TokenBoardUserConfig
+): Promise<TokenBoardUserConfig> {
+  if (nextConfig.goals !== undefined) {
+    return nextConfig;
+  }
+
+  const existing = await store.getUserConfig(userId);
+  const existingGoals = normalizeStoredTokenGoals(existing?.goals);
+
+  return existingGoals.length ? { ...nextConfig, goals: existingGoals } : nextConfig;
 }
 
 type IngestWriteMode = "ingest" | "replace";
@@ -3661,6 +3765,8 @@ async function runDailyReport(
 
   const dailyResult = await readLiveUsageLeaderboard({ range: "1D", metric: "tokens", now });
   const weeklyResult = await readLiveUsageLeaderboard({ range: "7D", metric: "tokens", now });
+  const reportGoalConfigs = await loadReportGoalConfigs();
+  const reportGoalEvents = reportGoalConfigs.length ? await usageStore().listEvents() : [];
   const reportResult =
     DAILY_REPORT_RANGE === "1D"
       ? dailyResult
@@ -3672,6 +3778,7 @@ async function runDailyReport(
     weeklySummary: weeklyResult.summary,
     generatedAt: now.toISOString(),
     dayKey,
+    goalEvaluationsByUser: buildReportGoalEvaluationsByUser(reportGoalConfigs, reportGoalEvents, now),
   });
   const events = detectDailyReportEvents(snapshot, latestReportSnapshot);
   const summary = reportResult.summary;
@@ -3730,14 +3837,21 @@ async function runWeeklyReport(
   }
 
   const usageEvents = await usageStore().listEvents();
+  const reportGoalConfigs = await loadReportGoalConfigs();
   const highlights = buildWeeklyReportHighlights(usageEvents, {
     now,
     tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+  });
+  const goalScorecard = buildWeeklyTokenGoalScorecard({
+    configs: reportGoalConfigs,
+    events: usageEvents,
+    now,
   });
   const card = buildWeeklyReportCard(summary, previousSummary, {
     tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
     siteUrl: DAILY_REPORT_SITE_URL || undefined,
     highlights,
+    goalScorecard,
   });
   const result = await sendFeishuCard(card, feishuReportConfig());
 
@@ -3752,6 +3866,44 @@ async function runWeeklyReport(
     `weekly report (${trigger}): send failed (status=${result.status}, code=${result.code ?? "?"}, msg=${result.msg ?? "?"})`,
   );
   return { kind: "weekly", sent: false, reason: "send-failed", status: result.status, activeUsers: summary.activeUsers, highlights: highlights.length };
+}
+
+type ReportGoalConfig = {
+  userId: string;
+  goals: TokenGoal[];
+};
+
+async function loadReportGoalConfigs(): Promise<ReportGoalConfig[]> {
+  const rows = await usageStore().listUserConfigs();
+
+  return rows.flatMap((row) => {
+    const goals = normalizeStoredTokenGoals(row.config.goals);
+    return goals.length ? [{ userId: row.userId, goals }] : [];
+  });
+}
+
+function buildReportGoalEvaluationsByUser(
+  configs: ReportGoalConfig[],
+  events: TokenUsageEvent[],
+  now: Date,
+) {
+  if (!configs.length) {
+    return new Map<string, ReturnType<typeof evaluateTokenGoals>>();
+  }
+
+  const eventsByUser = new Map<string, TokenUsageEvent[]>();
+  for (const event of events) {
+    const current = eventsByUser.get(event.userId) ?? [];
+    current.push(event);
+    eventsByUser.set(event.userId, current);
+  }
+
+  return new Map(
+    configs.map((config) => [
+      config.userId,
+      evaluateTokenGoals(config.goals, eventsByUser.get(config.userId) ?? [], { now }),
+    ])
+  );
 }
 
 function feishuReportConfig(): DailyReportConfig {
