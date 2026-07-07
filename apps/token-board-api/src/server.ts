@@ -59,7 +59,16 @@ import {
   type SnapshotShareStore,
 } from "@open-token-board/core/snapshot-share-storage";
 import { buildTokenUsageSnapshotFromEvents } from "@open-token-board/core/snapshot";
-import { buildDailyReportCard, sendFeishuCard, type DailyReportConfig } from "./daily-report";
+import {
+  buildDailyReportCard,
+  buildReportStateSnapshot,
+  buildWeeklyReportCard,
+  buildWeeklyReportHighlights,
+  detectDailyReportEvents,
+  sendFeishuCard,
+  type DailyReportConfig,
+  type ReportStateSnapshot,
+} from "./daily-report";
 
 const PORT = Number(process.env.TOKEN_BOARD_PORT || 8787);
 const HOST = process.env.TOKEN_BOARD_HOST || "127.0.0.1";
@@ -87,6 +96,10 @@ function positiveNumberEnv(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
+function booleanEnv(value: string | undefined, fallback: "true" | "false") {
+  const normalized = value?.trim();
+  return (normalized || fallback) === "true";
+}
 const DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const DEFAULT_BENCHMARK_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const SESSION_COOKIE_NAME = "token_board_session";
@@ -100,6 +113,7 @@ const OAUTH_STATE_TTL_SECONDS = 15 * 60;
 const FEISHU_WEBHOOK_URL = process.env.TOKEN_BOARD_FEISHU_WEBHOOK_URL || "";
 const FEISHU_WEBHOOK_SECRET = process.env.TOKEN_BOARD_FEISHU_WEBHOOK_SECRET || "";
 const DAILY_REPORT_AT = process.env.TOKEN_BOARD_DAILY_REPORT_AT || "09:00"; // local HH:MM
+const WEEKLY_REPORT_AT = process.env.TOKEN_BOARD_WEEKLY_REPORT_AT || "10:00"; // local Monday HH:MM
 const DAILY_REPORT_TZ_OFFSET_MIN = Number.isFinite(Number(process.env.TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET))
   ? Number(process.env.TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET)
   : 480; // UTC+8 (Asia/Shanghai) by default
@@ -110,8 +124,14 @@ const DAILY_REPORT_SITE_URL = process.env.TOKEN_BOARD_DAILY_REPORT_SITE_URL || "
 const DAILY_REPORT_TRIGGER_TOKEN = process.env.TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN || "";
 const DAILY_REPORT_STATE_FILE =
   process.env.TOKEN_BOARD_DAILY_REPORT_STATE_FILE || path.join(path.dirname(DATA_FILE), "daily-report-state.json");
-const DAILY_REPORT_ENABLED =
-  (process.env.TOKEN_BOARD_DAILY_REPORT_ENABLED ?? (FEISHU_WEBHOOK_URL ? "true" : "false")) === "true";
+const DAILY_REPORT_ENABLED = booleanEnv(
+  process.env.TOKEN_BOARD_DAILY_REPORT_ENABLED,
+  FEISHU_WEBHOOK_URL ? "true" : "false",
+);
+const WEEKLY_REPORT_ENABLED = booleanEnv(
+  process.env.TOKEN_BOARD_WEEKLY_REPORT_ENABLED,
+  FEISHU_WEBHOOK_URL ? "true" : "false",
+);
 let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
@@ -128,7 +148,10 @@ let leaderboardSnapshotWriteTimer: NodeJS.Timeout | undefined;
 let leaderboardSnapshotLastRefreshAt = "";
 let leaderboardSnapshotLastError = "";
 let dailyReportTimer: NodeJS.Timeout | undefined;
+let weeklyReportTimer: NodeJS.Timeout | undefined;
 let dailyReportLastSentDayKey = "";
+let weeklyReportLastSentWeekKey = "";
+let latestReportSnapshot: ReportStateSnapshot | null = null;
 
 async function main() {
   authSecret(); // fail fast if the auth secret is missing/placeholder
@@ -143,7 +166,7 @@ async function main() {
     );
   }
   startLeaderboardSnapshotRefreshLoop();
-  startDailyFeishuReportLoop();
+  startFeishuReportLoops();
 
   const server = createServer((request, response) => {
     void routeRequest(request, response).catch((error) => {
@@ -236,7 +259,12 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       sendJson(request, response, 400, { error: "Feishu webhook is not configured" });
       return;
     }
-    const result = await runDailyReport("manual");
+    const kind = parseReportKind(url.searchParams.get("kind"));
+    if (!kind) {
+      sendJson(request, response, 400, { error: "kind must be daily or weekly" });
+      return;
+    }
+    const result = kind === "weekly" ? await runWeeklyReport("manual") : await runDailyReport("manual");
     sendJson(request, response, result.sent ? 200 : 202, result);
     return;
   }
@@ -2227,19 +2255,19 @@ function localDayKey(now: Date, offsetMin: number): string {
   return `${local.getUTCFullYear()}-${pad2(local.getUTCMonth() + 1)}-${pad2(local.getUTCDate())}`;
 }
 
-function parseDailyReportTime(value: string): { hour: number; minute: number } {
+function parseReportTime(value: string, fallback: { hour: number; minute: number }): { hour: number; minute: number } {
   const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
   if (match) {
     const hour = Number(match[1]);
     const minute = Number(match[2]);
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return { hour, minute };
   }
-  return { hour: 9, minute: 0 };
+  return fallback;
 }
 
 /** UTC instant of the next local HH:MM (today if still ahead, else tomorrow). */
 function nextDailyReportTime(now: Date): Date {
-  const { hour, minute } = parseDailyReportTime(DAILY_REPORT_AT);
+  const { hour, minute } = parseReportTime(DAILY_REPORT_AT, { hour: 9, minute: 0 });
   const offsetMs = DAILY_REPORT_TZ_OFFSET_MIN * 60_000;
   const local = new Date(now.getTime() + offsetMs);
   let targetUtcMs =
@@ -2248,18 +2276,72 @@ function nextDailyReportTime(now: Date): Date {
   return new Date(targetUtcMs);
 }
 
-function startDailyFeishuReportLoop() {
-  if (!DAILY_REPORT_ENABLED) return;
+/** UTC instant of the next local Monday HH:MM. */
+function nextWeeklyReportTime(now: Date): Date {
+  const { hour, minute } = parseReportTime(WEEKLY_REPORT_AT, { hour: 10, minute: 0 });
+  const offsetMs = DAILY_REPORT_TZ_OFFSET_MIN * 60_000;
+  const local = new Date(now.getTime() + offsetMs);
+  const weekday = local.getUTCDay();
+  let daysUntilMonday = (1 - weekday + 7) % 7;
+  let targetUtcMs =
+    Date.UTC(
+      local.getUTCFullYear(),
+      local.getUTCMonth(),
+      local.getUTCDate() + daysUntilMonday,
+      hour,
+      minute,
+      0,
+      0,
+    ) - offsetMs;
+
+  if (targetUtcMs <= now.getTime()) {
+    daysUntilMonday += 7;
+    targetUtcMs =
+      Date.UTC(
+        local.getUTCFullYear(),
+        local.getUTCMonth(),
+        local.getUTCDate() + daysUntilMonday,
+        hour,
+        minute,
+        0,
+        0,
+      ) - offsetMs;
+  }
+
+  return new Date(targetUtcMs);
+}
+
+function localWeekKey(now: Date, offsetMin: number): string {
+  const local = new Date(now.getTime() + offsetMin * 60_000);
+  const weekday = local.getUTCDay();
+  const daysSinceMonday = (weekday + 6) % 7;
+  const mondayLocalUtcMs =
+    Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate()) - daysSinceMonday * 24 * 60 * 60 * 1000;
+  const monday = new Date(mondayLocalUtcMs);
+  return `${monday.getUTCFullYear()}-${pad2(monday.getUTCMonth() + 1)}-${pad2(monday.getUTCDate())}`;
+}
+
+function startFeishuReportLoops() {
+  if (!DAILY_REPORT_ENABLED && !WEEKLY_REPORT_ENABLED) return;
   if (!FEISHU_WEBHOOK_URL) {
-    console.warn("daily report enabled but TOKEN_BOARD_FEISHU_WEBHOOK_URL is missing; not scheduling");
+    console.warn("Feishu report enabled but TOKEN_BOARD_FEISHU_WEBHOOK_URL is missing; not scheduling");
     return;
   }
   void loadDailyReportState().finally(() => {
-    scheduleNextDailyReport();
-    console.log(
-      `daily Feishu report: enabled at ${DAILY_REPORT_AT} (UTC${DAILY_REPORT_TZ_OFFSET_MIN >= 0 ? "+" : ""}${DAILY_REPORT_TZ_OFFSET_MIN / 60}h), ` +
-        `range=${DAILY_REPORT_RANGE}, next=${nextDailyReportTime(new Date()).toISOString()}`,
-    );
+    if (DAILY_REPORT_ENABLED) {
+      scheduleNextDailyReport();
+      console.log(
+        `daily Feishu report: enabled at ${DAILY_REPORT_AT} (UTC${DAILY_REPORT_TZ_OFFSET_MIN >= 0 ? "+" : ""}${DAILY_REPORT_TZ_OFFSET_MIN / 60}h), ` +
+          `range=${DAILY_REPORT_RANGE}, next=${nextDailyReportTime(new Date()).toISOString()}`,
+      );
+    }
+    if (WEEKLY_REPORT_ENABLED) {
+      scheduleNextWeeklyReport();
+      console.log(
+        `weekly Feishu report: enabled on Monday at ${WEEKLY_REPORT_AT} (UTC${DAILY_REPORT_TZ_OFFSET_MIN >= 0 ? "+" : ""}${DAILY_REPORT_TZ_OFFSET_MIN / 60}h), ` +
+          `next=${nextWeeklyReportTime(new Date()).toISOString()}`,
+      );
+    }
   });
 }
 
@@ -2274,57 +2356,151 @@ function scheduleNextDailyReport() {
   }, delay);
 }
 
+function scheduleNextWeeklyReport() {
+  if (weeklyReportTimer) clearTimeout(weeklyReportTimer);
+  const now = new Date();
+  const delay = Math.max(1_000, nextWeeklyReportTime(now).getTime() - now.getTime());
+  weeklyReportTimer = setTimeout(() => {
+    void runWeeklyReport("schedule")
+      .catch((error) => console.error("weekly report (schedule) failed:", error))
+      .finally(scheduleNextWeeklyReport);
+  }, delay);
+}
+
 async function runDailyReport(
   trigger: "schedule" | "manual",
-): Promise<{ sent: boolean; reason?: string; status?: number; activeUsers?: number }> {
+): Promise<{ kind: "daily"; sent: boolean; reason?: string; status?: number; activeUsers?: number; events?: number }> {
   const now = new Date();
   const dayKey = localDayKey(now, DAILY_REPORT_TZ_OFFSET_MIN);
   if (trigger === "schedule" && dailyReportLastSentDayKey === dayKey) {
-    return { sent: false, reason: "already-sent-today" };
+    return { kind: "daily", sent: false, reason: "already-sent-today" };
   }
 
-  const { summary } = await readLiveUsageLeaderboard({ range: DAILY_REPORT_RANGE, metric: "tokens", now });
-  if (!summary || summary.activeUsers === 0) {
+  const dailyResult = await readLiveUsageLeaderboard({ range: "1D", metric: "tokens", now });
+  const weeklyResult = await readLiveUsageLeaderboard({ range: "7D", metric: "tokens", now });
+  const reportResult =
+    DAILY_REPORT_RANGE === "1D"
+      ? dailyResult
+      : DAILY_REPORT_RANGE === "7D"
+        ? weeklyResult
+        : await readLiveUsageLeaderboard({ range: DAILY_REPORT_RANGE, metric: "tokens", now });
+  const snapshot = buildReportStateSnapshot({
+    dailySummary: dailyResult.summary,
+    weeklySummary: weeklyResult.summary,
+    generatedAt: now.toISOString(),
+    dayKey,
+  });
+  const events = detectDailyReportEvents(snapshot, latestReportSnapshot);
+  const summary = reportResult.summary;
+
+  if (!summary || (summary.activeUsers === 0 && trigger === "schedule")) {
     if (trigger === "schedule") {
       dailyReportLastSentDayKey = dayKey;
+      latestReportSnapshot = snapshot;
       await saveDailyReportState();
     }
     console.log(`daily report (${trigger}): no active users for ${dayKey}, skipped`);
-    return { sent: false, reason: "no-data", activeUsers: 0 };
+    return { kind: "daily", sent: false, reason: "no-data", activeUsers: 0, events: events.length };
   }
 
-  const config: DailyReportConfig = {
-    webhookUrl: FEISHU_WEBHOOK_URL,
-    secret: FEISHU_WEBHOOK_SECRET || undefined,
-    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
-    siteUrl: DAILY_REPORT_SITE_URL || undefined,
-  };
   const card = buildDailyReportCard(summary, {
     tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
     siteUrl: DAILY_REPORT_SITE_URL || undefined,
+    events,
   });
-  const result = await sendFeishuCard(card, config);
+  const result = await sendFeishuCard(card, feishuReportConfig());
 
   if (result.ok) {
     dailyReportLastSentDayKey = dayKey;
+    latestReportSnapshot = snapshot;
     await saveDailyReportState();
-    console.log(`daily report (${trigger}): sent for ${dayKey} (status=${result.status})`);
-    return { sent: true, status: result.status, activeUsers: summary.activeUsers };
+    console.log(`daily report (${trigger}): sent for ${dayKey} (status=${result.status}, events=${events.length})`);
+    return { kind: "daily", sent: true, status: result.status, activeUsers: summary.activeUsers, events: events.length };
   }
 
   console.error(
     `daily report (${trigger}): send failed (status=${result.status}, code=${result.code ?? "?"}, msg=${result.msg ?? "?"})`,
   );
-  return { sent: false, reason: "send-failed", status: result.status, activeUsers: summary.activeUsers };
+  return { kind: "daily", sent: false, reason: "send-failed", status: result.status, activeUsers: summary.activeUsers, events: events.length };
+}
+
+async function runWeeklyReport(
+  trigger: "schedule" | "manual",
+): Promise<{ kind: "weekly"; sent: boolean; reason?: string; status?: number; activeUsers?: number; highlights?: number }> {
+  const now = new Date();
+  const weekKey = localWeekKey(now, DAILY_REPORT_TZ_OFFSET_MIN);
+  if (trigger === "schedule" && weeklyReportLastSentWeekKey === weekKey) {
+    return { kind: "weekly", sent: false, reason: "already-sent-this-week" };
+  }
+
+  const { summary } = await readLiveUsageLeaderboard({ range: "7D", metric: "tokens", now });
+  const previousNow = Number.isFinite(Date.parse(summary.startAt)) ? new Date(summary.startAt) : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const { summary: previousSummary } = await readLiveUsageLeaderboard({ range: "7D", metric: "tokens", now: previousNow });
+
+  if (!summary || (summary.activeUsers === 0 && trigger === "schedule")) {
+    if (trigger === "schedule") {
+      weeklyReportLastSentWeekKey = weekKey;
+      await saveDailyReportState();
+    }
+    console.log(`weekly report (${trigger}): no active users for ${weekKey}, skipped`);
+    return { kind: "weekly", sent: false, reason: "no-data", activeUsers: 0, highlights: 0 };
+  }
+
+  const usageEvents = await usageStore().listEvents();
+  const highlights = buildWeeklyReportHighlights(usageEvents, {
+    now,
+    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+  });
+  const card = buildWeeklyReportCard(summary, previousSummary, {
+    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+    siteUrl: DAILY_REPORT_SITE_URL || undefined,
+    highlights,
+  });
+  const result = await sendFeishuCard(card, feishuReportConfig());
+
+  if (result.ok) {
+    weeklyReportLastSentWeekKey = weekKey;
+    await saveDailyReportState();
+    console.log(`weekly report (${trigger}): sent for ${weekKey} (status=${result.status}, highlights=${highlights.length})`);
+    return { kind: "weekly", sent: true, status: result.status, activeUsers: summary.activeUsers, highlights: highlights.length };
+  }
+
+  console.error(
+    `weekly report (${trigger}): send failed (status=${result.status}, code=${result.code ?? "?"}, msg=${result.msg ?? "?"})`,
+  );
+  return { kind: "weekly", sent: false, reason: "send-failed", status: result.status, activeUsers: summary.activeUsers, highlights: highlights.length };
+}
+
+function feishuReportConfig(): DailyReportConfig {
+  return {
+    webhookUrl: FEISHU_WEBHOOK_URL,
+    secret: FEISHU_WEBHOOK_SECRET || undefined,
+    tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
+    siteUrl: DAILY_REPORT_SITE_URL || undefined,
+  };
+}
+
+function parseReportKind(value: string | null) {
+  if (!value || value === "daily") return "daily" as const;
+  if (value === "weekly") return "weekly" as const;
+  return null;
 }
 
 async function loadDailyReportState() {
   try {
     const raw = await fs.readFile(DAILY_REPORT_STATE_FILE, "utf8");
-    const parsed = JSON.parse(raw) as { lastSentDayKey?: unknown };
+    const parsed = JSON.parse(raw) as {
+      lastSentDayKey?: unknown;
+      lastWeeklySentWeekKey?: unknown;
+      latestSnapshot?: unknown;
+    };
     if (parsed && typeof parsed.lastSentDayKey === "string") {
       dailyReportLastSentDayKey = parsed.lastSentDayKey;
     }
+    if (parsed && typeof parsed.lastWeeklySentWeekKey === "string") {
+      weeklyReportLastSentWeekKey = parsed.lastWeeklySentWeekKey;
+    }
+    latestReportSnapshot = parseReportStateSnapshot(parsed?.latestSnapshot);
   } catch {
     // No state yet (or unreadable) — start fresh.
   }
@@ -2335,12 +2511,33 @@ async function saveDailyReportState() {
     await fs.mkdir(path.dirname(DAILY_REPORT_STATE_FILE), { recursive: true });
     await fs.writeFile(
       DAILY_REPORT_STATE_FILE,
-      JSON.stringify({ lastSentDayKey: dailyReportLastSentDayKey }),
+      JSON.stringify(
+        {
+          lastSentDayKey: dailyReportLastSentDayKey,
+          lastWeeklySentWeekKey: weeklyReportLastSentWeekKey,
+          latestSnapshot: latestReportSnapshot,
+        },
+        null,
+        2,
+      ),
       "utf8",
     );
   } catch (error) {
     console.error("failed to persist daily report state:", error);
   }
+}
+
+function parseReportStateSnapshot(value: unknown): ReportStateSnapshot | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const snapshot = value as Partial<ReportStateSnapshot>;
+  if (snapshot.schemaVersion !== 1 || typeof snapshot.generatedAt !== "string" || !Array.isArray(snapshot.users)) {
+    return null;
+  }
+
+  return snapshot as ReportStateSnapshot;
 }
 
 async function readLeaderboardSnapshot({

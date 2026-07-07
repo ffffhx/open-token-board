@@ -1,6 +1,11 @@
 import { createHmac } from "node:crypto";
 
-import type { TokenLeaderboardSummary } from "@open-token-board/core";
+import {
+  buildTokenAchievementSummariesByUser,
+  type TokenAchievementBadge,
+  type TokenLeaderboardSummary,
+  type TokenUsageEvent,
+} from "@open-token-board/core";
 
 /**
  * Daily leaderboard digest pushed to a Feishu (Lark) custom-bot webhook.
@@ -29,6 +34,43 @@ const RANGE_LABEL: Record<string, string> = {
 };
 
 const MEDALS = ["🥇", "🥈", "🥉"];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type ReportStateSnapshot = {
+  schemaVersion: 1;
+  generatedAt: string;
+  dayKey: string;
+  users: ReportUserSnapshot[];
+};
+
+export type ReportUserSnapshot = {
+  userId: string;
+  displayName: string;
+  dailyTokens: number;
+  levelId: string;
+  levelName: string;
+  levelThresholdTokens: number;
+  achievedBadges: Array<{ id: string; name: string; icon: string; category: TokenAchievementBadge["category"] }>;
+  singleDayPbDate: string | null;
+  singleDayPbTokens: number;
+  todayTokens: number;
+  ranks: {
+    daily?: number;
+    weekly?: number;
+  };
+};
+
+export type DailyReportEvent = {
+  type: "pb" | "level" | "badge" | "overtake";
+  priority: number;
+  content: string;
+};
+
+export type WeeklyReportHighlight = {
+  type: "pb" | "level";
+  priority: number;
+  content: string;
+};
 
 export function formatCompact(value: number): string {
   const n = Number.isFinite(value) ? value : 0;
@@ -60,13 +102,15 @@ function pct(share: number): string {
 /** Build the Feishu interactive-card payload for a whole-board daily digest. */
 export function buildDailyReportCard(
   summary: TokenLeaderboardSummary,
-  options: { tzOffsetMinutes: number; siteUrl?: string },
+  options: { tzOffsetMinutes: number; siteUrl?: string; events?: DailyReportEvent[] },
 ): Record<string, unknown> {
-  const { tzOffsetMinutes, siteUrl } = options;
+  const { tzOffsetMinutes, siteUrl, events = [] } = options;
   const rangeLabel = RANGE_LABEL[summary.range] ?? summary.range;
   const start = formatDateLabel(summary.startAt, tzOffsetMinutes);
   const end = formatDateLabel(summary.endAt, tzOffsetMinutes);
   const dateRange = start && end ? (start === end ? end : `${start}–${end}`) : "";
+  const topModel = summary.activeUsers > 0 && summary.topModel !== "unknown" ? summary.topModel : "";
+  const topTool = summary.activeUsers > 0 && summary.topTool !== "unknown" ? summary.topTool : "";
 
   const MAX_DETAIL = 10;
   const detailUsers = summary.users.slice(0, MAX_DETAIL);
@@ -74,11 +118,14 @@ export function buildDailyReportCard(
     ? detailUsers
         .map((user, index) => {
           const medal = MEDALS[index] ?? `#${user.rank}`;
-          const head = `${medal} **${escapeMd(user.displayName)}** · ${formatCompact(user.tokens)} tokens (${pct(user.share)})`;
+          const rankMove = formatRankMove(user.rankDelta);
+          const level = user.level.current.symbol || user.level.current.emoji || "";
+          const levelMark = level ? `【${escapeMd(level)}】` : "";
+          const head = `${medal} ${levelMark} **${escapeMd(user.displayName)}** ${rankMove} · ${formatCompact(user.tokens)} tokens (${pct(user.share)})`;
           const model = user.topModel ? escapeMd(user.topModel) : "—";
           const tool = user.topTool ? ` / ${escapeMd(user.topTool)}` : "";
           // Per-user detail line: cost · sessions · top model/tool.
-          const sub = `　└ ${formatUsd(user.costUsd)} · ${formatCompact(user.sessions)} 会话 · ${model}${tool}`;
+          const sub = `　└ 四类估算 ${formatUsd(user.costUsd)} · ${formatCompact(user.sessions)} 会话 · ${model}${tool}`;
           return `${head}\n${sub}`;
         })
         .join("\n")
@@ -98,19 +145,21 @@ export function buildDailyReportCard(
       tag: "div",
       fields: [
         shortField("📦 总消耗", `${formatCompact(summary.totalTokens)} tokens`),
-        shortField("💰 估算成本", formatUsd(summary.totalCostUsd)),
+        shortField("💰 四类估算成本", formatUsd(summary.totalCostUsd)),
         shortField("💬 总会话", formatCompact(summary.totalSessions)),
-        shortField("🤖 主力模型", summary.topModel || "—"),
+        shortField("🤖 主力模型", topModel || "—"),
       ],
     },
+    { tag: "hr" },
+    { tag: "div", text: { tag: "lark_md", content: `🎬 **今日事件**\n${formatDailyEventLines(events)}` } },
     { tag: "hr" },
     { tag: "div", text: { tag: "lark_md", content: `🏆 **排行榜 · 个人明细**\n${detailLines}${detailFooter}` } },
   ];
 
-  if (summary.topModel || summary.topTool) {
+  if (topModel || topTool) {
     const bits: string[] = [];
-    if (summary.topModel) bits.push(`主力模型 \`${escapeMd(summary.topModel)}\``);
-    if (summary.topTool) bits.push(`主力工具 \`${escapeMd(summary.topTool)}\``);
+    if (topModel) bits.push(`主力模型 \`${escapeMd(topModel)}\``);
+    if (topTool) bits.push(`主力工具 \`${escapeMd(topTool)}\``);
     elements.push({ tag: "hr" });
     elements.push({ tag: "div", text: { tag: "lark_md", content: `✨ **今日亮点**\n${bits.join(" · ")}` } });
   }
@@ -131,8 +180,393 @@ export function buildDailyReportCard(
   };
 }
 
+/** Build the Feishu interactive-card payload for a 7-day weekly digest. */
+export function buildWeeklyReportCard(
+  summary: TokenLeaderboardSummary,
+  previousSummary: TokenLeaderboardSummary,
+  options: { tzOffsetMinutes: number; siteUrl?: string; highlights?: WeeklyReportHighlight[] },
+): Record<string, unknown> {
+  const { tzOffsetMinutes, siteUrl, highlights = [] } = options;
+  const start = formatDateLabel(summary.startAt, tzOffsetMinutes);
+  const end = formatDateLabel(summary.endAt, tzOffsetMinutes);
+  const dateRange = start && end ? (start === end ? end : `${start}–${end}`) : "";
+  const champion = summary.users[0];
+  const championText = champion
+    ? `${champion.level.current.symbol ? `【${escapeMd(champion.level.current.symbol)}】` : ""}${escapeMd(champion.displayName)} · ${formatCompact(champion.tokens)} tokens`
+    : "暂无";
+  const elements: Array<Record<string, unknown>> = [
+    {
+      tag: "div",
+      text: {
+        tag: "lark_md",
+        content: `**7 天窗口**${dateRange ? ` · ${dateRange}` : ""} · 共 **${summary.activeUsers}** 位选手`,
+      },
+    },
+    {
+      tag: "div",
+      fields: [
+        shortField("👑 周冠军", championText),
+        shortField("📦 周总量", `${formatCompact(summary.totalTokens)} tokens`),
+        shortField("💰 四类估算成本", formatUsd(summary.totalCostUsd)),
+        shortField("📈 环比上周", `${formatChange(summary.totalTokens, previousSummary.totalTokens)} / ${formatChange(summary.totalCostUsd, previousSummary.totalCostUsd)}`),
+      ],
+    },
+    { tag: "hr" },
+    { tag: "div", text: { tag: "lark_md", content: `📊 **每日趋势**\n${formatWeeklyTrend(summary, tzOffsetMinutes)}` } },
+    { tag: "hr" },
+    { tag: "div", text: { tag: "lark_md", content: `🔥 **本周荣誉**\n${formatWeeklyHighlightLines(highlights)}` } },
+  ];
+
+  const topUsers = summary.users.slice(0, 5);
+  if (topUsers.length) {
+    elements.push({ tag: "hr" });
+    elements.push({
+      tag: "div",
+      text: {
+        tag: "lark_md",
+        content: `🏁 **周榜 Top5**\n${topUsers
+          .map((user, index) => {
+            const medal = MEDALS[index] ?? `#${user.rank}`;
+            const level = user.level.current.symbol ? `【${escapeMd(user.level.current.symbol)}】` : "";
+            return `${medal} ${level}${escapeMd(user.displayName)} · ${formatCompact(user.tokens)} tokens · ${formatUsd(user.costUsd)}`;
+          })
+          .join("\n")}`,
+      },
+    });
+  }
+
+  const noteText = siteUrl ? `open-token-board · 自动周报 · ${siteUrl}` : "open-token-board · 自动周报";
+  elements.push({ tag: "note", elements: [{ tag: "plain_text", content: noteText }] });
+
+  return {
+    msg_type: "interactive",
+    card: {
+      config: { wide_screen_mode: true },
+      header: {
+        template: "green",
+        title: { tag: "plain_text", content: "📈 每周 Token 周报" },
+      },
+      elements,
+    },
+  };
+}
+
+export function buildReportStateSnapshot({
+  dailySummary,
+  weeklySummary,
+  generatedAt,
+  dayKey,
+}: {
+  dailySummary: TokenLeaderboardSummary;
+  weeklySummary: TokenLeaderboardSummary;
+  generatedAt: string;
+  dayKey: string;
+}): ReportStateSnapshot {
+  const users = new Map<string, ReportUserSnapshot>();
+
+  for (const user of weeklySummary.users) {
+    users.set(user.userId, snapshotUser(user, 0, undefined, user.rank));
+  }
+
+  for (const user of dailySummary.users) {
+    const existing = users.get(user.userId);
+    users.set(user.userId, snapshotUser(user, user.tokens, user.rank, existing?.ranks.weekly));
+  }
+
+  return {
+    schemaVersion: 1,
+    generatedAt,
+    dayKey,
+    users: [...users.values()].sort((left, right) => left.displayName.localeCompare(right.displayName)),
+  };
+}
+
+export function detectDailyReportEvents(
+  current: ReportStateSnapshot,
+  previous: ReportStateSnapshot | null | undefined,
+): DailyReportEvent[] {
+  if (!previous) {
+    return [];
+  }
+
+  const previousUsers = new Map(previous.users.map((user) => [user.userId, user]));
+  const pbEvents: DailyReportEvent[] = [];
+  const levelEvents: DailyReportEvent[] = [];
+  const badgeEvents: DailyReportEvent[] = [];
+  const overtakeEvents: DailyReportEvent[] = [];
+
+  for (const user of current.users) {
+    const prior = previousUsers.get(user.userId);
+    if (!prior || user.dailyTokens <= 0) {
+      continue;
+    }
+
+    if (
+      prior.singleDayPbTokens > 0 &&
+      user.todayTokens === user.singleDayPbTokens &&
+      user.singleDayPbTokens > prior.singleDayPbTokens
+    ) {
+      const gainRatio = user.singleDayPbTokens / Math.max(1, prior.singleDayPbTokens);
+      pbEvents.push({
+        type: "pb",
+        priority: 4_000 + gainRatio,
+        content: `🏆 ${escapeMd(user.displayName)} 刷新单日 PB：${formatCompact(user.singleDayPbTokens)}（旧纪录 ${formatCompact(prior.singleDayPbTokens)}）`,
+      });
+    }
+
+    if (user.levelThresholdTokens > prior.levelThresholdTokens) {
+      levelEvents.push({
+        type: "level",
+        priority: 3_000 + Math.log10(Math.max(10, user.levelThresholdTokens)),
+        content: `⬆️ ${escapeMd(user.displayName)} 升级到「${escapeMd(user.levelName)}」`,
+      });
+    }
+
+    const priorBadgeIds = new Set(prior.achievedBadges.map((badge) => badge.id));
+    for (const badge of user.achievedBadges) {
+      if (priorBadgeIds.has(badge.id)) {
+        continue;
+      }
+      badgeEvents.push({
+        type: "badge",
+        priority: 2_000 + badgePriority(badge.category, badge.id),
+        content: `🎖️ ${escapeMd(user.displayName)} 新点亮「${escapeMd(badge.icon ? `${badge.icon} ${badge.name}` : badge.name)}」`,
+      });
+    }
+  }
+
+  overtakeEvents.push(...detectOvertakeEvents(current, previous, "daily"));
+  overtakeEvents.push(...detectOvertakeEvents(current, previous, "weekly"));
+
+  return [
+    ...topEvents(pbEvents, 3),
+    ...topEvents(levelEvents, 3),
+    ...topEvents(badgeEvents, 3),
+    ...topEvents(overtakeEvents, 3),
+  ].sort((left, right) => right.priority - left.priority);
+}
+
+export function buildWeeklyReportHighlights(
+  events: TokenUsageEvent[],
+  { now = new Date(), tzOffsetMinutes }: { now?: Date; tzOffsetMinutes: number },
+): WeeklyReportHighlight[] {
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
+  const start = new Date(safeNow.getTime() - 7 * DAY_MS);
+  const currentEntries = events.filter((event) => isFiniteTime(event.timestamp) && new Date(event.timestamp).getTime() <= safeNow.getTime());
+  const previousEntries = currentEntries.filter((event) => new Date(event.timestamp).getTime() < start.getTime());
+  const currentAchievements = buildTokenAchievementSummariesByUser(currentEntries, { now: safeNow });
+  const previousAchievements = buildTokenAchievementSummariesByUser(previousEntries, { now: start });
+  const names = latestDisplayNames(currentEntries);
+  const startDay = localDayKey(start, tzOffsetMinutes);
+  const endDay = localDayKey(safeNow, tzOffsetMinutes);
+  const highlights: WeeklyReportHighlight[] = [];
+
+  for (const [userId, current] of currentAchievements) {
+    const previous = previousAchievements.get(userId);
+    const name = names.get(userId) ?? userId;
+
+    if (
+      current.personalBests.singleDay.date &&
+      current.personalBests.singleDay.date >= startDay &&
+      current.personalBests.singleDay.date <= endDay &&
+      current.personalBests.singleDay.tokens > (previous?.personalBests.singleDay.tokens ?? 0)
+    ) {
+      const oldTokens = previous?.personalBests.singleDay.tokens ?? 0;
+      highlights.push({
+        type: "pb",
+        priority: 2_000 + current.personalBests.singleDay.tokens / Math.max(1, oldTokens || 1),
+        content: `🏆 ${escapeMd(name)} 本周单日 PB ${formatCompact(current.personalBests.singleDay.tokens)}${oldTokens > 0 ? `（旧 ${formatCompact(oldTokens)}）` : ""}`,
+      });
+    }
+
+    if (current.level.current.thresholdTokens > (previous?.level.current.thresholdTokens ?? 0)) {
+      highlights.push({
+        type: "level",
+        priority: 1_000 + current.level.current.thresholdTokens,
+        content: `⬆️ ${escapeMd(name)} 本周升至「${escapeMd(current.level.current.name)}」`,
+      });
+    }
+  }
+
+  return topEvents(highlights, 8);
+}
+
 function shortField(label: string, value: string): Record<string, unknown> {
   return { is_short: true, text: { tag: "lark_md", content: `**${label}**\n${value}` } };
+}
+
+function snapshotUser(
+  user: TokenLeaderboardSummary["users"][number],
+  dailyTokens: number,
+  dailyRank: number | undefined,
+  weeklyRank: number | undefined,
+): ReportUserSnapshot {
+  return {
+    userId: user.userId,
+    displayName: user.displayName,
+    dailyTokens,
+    levelId: user.level.current.id,
+    levelName: user.level.current.name,
+    levelThresholdTokens: user.level.current.thresholdTokens,
+    achievedBadges: user.badges
+      .filter((badge) => badge.achieved)
+      .map((badge) => ({
+        id: badge.id,
+        name: badge.name,
+        icon: badge.icon,
+        category: badge.category,
+      })),
+    singleDayPbDate: user.personalBests.singleDay.date,
+    singleDayPbTokens: user.personalBests.singleDay.tokens,
+    todayTokens: user.personalBests.todayTokens,
+    ranks: {
+      ...(dailyRank ? { daily: dailyRank } : {}),
+      ...(weeklyRank ? { weekly: weeklyRank } : {}),
+    },
+  };
+}
+
+function detectOvertakeEvents(
+  current: ReportStateSnapshot,
+  previous: ReportStateSnapshot,
+  range: "daily" | "weekly",
+): DailyReportEvent[] {
+  const label = range === "daily" ? "日榜" : "7 天榜";
+  const previousUsers = new Map(previous.users.map((user) => [user.userId, user]));
+  const currentByUser = new Map(current.users.map((user) => [user.userId, user]));
+  const events: DailyReportEvent[] = [];
+
+  for (const user of current.users) {
+    const currentRank = user.ranks[range];
+    const priorRank = previousUsers.get(user.userId)?.ranks[range];
+
+    if (!currentRank || !priorRank || currentRank > 5 || priorRank <= currentRank) {
+      continue;
+    }
+
+    const target = previous.users
+      .filter((candidate) => candidate.userId !== user.userId)
+      .map((candidate) => {
+        const candidatePriorRank = candidate.ranks[range];
+        const candidateCurrentRank = currentByUser.get(candidate.userId)?.ranks[range];
+        return {
+          candidate,
+          candidatePriorRank,
+          candidateCurrentRank,
+        };
+      })
+      .filter(
+        ({ candidatePriorRank, candidateCurrentRank }) =>
+          candidatePriorRank !== undefined &&
+          candidateCurrentRank !== undefined &&
+          candidatePriorRank < priorRank &&
+          candidateCurrentRank > currentRank &&
+          (candidatePriorRank <= 5 || currentRank <= 5),
+      )
+      .sort((left, right) => {
+        const leftSeatDistance = Math.abs((left.candidatePriorRank ?? 99) - currentRank);
+        const rightSeatDistance = Math.abs((right.candidatePriorRank ?? 99) - currentRank);
+        return leftSeatDistance - rightSeatDistance || (left.candidatePriorRank ?? 99) - (right.candidatePriorRank ?? 99);
+      })[0]?.candidate;
+
+    if (!target) {
+      continue;
+    }
+
+    events.push({
+      type: "overtake",
+      priority: 1_000 + (range === "daily" ? 100 : 0) + (6 - currentRank) * 10 + (priorRank - currentRank),
+      content: `⚔️ ${escapeMd(user.displayName)} 超越 ${escapeMd(target.displayName)} 升至第 ${currentRank}（${label}）`,
+    });
+  }
+
+  return events;
+}
+
+function formatDailyEventLines(events: DailyReportEvent[]) {
+  if (!events.length) {
+    return "_今日暂无荣誉事件，排行榜还在蓄力。_";
+  }
+
+  return events.map((event) => event.content).join("\n");
+}
+
+function formatWeeklyHighlightLines(highlights: WeeklyReportHighlight[]) {
+  if (!highlights.length) {
+    return "_本周暂无升级或 PB，先把炉温养起来。_";
+  }
+
+  return highlights.map((event) => event.content).join("\n");
+}
+
+function formatWeeklyTrend(summary: TokenLeaderboardSummary, tzOffsetMinutes: number) {
+  const points = summary.daily.slice(-7);
+  const maxTokens = Math.max(...points.map((point) => point.tokens), 0);
+
+  if (!points.length || maxTokens <= 0) {
+    return "_暂无趋势数据_";
+  }
+
+  return points
+    .map((point) => {
+      const length = Math.max(1, Math.round((point.tokens / maxTokens) * 12));
+      const bar = point.tokens > 0 ? "▇".repeat(length) : "·";
+      return `${formatDateLabel(point.startAt, tzOffsetMinutes)} ${bar} ${formatCompact(point.tokens)}`;
+    })
+    .join("\n");
+}
+
+function formatRankMove(rankDelta: number | null) {
+  if (rankDelta === null || rankDelta === 0) return "→";
+  return rankDelta > 0 ? `↑${rankDelta}` : `↓${Math.abs(rankDelta)}`;
+}
+
+function formatChange(current: number, previous: number) {
+  const safeCurrent = Number.isFinite(current) ? current : 0;
+  const safePrevious = Number.isFinite(previous) ? previous : 0;
+
+  if (safePrevious <= 0) {
+    return safeCurrent > 0 ? "新增" : "持平";
+  }
+
+  const change = (safeCurrent - safePrevious) / safePrevious;
+  const sign = change > 0 ? "+" : "";
+  return `${sign}${Math.round(change * 100)}%`;
+}
+
+function badgePriority(category: TokenAchievementBadge["category"], id: string) {
+  if (category === "volume") return 90;
+  if (category === "streak") return 80;
+  if (id === "cache-master") return 70;
+  if (category === "rhythm") return 60;
+  if (category === "model") return 50;
+  return 40;
+}
+
+function topEvents<T extends { priority: number }>(events: T[], limit: number): T[] {
+  return [...events].sort((left, right) => right.priority - left.priority).slice(0, limit);
+}
+
+function latestDisplayNames(events: TokenUsageEvent[]) {
+  const latest = new Map<string, { displayName: string; timestamp: string }>();
+
+  for (const event of events) {
+    const current = latest.get(event.userId);
+    if (!current || new Date(event.timestamp).getTime() > new Date(current.timestamp).getTime()) {
+      latest.set(event.userId, { displayName: event.displayName || event.userId, timestamp: event.timestamp });
+    }
+  }
+
+  return new Map([...latest.entries()].map(([userId, value]) => [userId, value.displayName]));
+}
+
+function localDayKey(value: Date, offsetMin: number): string {
+  const local = new Date(value.getTime() + offsetMin * 60_000);
+  return `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, "0")}-${String(local.getUTCDate()).padStart(2, "0")}`;
+}
+
+function isFiniteTime(value: string) {
+  return Number.isFinite(new Date(value).getTime());
 }
 
 /** Feishu custom-bot signature: base64(HMAC-SHA256(key=`${ts}\n${secret}`, msg="")). */
