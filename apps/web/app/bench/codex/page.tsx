@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { BenchmarkAgentApp } from "@/components/benchmark/benchmark-agent-app";
 import { zh } from "@/i18n/dictionaries/zh";
 
-const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
+const DEFAULT_API_URL = "https://124-221-36-36.anyip.dev:8443/token-board";
 
 export const metadata: Metadata = {
   title: zh.common.metadata.codexBenchTitle,

@@ -65,6 +65,7 @@ import {
   createTokenUsageStore,
   importTokenUsageEventsFromJsonFile,
   type TokenUsageStore,
+  type TokenUsageStoreHealth,
 } from "@open-token-board/core/storage";
 import {
   chatArticleWithKimi,
@@ -88,6 +89,7 @@ import {
   detectDailyReportEvents,
   sendFeishuCard,
   type DailyReportConfig,
+  type DailyQuotaAlertSection,
   type ReportStateSnapshot,
 } from "./daily-report";
 
@@ -116,6 +118,14 @@ const DEV_AUTH_SECRET_PLACEHOLDER = "dev-only-token-board-auth-secret";
 function positiveNumberEnv(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function percentageEnv(value: string | undefined, fallback: number) {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return fallback;
+  }
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : fallback;
 }
 function booleanEnv(value: string | undefined, fallback: "true" | "false") {
   const normalized = value?.trim();
@@ -153,6 +163,8 @@ const WEEKLY_REPORT_ENABLED = booleanEnv(
   process.env.TOKEN_BOARD_WEEKLY_REPORT_ENABLED,
   FEISHU_WEBHOOK_URL ? "true" : "false",
 );
+const QUOTA_ALERT_THRESHOLD_PERCENT = percentageEnv(process.env.TOKEN_BOARD_QUOTA_ALERT_THRESHOLD, 25);
+const QUOTA_ALERT_STALE_MS = 24 * 60 * 60 * 1000;
 let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
@@ -239,14 +251,24 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
   if (request.method === "GET" && url.pathname === "/api/usage/health") {
     const users = await loadUploadUsers();
-    const records = await usageStore().countEvents();
+    const store = usageStore();
+    const storageHealth = await getTokenUsageStorageHealth(store);
+    const records = storageHealth.eventCount;
     const snapshotShares = await shareStore().countShares();
     sendJson(request, response, 200, {
       ok: true,
       users: users.length,
       records,
+      eventsTotal: records,
       snapshotShares,
-      storage: usageStore().kind,
+      storage: store.kind,
+      storageBackend: {
+        type: storageHealth.kind,
+        label: storageHealth.label,
+        eventCount: storageHealth.eventCount,
+        lastWriteAt: storageHealth.lastWriteAt,
+        backups: storageHealth.backups,
+      },
       snapshotShareStorage: shareStore().kind,
       pricing: {
         overrideFile: process.env.TOKEN_BOARD_PRICING_FILE || null,
@@ -3611,6 +3633,32 @@ function usageStore() {
   return tokenUsageStore;
 }
 
+async function getTokenUsageStorageHealth(store: TokenUsageStore): Promise<TokenUsageStoreHealth> {
+  if (store.getHealth) {
+    return store.getHealth();
+  }
+
+  return {
+    kind: store.kind,
+    label: store.label,
+    eventCount: await store.countEvents(),
+    lastWriteAt: null,
+    backups: {
+      enabled: false,
+      retention: 0,
+      directory: null,
+      retained: 0,
+      latestFile: null,
+      latestBackupAt: null,
+      lastBackupAt: null,
+      lastBackupError: null,
+      lastRecoveryAt: null,
+      lastRecoverySource: null,
+      lastRecoveryError: null,
+    },
+  };
+}
+
 type UsageLeaderboardReadResult = {
   generatedAt: string;
   records: number;
@@ -3858,6 +3906,7 @@ async function runDailyReport(
     tzOffsetMinutes: DAILY_REPORT_TZ_OFFSET_MIN,
     siteUrl: DAILY_REPORT_SITE_URL || undefined,
     events,
+    quotaAlerts: await buildDailyQuotaAlertSection(now),
   });
   const result = await sendFeishuCard(card, feishuReportConfig());
 
@@ -3933,6 +3982,101 @@ type ReportGoalConfig = {
   userId: string;
   goals: TokenGoal[];
 };
+
+type QuotaAlertCandidate = {
+  remainingPercent: number;
+  etaAt: string | null;
+  observedAt: string | null;
+  toolLabel: string;
+};
+
+async function buildDailyQuotaAlertSection(now: Date): Promise<DailyQuotaAlertSection | undefined> {
+  const configs = await usageStore().listUserConfigs();
+  if (!configs.length) {
+    return undefined;
+  }
+
+  const [uploadUsers, events] = await Promise.all([loadUploadUsers(), usageStore().listEvents()]);
+  const profiles = buildTeamUserProfiles(uploadUsers, events);
+  const alerts: DailyQuotaAlertSection["alerts"] = [];
+  const staleUsers: DailyQuotaAlertSection["staleUsers"] = [];
+
+  for (const { userId, config } of configs) {
+    const candidate = lowestWeeklyQuotaCandidate([
+      weeklyQuotaCandidateFromReport(config.rateLimits, "Codex"),
+      weeklyQuotaCandidateFromReport(config.claudeCodeRateLimits, "Claude Code"),
+    ]);
+
+    if (!candidate || candidate.remainingPercent >= QUOTA_ALERT_THRESHOLD_PERCENT) {
+      continue;
+    }
+
+    const profile = profiles.get(userId) ?? teamFallbackProfile(userId);
+    const snapshotAt = quotaSnapshotAt(candidate, config.updatedAt);
+    const ageMs = Number.isFinite(snapshotAt) ? now.getTime() - snapshotAt : Number.POSITIVE_INFINITY;
+
+    if (ageMs > QUOTA_ALERT_STALE_MS) {
+      staleUsers.push({
+        userId,
+        displayName: profile.displayName,
+        ageHours: Number.isFinite(ageMs) ? ageMs / (60 * 60 * 1000) : 24,
+      });
+      continue;
+    }
+
+    alerts.push({
+      userId,
+      displayName: profile.displayName,
+      remainingPercent: candidate.remainingPercent,
+      etaAt: candidate.etaAt,
+      toolLabel: candidate.toolLabel,
+    });
+  }
+
+  alerts.sort((left, right) => left.remainingPercent - right.remainingPercent || left.displayName.localeCompare(right.displayName));
+  staleUsers.sort((left, right) => right.ageHours - left.ageHours || left.displayName.localeCompare(right.displayName));
+
+  return alerts.length || staleUsers.length
+    ? {
+        thresholdPercent: QUOTA_ALERT_THRESHOLD_PERCENT,
+        alerts,
+        staleUsers,
+      }
+    : undefined;
+}
+
+function weeklyQuotaCandidateFromReport(
+  report: CodexRateLimitReport | null | undefined,
+  toolLabel: string
+): QuotaAlertCandidate | null {
+  if (!report?.available) {
+    return null;
+  }
+
+  const weekly = report.windows.find((window) => window.key === "weekly");
+  if (!weekly || typeof weekly.remainingPercent !== "number" || !Number.isFinite(weekly.remainingPercent)) {
+    return null;
+  }
+
+  return {
+    remainingPercent: weekly.remainingPercent,
+    etaAt: weekly.etaAt,
+    observedAt: weekly.observedAt || report.generatedAt || report.latestEventAt,
+    toolLabel,
+  };
+}
+
+function lowestWeeklyQuotaCandidate(candidates: Array<QuotaAlertCandidate | null>) {
+  return candidates
+    .flatMap((candidate) => (candidate ? [candidate] : []))
+    .sort((left, right) => left.remainingPercent - right.remainingPercent)[0] ?? null;
+}
+
+function quotaSnapshotAt(candidate: QuotaAlertCandidate, configUpdatedAt: string | undefined) {
+  const raw = candidate.observedAt || configUpdatedAt || "";
+  const timestamp = Date.parse(raw);
+  return Number.isFinite(timestamp) ? timestamp : Number.NaN;
+}
 
 async function loadReportGoalConfigs(): Promise<ReportGoalConfig[]> {
   const rows = await usageStore().listUserConfigs();

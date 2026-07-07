@@ -44,7 +44,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.23";
+const VERSION = "0.4.24";
 // Reject any single event above this many tokens: no real API call approaches it, but
 // a cumulative usage counter mis-read as one call (e.g. Trae's stats file) can blow
 // past it. Mirrors the server-side cap in token-board-automation.ts.
@@ -3645,7 +3645,10 @@ function printHelp() {
   ${NPX_COMMAND} collect
   ${NPX_COMMAND} upload
   ${NPX_COMMAND} resync
-  ${NPX_COMMAND} replace`);
+  ${NPX_COMMAND} replace
+
+Default API: ${API_URL}
+Override: TOKEN_BOARD_API_URL=https://your-api.example.com/token-board ${NPX_COMMAND} upload`);
 }
 
 async function readJson(filePath) {

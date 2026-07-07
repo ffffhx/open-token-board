@@ -94,6 +94,26 @@ export type WeeklyReportHighlight = {
   content: string;
 };
 
+export type DailyQuotaAlert = {
+  userId: string;
+  displayName: string;
+  remainingPercent: number;
+  etaAt: string | null;
+  toolLabel?: string;
+};
+
+export type DailyQuotaStaleUser = {
+  userId: string;
+  displayName: string;
+  ageHours: number;
+};
+
+export type DailyQuotaAlertSection = {
+  thresholdPercent: number;
+  alerts: DailyQuotaAlert[];
+  staleUsers: DailyQuotaStaleUser[];
+};
+
 export function formatCompact(value: number): string {
   const n = Number.isFinite(value) ? value : 0;
   const abs = Math.abs(n);
@@ -124,9 +144,9 @@ function pct(share: number): string {
 /** Build the Feishu interactive-card payload for a whole-board daily digest. */
 export function buildDailyReportCard(
   summary: TokenLeaderboardSummary,
-  options: { tzOffsetMinutes: number; siteUrl?: string; events?: DailyReportEvent[] },
+  options: { tzOffsetMinutes: number; siteUrl?: string; events?: DailyReportEvent[]; quotaAlerts?: DailyQuotaAlertSection },
 ): Record<string, unknown> {
-  const { tzOffsetMinutes, siteUrl, events = [] } = options;
+  const { tzOffsetMinutes, siteUrl, events = [], quotaAlerts } = options;
   const rangeLabel = RANGE_LABEL[summary.range] ?? summary.range;
   const start = formatDateLabel(summary.startAt, tzOffsetMinutes);
   const end = formatDateLabel(summary.endAt, tzOffsetMinutes);
@@ -174,9 +194,21 @@ export function buildDailyReportCard(
     },
     { tag: "hr" },
     { tag: "div", text: { tag: "lark_md", content: `🎬 **今日事件**\n${formatDailyEventLines(events)}` } },
-    { tag: "hr" },
-    { tag: "div", text: { tag: "lark_md", content: `🏆 **排行榜 · 个人明细**\n${detailLines}${detailFooter}` } },
   ];
+
+  if (shouldRenderQuotaAlerts(quotaAlerts)) {
+    elements.push({ tag: "hr" });
+    elements.push({
+      tag: "div",
+      text: {
+        tag: "lark_md",
+        content: `🚨 **额度预警**\n${formatQuotaAlertLines(quotaAlerts, tzOffsetMinutes)}`,
+      },
+    });
+  }
+
+  elements.push({ tag: "hr" });
+  elements.push({ tag: "div", text: { tag: "lark_md", content: `🏆 **排行榜 · 个人明细**\n${detailLines}${detailFooter}` } });
 
   if (topModel || topTool) {
     const bits: string[] = [];
@@ -564,6 +596,47 @@ function formatDailyEventLines(events: DailyReportEvent[]) {
   }
 
   return events.map((event) => event.content).join("\n");
+}
+
+function shouldRenderQuotaAlerts(quotaAlerts: DailyQuotaAlertSection | undefined) {
+  return Boolean(quotaAlerts && (quotaAlerts.alerts.length || quotaAlerts.staleUsers.length));
+}
+
+function formatQuotaAlertLines(quotaAlerts: DailyQuotaAlertSection | undefined, tzOffsetMinutes: number) {
+  if (!quotaAlerts) {
+    return "";
+  }
+
+  const alertLines = quotaAlerts.alerts.map((alert) => {
+    const tool = alert.toolLabel ? ` · ${escapeMd(alert.toolLabel)}` : "";
+    return `⚠️ **${escapeMd(alert.displayName)}**${tool} · 剩余 ${formatPercentValue(alert.remainingPercent)} · 预计 ${formatQuotaEta(alert.etaAt, tzOffsetMinutes)} 耗尽`;
+  });
+  const staleLine = quotaAlerts.staleUsers.length
+    ? `_数据过旧（>24h）未计入：${quotaAlerts.staleUsers
+        .map((user) => `${escapeMd(user.displayName)} ${Math.max(24, Math.round(user.ageHours))}h`)
+        .join("、")}_`
+    : "";
+
+  return [...alertLines, staleLine].filter(Boolean).join("\n");
+}
+
+function formatQuotaEta(etaAt: string | null, tzOffsetMinutes: number) {
+  if (!etaAt) {
+    return "暂无法估算";
+  }
+
+  const ms = Date.parse(etaAt);
+  if (!Number.isFinite(ms)) {
+    return "暂无法估算";
+  }
+
+  const local = new Date(ms + tzOffsetMinutes * 60_000);
+  return `${local.getUTCMonth() + 1}/${local.getUTCDate()} ${String(local.getUTCHours()).padStart(2, "0")}:${String(local.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+function formatPercentValue(value: number) {
+  const safe = Number.isFinite(value) ? value : 0;
+  return `${Math.max(0, Math.min(100, safe)).toFixed(safe < 10 && safe % 1 !== 0 ? 1 : 0)}%`;
 }
 
 function formatWeeklyHighlightLines(highlights: WeeklyReportHighlight[]) {

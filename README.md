@@ -287,12 +287,16 @@ docker compose up -d --build
 | `TOKEN_BOARD_ALLOWED_GITHUB_LOGINS` | 可选 GitHub login 白名单，限制登录和 agent 上报。 |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth 与 Device Flow。Device Flow 只需要 client id，网页 OAuth 需要 secret。 |
 | `TOKEN_BOARD_DATA_FILE` | JSON 文件存储回退路径。 |
+| `TOKEN_BOARD_JSON_BACKUP_ENABLED` | JSON 文件存储每日首次写入前备份；设为 `false` 可关闭，默认保留最近 3 份。 |
+| `TOKEN_BOARD_JSON_BACKUP_DIR` | JSON 备份目录；默认与 `TOKEN_BOARD_DATA_FILE` 同目录。 |
 | `TOKEN_BOARD_LEADERBOARD_SNAPSHOT_FILE` | 榜单快照缓存文件。 |
 | `TOKEN_BOARD_LEADERBOARD_SNAPSHOT_REFRESH_MS` | 榜单快照刷新间隔。 |
 | `SNAPSHOT_SHARE_DATA_FILE` | snapshot 分享存储文件。 |
 | `TOKEN_BOARD_POSTGRES_DB` / `TOKEN_BOARD_POSTGRES_USER` / `TOKEN_BOARD_POSTGRES_PASSWORD` / `TOKEN_BOARD_POSTGRES_SCHEMA` | Docker Compose PostgreSQL 配置。 |
 | `TOKEN_BOARD_MIGRATE_JSON_ON_START` | 为 `true` 时启动后把 JSON 事件导入当前存储。 |
 | `TOKEN_BOARD_PRICING_FILE` | 可选自定义计价 JSON 文件，路径需在 API 容器内可读。 |
+
+JSON 文件存储会在单进程内串行化写入，并用临时文件 + rename 原子替换；启动时如果发现主文件损坏，会尝试从最近可读备份恢复，否则降级为空事件结构并输出告警。这个互斥只覆盖单个 Node 进程，多实例或多副本部署仍应使用 PostgreSQL。
 
 自定义价格表示例：
 
@@ -332,11 +336,12 @@ TOKEN_BOARD_DAILY_REPORT_RANGE=1D
 TOKEN_BOARD_DAILY_REPORT_SITE_URL=https://your-site/board
 TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN=replace-with-random-token
 TOKEN_BOARD_DAILY_REPORT_STATE_FILE=/data/daily-report-state.json
+TOKEN_BOARD_QUOTA_ALERT_THRESHOLD=25
 TOKEN_BOARD_DAILY_REPORT_ENABLED=true
 TOKEN_BOARD_WEEKLY_REPORT_ENABLED=true
 ```
 
-日报“今日事件”包括单日 PB、等级升级、新徽章，以及日榜/7 天榜 Top5 内超越。事件依赖 `TOKEN_BOARD_DAILY_REPORT_STATE_FILE` 保存的轻量快照，首次运行通常还没有可对比事件。
+日报“今日事件”包括单日 PB、等级升级、新徽章，以及日榜/7 天榜 Top5 内超越。事件依赖 `TOKEN_BOARD_DAILY_REPORT_STATE_FILE` 保存的轻量快照，首次运行通常还没有可对比事件。日报还会读取团队 Codex / Claude Code 周额度快照，剩余低于 `TOKEN_BOARD_QUOTA_ALERT_THRESHOLD`（默认 25%）时追加“额度预警”；超过 24 小时未更新的快照只做“数据过旧”提示，不计入预警。
 
 手动触发：
 

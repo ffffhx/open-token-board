@@ -42,6 +42,28 @@ export type TokenUsageStoreDeleteResult = {
   records: number;
 };
 
+export type TokenUsageStoreBackupStatus = {
+  enabled: boolean;
+  retention: number;
+  directory: string | null;
+  retained: number;
+  latestFile: string | null;
+  latestBackupAt: string | null;
+  lastBackupAt: string | null;
+  lastBackupError: string | null;
+  lastRecoveryAt: string | null;
+  lastRecoverySource: "backup" | "empty" | null;
+  lastRecoveryError: string | null;
+};
+
+export type TokenUsageStoreHealth = {
+  kind: TokenUsageStoreKind;
+  label: string;
+  eventCount: number;
+  lastWriteAt: string | null;
+  backups: TokenUsageStoreBackupStatus;
+};
+
 export type TokenUsageLeaderboardOptions = {
   range: TokenBoardRange;
   metric: TokenBoardMetric;
@@ -62,6 +84,7 @@ export type TokenUsageStore = {
   countEvents: () => Promise<number>;
   insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
   deleteEventsForUser: (userId: string) => Promise<TokenUsageStoreDeleteResult>;
+  getHealth?: () => Promise<TokenUsageStoreHealth>;
   getUserConfig: (userId: string) => Promise<TokenBoardUserConfig | null>;
   listUserConfigs: () => Promise<Array<{ userId: string; config: TokenBoardUserConfig }>>;
   upsertUserConfig: (userId: string, config: TokenBoardUserConfig) => Promise<TokenBoardUserConfig>;
@@ -87,6 +110,7 @@ const POSTGRES_USER_CONFIGS_TABLE = "user_configs";
 const INSERT_BATCH_SIZE = 400;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const FILE_BACKUP_RETENTION = 3;
 
 export async function createTokenUsageStore(options: TokenUsageStoreOptions): Promise<TokenUsageStore> {
   const databaseUrl = options.databaseUrl?.trim();
@@ -142,20 +166,24 @@ export async function readTokenUsageEventsFromFile(filePath: string) {
   }
 }
 
-function createFileTokenUsageStore({
+async function createFileTokenUsageStore({
   dataFile,
   maxEvents,
 }: {
   dataFile: string;
   maxEvents: number;
-}): TokenUsageStore {
+}): Promise<TokenUsageStore> {
   let storageQueue: Promise<unknown> = Promise.resolve();
   const userConfigsFile = path.join(path.dirname(dataFile), "user-configs.json");
+  const fileState = createFileStoreState(dataFile);
   const enqueueStorageOperation = <T>(operation: () => Promise<T>) => {
     const run = storageQueue.then(operation, operation);
     storageQueue = run.catch(() => undefined);
     return run;
   };
+
+  await recoverTokenUsageFileIfNeeded(dataFile, fileState);
+  await refreshFileWriteTime(dataFile, fileState);
 
   return {
     kind: "file",
@@ -181,7 +209,7 @@ function createFileTokenUsageStore({
         const merged = mergeTokenEvents(existing, events, maxEvents);
 
         if (incomingNew.length || hasMetadataUpdate) {
-          await writeTokenUsageEventsToFile(dataFile, merged);
+          await writeTokenUsageEventsToFile(dataFile, merged, fileState);
         }
 
         return {
@@ -197,12 +225,24 @@ function createFileTokenUsageStore({
         const deleted = existing.length - kept.length;
 
         if (deleted) {
-          await writeTokenUsageEventsToFile(dataFile, kept);
+          await writeTokenUsageEventsToFile(dataFile, kept, fileState);
         }
 
         return {
           deleted,
           records: kept.length,
+        };
+      }),
+    getHealth: () =>
+      enqueueStorageOperation(async () => {
+        const events = (await readTokenUsageEventsFromFile(dataFile)).entries;
+
+        return {
+          kind: "file",
+          label: dataFile,
+          eventCount: events.length,
+          lastWriteAt: fileState.lastWriteAt,
+          backups: await buildFileBackupStatus(fileState),
         };
       }),
     getUserConfig: (userId) => readTokenUserConfigsFromFile(userConfigsFile).then((configs) => configs[userId] ?? null),
@@ -235,6 +275,19 @@ function createPostgresTokenUsageStore({
   const safeSchema = sqlIdentifier(schema);
   const table = `${safeSchema}.${sqlIdentifier(POSTGRES_TABLE)}`;
   const userConfigsTable = `${safeSchema}.${sqlIdentifier(POSTGRES_USER_CONFIGS_TABLE)}`;
+  const backupStatus: TokenUsageStoreBackupStatus = {
+    enabled: false,
+    retention: 0,
+    directory: null,
+    retained: 0,
+    latestFile: null,
+    latestBackupAt: null,
+    lastBackupAt: null,
+    lastBackupError: null,
+    lastRecoveryAt: null,
+    lastRecoverySource: null,
+    lastRecoveryError: null,
+  };
 
   return {
     kind: "postgres" as const,
@@ -349,6 +402,20 @@ function createPostgresTokenUsageStore({
       return {
         deleted: result.rowCount || 0,
         records: await countPostgresRows(pool, table),
+      };
+    },
+    getHealth: async () => {
+      const [countResult, writeResult] = await Promise.all([
+        pool.query<{ count: string }>(`SELECT count(*) AS count FROM ${table}`),
+        pool.query<{ last_write_at: Date | string | null }>(`SELECT max(created_at) AS last_write_at FROM ${table}`),
+      ]);
+
+      return {
+        kind: "postgres" as const,
+        label: `${schema}.${POSTGRES_TABLE}`,
+        eventCount: Number(countResult.rows[0]?.count || 0),
+        lastWriteAt: writeResult.rows[0]?.last_write_at ? toIsoString(writeResult.rows[0].last_write_at) : null,
+        backups: backupStatus,
       };
     },
     getUserConfig: async (userId: string) => {
@@ -937,6 +1004,208 @@ function toFiniteInteger(value: unknown) {
   return Math.trunc(toFiniteNumber(value));
 }
 
+type FileStoreState = {
+  backupDir: string;
+  backupPrefix: string;
+  backupEnabled: boolean;
+  backupRetention: number;
+  lastWriteAt: string | null;
+  lastBackupDayKey: string | null;
+  lastBackupAt: string | null;
+  lastBackupError: string | null;
+  lastRecoveryAt: string | null;
+  lastRecoverySource: "backup" | "empty" | null;
+  lastRecoveryError: string | null;
+};
+
+type BackupFile = {
+  filePath: string;
+  mtimeMs: number;
+  mtimeIso: string;
+};
+
+function createFileStoreState(dataFile: string): FileStoreState {
+  const backupDir = process.env.TOKEN_BOARD_JSON_BACKUP_DIR?.trim() || path.dirname(dataFile);
+  const backupEnabled =
+    process.env.TOKEN_BOARD_JSON_BACKUP_ENABLED !== "false" &&
+    process.env.TOKEN_BOARD_JSON_BACKUPS !== "false";
+
+  return {
+    backupDir,
+    backupPrefix: `${path.basename(dataFile)}.backup-`,
+    backupEnabled,
+    backupRetention: FILE_BACKUP_RETENTION,
+    lastWriteAt: null,
+    lastBackupDayKey: null,
+    lastBackupAt: null,
+    lastBackupError: null,
+    lastRecoveryAt: null,
+    lastRecoverySource: null,
+    lastRecoveryError: null,
+  };
+}
+
+async function recoverTokenUsageFileIfNeeded(filePath: string, state: FileStoreState) {
+  try {
+    await readTokenUsageEventsFromFile(filePath);
+    return;
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Token usage data file is unreadable, attempting recovery: ${filePath}; ${message}`);
+
+    const backup = await findLatestValidTokenUsageBackup(state);
+    if (backup) {
+      await writeTokenUsageEventsToFile(filePath, backup.entries, state, { backupBeforeWrite: false });
+      state.lastRecoveryAt = new Date().toISOString();
+      state.lastRecoverySource = "backup";
+      state.lastRecoveryError = message;
+      console.warn(`Token usage data file restored from backup: ${backup.filePath}`);
+      return;
+    }
+
+    await writeTokenUsageEventsToFile(filePath, [], state, { backupBeforeWrite: false });
+    state.lastRecoveryAt = new Date().toISOString();
+    state.lastRecoverySource = "empty";
+    state.lastRecoveryError = message;
+    console.warn("Token usage data file recovered with an empty event store.");
+  }
+}
+
+async function refreshFileWriteTime(filePath: string, state: FileStoreState) {
+  try {
+    const stat = await fs.stat(filePath);
+    state.lastWriteAt = stat.mtime.toISOString();
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      state.lastBackupError = error instanceof Error ? error.message : String(error);
+    }
+  }
+}
+
+async function backupTokenUsageFileBeforeWrite(filePath: string, state: FileStoreState) {
+  if (!state.backupEnabled) {
+    return;
+  }
+
+  const dayKey = new Date().toISOString().slice(0, 10);
+  if (state.lastBackupDayKey === dayKey) {
+    return;
+  }
+
+  try {
+    await readTokenUsageEventsFromFile(filePath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return;
+    }
+
+    state.lastBackupError = error instanceof Error ? error.message : String(error);
+    console.warn(`Token usage backup skipped because the current file is unreadable: ${state.lastBackupError}`);
+    return;
+  }
+
+  const backupFile = path.join(state.backupDir, `${state.backupPrefix}${dayKey}.json`);
+  try {
+    await fs.mkdir(state.backupDir, { recursive: true });
+    if (!(await fileExists(backupFile))) {
+      await fs.copyFile(filePath, backupFile);
+    }
+    state.lastBackupDayKey = dayKey;
+    state.lastBackupAt = new Date().toISOString();
+    state.lastBackupError = null;
+    await rotateTokenUsageBackups(state);
+  } catch (error) {
+    state.lastBackupError = error instanceof Error ? error.message : String(error);
+    console.warn(`Token usage backup failed: ${state.lastBackupError}`);
+  }
+}
+
+async function rotateTokenUsageBackups(state: FileStoreState) {
+  const backups = await listTokenUsageBackups(state);
+  const stale = backups.slice(state.backupRetention);
+
+  await Promise.all(stale.map((backup) => fs.rm(backup.filePath, { force: true }).catch(() => undefined)));
+}
+
+async function findLatestValidTokenUsageBackup(state: FileStoreState) {
+  const backups = await listTokenUsageBackups(state);
+
+  for (const backup of backups) {
+    try {
+      const parsed = await readTokenUsageEventsFromFile(backup.filePath);
+      return { filePath: backup.filePath, entries: parsed.entries };
+    } catch (error) {
+      state.lastBackupError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  return null;
+}
+
+async function buildFileBackupStatus(state: FileStoreState): Promise<TokenUsageStoreBackupStatus> {
+  const backups = await listTokenUsageBackups(state);
+  const latest = backups[0] ?? null;
+
+  return {
+    enabled: state.backupEnabled,
+    retention: state.backupRetention,
+    directory: state.backupEnabled ? state.backupDir : null,
+    retained: backups.length,
+    latestFile: latest?.filePath ?? null,
+    latestBackupAt: latest?.mtimeIso ?? null,
+    lastBackupAt: state.lastBackupAt,
+    lastBackupError: state.lastBackupError,
+    lastRecoveryAt: state.lastRecoveryAt,
+    lastRecoverySource: state.lastRecoverySource,
+    lastRecoveryError: state.lastRecoveryError,
+  };
+}
+
+async function listTokenUsageBackups(state: FileStoreState): Promise<BackupFile[]> {
+  if (!state.backupEnabled) {
+    return [];
+  }
+
+  let names: string[];
+  try {
+    names = await fs.readdir(state.backupDir);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const backups = await Promise.all(
+    names
+      .filter((name) => name.startsWith(state.backupPrefix) && name.endsWith(".json"))
+      .map(async (name) => {
+        const filePath = path.join(state.backupDir, name);
+        const stat = await fs.stat(filePath);
+        return {
+          filePath,
+          mtimeMs: stat.mtimeMs,
+          mtimeIso: stat.mtime.toISOString(),
+        };
+      })
+  );
+
+  return backups.sort((left, right) => right.mtimeMs - left.mtimeMs || right.filePath.localeCompare(left.filePath));
+}
+
+async function fileExists(filePath: string) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function readTokenUserConfigsFromFile(filePath: string): Promise<Record<string, TokenBoardUserConfig>> {
   try {
     const parsed = JSON.parse(await fs.readFile(filePath, "utf8")) as unknown;
@@ -959,6 +1228,28 @@ async function readTokenUserConfigsFromFile(filePath: string): Promise<Record<st
 }
 
 async function writeTokenUserConfigsToFile(filePath: string, configs: Record<string, TokenBoardUserConfig>) {
+  await writeJsonFileAtomic(filePath, { schemaVersion: 1, updatedAt: new Date().toISOString(), users: configs });
+}
+
+async function writeTokenUsageEventsToFile(
+  filePath: string,
+  events: TokenUsageEvent[],
+  state?: FileStoreState,
+  options: { backupBeforeWrite?: boolean } = {}
+) {
+  if (state && options.backupBeforeWrite !== false) {
+    await backupTokenUsageFileBeforeWrite(filePath, state);
+  }
+
+  const writtenAt = new Date().toISOString();
+  await writeJsonFileAtomic(filePath, { schemaVersion: 1, updatedAt: writtenAt, entries: events });
+
+  if (state) {
+    state.lastWriteAt = writtenAt;
+  }
+}
+
+async function writeJsonFileAtomic(filePath: string, payload: unknown) {
   const dir = path.dirname(filePath);
   const tempFile = path.join(
     dir,
@@ -968,35 +1259,31 @@ async function writeTokenUserConfigsToFile(filePath: string, configs: Record<str
   await fs.mkdir(dir, { recursive: true });
 
   try {
-    await fs.writeFile(
-      tempFile,
-      `${JSON.stringify({ schemaVersion: 1, updatedAt: new Date().toISOString(), users: configs }, null, 2)}\n`
-    );
+    const handle = await fs.open(tempFile, "w", 0o600);
+    try {
+      await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, "utf8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
     await fs.rename(tempFile, filePath);
+    await fsyncDirectory(dir);
   } catch (error) {
     await fs.rm(tempFile, { force: true }).catch(() => undefined);
     throw error;
   }
 }
 
-async function writeTokenUsageEventsToFile(filePath: string, events: TokenUsageEvent[]) {
-  const dir = path.dirname(filePath);
-  const tempFile = path.join(
-    dir,
-    `.${path.basename(filePath)}.${process.pid}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`
-  );
-
-  await fs.mkdir(dir, { recursive: true });
-
+async function fsyncDirectory(dir: string) {
   try {
-    await fs.writeFile(
-      tempFile,
-      `${JSON.stringify({ schemaVersion: 1, updatedAt: new Date().toISOString(), entries: events }, null, 2)}\n`
-    );
-    await fs.rename(tempFile, filePath);
-  } catch (error) {
-    await fs.rm(tempFile, { force: true }).catch(() => undefined);
-    throw error;
+    const handle = await fs.open(dir, "r");
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    // Directory fsync is best-effort across filesystems/platforms.
   }
 }
 
