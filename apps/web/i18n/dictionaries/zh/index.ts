@@ -1,7 +1,21 @@
+import { benchmark } from "./benchmark";
+import { board } from "./board";
 import { common } from "./common";
+import { landing } from "./landing";
+import { limits } from "./limits";
+import { profile } from "./profile";
+import { share } from "./share";
+import { wrapped } from "./wrapped";
 
 export const zh = {
+  benchmark,
+  board,
   common,
+  landing,
+  limits,
+  profile,
+  share,
+  wrapped,
 };
 
 export type Dictionary = typeof zh;
