@@ -384,6 +384,7 @@ export function LeaderboardMobileCard({
   const metricValue = formatMetricValue(getUserMetricValue(user, metric), metric);
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
+  const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
 
   return (
     <article className="rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm">
@@ -412,6 +413,9 @@ export function LeaderboardMobileCard({
         <MetricMini label="费用" value={formatUsd(user.costUsd)} />
         <MetricMini label="会话" value={formatNumber(user.sessions)} />
       </div>
+      <p className="mt-2 truncate text-xs text-stone-500" title={cacheBreakdownTitle}>
+        读缓存 {formatTokens(user.cachedInputTokens)} · 写缓存 {formatTokens(user.cacheCreationInputTokens)}
+      </p>
       {showDailyTrend ? (
         <div className="mt-3 rounded-lg border border-stone-950/8 bg-white px-3 py-2">
           <DailyUsageSparkline
@@ -674,6 +678,7 @@ function formatSparklineBucketLabel(startDate: string, endDate: string) {
 export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBoardRange; showDailyTrend: boolean; user: TokenLeaderboardUser }) {
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
+  const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
   const rankTone =
     user.rank === 1
       ? "border-amber-600/30 bg-amber-50 text-amber-900"
@@ -710,7 +715,9 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           <DailyUsageSparkline fixedWidth daily={daily} label={`${user.displayName} 用量趋势`} range={range} />
         </td>
       ) : null}
-      <td className="px-4 py-3 text-right font-mono font-semibold text-stone-950">{formatTokens(consumptionTokens)}</td>
+      <td className="px-4 py-3 text-right font-mono font-semibold text-stone-950" title={cacheBreakdownTitle}>
+        {formatTokens(consumptionTokens)}
+      </td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatUsd(user.costUsd)}</td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
       <td className="px-4 py-3">

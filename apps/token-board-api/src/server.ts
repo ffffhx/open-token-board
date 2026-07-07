@@ -31,9 +31,12 @@ import {
 import {
   buildTokenAccountUsageProfile,
   buildTokenLeaderboard,
+  getTokenConsumptionTokens,
+  getUnmatchedTokenPricingModels,
   type TokenBoardMetric,
   type TokenBoardRange,
   type TokenLeaderboardSummary,
+  type TokenUsageEvent,
 } from "@open-token-board/core";
 import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
 import {
@@ -63,6 +66,8 @@ const DATA_FILE = process.env.TOKEN_BOARD_DATA_FILE || path.join(process.cwd(), 
 const USERS_FILE = process.env.TOKEN_BOARD_USERS_FILE || path.join(process.cwd(), ".token-board", "users.json");
 const MAX_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_BODY_BYTES, 4 * 1024 * 1024);
 const MAX_EVENTS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENTS, 100_000);
+const MAX_EVENT_TOTAL_TOKENS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS, 50_000_000);
+const MAX_USER_DAILY_TOTAL_TOKENS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_USER_DAILY_TOTAL_TOKENS, 500_000_000);
 const LEADERBOARD_SNAPSHOT_FILE =
   process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_FILE || path.join(path.dirname(DATA_FILE), "leaderboard-snapshots.json");
 const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_REFRESH_MS, 60_000);
@@ -194,6 +199,10 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       snapshotShares,
       storage: usageStore().kind,
       snapshotShareStorage: shareStore().kind,
+      pricing: {
+        overrideFile: process.env.TOKEN_BOARD_PRICING_FILE || null,
+        unmatchedModels: getUnmatchedTokenPricingModels(),
+      },
       leaderboardSnapshots: {
         entries: leaderboardSnapshotCache.size,
         file: LEADERBOARD_SNAPSHOT_FILE,
@@ -684,19 +693,39 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  const rawValidationErrors = rawEvents.length ? validateRawIngestEvents(rawEvents) : [];
+  if (rawValidationErrors.length) {
+    sendJson(request, response, 400, {
+      error: "Token usage batch rejected",
+      errors: rawValidationErrors,
+    });
+    return;
+  }
+
   const sanitized = rawEvents.length
     ? sanitizeIngestEvents(rawEvents, identity, ingestPrivacyOptions())
     : { entries: [], errors: [] };
 
-  if (!sanitized.entries.length && sanitized.errors.length && !userConfig) {
+  if (sanitized.errors.length) {
     sendJson(request, response, 400, {
-      error: "No valid token usage events",
+      error: "Token usage batch rejected",
       errors: sanitized.errors,
     });
     return;
   }
 
   const store = usageStore();
+  const batchValidationErrors = sanitized.entries.length
+    ? await validateNormalizedIngestEvents(store, sanitized.entries, "ingest")
+    : [];
+  if (batchValidationErrors.length) {
+    sendJson(request, response, 400, {
+      error: "Token usage batch rejected",
+      errors: batchValidationErrors,
+    });
+    return;
+  }
+
   if (userConfig) {
     await store.upsertUserConfig(identity.userId, userConfig);
   }
@@ -743,19 +772,39 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
+  const rawValidationErrors = rawEvents.length ? validateRawIngestEvents(rawEvents) : [];
+  if (rawValidationErrors.length) {
+    sendJson(request, response, 400, {
+      error: "Token usage batch rejected",
+      errors: rawValidationErrors,
+    });
+    return;
+  }
+
   const sanitized = rawEvents.length
     ? sanitizeIngestEvents(rawEvents, identity, ingestPrivacyOptions())
     : { entries: [], errors: [] };
 
-  if (!sanitized.entries.length && sanitized.errors.length && !userConfig) {
+  if (sanitized.errors.length) {
     sendJson(request, response, 400, {
-      error: "No valid token usage events",
+      error: "Token usage batch rejected",
       errors: sanitized.errors,
     });
     return;
   }
 
   const store = usageStore();
+  const batchValidationErrors = sanitized.entries.length
+    ? await validateNormalizedIngestEvents(store, sanitized.entries, "replace")
+    : [];
+  if (batchValidationErrors.length) {
+    sendJson(request, response, 400, {
+      error: "Token usage batch rejected",
+      errors: batchValidationErrors,
+    });
+    return;
+  }
+
   if (userConfig) {
     await store.upsertUserConfig(identity.userId, userConfig);
   }
@@ -794,6 +843,308 @@ function extractUserConfigFromIngestBody(body: unknown) {
       : {};
 
   return sanitizeTokenBoardUserConfig(record.userConfig ?? record.config, client);
+}
+
+type IngestWriteMode = "ingest" | "replace";
+
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const TOKEN_NUMBER_FIELDS = [
+  "inputTokens",
+  "input_tokens",
+  "cacheCreationInputTokens",
+  "cache_creation_input_tokens",
+  "cache_creation_input_tokens_5m",
+  "cache_creation_input_tokens_1h",
+  "cacheReadInputTokens",
+  "cache_read_input_tokens",
+  "cachedInputTokens",
+  "cached_input_tokens",
+  "cachedTokens",
+  "outputTokens",
+  "output_tokens",
+  "reasoningOutputTokens",
+  "reasoning_output_tokens",
+  "totalTokens",
+  "total_tokens",
+  "messages",
+] as const;
+
+function validateRawIngestEvents(events: unknown[]) {
+  const errors: string[] = [];
+  const latestAllowedMs = shanghaiStartOfDayAfterTomorrowMs();
+
+  events.forEach((event, index) => {
+    if (!event || typeof event !== "object" || Array.isArray(event)) {
+      errors.push(`第 ${index + 1} 条记录不是对象`);
+      return;
+    }
+
+    const record = event as Record<string, unknown>;
+    errors.push(...validateRawTokenNumbers(record, index));
+
+    const timestampValue = readRawField(record, ["timestamp", "reportedAt", "reported_at", "date", "createdAt", "created_at"]);
+    if (timestampValue !== undefined) {
+      const timestamp = parseRawDateMs(timestampValue);
+      if (timestamp === null) {
+        errors.push(`第 ${index + 1} 条记录 reported_at/timestamp 无法解析`);
+      } else if (timestamp >= latestAllowedMs) {
+        errors.push(`第 ${index + 1} 条记录 reported_at/timestamp 不能晚于明天（Asia/Shanghai）`);
+      }
+    }
+
+    const inputTokens = readRawNumber(record, ["inputTokens", "input_tokens"]);
+    const outputTokens = readRawNumber(record, ["outputTokens", "output_tokens"]);
+    const totalTokens = readRawNumber(record, ["totalTokens", "total_tokens"]);
+    const cacheReadTokens =
+      readRawNumber(record, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) +
+      readRawNumber(record, ["cacheReadInputTokens", "cache_read_input_tokens"]);
+    const cacheCreationTokens = readRawCacheCreationInputTokens(record);
+    const reasoningOutputTokens = readRawNumber(record, ["reasoningOutputTokens", "reasoning_output_tokens"]);
+    const computedTotalTokens = inputTokens + outputTokens;
+
+    if (totalTokens > 0 && Math.abs(totalTokens - computedTotalTokens) > 1) {
+      errors.push(
+        `第 ${index + 1} 条记录 totalTokens=${totalTokens} 与 inputTokens+outputTokens=${computedTotalTokens} 不一致`
+      );
+    }
+
+    if (inputTokens > 0 && cacheReadTokens + cacheCreationTokens > inputTokens + 1) {
+      errors.push(
+        `第 ${index + 1} 条记录 cache read/write 合计 ${cacheReadTokens + cacheCreationTokens} 超过 inputTokens ${inputTokens}`
+      );
+    }
+
+    if (outputTokens >= 0 && reasoningOutputTokens > outputTokens + 1) {
+      errors.push(
+        `第 ${index + 1} 条记录 reasoningOutputTokens ${reasoningOutputTokens} 超过 outputTokens ${outputTokens}`
+      );
+    }
+
+    if (MAX_EVENT_TOTAL_TOKENS > 0 && computedTotalTokens > MAX_EVENT_TOTAL_TOKENS) {
+      errors.push(
+        `第 ${index + 1} 条记录 token 用量 ${computedTotalTokens} 超出单条上限 ${MAX_EVENT_TOTAL_TOKENS}`
+      );
+    }
+  });
+
+  return errors;
+}
+
+async function validateNormalizedIngestEvents(
+  store: TokenUsageStore,
+  entries: TokenUsageEvent[],
+  mode: IngestWriteMode
+) {
+  const errors: string[] = [];
+
+  entries.forEach((event, index) => {
+    const fields = {
+      inputTokens: event.inputTokens,
+      cacheCreationInputTokens: event.cacheCreationInputTokens,
+      cachedInputTokens: event.cachedInputTokens,
+      outputTokens: event.outputTokens,
+      reasoningOutputTokens: event.reasoningOutputTokens,
+      totalTokens: event.totalTokens,
+    };
+
+    for (const [field, value] of Object.entries(fields)) {
+      if (!Number.isFinite(value) || value < 0) {
+        errors.push(`第 ${index + 1} 条记录 ${field} 必须是非负数`);
+      }
+    }
+
+    if (Math.abs(event.totalTokens - (event.inputTokens + event.outputTokens)) > 1) {
+      errors.push(`第 ${index + 1} 条记录 totalTokens 与 inputTokens+outputTokens 不一致`);
+    }
+
+    if (event.cachedInputTokens + event.cacheCreationInputTokens > event.inputTokens + 1) {
+      errors.push(`第 ${index + 1} 条记录 cache read/write 合计超过 inputTokens`);
+    }
+
+    if (event.reasoningOutputTokens > event.outputTokens + 1) {
+      errors.push(`第 ${index + 1} 条记录 reasoningOutputTokens 超过 outputTokens`);
+    }
+
+    if (MAX_EVENT_TOTAL_TOKENS > 0 && event.totalTokens > MAX_EVENT_TOTAL_TOKENS) {
+      errors.push(`第 ${index + 1} 条记录 token 用量 ${event.totalTokens} 超出单条上限 ${MAX_EVENT_TOTAL_TOKENS}`);
+    }
+  });
+
+  if (!errors.length) {
+    errors.push(...(await validateUserDailyTokenCap(store, entries, mode)));
+  }
+
+  return errors;
+}
+
+async function validateUserDailyTokenCap(store: TokenUsageStore, entries: TokenUsageEvent[], mode: IngestWriteMode) {
+  if (!entries.length || MAX_USER_DAILY_TOTAL_TOKENS <= 0) {
+    return [];
+  }
+
+  const totalsByUserDay = new Map<string, number>();
+  const incomingIds = new Set(entries.map((entry) => entry.id));
+
+  if (mode === "ingest") {
+    const users = new Set(entries.map((entry) => entry.userId));
+    for (const userId of users) {
+      const existing = await store.listEventsForUser(userId);
+      for (const event of existing) {
+        if (incomingIds.has(event.id)) {
+          continue;
+        }
+        addDailyTokenTotal(totalsByUserDay, event);
+      }
+    }
+  }
+
+  entries.forEach((event) => addDailyTokenTotal(totalsByUserDay, event));
+
+  return [...totalsByUserDay.entries()].flatMap(([key, tokens]) => {
+    if (tokens <= MAX_USER_DAILY_TOTAL_TOKENS) {
+      return [];
+    }
+
+    const [userId, day] = key.split("\n");
+    return [
+      `用户 ${userId} 在 ${day} 的单日 token 累计 ${Math.round(tokens)} 超出上限 ${MAX_USER_DAILY_TOTAL_TOKENS}`,
+    ];
+  });
+}
+
+function addDailyTokenTotal(totals: Map<string, number>, event: TokenUsageEvent) {
+  const key = `${event.userId}\n${shanghaiDateKey(event.timestamp)}`;
+  totals.set(key, (totals.get(key) ?? 0) + getTokenConsumptionTokens(event));
+}
+
+function validateRawTokenNumbers(record: Record<string, unknown>, index: number) {
+  const errors: string[] = [];
+  const cacheCreation = record.cache_creation;
+  const nestedCacheCreation =
+    cacheCreation && typeof cacheCreation === "object" && !Array.isArray(cacheCreation)
+      ? (cacheCreation as Record<string, unknown>)
+      : null;
+
+  for (const field of TOKEN_NUMBER_FIELDS) {
+    const value = record[field];
+    if (value === undefined) {
+      continue;
+    }
+    const parsed = parseRawNumber(value);
+    if (parsed === null) {
+      errors.push(`第 ${index + 1} 条记录 ${field} 不是有效数字`);
+    } else if (parsed < 0) {
+      errors.push(`第 ${index + 1} 条记录 ${field} 不能为负数`);
+    }
+  }
+
+  if (nestedCacheCreation) {
+    for (const field of ["ephemeral_5m_input_tokens", "ephemeral_1h_input_tokens"] as const) {
+      const value = nestedCacheCreation[field];
+      if (value === undefined) {
+        continue;
+      }
+      const parsed = parseRawNumber(value);
+      if (parsed === null) {
+        errors.push(`第 ${index + 1} 条记录 cache_creation.${field} 不是有效数字`);
+      } else if (parsed < 0) {
+        errors.push(`第 ${index + 1} 条记录 cache_creation.${field} 不能为负数`);
+      }
+    }
+  }
+
+  return errors;
+}
+
+function readRawCacheCreationInputTokens(record: Record<string, unknown>) {
+  const total = readRawNumber(record, ["cacheCreationInputTokens", "cache_creation_input_tokens"]);
+  if (total > 0) {
+    return total;
+  }
+
+  const cacheCreation = record.cache_creation;
+  const nested =
+    cacheCreation && typeof cacheCreation === "object" && !Array.isArray(cacheCreation)
+      ? (cacheCreation as Record<string, unknown>)
+      : {};
+
+  return (
+    readRawNumber(record, [
+      "cacheCreationInputTokens5m",
+      "cache_creation_input_tokens_5m",
+      "ephemeral5mInputTokens",
+      "ephemeral_5m_input_tokens",
+    ]) +
+    readRawNumber(record, [
+      "cacheCreationInputTokens1h",
+      "cache_creation_input_tokens_1h",
+      "ephemeral1hInputTokens",
+      "ephemeral_1h_input_tokens",
+    ]) +
+    readRawNumber(nested, ["ephemeral5mInputTokens", "ephemeral_5m_input_tokens"]) +
+    readRawNumber(nested, ["ephemeral1hInputTokens", "ephemeral_1h_input_tokens"])
+  );
+}
+
+function readRawNumber(record: Record<string, unknown>, fields: string[]) {
+  const value = readRawField(record, fields);
+  const parsed = value === undefined ? 0 : parseRawNumber(value);
+  return parsed === null ? 0 : parsed;
+}
+
+function readRawField(record: Record<string, unknown>, fields: string[]) {
+  for (const field of fields) {
+    if (record[field] !== undefined) {
+      return record[field];
+    }
+  }
+
+  return undefined;
+}
+
+function parseRawNumber(value: unknown) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.replace(/[$,_\s]/g, ""));
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return value === undefined || value === null || value === "" ? 0 : null;
+}
+
+function parseRawDateMs(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const trimmed = value.trim();
+    if (/^\d+$/.test(trimmed)) {
+      const epoch = Number(trimmed);
+      return epoch < 1e12 ? epoch * 1000 : epoch;
+    }
+    const parsed = new Date(trimmed).getTime();
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  return null;
+}
+
+function shanghaiStartOfDayAfterTomorrowMs(now = new Date()) {
+  const shifted = new Date(now.getTime() + SHANGHAI_OFFSET_MS);
+  return Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate() + 2) - SHANGHAI_OFFSET_MS;
+}
+
+function shanghaiDateKey(value: string) {
+  const time = new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+  const year = shifted.getUTCFullYear();
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(shifted.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 async function handleSnapshotSharePublish(request: IncomingMessage, response: ServerResponse) {
@@ -1318,6 +1669,7 @@ function ingestPrivacyOptions() {
     hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
     includeSessionTitle: process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE !== "false",
     maxEventAgeDays: positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120),
+    maxEventTotalTokens: MAX_EVENT_TOTAL_TOKENS,
     // Comma-separated source blocklist; defaults to "trae" (cumulative counters,
     // no per-call data — old agents keep re-uploading them as fresh calls).
     blockedSources: (process.env.TOKEN_BOARD_BLOCKED_SOURCES ?? "trae")

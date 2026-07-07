@@ -49,7 +49,9 @@ export function AccountUsagePanel({
   const inputContextTokens = user ? getInputContextTokens(user) : 0;
   const accountConsumptionTokens = user ? getTokenConsumptionTokens(user) : 0;
   const generatedTokens = user ? user.outputTokens + user.reasoningOutputTokens : 0;
-  const cacheHitRate = inputContextTokens > 0 && user ? user.cachedInputTokens / inputContextTokens : 0;
+  const cacheReadTokens = user?.cachedInputTokens ?? 0;
+  const cacheWriteTokens = user?.cacheCreationInputTokens ?? 0;
+  const cacheHitRate = inputContextTokens > 0 ? cacheReadTokens / inputContextTokens : 0;
   const accountTokensPerSession = user?.sessions ? accountConsumptionTokens / user.sessions : 0;
   const dashboardProfile = profile && user ? profile : null;
 
@@ -176,7 +178,7 @@ export function AccountUsagePanel({
               tooltip={{
                 title: "预估费用",
                 description: "按公开模型单价估算的美元成本，不等同于 Codex 账号额度或实际账单。",
-                formula: "Σ(input/1M × input 单价 + cached/1M × cached 单价 + output/1M × output 单价)",
+                formula: "Σ(input + cache write + cache read + output 四分类单价)",
                 detail: `当前区间估算 ${formatUsd(user.costUsd)}`,
               }}
             />
@@ -187,7 +189,7 @@ export function AccountUsagePanel({
               tone="green"
               tooltip={{
                 title: "总消耗 Token",
-                description: "排行榜主口径，按输入上下文加输出计算；缓存命中输入是输入上下文里的子集。",
+                description: "排行榜主口径，按输入上下文加输出计算；cache read/write 都是输入上下文里的子项，不额外加总。",
                 formula: "Σ(input_tokens + output_tokens)",
                 detail: `${formatNumber(dashboardProfile.records)} 条记录，共 ${formatTokens(accountConsumptionTokens)}`,
               }}
@@ -195,13 +197,13 @@ export function AccountUsagePanel({
             <AccountStatCard
               label="输入上下文"
               value={formatTokens(inputContextTokens)}
-              meta={`缓存 ${formatTokens(user.cachedInputTokens)}`}
+              meta={`读缓存 ${formatTokens(cacheReadTokens)} · 写缓存 ${formatTokens(cacheWriteTokens)}`}
               tone="blue"
               tooltip={{
                 title: "输入上下文",
-                description: "模型阅读过的上下文吞吐量；其中缓存命中部分在副指标里单独标出。",
+                description: "模型阅读过的上下文吞吐量；cache read 和 cache write 单独展示并按不同单价估算。",
                 formula: "Σ(input_tokens)",
-                detail: `输入上下文 ${formatTokens(user.inputTokens)}，其中缓存 ${formatTokens(user.cachedInputTokens)}`,
+                detail: `输入 ${formatTokens(user.inputTokens)}，读缓存 ${formatTokens(cacheReadTokens)}，写缓存 ${formatTokens(cacheWriteTokens)}`,
               }}
             />
             <AccountStatCard
@@ -223,9 +225,9 @@ export function AccountUsagePanel({
               tone="ink"
               tooltip={{
                 title: "缓存命中率",
-                description: "输入上下文里有多少来自缓存命中。命中越高，通常代表重复上下文更多、单位成本更低。",
+                description: "输入上下文里有多少来自 cache read。cache write 是写入成本，单独计价。",
                 formula: "Σ cached_input_tokens ÷ Σ input_tokens",
-                detail: `${formatTokens(user.cachedInputTokens)} ÷ ${formatTokens(inputContextTokens)} = ${formatPercent(cacheHitRate)}`,
+                detail: `${formatTokens(cacheReadTokens)} ÷ ${formatTokens(inputContextTokens)} = ${formatPercent(cacheHitRate)}；写缓存 ${formatTokens(cacheWriteTokens)}`,
               }}
             />
             <AccountStatCard
@@ -1028,7 +1030,18 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                         </p>
                       </td>
                       <td className="border-b border-slate-100 px-3 py-3 text-right align-top">
-                        <p className="font-mono text-base font-semibold text-blue-700">{formatTokens(session.tokens)}</p>
+                        <p
+                          className="font-mono text-base font-semibold text-blue-700"
+                          title={`input ${formatTokens(session.inputTokens)} · cache read ${formatTokens(session.cachedInputTokens)} · cache write ${formatTokens(session.cacheCreationInputTokens)} · output ${formatTokens(session.outputTokens)}`}
+                        >
+                          {formatTokens(session.tokens)}
+                        </p>
+                        <p
+                          className="mt-1 truncate text-xs text-slate-500"
+                          title={`cache read ${formatTokens(session.cachedInputTokens)} · cache write ${formatTokens(session.cacheCreationInputTokens)}`}
+                        >
+                          读 {formatTokens(session.cachedInputTokens)} · 写 {formatTokens(session.cacheCreationInputTokens)}
+                        </p>
                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
                           <div
                             className="h-full rounded-full bg-blue-600"

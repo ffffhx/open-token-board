@@ -77,10 +77,8 @@ function buildDiscoverOptions(config: TokenUsageCollectorConfig): DiscoverOption
 
 /**
  * ASC-backed replacement for collectLocalTokenUsage(). Returns events in the
- * downstream TokenUsageEvent shape (the extra cacheCreationInputTokens that ASC
- * carries is dropped — its cost is already folded into costUsd and its tokens
- * into inputTokens, so totals are preserved). Dedup / redaction / stable-id are
- * left to sanitizeIngestEvents().
+ * downstream TokenUsageEvent shape. Dedup / redaction / stable-id are left to
+ * sanitizeIngestEvents().
  */
 export async function collectLocalTokenUsageViaAsc(
   config: TokenUsageCollectorConfig = {}
@@ -117,10 +115,6 @@ export async function collectLocalTokenUsageViaAsc(
 
 /** Map an ASC TokenUsageEvent onto the downstream TokenUsageEvent shape. */
 function mapEvent(ev: AscTokenUsageEvent): TokenUsageEvent {
-  // Drop cacheCreationInputTokens (not in the downstream type) and `id`
-  // (sanitizeIngestEvents reassigns a stable id). Everything else is structurally
-  // identical and passes through, including ASC's costUsd which the leaderboard
-  // honours when finite.
   return {
     id: ev.id,
     userId: ev.userId,
@@ -132,6 +126,7 @@ function mapEvent(ev: AscTokenUsageEvent): TokenUsageEvent {
     tool: ev.tool,
     timestamp: ev.timestamp,
     inputTokens: ev.inputTokens,
+    cacheCreationInputTokens: ev.cacheCreationInputTokens ?? 0,
     cachedInputTokens: ev.cachedInputTokens,
     outputTokens: ev.outputTokens,
     reasoningOutputTokens: ev.reasoningOutputTokens,
