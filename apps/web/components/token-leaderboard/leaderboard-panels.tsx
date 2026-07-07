@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type ReactNode } from "react";
+import { useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import {
   getTokenConsumptionTokens,
@@ -9,6 +9,9 @@ import {
   type TokenBoardRange,
   type TokenLeaderboardSummary,
   type TokenLeaderboardUser,
+  type TokenTrendBreakdown,
+  type TokenTrendMetricValues,
+  type TokenTrendSegment,
 } from "@open-token-board/core";
 
 import { METRICS, ROLLING_RANGE_LABELS } from "./constants";
@@ -180,14 +183,18 @@ export function SegmentedControl({
 }
 
 export function StatTile({
+  active = false,
   label,
   value,
   meta,
+  onClick,
   tone,
 }: {
+  active?: boolean;
   label: string;
   value: ReactNode;
   meta: ReactNode;
+  onClick?: () => void;
   tone: "ink" | "mint" | "blue" | "gold";
 }) {
   const tones = {
@@ -196,15 +203,31 @@ export function StatTile({
     blue: "border-sky-600/18 bg-sky-50 text-sky-900",
     gold: "border-amber-600/18 bg-amber-50 text-amber-900",
   };
-
-  return (
-    <div className={`min-h-32 rounded-lg border p-4 shadow-sm ${tones[tone]}`}>
+  const className = `min-h-32 rounded-lg border p-4 text-left shadow-sm transition ${
+    tones[tone]
+  } ${active ? "ring-2 ring-blue-600/35 ring-offset-2 ring-offset-white" : onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""}`;
+  const content = (
+    <>
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-semibold uppercase opacity-65">{label}</p>
         <span className="mt-0.5 size-2 rounded-full bg-current opacity-55" />
       </div>
       <p className="mt-5 font-mono text-3xl font-semibold leading-none sm:text-4xl" title={typeof value === "string" ? value : undefined}>{value}</p>
       <p className="mt-3 truncate text-xs opacity-60" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
+    </>
+  );
+
+  if (onClick) {
+    return (
+      <button type="button" aria-pressed={active} onClick={onClick} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <div className={className}>
+      {content}
     </div>
   );
 }
@@ -222,113 +245,601 @@ export function HeroSignal({ label, value, meta }: { label: string; value: React
 export function DailyTokenTrendChart({
   daily,
   loading,
-  maxDailyTokens,
+  metric,
+  trend,
 }: {
   daily: TokenLeaderboardSummary["daily"];
   loading: boolean;
-  maxDailyTokens: number;
+  metric: TokenBoardMetric;
+  trend?: TokenTrendBreakdown;
 }) {
+  const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+  const hiddenKeySet = useMemo(() => new Set(hiddenKeys), [hiddenKeys]);
+
   if (loading) {
     return <TrendLoadingBars />;
   }
 
+  const trendDaily = trend?.daily ?? [];
+  const hasMetricTrend = trendDaily.some((point) => getTrendMetricValue(point, metric) > 0);
+  const effectiveMetric = trend && hasMetricTrend ? metric : "tokens";
+  const chartPoints = trend && hasMetricTrend ? trendDaily : daily;
+  const canStack =
+    effectiveMetric !== "users" &&
+    Boolean(trend && trend.segments.length > 1 && trendDaily.some((point) => point.segments.some((segment) => getTrendMetricValue(segment, effectiveMetric) > 0)));
+  const orderedSegments = trend?.segments ?? [];
+  const visibleSegments = orderedSegments.filter((segment) => !hiddenKeySet.has(segment.key));
+  const visibleKeys = new Set(visibleSegments.map((segment) => segment.key));
+  const width = 920;
+  const height = 238;
+  const paddingTop = 12;
+  const paddingBottom = 22;
+  const paddingX = 6;
+  const innerHeight = height - paddingTop - paddingBottom;
+  const gap = chartPoints.length > 45 ? 2 : chartPoints.length > 20 ? 3 : 5;
+  const barWidth =
+    chartPoints.length <= 0
+      ? width
+      : Math.max(2, (width - paddingX * 2 - gap * Math.max(0, chartPoints.length - 1)) / chartPoints.length);
+  const valueForPoint = (point: (typeof chartPoints)[number]) => {
+    if (!canStack || !hasTrendSegments(point)) {
+      return getTrendMetricValue(point, effectiveMetric);
+    }
+
+    const stackValue = point.segments
+      .filter((segment) => visibleKeys.has(segment.key))
+      .reduce((sum, segment) => sum + getTrendMetricValue(segment, effectiveMetric), 0);
+
+    return stackValue;
+  };
+  const maxValue = Math.max(1, ...chartPoints.map(valueForPoint));
+  const hoveredPoint = hoveredPointIndex === null ? null : chartPoints[hoveredPointIndex] ?? null;
+  const hoveredX =
+    hoveredPointIndex === null
+      ? 50
+      : ((paddingX + hoveredPointIndex * (barWidth + gap) + barWidth / 2) / width) * 100;
+  const hoverAlignClass =
+    hoveredPointIndex === null || chartPoints.length <= 1
+      ? "left-1/2 -translate-x-1/2 text-center"
+      : hoveredPointIndex === 0
+        ? "left-0 translate-x-0 text-left"
+        : hoveredPointIndex === chartPoints.length - 1
+          ? "right-0 translate-x-0 text-right"
+          : "left-1/2 -translate-x-1/2 text-center";
+  const metricLabel = metricTrendLabel(effectiveMetric);
+  const fallbackNotice = effectiveMetric !== metric ? "当前响应缺少该指标趋势，已降级展示 Token。" : "";
+
+  function cycleLegendSegment(segment: TokenTrendSegment) {
+    if (hiddenKeySet.has(segment.key)) {
+      setHiddenKeys((keys) => keys.filter((key) => key !== segment.key));
+      setFocusedKey(segment.key);
+      return;
+    }
+
+    if (focusedKey !== segment.key) {
+      setFocusedKey(segment.key);
+      return;
+    }
+
+    setHiddenKeys((keys) => [...keys, segment.key]);
+    setFocusedKey(null);
+  }
+
+  function resetLegend() {
+    setFocusedKey(null);
+    setHiddenKeys([]);
+  }
+
   return (
-    <>
-      {daily.map((point, index) => (
-        <DailyTokenTrendBar
-          key={point.date}
-          dailyLength={daily.length}
-          index={index}
-          maxDailyTokens={maxDailyTokens}
-          point={point}
+    <div className="min-w-0">
+      {canStack && orderedSegments.length ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {orderedSegments.map((segment) => {
+            const isHidden = hiddenKeySet.has(segment.key);
+            const isFocused = focusedKey === segment.key;
+            const colorStyle = trendSegmentColorStyle(segment);
+
+            return (
+              <button
+                key={segment.key}
+                type="button"
+                aria-pressed={isFocused}
+                onClick={() => cycleLegendSegment(segment)}
+                title={`${segment.label}：点击高亮，再次点击隐藏；隐藏后点击恢复`}
+                className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                  isHidden
+                    ? "border-slate-200 bg-slate-50 text-slate-400 line-through dark:border-slate-800 dark:bg-slate-900"
+                    : isFocused
+                      ? "border-blue-600/35 bg-blue-50 text-blue-900 shadow-sm"
+                      : focusedKey
+                        ? "border-stone-950/10 bg-white text-stone-500 opacity-65 hover:opacity-100"
+                        : "border-stone-950/10 bg-white text-stone-700 hover:border-blue-600/25 hover:bg-blue-50"
+                }`}
+              >
+                <span aria-hidden="true" className="token-trend-swatch size-2.5 rounded-full" style={colorStyle} />
+                <span className="max-w-[9rem] truncate">{segment.label}</span>
+              </button>
+            );
+          })}
+          {(focusedKey || hiddenKeys.length) ? (
+            <button
+              type="button"
+              onClick={resetLegend}
+              className="inline-flex min-h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-semibold text-slate-500 transition hover:border-blue-600/25 hover:bg-blue-50 hover:text-blue-700"
+            >
+              重置
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div
+        className="relative rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-2 pb-3 pt-4"
+        onMouseLeave={() => setHoveredPointIndex(null)}
+      >
+        <svg
+          aria-label={`${metricLabel}日趋势`}
+          className="h-64 w-full overflow-visible"
+          preserveAspectRatio="none"
+          role="img"
+          viewBox={`0 0 ${width} ${height}`}
+        >
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={height - paddingBottom}
+            y2={height - paddingBottom}
+            stroke="currentColor"
+            strokeOpacity="0.16"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+          {chartPoints.map((point, index) => {
+            const x = paddingX + index * (barWidth + gap);
+            const stackValue = valueForPoint(point);
+            const barHeight = Math.max(0, (stackValue / maxValue) * innerHeight);
+            const isSelected = selectedDate === point.date;
+            const isHovered = hoveredPointIndex === index;
+
+            if (canStack && hasTrendSegments(point)) {
+              let yCursor = height - paddingBottom;
+              const rects = point.segments
+                .filter((segment) => visibleKeys.has(segment.key))
+                .map((segment) => {
+                  const value = getTrendMetricValue(segment, effectiveMetric);
+                  const segmentHeight = value > 0 ? Math.max(1, (value / maxValue) * innerHeight) : 0;
+                  yCursor -= segmentHeight;
+                  const colorStyle = trendSegmentColorStyle(segment);
+                  const isDimmed = Boolean(focusedKey && focusedKey !== segment.key);
+
+                  return (
+                    <rect
+                      key={`${point.date}:${segment.key}`}
+                      className="token-trend-segment transition-opacity"
+                      data-token-trend-segment={segment.key}
+                      height={segmentHeight}
+                      rx={Math.min(3, barWidth / 2)}
+                      style={colorStyle}
+                      width={barWidth}
+                      x={x}
+                      y={yCursor}
+                      opacity={isDimmed ? 0.28 : 1}
+                    />
+                  );
+                });
+
+              return (
+                <g key={point.date}>
+                  {rects}
+                  {isSelected || isHovered ? (
+                    <rect
+                      aria-hidden="true"
+                      fill="none"
+                      height={Math.max(2, barHeight)}
+                      rx={Math.min(4, barWidth / 2)}
+                      stroke={isSelected ? "#dc2626" : "#2563eb"}
+                      strokeOpacity={isSelected ? 0.85 : 0.55}
+                      strokeWidth="1.5"
+                      vectorEffect="non-scaling-stroke"
+                      width={barWidth + 1}
+                      x={x - 0.5}
+                      y={height - paddingBottom - barHeight}
+                    />
+                  ) : null}
+                  <rect
+                    aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)}`}
+                    className="cursor-crosshair outline-none"
+                    data-token-trend-point={point.date}
+                    fill="transparent"
+                    height={height}
+                    onClick={() => setSelectedDate((date) => (date === point.date ? null : point.date))}
+                    onFocus={() => setHoveredPointIndex(index)}
+                    onMouseEnter={() => setHoveredPointIndex(index)}
+                    onMouseMove={() => setHoveredPointIndex(index)}
+                    pointerEvents="all"
+                    tabIndex={0}
+                    width={Math.max(8, barWidth + gap)}
+                    x={Math.max(0, x - gap / 2)}
+                    y={0}
+                  >
+                    <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
+                  </rect>
+                </g>
+              );
+            }
+
+            return (
+              <g key={point.date}>
+                <rect
+                  className={index === chartPoints.length - 1 ? "token-trend-latest" : "token-trend-total"}
+                  height={Math.max(stackValue > 0 ? 2 : 0, barHeight)}
+                  rx={Math.min(3, barWidth / 2)}
+                  width={barWidth}
+                  x={x}
+                  y={height - paddingBottom - Math.max(stackValue > 0 ? 2 : 0, barHeight)}
+                />
+                {isSelected || isHovered ? (
+                  <rect
+                    aria-hidden="true"
+                    fill="none"
+                    height={Math.max(2, barHeight)}
+                    rx={Math.min(4, barWidth / 2)}
+                    stroke={isSelected ? "#dc2626" : "#2563eb"}
+                    strokeOpacity={isSelected ? 0.85 : 0.55}
+                    strokeWidth="1.5"
+                    vectorEffect="non-scaling-stroke"
+                    width={barWidth + 1}
+                    x={x - 0.5}
+                    y={height - paddingBottom - barHeight}
+                  />
+                ) : null}
+                <rect
+                  aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)}`}
+                  className="cursor-crosshair outline-none"
+                  data-token-trend-point={point.date}
+                  fill="transparent"
+                  height={height}
+                  onClick={() => setSelectedDate((date) => (date === point.date ? null : point.date))}
+                  onFocus={() => setHoveredPointIndex(index)}
+                  onMouseEnter={() => setHoveredPointIndex(index)}
+                  onMouseMove={() => setHoveredPointIndex(index)}
+                  pointerEvents="all"
+                  tabIndex={0}
+                  width={Math.max(8, barWidth + gap)}
+                  x={Math.max(0, x - gap / 2)}
+                  y={0}
+                >
+                  <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
+                </rect>
+              </g>
+            );
+          })}
+        </svg>
+
+        {hoveredPoint ? (
+          <div
+            role="tooltip"
+            className={`pointer-events-none absolute top-2 z-30 min-w-[12rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-100 shadow-sm backdrop-blur ${hoverAlignClass}`}
+            style={{ left: `${hoveredX}%` }}
+            data-token-trend-tooltip={hoveredPoint.date}
+          >
+            <span className="block font-mono text-[10px] font-semibold text-blue-600">{hoveredPoint.date}</span>
+            <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">
+              {formatTrendMetricValue(valueForPoint(hoveredPoint), effectiveMetric)}
+            </span>
+            {hasTrendSegments(hoveredPoint) && canStack ? (
+              <span className="mt-2 block space-y-1">
+                {hoveredPoint.segments
+                  .filter((segment) => visibleKeys.has(segment.key))
+                  .filter((segment) => getTrendMetricValue(segment, effectiveMetric) > 0)
+                  .sort((left, right) => getTrendMetricValue(right, effectiveMetric) - getTrendMetricValue(left, effectiveMetric))
+                  .slice(0, 7)
+                  .map((segment) => (
+                    <span key={segment.key} className="flex min-w-0 items-center justify-between gap-2 text-[11px]">
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span aria-hidden="true" className="token-trend-swatch size-2 rounded-full" style={trendSegmentColorStyle(segment)} />
+                        <span className="truncate">{segment.label}</span>
+                      </span>
+                      <span className="shrink-0 font-mono text-stone-500">
+                        {formatTrendMetricValue(getTrendMetricValue(segment, effectiveMetric), effectiveMetric)}
+                      </span>
+                    </span>
+                  ))}
+              </span>
+            ) : null}
+            <span className="mt-2 block whitespace-normal font-mono text-[10px] leading-4 text-stone-500">
+              {formatUtcRange(hoveredPoint.startAt, hoveredPoint.endAt)}
+            </span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-2 flex justify-between gap-3 font-mono text-xs text-stone-500">
+        <span>{chartPoints[0]?.date.slice(5) ?? "--"}</span>
+        <span className="truncate text-center">{fallbackNotice || `${metricLabel} · ${canStack ? "按模型堆叠" : "单指标趋势"}`}</span>
+        <span>{chartPoints.at(-1)?.date.slice(5) ?? "--"}</span>
+      </div>
+
+      {selectedDate ? (
+        <HourlyTrendDrilldown
+          canStack={canStack}
+          focusedKey={focusedKey}
+          hiddenKeySet={hiddenKeySet}
+          metric={effectiveMetric}
+          selectedDate={selectedDate}
+          trend={trend}
         />
-      ))}
-    </>
+      ) : null}
+    </div>
   );
 }
 
-function DailyTokenTrendBar({
-  dailyLength,
-  index,
-  maxDailyTokens,
-  point,
+function HourlyTrendDrilldown({
+  canStack,
+  focusedKey,
+  hiddenKeySet,
+  metric,
+  selectedDate,
+  trend,
 }: {
-  dailyLength: number;
-  index: number;
-  maxDailyTokens: number;
-  point: TokenLeaderboardSummary["daily"][number];
+  canStack: boolean;
+  focusedKey: string | null;
+  hiddenKeySet: Set<string>;
+  metric: TokenBoardMetric;
+  selectedDate: string;
+  trend?: TokenTrendBreakdown;
 }) {
-  const tooltipId = useId();
-  const safeMaxTokens = Math.max(1, maxDailyTokens);
-  const barHeightPercent = Math.max(3, (point.tokens / safeMaxTokens) * 100);
-  const barHeight = `${barHeightPercent}%`;
-  const isLatest = index === dailyLength - 1;
-  const exactTokens = `${formatNumber(point.tokens)} tokens`;
-  const utcRange = formatUtcRange(point.startAt, point.endAt);
-  const exactLabel = `${point.date} ${exactTokens} ${utcRange}`;
-  const tooltipAlignClass =
-    dailyLength === 1
-      ? "left-1/2 -translate-x-1/2 text-center"
-      : index === 0
-        ? "left-0 translate-x-0 text-left"
-        : isLatest
-          ? "right-0 translate-x-0 text-right"
-          : "left-1/2 -translate-x-1/2 text-center";
-  const tooltipArrowClass =
-    dailyLength === 1
-      ? "left-1/2 -translate-x-1/2"
-      : index === 0
-        ? "left-3"
-        : isLatest
-          ? "right-3"
-          : "left-1/2 -translate-x-1/2";
+  const [hoveredHourIndex, setHoveredHourIndex] = useState<number | null>(null);
+  const day = trend?.hourly.find((item) => item.date === selectedDate);
+
+  if (!trend || !day) {
+    return (
+      <div className="mt-3 rounded-lg border border-amber-600/20 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+        仅最近 {trend?.hourlySupportedDays ?? 7} 天支持小时下钻，当前日期 {selectedDate} 暂不展开。
+      </div>
+    );
+  }
+
+  const points = day.points;
+  const width = 920;
+  const height = 124;
+  const paddingTop = 8;
+  const paddingBottom = 18;
+  const paddingX = 6;
+  const innerHeight = height - paddingTop - paddingBottom;
+  const gap = 4;
+  const barWidth = Math.max(4, (width - paddingX * 2 - gap * 23) / 24);
+  const valueForPoint = (point: TokenTrendMetricValues & { segments: TokenTrendSegment[] }) => {
+    if (!canStack) {
+      return getTrendMetricValue(point, metric);
+    }
+
+    return point.segments
+      .filter((segment) => !hiddenKeySet.has(segment.key))
+      .reduce((sum, segment) => sum + getTrendMetricValue(segment, metric), 0);
+  };
+  const maxValue = Math.max(1, ...points.map(valueForPoint));
+  const hoveredPoint = hoveredHourIndex === null ? null : points[hoveredHourIndex] ?? null;
 
   return (
-    <div className="relative flex h-full min-w-0 items-end">
-      <button
-        type="button"
-        aria-describedby={tooltipId}
-        aria-label={exactLabel}
-        className="group/trend relative flex h-full w-full cursor-crosshair appearance-none items-end rounded-t-[3px] border-0 bg-transparent px-0 pb-0 pt-20 text-inherit outline-none focus-visible:ring-2 focus-visible:ring-blue-600/35 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
-        data-token-trend-point={point.date}
-      >
-        <span
-          aria-hidden="true"
-          className={`block w-full rounded-t-[3px] transition duration-200 group-hover/trend:translate-y-[-2px] group-focus-visible/trend:translate-y-[-2px] ${
-            isLatest
-              ? "bg-red-600 group-hover/trend:bg-red-500 group-focus-visible/trend:bg-red-500"
-              : "bg-blue-600 group-hover/trend:bg-blue-600 group-focus-visible/trend:bg-blue-600"
-          }`}
-          style={{ height: barHeight }}
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 left-1/2 z-10 -translate-x-1/2 border-l border-dashed border-blue-600/45 opacity-0 transition group-hover/trend:opacity-100 group-focus-visible/trend:opacity-100"
-          style={{ height: barHeight }}
-        />
-        <span
-          id={tooltipId}
-          role="tooltip"
-          className={`pointer-events-none absolute top-2 z-30 min-w-[9rem] max-w-[16rem] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-0 shadow-sm backdrop-blur transition duration-150 group-hover/trend:translate-y-[-0.2rem] group-hover/trend:opacity-100 group-focus-visible/trend:translate-y-[-0.2rem] group-focus-visible/trend:opacity-100 ${tooltipAlignClass}`}
-          data-token-trend-tooltip-placement="top-rail"
-          data-token-trend-tooltip={point.date}
-        >
-          <span className="block font-mono text-[10px] font-semibold text-blue-600">{point.date}</span>
-          <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">{formatTokens(point.tokens)}</span>
-          <span className="mt-1 block truncate font-mono text-[10px] text-stone-500" title={exactTokens}>
-            {exactTokens}
-          </span>
-          <span className="mt-1 block whitespace-normal font-mono text-[10px] leading-4 text-stone-500" title={utcRange}>
-            {utcRange}
-          </span>
-          <span
-            aria-hidden="true"
-            className={`absolute top-full size-2 rotate-45 border-b border-r border-blue-600/18 bg-white ${tooltipArrowClass}`}
-          />
+    <div className="mt-3 rounded-lg border border-stone-950/8 bg-slate-50 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold text-stone-950">{selectedDate} 小时分布</h3>
+          <p className="mt-0.5 font-mono text-[11px] text-stone-500">
+            {hoveredPoint
+              ? `${String(hoveredPoint.hour).padStart(2, "0")}:00 · ${formatTrendMetricValue(valueForPoint(hoveredPoint), metric)}`
+              : `最近 ${trend.hourlySupportedDays} 天可下钻`}
+          </p>
+        </div>
+        <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500">
+          24 小时
         </span>
-      </button>
+      </div>
+      <div className="relative mt-2" onMouseLeave={() => setHoveredHourIndex(null)}>
+        <svg
+          aria-label={`${selectedDate} 小时分布`}
+          className="h-32 w-full overflow-visible"
+          preserveAspectRatio="none"
+          role="img"
+          viewBox={`0 0 ${width} ${height}`}
+        >
+          <line
+            x1={paddingX}
+            x2={width - paddingX}
+            y1={height - paddingBottom}
+            y2={height - paddingBottom}
+            stroke="currentColor"
+            strokeOpacity="0.16"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+          {points.map((point, index) => {
+            const x = paddingX + index * (barWidth + gap);
+            const stackValue = valueForPoint(point);
+            const barHeight = Math.max(0, (stackValue / maxValue) * innerHeight);
+
+            if (canStack) {
+              let yCursor = height - paddingBottom;
+              const rects = point.segments
+                .filter((segment) => !hiddenKeySet.has(segment.key))
+                .map((segment) => {
+                  const value = getTrendMetricValue(segment, metric);
+                  const segmentHeight = value > 0 ? Math.max(1, (value / maxValue) * innerHeight) : 0;
+                  yCursor -= segmentHeight;
+                  const isDimmed = Boolean(focusedKey && focusedKey !== segment.key);
+
+                  return (
+                    <rect
+                      key={`${point.hour}:${segment.key}`}
+                      className="token-trend-segment transition-opacity"
+                      height={segmentHeight}
+                      rx={Math.min(3, barWidth / 2)}
+                      style={trendSegmentColorStyle(segment)}
+                      width={barWidth}
+                      x={x}
+                      y={yCursor}
+                      opacity={isDimmed ? 0.28 : 1}
+                    />
+                  );
+                });
+
+              return (
+                <g key={point.hour}>
+                  {rects}
+                  <rect
+                    aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}
+                    className="cursor-crosshair"
+                    fill="transparent"
+                    height={height}
+                    onMouseEnter={() => setHoveredHourIndex(index)}
+                    onMouseMove={() => setHoveredHourIndex(index)}
+                    pointerEvents="all"
+                    width={Math.max(10, barWidth + gap)}
+                    x={Math.max(0, x - gap / 2)}
+                    y={0}
+                  >
+                    <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}</title>
+                  </rect>
+                </g>
+              );
+            }
+
+            return (
+              <g key={point.hour}>
+                <rect
+                  className="token-trend-total"
+                  height={Math.max(stackValue > 0 ? 2 : 0, barHeight)}
+                  rx={Math.min(3, barWidth / 2)}
+                  width={barWidth}
+                  x={x}
+                  y={height - paddingBottom - Math.max(stackValue > 0 ? 2 : 0, barHeight)}
+                />
+                <rect
+                  aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}
+                  className="cursor-crosshair"
+                  fill="transparent"
+                  height={height}
+                  onMouseEnter={() => setHoveredHourIndex(index)}
+                  onMouseMove={() => setHoveredHourIndex(index)}
+                  pointerEvents="all"
+                  width={Math.max(10, barWidth + gap)}
+                  x={Math.max(0, x - gap / 2)}
+                  y={0}
+                >
+                  <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}</title>
+                </rect>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div className="mt-1 flex justify-between font-mono text-[11px] text-stone-500">
+        <span>00:00</span>
+        <span>06:00</span>
+        <span>12:00</span>
+        <span>18:00</span>
+        <span>23:00</span>
+      </div>
     </div>
   );
+}
+
+const TREND_SEGMENT_COLORS = [
+  { dark: "#60a5fa", light: "#2563eb" },
+  { dark: "#2dd4bf", light: "#0f766e" },
+  { dark: "#fbbf24", light: "#d97706" },
+  { dark: "#fb7185", light: "#be123c" },
+  { dark: "#a78bfa", light: "#7c3aed" },
+  { dark: "#38bdf8", light: "#0284c7" },
+  { dark: "#f97316", light: "#ea580c" },
+];
+const OTHER_TREND_COLOR = { dark: "#94a3b8", light: "#64748b" };
+
+function trendSegmentColorStyle(segment: TokenTrendSegment) {
+  const color = segment.other ? OTHER_TREND_COLOR : TREND_SEGMENT_COLORS[hashTrendKey(segment.key) % TREND_SEGMENT_COLORS.length];
+
+  return {
+    "--trend-fill-dark": color.dark,
+    "--trend-fill-light": color.light,
+  } as CSSProperties;
+}
+
+function hasTrendSegments(point: unknown): point is { segments: TokenTrendSegment[]; tokens: number; startAt: string; endAt: string; date: string } {
+  return Boolean(point && typeof point === "object" && Array.isArray((point as { segments?: unknown }).segments));
+}
+
+function hashTrendKey(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function getTrendMetricValue(value: Partial<TokenTrendMetricValues> & { tokens: number }, metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return value.costUsd ?? 0;
+  }
+
+  if (metric === "sessions") {
+    return value.sessions ?? 0;
+  }
+
+  if (metric === "messages") {
+    return value.messages ?? 0;
+  }
+
+  if (metric === "users") {
+    return value.activeUsers ?? 0;
+  }
+
+  return value.tokens;
+}
+
+function formatTrendMetricValue(value: number, metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return formatUsd(value);
+  }
+
+  if (metric === "sessions") {
+    return `${formatNumber(value)} 会话`;
+  }
+
+  if (metric === "messages") {
+    return `${formatNumber(value)} 条消息`;
+  }
+
+  if (metric === "users") {
+    return `${formatNumber(value)} 人`;
+  }
+
+  return formatTokens(value);
+}
+
+function metricTrendLabel(metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return "估算费用";
+  }
+
+  if (metric === "sessions") {
+    return "会话";
+  }
+
+  if (metric === "messages") {
+    return "消息";
+  }
+
+  if (metric === "users") {
+    return "活跃人数";
+  }
+
+  return "Token";
 }
 
 export function PanelHeader({ title, meta, action }: { title: string; meta: ReactNode; action: ReactNode }) {
@@ -382,7 +893,7 @@ export function LeaderboardMobileCard({
   showDailyTrend: boolean;
   user: TokenLeaderboardUser;
 }) {
-  const metricLabel = METRICS.find((item) => item.key === metric)?.label ?? "总消耗";
+  const metricLabel = metric === "users" ? "活跃天数" : METRICS.find((item) => item.key === metric)?.label ?? "总消耗";
   const metricValue = formatMetricValue(getUserMetricValue(user, metric), metric);
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
@@ -730,6 +1241,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
       </td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatUsd(user.costUsd)}</td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.activeDays)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-md border border-stone-950/10 bg-slate-50 px-2 py-1 text-xs font-semibold text-stone-700">
@@ -959,17 +1471,16 @@ const TREND_SKELETON_HEIGHTS = ["35%", "55%", "42%", "68%", "50%", "78%", "60%",
 
 function TrendLoadingBars() {
   return (
-    <>
+    <div className="grid h-64 grid-cols-12 items-end gap-1 rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-3 pb-3 pt-5">
       {TREND_SKELETON_HEIGHTS.map((height, index) => (
-        <div key={index} className="flex h-full min-w-0 items-end">
-          <span
-            aria-hidden="true"
-            className="block w-full rounded-t-[3px] bg-slate-200/80 motion-safe:animate-pulse"
-            style={{ height }}
-          />
-        </div>
+        <span
+          key={index}
+          aria-hidden="true"
+          className="block w-full rounded-t-[3px] bg-slate-200/80 motion-safe:animate-pulse"
+          style={{ height }}
+        />
       ))}
-    </>
+    </div>
   );
 }
 

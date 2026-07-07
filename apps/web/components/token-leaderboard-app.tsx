@@ -10,6 +10,7 @@ import {
   type TokenBoardMetric,
   type TokenBoardRange,
   type TokenLeaderboardSummary,
+  type TokenTrendMetricValues,
 } from "@open-token-board/core";
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
@@ -86,6 +87,29 @@ function statsCacheKey(base: string, range: TokenBoardRange, metric: TokenBoardM
 }
 function accountCacheKey(base: string, userId: string, range: TokenBoardRange): string {
   return `${base}|${userId}|${range}`;
+}
+
+function getTeamTrendMetricValue(
+  point: (TokenLeaderboardSummary["daily"][number] & Partial<TokenTrendMetricValues>),
+  metric: TokenBoardMetric
+) {
+  if (metric === "cost") {
+    return point.costUsd ?? 0;
+  }
+
+  if (metric === "sessions") {
+    return point.sessions ?? 0;
+  }
+
+  if (metric === "messages") {
+    return point.messages ?? 0;
+  }
+
+  if (metric === "users") {
+    return point.activeUsers ?? 0;
+  }
+
+  return point.tokens;
 }
 
 export function TokenLeaderboardApp({
@@ -329,8 +353,9 @@ export function TokenLeaderboardApp({
   const topUsers = summary.users.slice(0, 8);
   const leader = summary.users[0];
   const showDailyLeaderboardTrend = range !== "1D";
-  const leaderboardColumnCount = showDailyLeaderboardTrend ? 7 : 6;
-  const maxDailyTokens = Math.max(1, ...summary.daily.map((point) => point.tokens));
+  const leaderboardColumnCount = showDailyLeaderboardTrend ? 8 : 7;
+  const trendPointsForPeak = summary.trends?.model.daily?.length ? summary.trends.model.daily : summary.daily;
+  const trendPeakValue = Math.max(0, ...trendPointsForPeak.map((point) => getTeamTrendMetricValue(point, metric)));
   const selectedMetricLabel = METRICS.find((item) => item.key === metric)?.label ?? "总消耗";
   const shareTotal = Math.max(0, summary.users.reduce((sum, user) => sum + getUserMetricValue(user, metric), 0));
   const totalInputContextTokens = summary.users.reduce((sum, user) => sum + getInputContextTokens(user), 0);
@@ -472,7 +497,7 @@ export function TokenLeaderboardApp({
         )}
       </div>
       <div className="hidden overflow-x-auto sm:block">
-        <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[960px]" : "min-w-[720px]"}`}>
+        <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
               <th className="px-4 py-3">排名</th>
@@ -481,6 +506,7 @@ export function TokenLeaderboardApp({
               <SortableColumnHeader active={metric === "tokens"} align="right">总消耗 Token</SortableColumnHeader>
               <SortableColumnHeader active={metric === "cost"} align="right">费用</SortableColumnHeader>
               <SortableColumnHeader active={metric === "sessions"} align="right">会话</SortableColumnHeader>
+              <SortableColumnHeader active={metric === "users"} align="right">活跃天数</SortableColumnHeader>
               <th className="px-4 py-3">常用模型</th>
             </tr>
           </thead>
@@ -702,28 +728,36 @@ export function TokenLeaderboardApp({
           <div className="min-w-0 space-y-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatTile
+                active={metric === "tokens"}
                 label="总消耗 Token"
                 value={isDataLoading ? <Skeleton className="h-8 w-28" /> : formatTokens(totalConsumptionTokens)}
                 meta={isDataLoading ? "" : "输入上下文 + 输出 Token"}
+                onClick={() => setMetric("tokens")}
                 tone="ink"
               />
               <StatTile
-                label="活跃用户"
-                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.activeUsers)}
-                meta={isDataLoading ? "" : `${summary.activeUsers} 位参与`}
-                tone="mint"
-              />
-              <StatTile
-                label="会话"
-                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.totalSessions)}
-                meta={isDataLoading ? "" : "Sessions"}
-                tone="blue"
-              />
-              <StatTile
+                active={metric === "cost"}
                 label="估算费用"
                 value={isDataLoading ? <Skeleton className="h-8 w-24" /> : formatUsd(summary.totalCostUsd)}
                 meta={isDataLoading ? "" : "非实际账单"}
+                onClick={() => setMetric("cost")}
                 tone="gold"
+              />
+              <StatTile
+                active={metric === "sessions"}
+                label="会话数"
+                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.totalSessions)}
+                meta={isDataLoading ? "" : "Sessions"}
+                onClick={() => setMetric("sessions")}
+                tone="blue"
+              />
+              <StatTile
+                active={metric === "users"}
+                label="活跃人数"
+                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.activeUsers)}
+                meta={isDataLoading ? "" : `${summary.activeUsers} 位参与`}
+                onClick={() => setMetric("users")}
+                tone="mint"
               />
             </div>
 
@@ -738,24 +772,18 @@ export function TokenLeaderboardApp({
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.82fr)]">
               <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold">Token 趋势</h2>
+                  <h2 className="text-base font-semibold">{selectedMetricLabel}趋势</h2>
                   <p className="font-mono text-xs text-stone-500">
-                    峰值 {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : formatTokens(maxDailyTokens)}
+                    峰值 {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : formatMetricValue(trendPeakValue, metric)}
                   </p>
                 </div>
-                <div
-                  className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(8px,1fr))] items-end gap-1 rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-3 pb-3 pt-5"
-                  aria-label="Token 趋势"
-                >
+                <div className="mt-4">
                   <DailyTokenTrendChart
                     daily={summary.daily}
                     loading={isDataLoading}
-                    maxDailyTokens={maxDailyTokens}
+                    metric={metric}
+                    trend={summary.trends?.model}
                   />
-                </div>
-                <div className="mt-2 flex justify-between font-mono text-xs text-stone-500">
-                  <span>{isDataLoading ? "--" : summary.daily[0]?.date.slice(5) ?? "--"}</span>
-                  <span>{isDataLoading ? "--" : summary.daily.at(-1)?.date.slice(5) ?? "--"}</span>
                 </div>
               </section>
 

@@ -9,6 +9,7 @@ import {
   buildTokenAchievementSummariesByUser,
 } from "./token-achievements";
 import {
+  buildTokenLeaderboardTrends,
   normalizeTokenUsageEvent,
   parseTokenUsageImport,
   type TokenBoardMetric,
@@ -404,6 +405,7 @@ type PostgresNamedUsageRow = {
 };
 
 type PostgresPreviousRankRow = {
+  active_days: string | number;
   user_id: string;
   display_name: string | null;
   tokens: string | number;
@@ -591,7 +593,8 @@ async function readPostgresLeaderboardSummary(
         SUM(total_tokens)::double precision AS tokens,
         COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd,
         SUM(messages)::double precision AS messages,
-        COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions
+        COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
+        COUNT(DISTINCT (reported_at AT TIME ZONE 'UTC')::date)::integer AS active_days
       FROM ${table}
       WHERE reported_at >= $1
         AND reported_at < $2
@@ -682,6 +685,8 @@ async function readPostgresLeaderboardSummary(
     };
   });
   const dailyValues = new Map(dailyResult.rows.map((row) => [row.date, toFiniteNumber(row.tokens)]));
+  const trendEvents = await readPostgresEventsInRange(pool, table, start, end);
+  const trends = buildTokenLeaderboardTrends(trendEvents, start, end);
 
   return {
     records: usersWithShare.reduce((sum, user) => sum + user.records, 0),
@@ -697,6 +702,7 @@ async function readPostgresLeaderboardSummary(
       topModel: models[0]?.name ?? "unknown",
       topTool: tools[0]?.name ?? "unknown",
       daily: fillDailySeries(emptyDailySeries, dailyValues),
+      trends,
       models,
       tools,
       users: usersWithShare,
@@ -741,6 +747,10 @@ function previousPostgresMetricValue(row: PostgresPreviousRankRow, metric: Token
     return toFiniteNumber(row.messages);
   }
 
+  if (metric === "users") {
+    return toFiniteInteger(row.active_days);
+  }
+
   return toFiniteNumber(row.tokens);
 }
 
@@ -755,6 +765,10 @@ function leaderboardMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMe
 
   if (metric === "messages") {
     return user.messages;
+  }
+
+  if (metric === "users") {
+    return user.activeDays;
   }
 
   return user.tokens;
@@ -775,6 +789,21 @@ async function readPostgresEventsForUsers(pool: Pool, table: string, userIds: st
       ORDER BY user_id ASC, reported_at ASC, created_at ASC
     `,
     [uniqueUserIds]
+  );
+
+  return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
+}
+
+async function readPostgresEventsInRange(pool: Pool, table: string, start: Date, end: Date) {
+  const result = await pool.query<TokenUsageEventRow>(
+    `
+      SELECT *
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at <= $2
+      ORDER BY reported_at ASC, created_at ASC
+    `,
+    [start, end]
   );
 
   return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);

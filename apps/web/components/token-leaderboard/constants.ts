@@ -14,6 +14,7 @@ export const METRICS: Array<{ key: TokenBoardMetric; label: string }> = [
   { key: "tokens", label: "总消耗" },
   { key: "cost", label: "费用" },
   { key: "sessions", label: "会话" },
+  { key: "users", label: "活跃人数" },
 ];
 export const DATA_LOAD_SLOW_MS = 10_000;
 export const TOAST_DISMISS_MS = 1_800;

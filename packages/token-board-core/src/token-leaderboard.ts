@@ -10,13 +10,56 @@ import {
 
 export type TokenBoardRange = "1D" | "7D" | "30D" | "90D";
 
-export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages";
+export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages" | "users";
 
 export type TokenDailyUsagePoint = {
   date: string;
   startAt: string;
   endAt: string;
   tokens: number;
+};
+
+export type TokenTrendMetricValues = {
+  tokens: number;
+  costUsd: number;
+  sessions: number;
+  messages: number;
+  activeUsers: number;
+};
+
+export type TokenTrendSegment = TokenTrendMetricValues & {
+  key: string;
+  label: string;
+  other?: boolean;
+  rank: number;
+  share: number;
+};
+
+export type TokenTrendPoint = TokenDailyUsagePoint &
+  Omit<TokenTrendMetricValues, "tokens"> & {
+    segments: TokenTrendSegment[];
+  };
+
+export type TokenHourlyTrendPoint = TokenTrendMetricValues & {
+  date: string;
+  endAt: string;
+  hour: number;
+  segments: TokenTrendSegment[];
+  startAt: string;
+};
+
+export type TokenTrendBreakdown = {
+  daily: TokenTrendPoint[];
+  hourly: Array<{
+    date: string;
+    endAt: string;
+    points: TokenHourlyTrendPoint[];
+    startAt: string;
+  }>;
+  hourlySupportedDays: number;
+  kind: "model" | "user";
+  limit: number;
+  segments: TokenTrendSegment[];
 };
 
 export type TokenUsageEvent = {
@@ -82,6 +125,10 @@ export type TokenLeaderboardSummary = {
   topModel: string;
   topTool: string;
   daily: TokenDailyUsagePoint[];
+  trends?: {
+    model: TokenTrendBreakdown;
+    user: TokenTrendBreakdown;
+  };
   models: Array<{ name: string; tokens: number; costUsd: number; share: number }>;
   tools: Array<{ name: string; tokens: number; sessions: number; share: number }>;
   users: TokenLeaderboardUser[];
@@ -180,6 +227,8 @@ const RANGE_DAYS: Record<TokenBoardRange, number> = {
   "30D": 30,
   "90D": 90,
 };
+const TREND_STACK_LIMIT = 5;
+const HOURLY_DRILLDOWN_DAYS = 7;
 
 export type TokenModelPricing = {
   id: string;
@@ -288,6 +337,7 @@ export function buildTokenLeaderboard(
   const totalMessages = users.reduce((sum, user) => sum + user.messages, 0);
   const models = aggregateNamedUsage(currentEntries, "model");
   const tools = aggregateNamedUsage(currentEntries, "tool");
+  const trends = buildTokenLeaderboardTrends(currentEntries, start, end);
 
   return {
     range,
@@ -301,6 +351,7 @@ export function buildTokenLeaderboard(
     topModel: models[0]?.name ?? "unknown",
     topTool: tools[0]?.name ?? "unknown",
     daily: buildDailySeries(currentEntries, start, end),
+    trends,
     models,
     tools,
     users: users.map((user) => ({
@@ -799,6 +850,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
     string,
     {
       costUsd: number;
+      days: Set<string>;
       displayName: string;
       messages: number;
       sessions: Set<string>;
@@ -811,6 +863,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
       values.get(entry.userId) ??
       {
         costUsd: 0,
+        days: new Set<string>(),
         displayName: entry.displayName || entry.userId,
         messages: 0,
         sessions: new Set<string>(),
@@ -818,6 +871,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
       };
 
     current.costUsd += entry.costUsd ?? 0;
+    current.days.add(toDateKey(entry.timestamp));
     current.displayName = entry.displayName || current.displayName;
     current.messages += entry.messages ?? 0;
     current.sessions.add(entry.sessionId || entry.id);
@@ -838,6 +892,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
 function previousMetricValue(
   value: {
     costUsd: number;
+    days: Set<string>;
     messages: number;
     sessions: Set<string>;
     tokens: number;
@@ -856,6 +911,10 @@ function previousMetricValue(
     return value.messages;
   }
 
+  if (metric === "users") {
+    return value.days.size;
+  }
+
   return value.tokens;
 }
 
@@ -870,6 +929,10 @@ function metricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
 
   if (metric === "messages") {
     return user.messages;
+  }
+
+  if (metric === "users") {
+    return user.activeDays;
   }
 
   return user.tokens;
@@ -899,6 +962,248 @@ function aggregateNamedUsage(entries: TokenUsageEvent[], key: "model" | "tool") 
     }))
     .sort((a, b) => b.tokens - a.tokens)
     .slice(0, 12);
+}
+
+const OTHER_TREND_KEY = "__token-board-other__";
+
+type TrendGroupKind = "model" | "user";
+type MutableTrendValue = {
+  activeUsers: Set<string>;
+  costUsd: number;
+  key: string;
+  label: string;
+  messages: number;
+  other?: boolean;
+  sessions: Set<string>;
+  tokens: number;
+};
+
+export function buildTokenLeaderboardTrends(
+  entries: TokenUsageEvent[],
+  start: Date,
+  end: Date,
+  limit = TREND_STACK_LIMIT
+): { model: TokenTrendBreakdown; user: TokenTrendBreakdown } {
+  return {
+    model: buildTrendBreakdown(entries, start, end, "model", limit),
+    user: buildTrendBreakdown(entries, start, end, "user", limit),
+  };
+}
+
+function buildTrendBreakdown(
+  entries: TokenUsageEvent[],
+  start: Date,
+  end: Date,
+  kind: TrendGroupKind,
+  limit: number
+): TokenTrendBreakdown {
+  const emptyDailySeries = buildEmptyDailySeries(start, end);
+  const dailyDateKeys = new Set(emptyDailySeries.map((point) => point.date));
+  const supportedDailySeries = emptyDailySeries.slice(-HOURLY_DRILLDOWN_DAYS);
+  const supportedDateKeys = new Set(supportedDailySeries.map((point) => point.date));
+  const rawTotals = new Map<string, MutableTrendValue>();
+
+  for (const entry of entries) {
+    const key = trendGroupKey(entry, kind);
+    const value = getOrCreateMutableTrendValue(rawTotals, key, trendGroupLabel(entry, kind));
+    addEntryToTrendValue(value, entry);
+  }
+
+  const rankedRawSegments = [...rawTotals.values()].sort(
+    (left, right) => right.tokens - left.tokens || left.label.localeCompare(right.label)
+  );
+  const topRawSegments = rankedRawSegments.slice(0, Math.max(1, limit));
+  const topKeys = new Set(topRawSegments.map((segment) => segment.key));
+  const hasOther = rankedRawSegments.length > topRawSegments.length;
+  const orderedKeys = [
+    ...topRawSegments.map((segment) => segment.key),
+    ...(hasOther ? [OTHER_TREND_KEY] : []),
+  ];
+  const labelByKey = new Map(topRawSegments.map((segment) => [segment.key, segment.label] as const));
+  if (hasOther) {
+    labelByKey.set(OTHER_TREND_KEY, "其他");
+  }
+
+  const totalValues = new Map<string, MutableTrendValue>();
+  const dailyValues = new Map<string, Map<string, MutableTrendValue>>();
+  const dailyTotals = new Map<string, MutableTrendValue>();
+  const hourlyValues = new Map<string, Map<string, MutableTrendValue>>();
+  const hourlyTotals = new Map<string, MutableTrendValue>();
+
+  for (const entry of entries) {
+    const date = toDateKey(entry.timestamp);
+
+    if (!dailyDateKeys.has(date)) {
+      continue;
+    }
+
+    const rawKey = trendGroupKey(entry, kind);
+    const key = topKeys.has(rawKey) ? rawKey : OTHER_TREND_KEY;
+    const label = labelByKey.get(key) ?? trendGroupLabel(entry, kind);
+    const other = key === OTHER_TREND_KEY;
+
+    addEntryToTrendValue(getOrCreateMutableTrendValue(totalValues, key, label, other), entry);
+    addEntryToTrendValue(getOrCreateMutableTrendValue(dailyTotals, date, date), entry);
+
+    const dayValues = dailyValues.get(date) ?? new Map<string, MutableTrendValue>();
+    addEntryToTrendValue(getOrCreateMutableTrendValue(dayValues, key, label, other), entry);
+    dailyValues.set(date, dayValues);
+
+    if (supportedDateKeys.has(date)) {
+      const hour = new Date(entry.timestamp).getUTCHours();
+      const hourKey = `${date}:${hour}`;
+      const hourValues = hourlyValues.get(hourKey) ?? new Map<string, MutableTrendValue>();
+      addEntryToTrendValue(getOrCreateMutableTrendValue(hourValues, key, label, other), entry);
+      hourlyValues.set(hourKey, hourValues);
+      addEntryToTrendValue(getOrCreateMutableTrendValue(hourlyTotals, hourKey, hourKey), entry);
+    }
+  }
+
+  const totalTokens = [...totalValues.values()].reduce((sum, value) => sum + value.tokens, 0);
+  const segments = orderedKeys.flatMap((key, index) => {
+    const value = totalValues.get(key);
+    const label = labelByKey.get(key) ?? key;
+
+    if (!value && !label) {
+      return [];
+    }
+
+    return [trendValueToSegment(value ?? createMutableTrendValue(key, label, key === OTHER_TREND_KEY), index + 1, totalTokens)];
+  });
+  const rankByKey = new Map(segments.map((segment) => [segment.key, segment.rank] as const));
+
+  return {
+    daily: emptyDailySeries.map((point) => {
+      const total = dailyTotals.get(point.date) ?? createMutableTrendValue(point.date, point.date);
+      const values = dailyValues.get(point.date) ?? new Map<string, MutableTrendValue>();
+
+      return {
+        ...point,
+        tokens: total.tokens,
+        costUsd: total.costUsd,
+        sessions: total.sessions.size,
+        messages: total.messages,
+        activeUsers: total.activeUsers.size,
+        segments: orderedKeys.map((key) =>
+          trendValueToSegment(
+            values.get(key) ??
+              createMutableTrendValue(key, labelByKey.get(key) ?? key, key === OTHER_TREND_KEY),
+            rankByKey.get(key) ?? orderedKeys.indexOf(key) + 1,
+            totalTokens
+          )
+        ),
+      };
+    }),
+    hourly: supportedDailySeries.map((day) => ({
+      date: day.date,
+      startAt: day.startAt,
+      endAt: day.endAt,
+      points: buildHourlyTrendPoints(day.date, start, end, orderedKeys, labelByKey, rankByKey, hourlyValues, hourlyTotals, totalTokens),
+    })),
+    hourlySupportedDays: HOURLY_DRILLDOWN_DAYS,
+    kind,
+    limit,
+    segments,
+  };
+}
+
+function buildHourlyTrendPoints(
+  date: string,
+  rangeStart: Date,
+  rangeEnd: Date,
+  orderedKeys: string[],
+  labelByKey: Map<string, string>,
+  rankByKey: Map<string, number>,
+  hourlyValues: Map<string, Map<string, MutableTrendValue>>,
+  hourlyTotals: Map<string, MutableTrendValue>,
+  totalTokens: number
+): TokenHourlyTrendPoint[] {
+  const dayStart = new Date(`${date}T00:00:00.000Z`);
+
+  return Array.from({ length: 24 }, (_, hour) => {
+    const bucketStart = new Date(dayStart.getTime() + hour * 60 * 60 * 1000);
+    const bucketEnd = new Date(bucketStart.getTime() + 60 * 60 * 1000);
+    const clippedStart = new Date(Math.max(bucketStart.getTime(), rangeStart.getTime()));
+    const clippedEnd = new Date(Math.min(bucketEnd.getTime(), rangeEnd.getTime()));
+    const hourKey = `${date}:${hour}`;
+    const total = hourlyTotals.get(hourKey) ?? createMutableTrendValue(hourKey, hourKey);
+    const values = hourlyValues.get(hourKey) ?? new Map<string, MutableTrendValue>();
+
+    return {
+      date,
+      hour,
+      startAt: clippedStart.getTime() <= clippedEnd.getTime() ? clippedStart.toISOString() : bucketStart.toISOString(),
+      endAt: clippedStart.getTime() <= clippedEnd.getTime() ? clippedEnd.toISOString() : bucketEnd.toISOString(),
+      tokens: total.tokens,
+      costUsd: total.costUsd,
+      sessions: total.sessions.size,
+      messages: total.messages,
+      activeUsers: total.activeUsers.size,
+      segments: orderedKeys.map((key) =>
+        trendValueToSegment(
+          values.get(key) ??
+            createMutableTrendValue(key, labelByKey.get(key) ?? key, key === OTHER_TREND_KEY),
+          rankByKey.get(key) ?? orderedKeys.indexOf(key) + 1,
+          totalTokens
+        )
+      ),
+    };
+  });
+}
+
+function trendGroupKey(entry: TokenUsageEvent, kind: TrendGroupKind) {
+  return kind === "model" ? entry.model || "unknown" : entry.userId || "unknown";
+}
+
+function trendGroupLabel(entry: TokenUsageEvent, kind: TrendGroupKind) {
+  return kind === "model" ? entry.model || "unknown" : entry.displayName || entry.userId || "unknown";
+}
+
+function createMutableTrendValue(key: string, label: string, other = false): MutableTrendValue {
+  return {
+    activeUsers: new Set<string>(),
+    costUsd: 0,
+    key,
+    label,
+    messages: 0,
+    other,
+    sessions: new Set<string>(),
+    tokens: 0,
+  };
+}
+
+function getOrCreateMutableTrendValue(
+  values: Map<string, MutableTrendValue>,
+  key: string,
+  label: string,
+  other = false
+) {
+  const current = values.get(key) ?? createMutableTrendValue(key, label, other);
+  values.set(key, current);
+  return current;
+}
+
+function addEntryToTrendValue(value: MutableTrendValue, entry: TokenUsageEvent) {
+  value.tokens += getTokenConsumptionTokens(entry);
+  value.costUsd += entry.costUsd ?? 0;
+  value.messages += entry.messages ?? 0;
+  value.sessions.add(entry.sessionId || entry.id);
+  value.activeUsers.add(entry.userId);
+}
+
+function trendValueToSegment(value: MutableTrendValue, rank: number, totalTokens: number): TokenTrendSegment {
+  return {
+    key: value.key,
+    label: value.label,
+    other: value.other || undefined,
+    rank,
+    tokens: value.tokens,
+    costUsd: value.costUsd,
+    sessions: value.sessions.size,
+    messages: value.messages,
+    activeUsers: value.activeUsers.size,
+    share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+  };
 }
 
 function aggregateProjectUsage(entries: TokenUsageEvent[]): TokenUsageProjectBreakdown[] {
