@@ -1,0 +1,29 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+
+import { PublicProfileClient } from "@/components/profile/public-profile-client";
+
+const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
+
+export const metadata: Metadata = {
+  title: "公开个人主页 | Open Token Board",
+  description: "可分享的 AI 编码 Token 公开个人主页：年度贡献热力图、每日趋势、模型分布与分享卡。",
+};
+
+export default function UserProfilePage() {
+  return (
+    <Suspense fallback={<ProfilePageFallback />}>
+      <PublicProfileClient apiBaseUrl={process.env.NEXT_PUBLIC_TOKEN_BOARD_API_URL || DEFAULT_API_URL} />
+    </Suspense>
+  );
+}
+
+function ProfilePageFallback() {
+  return (
+    <main className="mx-auto min-h-[100svh] max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="h-20 animate-pulse rounded-lg bg-slate-200" />
+      <div className="mt-5 h-80 animate-pulse rounded-lg bg-slate-200" />
+    </main>
+  );
+}
+
