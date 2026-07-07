@@ -1890,6 +1890,7 @@ async function collectClaudeCodeRateLimits() {
       observedAt,
       staleSeconds,
       burnPercentPerHour: null,
+      burnTokensPerHour: null,
       etaSeconds: null,
       etaAt: null,
       willExhaustBeforeReset: false,
@@ -2164,6 +2165,10 @@ function buildCodexRateWindow(key, windowMinutes, label, events, now, pickPct, p
   }
 
   const estimatedCapacityTokens = estimateCodexRateCapacityTokens(events, pickPct);
+  const burnTokensPerHour =
+    estimatedCapacityTokens !== null && burnPercentPerHour !== null
+      ? Math.round((estimatedCapacityTokens * burnPercentPerHour) / 100)
+      : null;
   const estimatedRemainingTokens =
     estimatedCapacityTokens !== null ? Math.round((estimatedCapacityTokens * remainingPercent) / 100) : null;
   let localConsumedTokensThisWindow = null;
@@ -2189,6 +2194,7 @@ function buildCodexRateWindow(key, windowMinutes, label, events, now, pickPct, p
     observedAt: new Date(latest.ts).toISOString(),
     staleSeconds: Math.round((now - latest.ts) / 1000),
     burnPercentPerHour,
+    burnTokensPerHour,
     etaSeconds,
     etaAt,
     willExhaustBeforeReset: etaSeconds !== null && resetsInSeconds !== null && etaSeconds < resetsInSeconds,

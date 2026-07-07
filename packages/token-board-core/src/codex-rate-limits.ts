@@ -43,6 +43,8 @@ export interface CodexRateWindow {
   staleSeconds: number;
   /** 最近的消耗速度（百分比/小时），idle 或无法估算时为 null。 */
   burnPercentPerHour: number | null;
+  /** 最近的消耗速度（估算 token/小时），无法估算容量或 idle 时为 null。 */
+  burnTokensPerHour: number | null;
   /** 预计还有多少秒耗尽（到 100%），不会耗尽时为 null。 */
   etaSeconds: number | null;
   /** 预计耗尽的时间点（ISO），不会耗尽时为 null。 */
@@ -360,6 +362,16 @@ function buildWindow(
     if (hours > 0 && dPct > 0) burnPercentPerHour = dPct / hours;
   }
 
+  const estimatedCapacityTokens = estimateCapacityTokens(events, pickPct);
+  const burnTokensPerHour =
+    estimatedCapacityTokens !== null && burnPercentPerHour !== null
+      ? Math.round((estimatedCapacityTokens * burnPercentPerHour) / 100)
+      : null;
+  const estimatedRemainingTokens =
+    estimatedCapacityTokens !== null
+      ? Math.round((estimatedCapacityTokens * remainingPercent) / 100)
+      : null;
+
   let etaSeconds: number | null = null;
   let etaAt: string | null = null;
   if (burnPercentPerHour && burnPercentPerHour > 0 && remainingPercent > 0) {
@@ -369,12 +381,6 @@ function buildWindow(
   }
   const willExhaustBeforeReset =
     etaSeconds !== null && resetsInSeconds !== null && etaSeconds < resetsInSeconds;
-
-  const estimatedCapacityTokens = estimateCapacityTokens(events, pickPct);
-  const estimatedRemainingTokens =
-    estimatedCapacityTokens !== null
-      ? Math.round((estimatedCapacityTokens * remainingPercent) / 100)
-      : null;
 
   // 本机本周期消耗：自当前段起点以来的 per-turn token 之和。
   let localConsumedTokensThisWindow: number | null = null;
@@ -398,6 +404,7 @@ function buildWindow(
     observedAt: new Date(latest.ts).toISOString(),
     staleSeconds: Math.round((now - latest.ts) / 1000),
     burnPercentPerHour,
+    burnTokensPerHour,
     etaSeconds,
     etaAt,
     willExhaustBeforeReset,

@@ -9,13 +9,62 @@ import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogo } from "@/components/token-board-logo";
 
 const POLL_INTERVAL_MS = 15_000;
+const TEAM_SNAPSHOT_STALE_SECONDS = 2 * 60 * 60;
 
 type LoadState = "idle" | "loading" | "ready" | "error";
+
+interface TeamRateLimitWindowSnapshot {
+  key: "5h" | "weekly";
+  windowMinutes: number;
+  label: string;
+  usedPercent: number;
+  remainingPercent: number;
+  resetsAt: string | null;
+  resetsInSeconds: number | null;
+  observedAt: string;
+  staleSeconds: number;
+  burnPercentPerHour: number | null;
+  burnTokensPerHour: number | null;
+  etaSeconds: number | null;
+  etaAt: string | null;
+  willExhaustBeforeReset: boolean;
+}
+
+interface TeamRateLimitToolSnapshot {
+  available: boolean;
+  plan: string | null;
+  generatedAt: string;
+  latestEventAt: string | null;
+  windows: TeamRateLimitWindowSnapshot[];
+}
+
+interface TeamRateLimitUser {
+  userId: string;
+  login: string;
+  displayName: string;
+  team: string | null;
+  avatarUrl: string | null;
+  updatedAt: string;
+  snapshotAgeSeconds: number;
+  stale: boolean;
+  weeklyRemainingPercent: number | null;
+  fiveHourRemainingPercent: number | null;
+  codex: TeamRateLimitToolSnapshot | null;
+  claudeCode: TeamRateLimitToolSnapshot | null;
+}
+
+interface TeamRateLimitReport {
+  schemaVersion: 1;
+  generatedAt: string;
+  staleAfterSeconds: number;
+  users: TeamRateLimitUser[];
+}
 
 // 模块级缓存：在路由切换（额度 ↔ 榜单 ↔ 其它页面）后仍保留上一次的额度快照。
 // 组件卸载时这里不会被清空，切回来时能立即用旧数据渲染，再在后台静默刷新，
 // 而不是每次都从空白 loading 重新拉取。
 const rateLimitReportCache = new Map<string, CodexRateLimitReport>();
+const teamRateLimitReportCache = new Map<string, TeamRateLimitReport>();
 function rateLimitCacheKey(base: string, endpoint: string): string {
   return `${base}||${endpoint}`;
 }
@@ -46,30 +95,133 @@ function secondsUntil(iso: string | null, now: number): number | null {
   return Math.round((Date.parse(iso) - now) / 1000);
 }
 
-function toneFor(percent: number): { bar: string; text: string } {
-  if (percent >= 85) return { bar: "bg-rose-500", text: "text-rose-600" };
-  if (percent >= 60) return { bar: "bg-amber-500", text: "text-amber-600" };
-  return { bar: "bg-emerald-500", text: "text-emerald-600" };
+function toneFor(usedPercent: number): {
+  bar: string;
+  text: string;
+  badge: string;
+  track: string;
+  label: string;
+} {
+  if (usedPercent >= 90) {
+    return {
+      bar: "bg-rose-500",
+      text: "text-rose-600",
+      badge: "border-rose-200 bg-rose-50 text-rose-700",
+      track: "bg-rose-100",
+      label: "高危",
+    };
+  }
+  if (usedPercent >= 70) {
+    return {
+      bar: "bg-amber-500",
+      text: "text-amber-600",
+      badge: "border-amber-200 bg-amber-50 text-amber-700",
+      track: "bg-amber-100",
+      label: "预警",
+    };
+  }
+  return {
+    bar: "bg-emerald-500",
+    text: "text-emerald-600",
+    badge: "border-emerald-200 bg-emerald-50 text-emerald-700",
+    track: "bg-emerald-100",
+    label: "正常",
+  };
+}
+
+function effectiveWindowMetrics(
+  w: {
+    windowMinutes: number;
+    usedPercent: number;
+    remainingPercent: number;
+    resetsAt: string | null;
+    resetsInSeconds: number | null;
+    burnPercentPerHour: number | null;
+    burnTokensPerHour: number | null;
+    etaAt: string | null;
+    etaSeconds: number | null;
+    willExhaustBeforeReset: boolean;
+    estimatedCapacityTokens?: number | null;
+  },
+  now: number,
+) {
+  const resetsInSeconds = secondsUntil(w.resetsAt, now) ?? w.resetsInSeconds;
+  const averageBurnPercentPerHour = averageBurnSinceWindowStart(w, now);
+  const burnPercentPerHour = w.burnPercentPerHour ?? averageBurnPercentPerHour;
+  const burnTokensPerHour =
+    w.burnTokensPerHour ??
+    (burnPercentPerHour !== null && w.estimatedCapacityTokens !== null && w.estimatedCapacityTokens !== undefined
+      ? Math.round((w.estimatedCapacityTokens * burnPercentPerHour) / 100)
+      : null);
+
+  let etaSeconds = secondsUntil(w.etaAt, now) ?? w.etaSeconds;
+  let etaAt = w.etaAt;
+
+  if (etaSeconds === null && burnPercentPerHour !== null && burnPercentPerHour > 0 && w.remainingPercent > 0) {
+    etaSeconds = Math.round((w.remainingPercent / burnPercentPerHour) * 3600);
+    etaAt = new Date(now + etaSeconds * 1000).toISOString();
+  }
+
+  return {
+    resetsInSeconds,
+    burnPercentPerHour,
+    burnTokensPerHour,
+    burnIsAverage: w.burnPercentPerHour === null && averageBurnPercentPerHour !== null,
+    etaSeconds,
+    etaAt,
+    willExhaustBeforeReset: etaSeconds !== null && resetsInSeconds !== null ? etaSeconds < resetsInSeconds : w.willExhaustBeforeReset,
+  };
+}
+
+function averageBurnSinceWindowStart(
+  w: Pick<CodexRateWindow, "windowMinutes" | "usedPercent" | "resetsAt">,
+  now: number,
+): number | null {
+  if (!w.resetsAt || w.usedPercent <= 0) return null;
+  const resetMs = Date.parse(w.resetsAt);
+  if (!Number.isFinite(resetMs) || resetMs <= now) return null;
+  const windowMs = w.windowMinutes * 60 * 1000;
+  const startMs = resetMs - windowMs;
+  if (startMs >= now) return null;
+  const elapsedHours = (now - startMs) / 3600 / 1000;
+  return elapsedHours > 0 ? w.usedPercent / elapsedHours : null;
+}
+
+function burnLabel(metrics: ReturnType<typeof effectiveWindowMetrics>): string {
+  if (metrics.burnPercentPerHour === null) return "空闲";
+  const tokens = metrics.burnTokensPerHour !== null ? `≈ ${fmtTokens(metrics.burnTokensPerHour)} tokens/小时` : "tokens/小时 —";
+  return `${metrics.burnPercentPerHour.toFixed(1)}%/小时 · ${tokens}${metrics.burnIsAverage ? " · 周期平均" : ""}`;
+}
+
+function ProgressBar({ usedPercent, height = "h-2.5" }: { usedPercent: number; height?: string }) {
+  const tone = toneFor(usedPercent);
+  return (
+    <div className={`${height} w-full overflow-hidden rounded-full ${tone.track}`}>
+      <div
+        className={`h-full rounded-full ${tone.bar} transition-[width] duration-700`}
+        style={{ width: `${Math.min(100, Math.max(0, usedPercent))}%` }}
+      />
+    </div>
+  );
 }
 
 function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }) {
   const tone = toneFor(w.usedPercent);
-  const resetsIn = secondsUntil(w.resetsAt, now);
-  const etaIn = secondsUntil(w.etaAt, now);
+  const metrics = effectiveWindowMetrics(w, now);
 
   let etaNode: React.ReactNode;
-  if (etaIn === null) {
+  if (metrics.etaSeconds === null) {
     etaNode = <span className="text-emerald-600">当前速度下本周期不会耗尽</span>;
-  } else if (w.willExhaustBeforeReset) {
+  } else if (metrics.willExhaustBeforeReset) {
     etaNode = (
-      <span className="text-rose-600">
-        约 {fmtDuration(etaIn)}后耗尽 <span className="text-slate-400">(早于重置)</span>
+      <span className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">
+        约 {fmtDuration(metrics.etaSeconds)}后耗尽 <span className="text-rose-500">(早于重置)</span>
       </span>
     );
   } else {
     etaNode = (
       <span className="text-amber-600">
-        约 {fmtDuration(etaIn)}后耗尽 <span className="text-slate-400">(晚于重置，会先刷新)</span>
+        约 {fmtDuration(metrics.etaSeconds)}后耗尽 <span className="text-slate-400">(晚于重置，会先刷新)</span>
       </span>
     );
   }
@@ -78,7 +230,9 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
     <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-baseline justify-between">
         <h3 className="text-lg font-semibold text-slate-900">{w.label}窗口</h3>
-        <span className="font-mono text-xs text-slate-400">{w.windowMinutes} 分钟</span>
+        <span className={`rounded-full border px-2 py-0.5 font-mono text-xs font-semibold ${tone.badge}`}>
+          {tone.label} · 已用 {w.usedPercent.toFixed(0)}%
+        </span>
       </div>
 
       <div className="mt-5 flex items-end gap-3">
@@ -89,26 +243,25 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
         <span className="pb-1 text-sm text-slate-500">剩余额度</span>
       </div>
 
-      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-        <div
-          className={`h-full rounded-full ${tone.bar} transition-[width] duration-700`}
-          style={{ width: `${Math.min(100, w.remainingPercent)}%` }}
-        />
+      <div className="mt-4">
+        <ProgressBar usedPercent={w.usedPercent} />
       </div>
       <p className="mt-2 text-xs text-slate-500">
+        已用 <span className={`font-semibold ${tone.text}`}>{w.usedPercent.toFixed(0)}%</span>
+        <span className="text-slate-300"> · </span>
         剩余 <span className="font-semibold text-slate-700">{w.remainingPercent.toFixed(0)}%</span>
+        <span className="text-slate-300"> · </span>
+        <span className="font-mono">{w.windowMinutes} 分钟</span>
       </p>
 
       <dl className="mt-5 grid grid-cols-2 gap-4 text-sm">
         <div>
           <dt className="text-xs text-slate-400">重置倒计时</dt>
-          <dd className="mt-1 font-mono font-semibold text-slate-900 tabular-nums">{fmtDuration(resetsIn)}</dd>
+          <dd className="mt-1 font-mono font-semibold text-slate-900 tabular-nums">{fmtDuration(metrics.resetsInSeconds)}</dd>
         </div>
         <div>
           <dt className="text-xs text-slate-400">消耗速度</dt>
-          <dd className="mt-1 font-semibold text-slate-900">
-            {w.burnPercentPerHour !== null ? `${w.burnPercentPerHour.toFixed(1)}%/小时` : "空闲"}
-          </dd>
+          <dd className="mt-1 font-semibold text-slate-900">{burnLabel(metrics)}</dd>
         </div>
         <div className="col-span-2">
           <dt className="text-xs text-slate-400">预计耗尽</dt>
@@ -136,7 +289,7 @@ interface RateLimitData {
   reload: () => void;
 }
 
-function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limits"): RateLimitData {
+function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limits", enabled = true): RateLimitData {
   const base = apiBaseUrl.replace(/\/+$/, "");
   const key = rateLimitCacheKey(base, endpoint);
   const [report, setReport] = useState<CodexRateLimitReport | null>(() => rateLimitReportCache.get(key) ?? null);
@@ -145,6 +298,9 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
   const [now, setNow] = useState<number>(() => Date.now());
 
   const reload = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
     if (!base) {
       setState("error");
       setError("未配置 API 地址。");
@@ -168,21 +324,98 @@ function useRateLimitReport(apiBaseUrl: string, endpoint = "/api/usage/rate-limi
       setState("error");
       setError(err instanceof Error ? err.message : "请求失败");
     }
-  }, [base, endpoint]);
+  }, [base, endpoint, enabled]);
 
   // 切换数据源（Codex ↔ Claude）时，用对应缓存立即回填；没缓存才回到 loading。
   // 既避免把上一个工具的额度显示在新标题下，也避免每次都从空白重新加载。
   useEffect(() => {
+    if (!enabled) {
+      setReport(null);
+      setState("idle");
+      setError(null);
+      return;
+    }
     const cached = rateLimitReportCache.get(key) ?? null;
     setReport(cached);
     setState(cached ? "ready" : "loading");
-  }, [key]);
+  }, [enabled, key]);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     void reload();
     const poll = setInterval(() => void reload(), POLL_INTERVAL_MS);
     return () => clearInterval(poll);
-  }, [reload]);
+  }, [enabled, reload]);
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return { report, state, error, now, base, reload: () => void reload() };
+}
+
+interface TeamRateLimitData {
+  report: TeamRateLimitReport | null;
+  state: LoadState;
+  error: string | null;
+  now: number;
+  base: string;
+  reload: () => void;
+}
+
+function useTeamRateLimitReport(apiBaseUrl: string, enabled: boolean): TeamRateLimitData {
+  const endpoint = "/api/usage/rate-limits/team";
+  const base = apiBaseUrl.replace(/\/+$/, "");
+  const key = rateLimitCacheKey(base, endpoint);
+  const [report, setReport] = useState<TeamRateLimitReport | null>(() => teamRateLimitReportCache.get(key) ?? null);
+  const [state, setState] = useState<LoadState>(() => (teamRateLimitReportCache.has(key) ? "ready" : "idle"));
+  const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState<number>(() => Date.now());
+
+  const reload = useCallback(async () => {
+    if (!enabled) return;
+    if (!base) {
+      setState("error");
+      setError("未配置 API 地址。");
+      return;
+    }
+    const cacheKey = rateLimitCacheKey(base, endpoint);
+    if (!teamRateLimitReportCache.has(cacheKey)) setState("loading");
+    try {
+      const res = await fetch(`${base}${endpoint}`, { cache: "no-store", credentials: "include" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as TeamRateLimitReport;
+      teamRateLimitReportCache.set(cacheKey, data);
+      setReport(data);
+      setNow(Date.now());
+      setState("ready");
+      setError(null);
+    } catch (err) {
+      if (teamRateLimitReportCache.has(cacheKey)) return;
+      setState("error");
+      setError(err instanceof Error ? err.message : "请求失败");
+    }
+  }, [base, enabled]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setReport(null);
+      setState("idle");
+      setError(null);
+      return;
+    }
+    const cached = teamRateLimitReportCache.get(key) ?? null;
+    setReport(cached);
+    setState(cached ? "ready" : "loading");
+  }, [enabled, key]);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    void reload();
+    const poll = setInterval(() => void reload(), POLL_INTERVAL_MS);
+    return () => clearInterval(poll);
+  }, [enabled, reload]);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 1000);
@@ -226,6 +459,192 @@ function WindowGrid({ report, now }: { report: CodexRateLimitReport; now: number
   );
 }
 
+function TeamRateLimitSection({
+  data,
+  authenticated,
+  loginWithGitHub,
+}: {
+  data: TeamRateLimitData;
+  authenticated: boolean | null;
+  loginWithGitHub: () => void;
+}) {
+  const authBox = (
+    <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
+      <p className="font-semibold">团队额度墙需要 GitHub 登录</p>
+      <p className="mt-1">登录后可查看团队内 agent 最近上传的 Codex 与 Claude Code 额度百分比。</p>
+      <button
+        type="button"
+        onClick={loginWithGitHub}
+        className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
+      >
+        GitHub 登录后查看团队墙
+      </button>
+    </div>
+  );
+
+  if (authenticated === false) {
+    return authBox;
+  }
+
+  if (data.state === "loading") {
+    return (
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+        正在汇总团队额度快照…
+      </div>
+    );
+  }
+
+  if (data.state === "error") {
+    if (data.error === "HTTP 401") return authBox;
+    return (
+      <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
+        <p className="font-semibold">无法获取团队额度墙</p>
+        <p className="mt-1">{data.error}</p>
+      </div>
+    );
+  }
+
+  if (!data.report || data.report.users.length === 0) {
+    return (
+      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
+        暂无团队额度快照。
+      </div>
+    );
+  }
+
+  return (
+    <section className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+        <span>
+          {data.report.users.length} 人 · 按每周窗口剩余额度升序 · 快照超过 {fmtDuration(data.report.staleAfterSeconds)} 标记为数据过旧
+        </span>
+        <span className="text-slate-400">每 15 秒自动刷新</span>
+      </div>
+      <div className="mt-4 space-y-3">
+        {data.report.users.map((user) => (
+          <TeamRateLimitRow key={user.userId} user={user} now={data.now} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TeamRateLimitRow({ user, now }: { user: TeamRateLimitUser; now: number }) {
+  return (
+    <article
+      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition ${
+        user.stale ? "opacity-60 grayscale" : ""
+      }`}
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(12rem,16rem)_1fr] lg:items-center">
+        <div className="flex min-w-0 items-center gap-3">
+          {user.avatarUrl ? (
+            <img
+              src={user.avatarUrl}
+              alt=""
+              className="size-10 shrink-0 rounded-lg border border-slate-200 bg-slate-50"
+            />
+          ) : (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 font-mono text-xs font-semibold text-slate-500">
+              {user.login.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-900">{user.displayName}</p>
+            <p className="truncate font-mono text-xs text-slate-500">@{user.login}</p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+              {user.team && (
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-slate-600">{user.team}</span>
+              )}
+              <span
+                className={
+                  user.stale
+                    ? "rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-slate-500"
+                    : "rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-emerald-700"
+                }
+              >
+                {user.stale ? "数据过旧" : "新鲜"} · {fmtDuration(user.snapshotAgeSeconds)}前
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <TeamToolQuota title="Codex" snapshot={user.codex} now={now} />
+          <TeamToolQuota title="Claude Code" snapshot={user.claudeCode} now={now} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function TeamToolQuota({
+  title,
+  snapshot,
+  now,
+}: {
+  title: string;
+  snapshot: TeamRateLimitToolSnapshot | null;
+  now: number;
+}) {
+  const fiveHour = snapshot?.windows.find((w) => w.key === "5h") ?? null;
+  const weekly = snapshot?.windows.find((w) => w.key === "weekly") ?? null;
+
+  return (
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold text-slate-700">{title}</p>
+        {snapshot?.plan && <span className="truncate font-mono text-[11px] text-slate-400">{snapshot.plan}</span>}
+      </div>
+      {snapshot ? (
+        <div className="mt-3 space-y-2.5">
+          <TeamWindowBar label="5h" window={fiveHour} now={now} />
+          <TeamWindowBar label="周" window={weekly} now={now} />
+        </div>
+      ) : (
+        <p className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-400">暂无快照</p>
+      )}
+    </div>
+  );
+}
+
+function TeamWindowBar({
+  label,
+  window,
+  now,
+}: {
+  label: string;
+  window: TeamRateLimitWindowSnapshot | null;
+  now: number;
+}) {
+  if (!window) {
+    return (
+      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 text-xs text-slate-400">
+        <span className="font-mono font-semibold">{label}</span>
+        <div className="h-2 overflow-hidden rounded-full bg-slate-200" />
+        <span className="text-right">—</span>
+      </div>
+    );
+  }
+
+  const tone = toneFor(window.usedPercent);
+  const metrics = effectiveWindowMetrics(window, now);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_3.5rem] items-center gap-2 text-xs">
+        <span className="font-mono font-semibold text-slate-500">{label}</span>
+        <ProgressBar usedPercent={window.usedPercent} height="h-2" />
+        <span className={`text-right font-mono font-semibold ${tone.text}`}>{window.usedPercent.toFixed(0)}%</span>
+      </div>
+      <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 pl-10 text-[11px] leading-4 text-slate-500">
+        <span>剩余 {window.remainingPercent.toFixed(0)}%</span>
+        <span>重置 {fmtDuration(metrics.resetsInSeconds)}</span>
+        {metrics.burnPercentPerHour !== null && <span>{metrics.burnPercentPerHour.toFixed(1)}%/小时</span>}
+      </div>
+    </div>
+  );
+}
+
 /**
  * 嵌入式额度面板：用于 /board 个人区域。未登录、未安装 agent 或还没有
  * 额度快照时静默隐藏，避免给公开榜单的访客显示报错。
@@ -258,7 +677,8 @@ export function RateLimitPanel({ apiBaseUrl }: { apiBaseUrl: string }) {
   );
 }
 
-export type LimitTab = "codex" | "claude";
+export type LimitTab = "codex" | "claude" | "team";
+type PersonalLimitTab = Exclude<LimitTab, "team">;
 
 interface TabConfig {
   label: string;
@@ -274,7 +694,7 @@ interface TabConfig {
   waitingLabel: string;
 }
 
-const TAB_CONFIG: Record<LimitTab, TabConfig> = {
+const TAB_CONFIG: Record<PersonalLimitTab, TabConfig> = {
   codex: {
     label: "Codex",
     endpoint: "/api/usage/rate-limits",
@@ -355,9 +775,15 @@ const TAB_CONFIG: Record<LimitTab, TabConfig> = {
 };
 
 function LimitTabSwitcher({ tab, onChange }: { tab: LimitTab; onChange: (next: LimitTab) => void }) {
+  const tabs: Array<{ key: LimitTab; label: string }> = [
+    { key: "codex", label: TAB_CONFIG.codex.label },
+    { key: "claude", label: TAB_CONFIG.claude.label },
+    { key: "team", label: "团队" },
+  ];
+
   return (
     <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="额度数据源">
-      {(Object.keys(TAB_CONFIG) as LimitTab[]).map((key) => {
+      {tabs.map(({ key, label }) => {
         const isActive = key === tab;
         return (
           <button
@@ -372,7 +798,7 @@ function LimitTabSwitcher({ tab, onChange }: { tab: LimitTab; onChange: (next: L
                 : "min-h-9 rounded-lg px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
             }
           >
-            {TAB_CONFIG[key].label}
+            {label}
           </button>
         );
       })}
@@ -389,11 +815,14 @@ export function RateLimitBoard({
   initialTab = "codex",
 }: {
   apiBaseUrl: string;
-  initialTab?: LimitTab;
+  initialTab?: PersonalLimitTab;
 }) {
   const [tab, setTab] = useState<LimitTab>(initialTab);
-  const config = TAB_CONFIG[tab];
-  const { report, state, error, now, base, reload } = useRateLimitReport(apiBaseUrl, config.endpoint);
+  const personalTab: PersonalLimitTab = tab === "team" ? "codex" : tab;
+  const config = TAB_CONFIG[personalTab];
+  const personalData = useRateLimitReport(apiBaseUrl, config.endpoint, tab !== "team");
+  const teamData = useTeamRateLimitReport(apiBaseUrl, tab === "team");
+  const { report, state, error, now, base } = personalData;
   // null = 尚未确定登录态；用它区分「未登录」与「已登录但还没有 agent 快照」，
   // 避免给已登录用户显示误导性的「GitHub 登录」按钮。
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -435,7 +864,7 @@ export function RateLimitBoard({
           <AppNavLinks active="limits" />
           <button
             type="button"
-            onClick={reload}
+            onClick={tab === "team" ? teamData.reload : personalData.reload}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
             刷新
@@ -449,18 +878,32 @@ export function RateLimitBoard({
         </div>
 
         <header className="mt-5">
-          <p className="font-mono text-xs font-semibold uppercase text-blue-600">{config.eyebrow}</p>
-          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{config.title}</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{config.description}</p>
+          {tab === "team" ? (
+            <>
+              <p className="font-mono text-xs font-semibold uppercase text-blue-600">Team rate limit wall</p>
+              <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">团队额度墙</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                汇总团队成员最近一次 agent 上传的 Codex 与 Claude Code 额度快照，按每周窗口剩余从低到高排列。
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="font-mono text-xs font-semibold uppercase text-blue-600">{config.eyebrow}</p>
+              <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{config.title}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{config.description}</p>
+            </>
+          )}
         </header>
 
-        {state === "loading" && (
+        {tab === "team" ? (
+          <TeamRateLimitSection data={teamData} authenticated={authenticated} loginWithGitHub={loginWithGitHub} />
+        ) : state === "loading" && (
           <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
             {config.loadingText}
           </div>
         )}
 
-        {state === "error" && (
+        {tab !== "team" && state === "error" && (
           <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
             <p className="font-semibold">无法获取额度数据</p>
             <p className="mt-1">{error}</p>
@@ -468,7 +911,7 @@ export function RateLimitBoard({
           </div>
         )}
 
-        {state === "ready" && report && !report.available && (
+        {tab !== "team" && state === "ready" && report && !report.available && (
           <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
             <p className="font-semibold">{config.emptyTitle}</p>
             {report.notes.map((note) => (
@@ -493,7 +936,7 @@ export function RateLimitBoard({
           </div>
         )}
 
-        {report && report.available && (
+        {tab !== "team" && report && report.available && (
           <>
             <div className="mt-6">
               <StatusLine report={report} now={now} />

@@ -55,6 +55,7 @@ export type TokenUsageStore = {
   insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
   deleteEventsForUser: (userId: string) => Promise<TokenUsageStoreDeleteResult>;
   getUserConfig: (userId: string) => Promise<TokenBoardUserConfig | null>;
+  listUserConfigs: () => Promise<Array<{ userId: string; config: TokenBoardUserConfig }>>;
   upsertUserConfig: (userId: string, config: TokenBoardUserConfig) => Promise<TokenBoardUserConfig>;
   close?: () => Promise<void>;
 };
@@ -201,6 +202,10 @@ function createFileTokenUsageStore({
         };
       }),
     getUserConfig: (userId) => readTokenUserConfigsFromFile(userConfigsFile).then((configs) => configs[userId] ?? null),
+    listUserConfigs: () =>
+      readTokenUserConfigsFromFile(userConfigsFile).then((configs) =>
+        Object.entries(configs).map(([userId, config]) => ({ userId, config }))
+      ),
     upsertUserConfig: (userId, config) =>
       enqueueStorageOperation(async () => {
         const configs = await readTokenUserConfigsFromFile(userConfigsFile);
@@ -351,6 +356,31 @@ function createPostgresTokenUsageStore({
         ...row.config,
         updatedAt: new Date(row.updated_at || row.config.updatedAt).toISOString(),
       };
+    },
+    listUserConfigs: async () => {
+      const result = await pool.query<{ user_id: string; config: TokenBoardUserConfig; updated_at: Date | string }>(
+        `
+          SELECT user_id, config, updated_at
+          FROM ${userConfigsTable}
+          ORDER BY updated_at DESC
+        `
+      );
+
+      return result.rows.flatMap((row) => {
+        if (!row.config) {
+          return [];
+        }
+
+        return [
+          {
+            userId: row.user_id,
+            config: {
+              ...row.config,
+              updatedAt: new Date(row.updated_at || row.config.updatedAt).toISOString(),
+            },
+          },
+        ];
+      });
     },
     upsertUserConfig: async (userId: string, config: TokenBoardUserConfig) => {
       await pool.query(
