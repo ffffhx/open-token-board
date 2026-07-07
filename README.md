@@ -34,10 +34,11 @@ Open Token Board 是一个**自己就能部署一套**的 AI 编码 Token 排行
 - 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code 的本地用量日志
 - 🏅 **实时公共榜单** — 按 1D / 7D / 30D / 90D 滚动窗口，按总消耗 / 费用 / 会话排序，含每日趋势与份额
 - 📊 **个人消耗看板** — 排名、百分位、缓存命中率、模型 / 工具 / 项目分布、分时活跃热力图、Session 明细
+- 📨 **飞书日报 / 周报** — 自定义机器人推送排行榜、今日荣誉事件、周冠军和 7 天趋势
 - 📟 **Codex 额度面板** — agent 安装后定时同步本机 `~/.codex` 的 5 小时 / 每周额度快照，展示剩余、重置倒计时与预计耗尽时间；也支持命令行本地查看
 - 🔐 **GitHub 登录** — OAuth + Device Flow，agent 与网页用同一身份；可用白名单限制谁能上报
 - 🕵️ **隐私优先** — 只上报 token 数、模型、工具、项目 basename 与会话短标题，**绝不上传 prompt 正文**
-- 🧾 **费用估算** — 按公开模型单价估算成本（非实际账单），帮你横向比较
+- 🧾 **费用估算** — 按输入 / 缓存写入 / 缓存读取 / 输出四分类公开单价估算成本（非实际账单），帮你横向比较
 - 🧰 **一行命令加入** — 朋友只需 `npx token-board-agent install`，无需克隆仓库
 - 🐳 **开箱即用的自托管** — Docker Compose 一把起 API + PostgreSQL；无数据库时自动回退到 JSON 文件存储
 
@@ -170,6 +171,36 @@ docker compose up -d --build
 - 配置了 `TOKEN_BOARD_DATABASE_URL` / PostgreSQL 时优先使用数据库；否则回退到 `TOKEN_BOARD_DATA_FILE` 的 JSON 存储。
 - 通过 `TOKEN_BOARD_ALLOWED_GITHUB_LOGINS` 可限制允许上报的 GitHub 账号。
 - AI 评测页默认仅 `ffffhx` 可见；可用 `TOKEN_BOARD_BENCHMARK_ALLOWED_GITHUB_LOGINS` 指定逗号分隔的 GitHub login 白名单。
+
+### 飞书日报 / 周报
+
+后端可以直接向飞书自定义机器人 webhook 发送 interactive card，不需要飞书应用凭证。配置 `TOKEN_BOARD_FEISHU_WEBHOOK_URL` 后默认启用日报和周报；未配置 webhook 时不会调度发送。
+
+常用变量：
+
+```bash
+TOKEN_BOARD_FEISHU_WEBHOOK_URL=https://open.feishu.cn/open-apis/bot/v2/hook/...
+TOKEN_BOARD_FEISHU_WEBHOOK_SECRET=        # 机器人开启签名校验时填写
+TOKEN_BOARD_DAILY_REPORT_AT=09:00         # 本地时间，默认 Asia/Shanghai
+TOKEN_BOARD_WEEKLY_REPORT_AT=10:00        # 每周一 10:00
+TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET=480
+TOKEN_BOARD_DAILY_REPORT_RANGE=1D
+TOKEN_BOARD_DAILY_REPORT_SITE_URL=https://your-site/board
+TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN=replace-with-random-token
+TOKEN_BOARD_DAILY_REPORT_STATE_FILE=/data/daily-report-state.json
+```
+
+日报会展示“今日事件”：个人单日 PB、等级升级、新徽章、日榜 / 7 天榜 Top5 内超越；没有事件时显示兜底文案。事件对比依赖 `TOKEN_BOARD_DAILY_REPORT_STATE_FILE` 中的轻量快照，兼容 JSON 与 PostgreSQL 存储，不会写入用户配置。
+
+手动触发用于测试或补发：
+
+```bash
+curl -X POST "https://your-api/api/internal/daily-report/run?kind=daily" \
+  -H "Authorization: Bearer $TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN"
+
+curl -X POST "https://your-api/api/internal/daily-report/run?kind=weekly" \
+  -H "Authorization: Bearer $TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN"
+```
 
 ### 前端（GitHub Pages）
 
