@@ -386,6 +386,13 @@ summary:focus-visible {
     transition-duration: 0.01ms !important;
   }
 
+  .otb-skeleton::after,
+  .otb-leader-breathe,
+  .otb-toast-pop,
+  .motion-safe\:animate-spin {
+    animation: none !important;
+  }
+
   .otb-card-hover:hover {
     transform: none;
   }
