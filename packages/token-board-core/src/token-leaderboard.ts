@@ -1,4 +1,12 @@
 import type { CodexRateLimitReport } from "./codex-rate-limits";
+import {
+  buildEmptyTokenAchievementSummary,
+  buildTokenAchievementSummariesByUser,
+  buildTokenAchievementSummary,
+  type TokenAchievementBadge,
+  type TokenLevelProgress,
+  type TokenPersonalBests,
+} from "./token-achievements";
 
 export type TokenBoardRange = "1D" | "7D" | "30D" | "90D";
 
@@ -34,9 +42,14 @@ export type TokenUsageEvent = {
 
 export type TokenLeaderboardUser = {
   rank: number;
+  previousRank: number | null;
+  rankDelta: number | null;
   userId: string;
   displayName: string;
   team: string;
+  level: TokenLevelProgress;
+  badges: TokenAchievementBadge[];
+  personalBests: TokenPersonalBests;
   tokens: number;
   inputTokens: number;
   cachedInputTokens: number;
@@ -138,6 +151,9 @@ export type TokenAccountUsageProfile = {
   startAt: string;
   endAt: string;
   user: TokenLeaderboardUser | null;
+  level: TokenLevelProgress;
+  badges: TokenAchievementBadge[];
+  personalBests: TokenPersonalBests;
   rank: number | null;
   previousRank: number | null;
   rankDelta: number | null;
@@ -212,7 +228,14 @@ export function buildTokenLeaderboard(
   });
   const dailyByUser = buildDailySeriesByUser(currentEntries, start, end);
   const previousTokensByUser = sumTokensByUser(previousEntries);
-  const users = rankUsers(aggregateUsers(currentEntries, previousTokensByUser, dailyByUser), metric);
+  const previousRankByUser = rankEntriesByUser(previousEntries, metric);
+  const achievementsByUser = buildTokenAchievementSummariesByUser(normalizedEntries, { now: end });
+  const users = applyRankDelta(
+    rankUsers(
+      aggregateUsers(currentEntries, previousTokensByUser, dailyByUser, achievementsByUser, previousRankByUser),
+      metric
+    )
+  );
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
   const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
   const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
@@ -264,12 +287,21 @@ export function buildTokenAccountUsageProfile(
   });
   const accountSummary = buildTokenLeaderboard(accountEntries, { range, metric: "tokens", now: safeNow });
   const rankedUser = globalSummary.users.find((user) => user.userId === userId) ?? null;
+  const achievements = buildTokenAchievementSummary(
+    normalizedEntries.filter((entry) => entry.userId === userId),
+    { now: safeNow }
+  );
   const accountUser = accountSummary.users[0]
     ? {
         ...accountSummary.users[0],
         rank: rankedUser?.rank ?? accountSummary.users[0].rank,
+        previousRank: rankedUser?.previousRank ?? accountSummary.users[0].previousRank,
+        rankDelta: rankedUser?.rankDelta ?? accountSummary.users[0].rankDelta,
         share: rankedUser?.share ?? accountSummary.users[0].share,
         deltaTokens: rankedUser?.deltaTokens ?? accountSummary.users[0].deltaTokens,
+        level: achievements.level,
+        badges: achievements.badges,
+        personalBests: achievements.personalBests,
       }
     : null;
   const previousSummary = buildTokenLeaderboard(normalizedEntries, { range, metric: "tokens", now: start });
@@ -282,6 +314,9 @@ export function buildTokenAccountUsageProfile(
     startAt: globalSummary.startAt,
     endAt: globalSummary.endAt,
     user: accountUser,
+    level: achievements.level,
+    badges: achievements.badges,
+    personalBests: achievements.personalBests,
     rank,
     previousRank,
     rankDelta: rank !== null && previousRank !== null ? previousRank - rank : null,
@@ -574,11 +609,26 @@ function recordsToEvents(records: unknown[]) {
 function aggregateUsers(
   entries: TokenUsageEvent[],
   previousTokensByUser: Map<string, number>,
-  dailyByUser: Map<string, TokenDailyUsagePoint[]>
+  dailyByUser: Map<string, TokenDailyUsagePoint[]>,
+  achievementsByUser: Map<string, ReturnType<typeof buildTokenAchievementSummary>>,
+  previousRankByUser: Map<string, number>
 ): TokenLeaderboardUser[] {
   const users = new Map<
     string,
-    Omit<TokenLeaderboardUser, "rank" | "share" | "deltaTokens" | "topModel" | "topTool" | "daily"> & {
+    Omit<
+      TokenLeaderboardUser,
+      | "rank"
+      | "previousRank"
+      | "rankDelta"
+      | "share"
+      | "deltaTokens"
+      | "topModel"
+      | "topTool"
+      | "daily"
+      | "level"
+      | "badges"
+      | "personalBests"
+    > & {
       modelTokens: Map<string, number>;
       toolTokens: Map<string, number>;
       days: Set<string>;
@@ -634,12 +684,18 @@ function aggregateUsers(
 
   return [...users.values()].map((user) => {
     const previousTokens = previousTokensByUser.get(user.userId) ?? 0;
+    const achievements = achievementsByUser.get(user.userId) ?? buildEmptyTokenAchievementSummary();
 
     return {
       rank: 0,
+      previousRank: previousRankByUser.get(user.userId) ?? null,
+      rankDelta: null,
       userId: user.userId,
       displayName: user.displayName,
       team: user.team,
+      level: achievements.level,
+      badges: achievements.badges,
+      personalBests: achievements.personalBests,
       tokens: user.tokens,
       inputTokens: user.inputTokens,
       cachedInputTokens: user.cachedInputTokens,
@@ -664,6 +720,78 @@ function rankUsers(users: TokenLeaderboardUser[], metric: TokenBoardMetric) {
   return users
     .sort((a, b) => metricValue(b, metric) - metricValue(a, metric) || a.displayName.localeCompare(b.displayName))
     .map((user, index) => ({ ...user, rank: index + 1 }));
+}
+
+function applyRankDelta(users: TokenLeaderboardUser[]) {
+  return users.map((user) => ({
+    ...user,
+    rankDelta: user.previousRank === null ? null : user.previousRank - user.rank,
+  }));
+}
+
+function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric) {
+  const values = new Map<
+    string,
+    {
+      costUsd: number;
+      displayName: string;
+      messages: number;
+      sessions: Set<string>;
+      tokens: number;
+    }
+  >();
+
+  for (const entry of entries) {
+    const current =
+      values.get(entry.userId) ??
+      {
+        costUsd: 0,
+        displayName: entry.displayName || entry.userId,
+        messages: 0,
+        sessions: new Set<string>(),
+        tokens: 0,
+      };
+
+    current.costUsd += entry.costUsd ?? 0;
+    current.displayName = entry.displayName || current.displayName;
+    current.messages += entry.messages ?? 0;
+    current.sessions.add(entry.sessionId || entry.id);
+    current.tokens += getTokenConsumptionTokens(entry);
+    values.set(entry.userId, current);
+  }
+
+  const ranked = [...values.entries()]
+    .sort(([, left], [, right]) => {
+      const diff = previousMetricValue(right, metric) - previousMetricValue(left, metric);
+      return diff || left.displayName.localeCompare(right.displayName);
+    })
+    .map(([userId], index) => [userId, index + 1] as const);
+
+  return new Map(ranked);
+}
+
+function previousMetricValue(
+  value: {
+    costUsd: number;
+    messages: number;
+    sessions: Set<string>;
+    tokens: number;
+  },
+  metric: TokenBoardMetric
+) {
+  if (metric === "cost") {
+    return value.costUsd;
+  }
+
+  if (metric === "sessions") {
+    return value.sessions.size;
+  }
+
+  if (metric === "messages") {
+    return value.messages;
+  }
+
+  return value.tokens;
 }
 
 function metricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {

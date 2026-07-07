@@ -165,6 +165,8 @@ export function AccountUsagePanel({
             📊 生成我的战报卡 · 一键导出图片分享 →
           </Link>
 
+          <AccountHonorPanel profile={dashboardProfile} />
+
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <AccountStatCard
               label="预估费用"
@@ -314,6 +316,231 @@ export function AccountUsagePanel({
       )}
     </section>
   );
+}
+
+function AccountHonorPanel({ profile }: { profile: TokenAccountUsageProfile }) {
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <div className="space-y-5">
+        <AccountLevelCard profile={profile} />
+        <AccountPersonalBestCards personalBests={profile.personalBests} />
+      </div>
+      <AccountBadgeWall badges={profile.badges} />
+    </div>
+  );
+}
+
+function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
+  const { level } = profile;
+  const current = level.current;
+  const next = level.next;
+  const progressPercent = Math.round(level.progress * 100);
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            className="flex size-12 shrink-0 items-center justify-center rounded-lg border font-mono text-xl font-bold"
+            style={{
+              backgroundColor: `${current.color}18`,
+              borderColor: `${current.color}55`,
+              color: current.color,
+            }}
+          >
+            {current.symbol}
+          </span>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">当前等级</p>
+            <h3 className="mt-1 truncate text-xl font-semibold text-slate-950 dark:text-slate-50">
+              {current.name}
+              <span className="ml-2 font-mono text-sm text-slate-400">{current.emoji}</span>
+            </h3>
+          </div>
+        </div>
+        <div className="text-left sm:text-right">
+          <p className="font-mono text-2xl font-semibold text-slate-950 dark:text-slate-50">
+            {formatTokens(level.totalTokens)}
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">累计总 token</p>
+        </div>
+      </div>
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <span>{next ? `距 ${next.name}` : "已到达最高等级"}</span>
+          <span className="font-mono">{next ? `${progressPercent}%` : "MAX"}</span>
+        </div>
+        <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner dark:bg-slate-900">
+          <div
+            className="h-full rounded-full"
+            style={{
+              backgroundColor: current.color,
+              width: `${Math.max(next ? 4 : 100, progressPercent)}%`,
+            }}
+          />
+        </div>
+        <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400">
+          {next && level.tokensToNext !== null
+            ? `还差 ${formatTokens(level.tokensToNext)} token 升级`
+            : "超新星已点亮，继续刷新个人纪录"}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function AccountBadgeWall({ badges }: { badges: TokenAccountUsageProfile["badges"] }) {
+  const achievedCount = badges.filter((badge) => badge.achieved).length;
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">徽章墙</h3>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {formatNumber(achievedCount)} / {formatNumber(badges.length)} 已达成
+          </p>
+        </div>
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-mono text-xs font-semibold text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-300">
+          Honor
+        </span>
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {badges.map((badge) => (
+          <div
+            key={badge.id}
+            className={`rounded-lg border p-3 transition ${
+              badge.achieved
+                ? "border-blue-200 bg-blue-50 text-blue-950 shadow-sm dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-100"
+                : "border-slate-200 bg-slate-50 text-slate-500 grayscale dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <span
+                className={`flex size-9 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-bold ${
+                  badge.achieved
+                    ? "border-blue-200 bg-white text-blue-700 dark:border-blue-900/70 dark:bg-slate-950 dark:text-blue-300"
+                    : "border-slate-200 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-950"
+                }`}
+              >
+                {badge.icon}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold" title={badge.name}>
+                  {badge.name}
+                </p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5" title={badge.achieved ? badge.description : badge.condition}>
+                  {badge.achieved ? badge.description : badge.condition}
+                </p>
+              </div>
+            </div>
+            <p className="mt-2 truncate font-mono text-[11px]">
+              {badge.achieved ? `达成 ${formatAchievementDate(badge.achievedAt)}` : "未达成"}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AccountPersonalBestCards({
+  personalBests,
+}: {
+  personalBests: TokenAccountUsageProfile["personalBests"];
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">个人纪录</h3>
+        {personalBests.brokeDailyPbToday ? (
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-mono text-xs font-semibold text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300">
+            今日破纪录
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <PersonalBestCard
+          highlighted={personalBests.brokeDailyPbToday}
+          label="单日最高"
+          meta={formatDayLabel(personalBests.singleDay.date)}
+          value={formatTokens(personalBests.singleDay.tokens)}
+        />
+        <PersonalBestCard
+          label="7 天滚动最高"
+          meta={formatDateRange(personalBests.rolling7Day.startDate, personalBests.rolling7Day.endDate)}
+          value={formatTokens(personalBests.rolling7Day.tokens)}
+        />
+        <PersonalBestCard
+          label="最长连续活跃"
+          meta={formatDateRange(personalBests.longestStreak.startDate, personalBests.longestStreak.endDate)}
+          value={`${formatNumber(personalBests.longestStreak.days)}d`}
+        />
+      </div>
+    </section>
+  );
+}
+
+function PersonalBestCard({
+  highlighted = false,
+  label,
+  meta,
+  value,
+}: {
+  highlighted?: boolean;
+  label: string;
+  meta: string;
+  value: string;
+}) {
+  return (
+    <div
+      className={`min-h-28 rounded-lg border p-3 ${
+        highlighted
+          ? "border-amber-300 bg-amber-50 text-amber-950 shadow-sm dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-100"
+          : "border-slate-200 bg-slate-50 text-slate-950 dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-100"
+      }`}
+    >
+      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-3 truncate font-mono text-2xl font-semibold" title={value}>
+        {value}
+      </p>
+      <p className="mt-3 truncate text-xs text-slate-500 dark:text-slate-400" title={meta}>
+        {meta}
+      </p>
+    </div>
+  );
+}
+
+function formatAchievementDate(value: string | null) {
+  if (!value) {
+    return "--";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return formatDayLabel(value);
+  }
+
+  return formatShortDate(value);
+}
+
+function formatDateRange(startDate: string | null, endDate: string | null) {
+  if (!startDate || !endDate) {
+    return "--";
+  }
+
+  const start = formatDayLabel(startDate);
+  const end = formatDayLabel(endDate);
+
+  return start === end ? start : `${start} - ${end}`;
+}
+
+function formatDayLabel(value: string | null) {
+  if (!value) {
+    return "--";
+  }
+
+  const [, month, day] = value.split("-");
+  return month && day ? `${Number(month)}/${Number(day)}` : value;
 }
 
 function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["config"] }) {

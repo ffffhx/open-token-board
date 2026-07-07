@@ -5,6 +5,10 @@ import { Pool, type PoolConfig } from "pg";
 
 import { mergeTokenEvents } from "./token-board-automation";
 import {
+  buildEmptyTokenAchievementSummary,
+  buildTokenAchievementSummariesByUser,
+} from "./token-achievements";
+import {
   normalizeTokenUsageEvent,
   parseTokenUsageImport,
   type TokenBoardMetric,
@@ -396,6 +400,15 @@ type PostgresNamedUsageRow = {
   sessions?: string | number;
 };
 
+type PostgresPreviousRankRow = {
+  user_id: string;
+  display_name: string | null;
+  tokens: string | number;
+  cost_usd: string | number;
+  messages: string | number;
+  sessions: string | number;
+};
+
 async function readPostgresLeaderboardSummary(
   pool: Pool,
   table: string,
@@ -565,6 +578,22 @@ async function readPostgresLeaderboardSummary(
     `,
     rangeParams
   );
+  const previousRankResult = await pool.query<PostgresPreviousRankRow>(
+    `
+      SELECT
+        user_id,
+        MAX(display_name) AS display_name,
+        SUM(total_tokens)::double precision AS tokens,
+        COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd,
+        SUM(messages)::double precision AS messages,
+        COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions
+      FROM ${table}
+      WHERE reported_at >= $1
+        AND reported_at < $2
+      GROUP BY user_id
+    `,
+    [previousStart, start]
+  );
   const emptyDailySeries = buildEmptyDailySeries(start, end);
   const dailyByUserValues = new Map<string, Map<string, number>>();
 
@@ -578,16 +607,26 @@ async function readPostgresLeaderboardSummary(
     dailyByUserValues.set(row.user_id, values);
   }
 
-  const users = rankLeaderboardUsers(
+  const userIds = userResult.rows.map((row) => row.user_id).filter(Boolean);
+  const achievementEvents = await readPostgresEventsForUsers(pool, table, userIds);
+  const achievementsByUser = buildTokenAchievementSummariesByUser(achievementEvents, { now: end });
+  const previousRankByUser = rankPostgresPreviousUsers(previousRankResult.rows, metric);
+  const users = applyLeaderboardRankDelta(rankLeaderboardUsers(
     userResult.rows.map((row) => {
       const tokens = toFiniteNumber(row.tokens);
       const previousTokens = toFiniteNumber(row.previous_tokens);
+      const achievements = achievementsByUser.get(row.user_id) ?? buildEmptyTokenAchievementSummary(end);
 
       return {
         rank: 0,
+        previousRank: previousRankByUser.get(row.user_id) ?? null,
+        rankDelta: null,
         userId: row.user_id,
         displayName: row.display_name || row.user_id,
         team: row.team || "Friends",
+        level: achievements.level,
+        badges: achievements.badges,
+        personalBests: achievements.personalBests,
         tokens,
         inputTokens: toFiniteNumber(row.input_tokens),
         cachedInputTokens: toFiniteNumber(row.cached_input_tokens),
@@ -607,7 +646,7 @@ async function readPostgresLeaderboardSummary(
       };
     }),
     metric
-  );
+  ));
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
   const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
   const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
@@ -665,6 +704,40 @@ function rankLeaderboardUsers(users: TokenLeaderboardUser[], metric: TokenBoardM
     .map((user, index) => ({ ...user, rank: index + 1 }));
 }
 
+function applyLeaderboardRankDelta(users: TokenLeaderboardUser[]) {
+  return users.map((user) => ({
+    ...user,
+    rankDelta: user.previousRank === null ? null : user.previousRank - user.rank,
+  }));
+}
+
+function rankPostgresPreviousUsers(rows: PostgresPreviousRankRow[], metric: TokenBoardMetric) {
+  return new Map(
+    [...rows]
+      .sort((left, right) => {
+        const diff = previousPostgresMetricValue(right, metric) - previousPostgresMetricValue(left, metric);
+        return diff || (left.display_name || left.user_id).localeCompare(right.display_name || right.user_id);
+      })
+      .map((row, index) => [row.user_id, index + 1] as const)
+  );
+}
+
+function previousPostgresMetricValue(row: PostgresPreviousRankRow, metric: TokenBoardMetric) {
+  if (metric === "cost") {
+    return toFiniteNumber(row.cost_usd);
+  }
+
+  if (metric === "sessions") {
+    return toFiniteInteger(row.sessions);
+  }
+
+  if (metric === "messages") {
+    return toFiniteNumber(row.messages);
+  }
+
+  return toFiniteNumber(row.tokens);
+}
+
 function leaderboardMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
   if (metric === "cost") {
     return user.costUsd;
@@ -679,6 +752,26 @@ function leaderboardMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMe
   }
 
   return user.tokens;
+}
+
+async function readPostgresEventsForUsers(pool: Pool, table: string, userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+
+  if (!uniqueUserIds.length) {
+    return [];
+  }
+
+  const result = await pool.query<TokenUsageEventRow>(
+    `
+      SELECT *
+      FROM ${table}
+      WHERE user_id = ANY($1::text[])
+      ORDER BY user_id ASC, reported_at ASC, created_at ASC
+    `,
+    [uniqueUserIds]
+  );
+
+  return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
 }
 
 function buildEmptyDailySeries(start: Date, end: Date): TokenDailyUsagePoint[] {

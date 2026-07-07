@@ -1,4 +1,5 @@
 import {
+  buildEmptyTokenAchievementSummary,
   getTokenConsumptionTokens,
   type TokenAccountUsageProfile,
   type TokenBoardMetric,
@@ -121,11 +122,18 @@ export function getUserMetricValue(user: TokenLeaderboardUser, metric: TokenBoar
 
 export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric: TokenBoardMetric): TokenLeaderboardSummary {
   const users = summary.users
-    .map((user) => ({
-      ...user,
-      daily: normalizeDailyUsageSeries(user.daily),
-      tokens: getTokenConsumptionTokens(user),
-    }))
+    .map((user) => {
+      const achievements = normalizeRemoteAchievements(user);
+
+      return {
+        ...user,
+        ...achievements,
+        previousRank: finiteNumberOrNull(user.previousRank),
+        rankDelta: finiteNumberOrNull(user.rankDelta),
+        daily: normalizeDailyUsageSeries(user.daily),
+        tokens: getTokenConsumptionTokens(user),
+      };
+    })
     .sort((left, right) => getUserMetricValue(right, metric) - getUserMetricValue(left, metric) || left.displayName.localeCompare(right.displayName))
     .map((user, index) => ({ ...user, rank: index + 1 }));
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
@@ -173,14 +181,20 @@ function formatUtcDateTime(value: string) {
 }
 
 export function normalizeRemoteAccountProfile(profile: TokenAccountUsageProfile): TokenAccountUsageProfile {
+  const achievements = normalizeRemoteAchievements(profile);
+
   return {
     ...profile,
+    ...achievements,
     config: normalizeRemoteUserConfig(profile.config),
     daily: normalizeDailyUsageSeries(profile.daily),
     sessions: Array.isArray(profile.sessions) ? profile.sessions.map(normalizeRemoteSession) : [],
     user: profile.user
       ? {
           ...profile.user,
+          ...normalizeRemoteAchievements(profile.user),
+          previousRank: finiteNumberOrNull(profile.user.previousRank),
+          rankDelta: finiteNumberOrNull(profile.user.rankDelta),
           daily: normalizeDailyUsageSeries(profile.user.daily),
           tokens: getTokenConsumptionTokens(profile.user),
         }
@@ -231,6 +245,41 @@ export function normalizeRemoteSession(session: TokenAccountUsageProfile["sessio
 
 export function finiteNumberOrUndefined(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function finiteNumberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function normalizeRemoteAchievements(value: {
+  badges?: unknown;
+  level?: unknown;
+  personalBests?: unknown;
+}) {
+  const fallback = buildEmptyTokenAchievementSummary();
+
+  return {
+    level: isLevelProgress(value.level) ? value.level : fallback.level,
+    badges: Array.isArray(value.badges) ? value.badges : fallback.badges,
+    personalBests: isPersonalBests(value.personalBests) ? value.personalBests : fallback.personalBests,
+  };
+}
+
+function isLevelProgress(value: unknown): value is ReturnType<typeof buildEmptyTokenAchievementSummary>["level"] {
+  const level = value as ReturnType<typeof buildEmptyTokenAchievementSummary>["level"];
+
+  return Boolean(value && typeof value === "object" && level.current && typeof level.current.name === "string");
+}
+
+function isPersonalBests(value: unknown): value is ReturnType<typeof buildEmptyTokenAchievementSummary>["personalBests"] {
+  const personalBests = value as ReturnType<typeof buildEmptyTokenAchievementSummary>["personalBests"];
+
+  return (
+    Boolean(value && typeof value === "object") &&
+    Boolean(personalBests.singleDay) &&
+    Boolean(personalBests.rolling7Day) &&
+    Boolean(personalBests.longestStreak)
+  );
 }
 
 export function formatMetricValue(value: number, metric: TokenBoardMetric) {

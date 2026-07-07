@@ -392,9 +392,13 @@ export function LeaderboardMobileCard({
           <span className="rounded-full border border-amber-600/25 bg-amber-50 px-2.5 py-1 font-mono text-xs font-semibold text-amber-900">
             #{user.rank}
           </span>
+          <RankDeltaBadge previousRank={user.previousRank} rankDelta={user.rankDelta} />
           <Avatar name={user.displayName} index={user.rank} />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <LevelSymbol level={user.level} />
+              <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+            </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
         </div>
@@ -682,15 +686,21 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
   return (
     <tr className="transition hover:bg-slate-50">
       <td className="px-4 py-3">
-        <span className={`inline-flex min-w-10 justify-center rounded-full border px-2 py-1 font-mono text-xs font-semibold ${rankTone}`}>
-          #{user.rank}
-        </span>
+        <div className="flex flex-col items-start gap-1.5">
+          <span className={`inline-flex min-w-10 justify-center rounded-full border px-2 py-1 font-mono text-xs font-semibold ${rankTone}`}>
+            #{user.rank}
+          </span>
+          <RankDeltaBadge previousRank={user.previousRank} rankDelta={user.rankDelta} />
+        </div>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center gap-3">
           <Avatar name={user.displayName} index={user.rank} />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <LevelSymbol level={user.level} />
+              <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+            </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
         </div>
@@ -724,6 +734,64 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
         </div>
       </td>
     </tr>
+  );
+}
+
+function LevelSymbol({ level }: { level: TokenLeaderboardUser["level"] }) {
+  const current = level.current;
+
+  return (
+    <span
+      className="inline-flex size-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold leading-none dark:bg-slate-950/30"
+      style={{
+        backgroundColor: `${current.color}18`,
+        borderColor: `${current.color}55`,
+        color: current.color,
+      }}
+      title={`${current.name} · 累计等级`}
+    >
+      {current.symbol}
+    </span>
+  );
+}
+
+function RankDeltaBadge({
+  previousRank,
+  rankDelta,
+}: {
+  previousRank: number | null;
+  rankDelta: number | null;
+}) {
+  if (previousRank === null) {
+    return (
+      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+        新上榜
+      </span>
+    );
+  }
+
+  if (!rankDelta) {
+    return (
+      <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+        持平
+      </span>
+    );
+  }
+
+  const isUp = rankDelta > 0;
+
+  return (
+    <span
+      className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold ${
+        isUp
+          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
+          : "border-red-200 bg-red-50 text-red-700 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300"
+      }`}
+      title={`上一周期 #${previousRank}`}
+    >
+      {isUp ? "↑" : "↓"}
+      {formatNumber(Math.abs(rankDelta))}
+    </span>
   );
 }
 
