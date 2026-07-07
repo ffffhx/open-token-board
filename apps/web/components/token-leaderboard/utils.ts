@@ -142,10 +142,119 @@ export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric:
     ...summary,
     daily: normalizeDailyUsageSeries(summary.daily),
     totalTokens,
+    teams: normalizeRemoteTeams(summary.teams),
+    projects: normalizeRemoteProjects(summary.projects),
+    distribution: normalizeRemoteDistribution(summary.distribution),
     users: users.map((user) => ({
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
     })),
+  };
+}
+
+function normalizeRemoteTeams(value: unknown): TokenLeaderboardSummary["teams"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    const team = item as TokenLeaderboardSummary["teams"][number];
+    if (!team || typeof team !== "object" || typeof team.name !== "string") {
+      return [];
+    }
+
+    const tokens = finiteNumberOrZero(team.tokens);
+    const members = Array.isArray(team.members)
+      ? team.members.flatMap((member) => {
+          if (!member || typeof member !== "object" || typeof member.userId !== "string") {
+            return [];
+          }
+
+          return [
+            {
+              userId: member.userId,
+              displayName: typeof member.displayName === "string" ? member.displayName : member.userId,
+              tokens: finiteNumberOrZero(member.tokens),
+              share: finiteNumberOrZero(member.share),
+            },
+          ];
+        })
+      : [];
+
+    return [
+      {
+        rank: finiteNumberOrZero(team.rank),
+        name: team.name,
+        tokens,
+        costUsd: finiteNumberOrZero(team.costUsd),
+        activeUsers: finiteNumberOrZero(team.activeUsers),
+        tokensPerUser: finiteNumberOrZero(team.tokensPerUser),
+        deltaTokens: finiteNumberOrNull(team.deltaTokens),
+        share: finiteNumberOrZero(team.share),
+        members,
+      },
+    ];
+  });
+}
+
+function normalizeRemoteProjects(value: unknown): TokenLeaderboardSummary["projects"] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((item) => {
+    const project = item as TokenLeaderboardSummary["projects"][number];
+    if (!project || typeof project !== "object" || typeof project.name !== "string") {
+      return [];
+    }
+
+    return [
+      {
+        rank: finiteNumberOrZero(project.rank),
+        name: project.name,
+        tokens: finiteNumberOrZero(project.tokens),
+        costUsd: finiteNumberOrZero(project.costUsd),
+        activeUsers: finiteNumberOrZero(project.activeUsers),
+        sessions: finiteNumberOrZero(project.sessions),
+        topModel: typeof project.topModel === "string" && project.topModel ? project.topModel : "unknown",
+        share: finiteNumberOrZero(project.share),
+        other: project.other || undefined,
+      },
+    ];
+  });
+}
+
+function normalizeRemoteDistribution(value: unknown): TokenLeaderboardSummary["distribution"] {
+  const distribution = value as Partial<TokenLeaderboardSummary["distribution"]>;
+  const percentiles: Partial<TokenLeaderboardSummary["distribution"]["percentiles"]> =
+    distribution?.percentiles ?? {};
+
+  return {
+    totalUsers: finiteNumberOrZero(distribution?.totalUsers),
+    maxTokens: finiteNumberOrZero(distribution?.maxTokens),
+    percentiles: {
+      p50: finiteNumberOrZero(percentiles.p50),
+      p90: finiteNumberOrZero(percentiles.p90),
+      p99: finiteNumberOrZero(percentiles.p99),
+    },
+    buckets: Array.isArray(distribution?.buckets)
+      ? distribution.buckets.flatMap((bucket) => {
+          if (!bucket || typeof bucket !== "object" || typeof bucket.key !== "string") {
+            return [];
+          }
+
+          return [
+            {
+              key: bucket.key,
+              label: typeof bucket.label === "string" ? bucket.label : bucket.key,
+              minTokens: finiteNumberOrZero(bucket.minTokens),
+              maxTokens: finiteNumberOrNull(bucket.maxTokens),
+              count: finiteNumberOrZero(bucket.count),
+              share: finiteNumberOrZero(bucket.share),
+            },
+          ];
+        })
+      : [],
   };
 }
 
