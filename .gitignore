@@ -4,3 +4,6 @@ node_modules/
 .env*.local
 .DS_Store
 *.tsbuildinfo
+tests/.tmp/
+test-results/
+playwright-report/
