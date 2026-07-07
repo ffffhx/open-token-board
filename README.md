@@ -118,6 +118,14 @@ pnpm codex:limits -- --json --days=30   # 输出原始 JSON / 指定回看天数
 
 > agent 只读取这些工具自己写下的用量日志，不修改任何文件，也不访问网络上的其它内容。
 
+### README 徽章
+
+公开个人主页支持复制 Markdown 徽章，也可以手写：
+
+```md
+[![Open Token Board](https://your-token-board.example/api/badge?login=your-github-login&style=weekly)](https://your-token-board.example/u?login=your-github-login)
+```
+
 ## 🔒 隐私
 
 读取本地编码日志是件敏感的事，所以默认上报内容经过严格收敛，可在 agent 配置里进一步收紧：

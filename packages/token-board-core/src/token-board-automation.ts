@@ -383,7 +383,16 @@ export function createIngestPayload(
 }
 
 export function isTokenBoardRange(value: string): value is TokenBoardRange {
-  return value === "1D" || value === "7D" || value === "30D" || value === "90D";
+  return (
+    value === "1D" ||
+    value === "7D" ||
+    value === "30D" ||
+    value === "90D" ||
+    value === "week" ||
+    value === "month" ||
+    value === "lastweek" ||
+    value === "lastmonth"
+  );
 }
 
 export function isTokenBoardMetric(value: string): value is TokenBoardMetric {

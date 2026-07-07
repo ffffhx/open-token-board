@@ -30,6 +30,7 @@ import {
 } from "@open-token-board/core/automation";
 import {
   buildTokenAchievementSummary,
+  createCustomTokenLeaderboardWindow,
   buildTokenAccountUsageProfile,
   buildTokenLevelProgress,
   buildTokenLeaderboard,
@@ -41,6 +42,7 @@ import {
   type TokenBoardRange,
   type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
+  type TokenLeaderboardWindow,
   type TokenLeaderboardUser,
   type TokenWrappedLevelUp,
   type TokenWrappedNamedUsage,
@@ -149,7 +151,7 @@ let tokenUsageStore: TokenUsageStore | undefined;
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
-const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
+const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D", "week", "month", "lastweek", "lastmonth"];
 const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages", "users"];
 const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const PUBLIC_PROFILE_DAILY_DAYS = 365;
@@ -451,14 +453,21 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/usage/stats") {
-    const range = parseRange(url.searchParams.get("range"));
     const metric = parseMetric(url.searchParams.get("metric"));
     const now = parseNow(url.searchParams.get("now"));
+    const statsRange = parseStatsRange(url.searchParams);
+
+    if ("error" in statsRange) {
+      sendJson(request, response, 400, { error: statsRange.error });
+      return;
+    }
+
     const { generatedAt, records, source, summary } = await readUsageLeaderboard({
-      range,
+      range: statsRange.range,
       metric,
       now,
-      preferSnapshot: !url.searchParams.has("now"),
+      preferSnapshot: statsRange.preferSnapshot,
+      window: statsRange.window,
     });
 
     sendJson(request, response, 200, {
@@ -468,6 +477,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       generatedAt,
       summary,
     });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/badge") {
+    await handleBadge(request, response, url);
     return;
   }
 
@@ -914,12 +928,7 @@ async function buildUsageMePayload(
   const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
   const totalUsers = summary.users.length;
   const rank = rankedUser?.rank ?? null;
-  const { summary: previousSummary } = await readUsageLeaderboard({
-    range,
-    metric: "tokens",
-    now: new Date(summary.startAt),
-  });
-  const previousRank = previousSummary.users.find((entry) => entry.userId === identity.userId)?.rank ?? null;
+  const previousRank = rankedUser?.previousRank ?? null;
   profile.rank = rank;
   profile.previousRank = previousRank;
   profile.rankDelta = rank !== null && previousRank !== null ? previousRank - rank : null;
@@ -1226,6 +1235,115 @@ async function handlePublicUsageUser(request: IncomingMessage, response: ServerR
       rankings,
     },
   });
+}
+
+async function handleBadge(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const login = normalizePublicProfileLogin(url.searchParams.get("login"));
+  const style = parseBadgeStyle(url.searchParams.get("style"));
+
+  if (!login) {
+    sendSvg(request, response, 200, buildBadgeSvg("Open Token Board", "unknown", "unknown"));
+    return;
+  }
+
+  const store = usageStore();
+  const [events, uploadUsers] = await Promise.all([store.listEvents(), loadUploadUsers()]);
+  const match = findPublicProfileUserEvents(events, uploadUsers, login);
+
+  if (!match) {
+    sendSvg(request, response, 200, buildBadgeSvg("Open Token Board", "unknown", "unknown"));
+    return;
+  }
+
+  const now = parseNow(url.searchParams.get("now"));
+  const label = "Open Token Board";
+  const value =
+    style === "weekly"
+      ? weeklyBadgeValue(events, match.userId, now)
+      : flatBadgeValue(match.events, now);
+
+  sendSvg(request, response, 200, buildBadgeSvg(label, value, style));
+}
+
+function parseBadgeStyle(value: string | null): "flat" | "weekly" {
+  return value === "weekly" ? "weekly" : "flat";
+}
+
+function flatBadgeValue(events: TokenUsageEvent[], now: Date) {
+  const achievement = buildTokenAchievementSummary(events, { now });
+
+  return `${achievement.level.current.name} · ${formatBadgeNumber(achievement.level.totalTokens)} tokens`;
+}
+
+function weeklyBadgeValue(events: TokenUsageEvent[], userId: string, now: Date) {
+  const summary = buildTokenLeaderboard(events, { range: "week", metric: "tokens", now });
+  const user = summary.users.find((entry) => entry.userId === userId);
+
+  if (!user) {
+    return "0 tokens · rank --";
+  }
+
+  return `${formatBadgeNumber(user.tokens)} this week · #${user.rank}`;
+}
+
+function formatBadgeNumber(value: number) {
+  const safe = Number.isFinite(value) ? Math.max(0, value) : 0;
+
+  if (safe >= 1_000_000_000) {
+    return `${formatBadgeCompact(safe / 1_000_000_000)}B`;
+  }
+
+  if (safe >= 1_000_000) {
+    return `${formatBadgeCompact(safe / 1_000_000)}M`;
+  }
+
+  if (safe >= 1_000) {
+    return `${formatBadgeCompact(safe / 1_000)}K`;
+  }
+
+  return String(Math.round(safe));
+}
+
+function formatBadgeCompact(value: number) {
+  return value >= 100 ? String(Math.round(value)) : value.toFixed(1).replace(/\.0$/, "");
+}
+
+function buildBadgeSvg(label: string, value: string, tone: "flat" | "weekly" | "unknown") {
+  const labelWidth = badgeTextWidth(label) + 18;
+  const valueWidth = badgeTextWidth(value) + 18;
+  const width = labelWidth + valueWidth;
+  const valueColor = tone === "unknown" ? "#6b7280" : tone === "weekly" ? "#2563eb" : "#475569";
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="20" role="img" aria-label="${escapeXml(`${label}: ${value}`)}">`,
+    `<title>${escapeXml(`${label}: ${value}`)}</title>`,
+    `<linearGradient id="s" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".12"/><stop offset="1" stop-opacity=".12"/></linearGradient>`,
+    `<clipPath id="r"><rect width="${width}" height="20" rx="3" fill="#fff"/></clipPath>`,
+    `<g clip-path="url(#r)">`,
+    `<rect width="${labelWidth}" height="20" fill="#334155"/>`,
+    `<rect x="${labelWidth}" width="${valueWidth}" height="20" fill="${valueColor}"/>`,
+    `<rect width="${width}" height="20" fill="url(#s)"/>`,
+    `</g>`,
+    `<g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="11">`,
+    `<text x="${labelWidth / 2}" y="15" fill="#010101" fill-opacity=".25">${escapeXml(label)}</text>`,
+    `<text x="${labelWidth / 2}" y="14">${escapeXml(label)}</text>`,
+    `<text x="${labelWidth + valueWidth / 2}" y="15" fill="#010101" fill-opacity=".25">${escapeXml(value)}</text>`,
+    `<text x="${labelWidth + valueWidth / 2}" y="14">${escapeXml(value)}</text>`,
+    `</g>`,
+    `</svg>`,
+  ].join("");
+}
+
+function badgeTextWidth(value: string) {
+  return Math.ceil([...value].reduce((sum, char) => sum + (char.charCodeAt(0) > 127 ? 12 : 7), 0));
+}
+
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 async function handleUsageWrapped(request: IncomingMessage, response: ServerResponse, url: URL) {
@@ -3068,8 +3186,89 @@ function parseExportScope(value: string | null): "leaderboard" | "me" | null {
 }
 
 function parseRange(value: string | null): TokenBoardRange {
-  const normalized = value?.trim().toUpperCase() || "";
-  return isTokenBoardRange(normalized) ? normalized : "7D";
+  const raw = value?.trim() || "";
+  const rolling = raw.toUpperCase();
+  const calendar = raw.toLowerCase();
+
+  if (isTokenBoardRange(rolling)) {
+    return rolling;
+  }
+
+  return isTokenBoardRange(calendar) ? calendar : "7D";
+}
+
+function parseStatsRange(searchParams: URLSearchParams):
+  | { range: TokenBoardRange; preferSnapshot: boolean; window?: TokenLeaderboardWindow }
+  | { error: string } {
+  const from = searchParams.get("from");
+  const to = searchParams.get("to");
+
+  if (from !== null || to !== null) {
+    const custom = parseCustomStatsWindow(from, to);
+
+    if (!custom) {
+      return { error: "from/to must be valid YYYY-MM-DD dates, from <= to, with a maximum range of 366 days" };
+    }
+
+    return {
+      range: "7D",
+      preferSnapshot: false,
+      window: custom,
+    };
+  }
+
+  return {
+    range: parseRange(searchParams.get("range")),
+    preferSnapshot: !searchParams.has("now"),
+  };
+}
+
+function parseCustomStatsWindow(from: string | null, to: string | null): TokenLeaderboardWindow | null {
+  if (!from || !to || !isValidDayKey(from) || !isValidDayKey(to)) {
+    return null;
+  }
+
+  const fromTime = dayKeyUtcTime(from);
+  const toTime = dayKeyUtcTime(to);
+
+  if (toTime < fromTime) {
+    return null;
+  }
+
+  const days = Math.floor((toTime - fromTime) / (24 * 60 * 60 * 1000)) + 1;
+
+  if (days < 1 || days > 366) {
+    return null;
+  }
+
+  return createCustomTokenLeaderboardWindow(from, to);
+}
+
+function isValidDayKey(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return false;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    year >= 2000 &&
+    year <= 2100 &&
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
+}
+
+function dayKeyUtcTime(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return Date.UTC(year, month - 1, day);
 }
 
 function parseMetric(value: string | null): TokenBoardMetric {
@@ -3268,13 +3467,15 @@ async function readUsageLeaderboard({
   metric,
   now,
   preferSnapshot = false,
+  window,
 }: {
   range: TokenBoardRange;
   metric: TokenBoardMetric;
   now: Date;
   preferSnapshot?: boolean;
+  window?: TokenLeaderboardWindow;
 }): Promise<UsageLeaderboardReadResult> {
-  if (preferSnapshot) {
+  if (preferSnapshot && !window) {
     const snapshot = await readLeaderboardSnapshot({ range, metric });
 
     if (snapshot) {
@@ -3291,7 +3492,7 @@ async function readUsageLeaderboard({
     }
   }
 
-  const live = await readLiveUsageLeaderboard({ range, metric, now });
+  const live = await readLiveUsageLeaderboard({ range, metric, now, window });
 
   return {
     ...live,
@@ -3304,14 +3505,16 @@ async function readLiveUsageLeaderboard({
   range,
   metric,
   now,
+  window,
 }: {
   range: TokenBoardRange;
   metric: TokenBoardMetric;
   now: Date;
+  window?: TokenLeaderboardWindow;
 }) {
   const store = usageStore();
 
-  if (store.getLeaderboardSummary) {
+  if (store.getLeaderboardSummary && !window) {
     return store.getLeaderboardSummary({ range, metric, now });
   }
 
@@ -3319,7 +3522,7 @@ async function readLiveUsageLeaderboard({
 
   return {
     records: events.length,
-    summary: buildTokenLeaderboard(events, { range, metric, now }),
+    summary: buildTokenLeaderboard(events, { range, metric, now, window }),
   };
 }
 
@@ -3892,6 +4095,15 @@ function sendCsv(request: IncomingMessage, response: ServerResponse, status: num
     "Cache-Control": "no-store",
   });
   response.end(csv);
+}
+
+function sendSvg(request: IncomingMessage, response: ServerResponse, status: number, svg: string) {
+  applyCors(request, response);
+  response.writeHead(status, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+  response.end(svg);
 }
 
 function exportContentDisposition(scope: "leaderboard" | "me", range: TokenBoardRange, format: "csv" | "json") {

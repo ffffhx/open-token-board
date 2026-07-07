@@ -8,7 +8,8 @@ import {
   type TokenPersonalBests,
 } from "./token-achievements";
 
-export type TokenBoardRange = "1D" | "7D" | "30D" | "90D";
+export type TokenBoardRange = "1D" | "7D" | "30D" | "90D" | "week" | "month" | "lastweek" | "lastmonth";
+export type TokenLeaderboardSummaryRange = TokenBoardRange | "custom";
 
 export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages" | "users";
 
@@ -114,7 +115,7 @@ export type TokenLeaderboardUser = {
 };
 
 export type TokenLeaderboardSummary = {
-  range: TokenBoardRange;
+  range: TokenLeaderboardSummaryRange;
   startAt: string;
   endAt: string;
   totalTokens: number;
@@ -221,12 +222,22 @@ export type TokenAccountUsageProfile = {
   config: TokenBoardUserConfig | null;
 };
 
-const RANGE_DAYS: Record<TokenBoardRange, number> = {
+export type TokenLeaderboardWindow = {
+  range: TokenLeaderboardSummaryRange;
+  start: Date;
+  end: Date;
+  previousStart: Date;
+  previousEnd: Date;
+};
+
+const ROLLING_RANGE_DAYS: Record<Extract<TokenBoardRange, "1D" | "7D" | "30D" | "90D">, number> = {
   "1D": 1,
   "7D": 7,
   "30D": 30,
   "90D": 90,
 };
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const TREND_STACK_LIMIT = 5;
 const HOURLY_DRILLDOWN_DAYS = 7;
 
@@ -311,26 +322,27 @@ export function buildTokenLeaderboard(
     range,
     metric,
     now = new Date(),
+    window,
   }: {
     range: TokenBoardRange;
     metric: TokenBoardMetric;
     now?: Date;
+    window?: TokenLeaderboardWindow;
   }
 ): TokenLeaderboardSummary {
   const end = Number.isFinite(now.getTime()) ? now : new Date();
-  const rangeMs = RANGE_DAYS[range] * 24 * 60 * 60 * 1000;
-  const start = new Date(end.getTime() - rangeMs);
-  const previousStart = new Date(start.getTime() - rangeMs);
+  const rangeWindow = window ?? resolveTokenLeaderboardWindow(range, end);
+  const { start, previousStart, previousEnd } = rangeWindow;
   const normalizedEntries = dedupeTokenEvents(entries.map(normalizeTokenUsageEvent));
   const currentEntries = normalizedEntries.filter((entry) => {
     const timestamp = new Date(entry.timestamp).getTime();
-    return timestamp >= start.getTime() && timestamp <= end.getTime();
+    return timestamp >= start.getTime() && timestamp <= rangeWindow.end.getTime();
   });
   const previousEntries = normalizedEntries.filter((entry) => {
     const timestamp = new Date(entry.timestamp).getTime();
-    return timestamp >= previousStart.getTime() && timestamp < start.getTime();
+    return timestamp >= previousStart.getTime() && timestamp <= previousEnd.getTime();
   });
-  const dailyByUser = buildDailySeriesByUser(currentEntries, start, end);
+  const dailyByUser = buildDailySeriesByUser(currentEntries, start, rangeWindow.end);
   const previousTokensByUser = sumTokensByUser(previousEntries);
   const previousRankByUser = rankEntriesByUser(previousEntries, metric);
   const achievementsByUser = buildTokenAchievementSummariesByUser(normalizedEntries, { now: end });
@@ -346,12 +358,12 @@ export function buildTokenLeaderboard(
   const totalMessages = users.reduce((sum, user) => sum + user.messages, 0);
   const models = aggregateNamedUsage(currentEntries, "model");
   const tools = aggregateNamedUsage(currentEntries, "tool");
-  const trends = buildTokenLeaderboardTrends(currentEntries, start, end);
+  const trends = buildTokenLeaderboardTrends(currentEntries, start, rangeWindow.end);
 
   return {
-    range,
+    range: rangeWindow.range,
     startAt: start.toISOString(),
-    endAt: end.toISOString(),
+    endAt: rangeWindow.end.toISOString(),
     totalTokens,
     totalCostUsd,
     totalSessions,
@@ -359,7 +371,7 @@ export function buildTokenLeaderboard(
     activeUsers: users.length,
     topModel: models[0]?.name ?? "unknown",
     topTool: tools[0]?.name ?? "unknown",
-    daily: buildDailySeries(currentEntries, start, end),
+    daily: buildDailySeries(currentEntries, start, rangeWindow.end),
     trends,
     models,
     tools,
@@ -367,6 +379,61 @@ export function buildTokenLeaderboard(
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
     })),
+  };
+}
+
+export function resolveTokenLeaderboardWindow(range: TokenBoardRange, now = new Date()): TokenLeaderboardWindow {
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
+
+  if (range in ROLLING_RANGE_DAYS) {
+    const days = ROLLING_RANGE_DAYS[range as keyof typeof ROLLING_RANGE_DAYS];
+    const start = new Date(safeNow.getTime() - days * DAY_MS);
+
+    return {
+      range,
+      start,
+      end: safeNow,
+      previousStart: new Date(start.getTime() - days * DAY_MS),
+      previousEnd: new Date(start.getTime() - 1),
+    };
+  }
+
+  if (range === "week" || range === "lastweek") {
+    const thisWeekStart = startOfShanghaiWeek(safeNow);
+    const currentStart = range === "week" ? thisWeekStart : new Date(thisWeekStart.getTime() - 7 * DAY_MS);
+
+    return {
+      range,
+      start: currentStart,
+      end: range === "week" ? safeNow : new Date(thisWeekStart.getTime() - 1),
+      previousStart: new Date(currentStart.getTime() - 7 * DAY_MS),
+      previousEnd: new Date(currentStart.getTime() - 1),
+    };
+  }
+
+  const thisMonthStart = startOfShanghaiMonth(safeNow);
+  const currentStart = range === "month" ? thisMonthStart : addShanghaiMonths(thisMonthStart, -1);
+
+  return {
+    range,
+    start: currentStart,
+    end: range === "month" ? safeNow : new Date(thisMonthStart.getTime() - 1),
+    previousStart: addShanghaiMonths(currentStart, -1),
+    previousEnd: new Date(currentStart.getTime() - 1),
+  };
+}
+
+export function createCustomTokenLeaderboardWindow(from: string, to: string): TokenLeaderboardWindow {
+  const start = shanghaiDayStartUtc(from);
+  const toStart = shanghaiDayStartUtc(to);
+  const days = Math.floor((toStart.getTime() - start.getTime()) / DAY_MS) + 1;
+
+  return {
+    range: "custom",
+    start,
+    end: new Date(toStart.getTime() + DAY_MS - 1),
+    previousStart: new Date(start.getTime() - days * DAY_MS),
+    previousEnd: new Date(start.getTime() - 1),
   };
 }
 
@@ -410,8 +477,7 @@ export function buildTokenAccountUsageProfile(
         personalBests: achievements.personalBests,
       }
     : null;
-  const previousSummary = buildTokenLeaderboard(normalizedEntries, { range, metric: "tokens", now: start });
-  const previousRank = previousSummary.users.find((user) => user.userId === userId)?.rank ?? null;
+  const previousRank = rankedUser?.previousRank ?? null;
   const rank = rankedUser?.rank ?? null;
   const totalUsers = globalSummary.users.length;
 
@@ -1059,7 +1125,7 @@ function buildTrendBreakdown(
     dailyValues.set(date, dayValues);
 
     if (supportedDateKeys.has(date)) {
-      const hour = new Date(entry.timestamp).getUTCHours();
+      const hour = shanghaiHour(entry.timestamp);
       const hourKey = `${date}:${hour}`;
       const hourValues = hourlyValues.get(hourKey) ?? new Map<string, MutableTrendValue>();
       addEntryToTrendValue(getOrCreateMutableTrendValue(hourValues, key, label, other), entry);
@@ -1127,7 +1193,7 @@ function buildHourlyTrendPoints(
   hourlyTotals: Map<string, MutableTrendValue>,
   totalTokens: number
 ): TokenHourlyTrendPoint[] {
-  const dayStart = new Date(`${date}T00:00:00.000Z`);
+  const dayStart = shanghaiDayStartUtc(date);
 
   return Array.from({ length: 24 }, (_, hour) => {
     const bucketStart = new Date(dayStart.getTime() + hour * 60 * 60 * 1000);
@@ -1431,7 +1497,6 @@ function topActivityWeekday(entries: TokenUsageEvent[]) {
   return weekday === undefined ? "--" : WEEKDAY_LABELS[weekday];
 }
 
-const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const WEEKDAY_LABELS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 function getShanghaiWeekdayHour(value: string) {
@@ -1489,12 +1554,12 @@ function buildDailySeriesByUser(
 
 function buildEmptyDailySeries(start: Date, end: Date): TokenDailyUsagePoint[] {
   const points: TokenDailyUsagePoint[] = [];
-  const startDay = startOfUtcDay(start);
-  const endDay = startOfUtcDay(end);
+  const startDay = startOfShanghaiDay(start);
+  const endDay = startOfShanghaiDay(end);
 
-  for (let time = startDay.getTime(); time <= endDay.getTime(); time += 24 * 60 * 60 * 1000) {
+  for (let time = startDay.getTime(); time <= endDay.getTime(); time += DAY_MS) {
     const bucketStart = new Date(Math.max(time, start.getTime()));
-    const bucketEnd = new Date(Math.min(time + 24 * 60 * 60 * 1000, end.getTime()));
+    const bucketEnd = new Date(Math.min(time + DAY_MS - 1, end.getTime()));
 
     points.push({
       date: toDateKey(new Date(time).toISOString()),
@@ -1884,12 +1949,65 @@ function normalizeDate(value: unknown) {
   return new Date(ms ?? Date.now()).toISOString();
 }
 
-function toDateKey(value: string) {
-  return new Date(value).toISOString().slice(0, 10);
+function toDateKey(value: string | Date) {
+  const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+
+  return `${shifted.getUTCFullYear()}-${padNumber(shifted.getUTCMonth() + 1)}-${padNumber(shifted.getUTCDate())}`;
 }
 
 function startOfUtcDay(value: Date) {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function startOfShanghaiDay(value: Date) {
+  return shanghaiDayStartUtc(toDateKey(value));
+}
+
+function startOfShanghaiWeek(value: Date) {
+  const dayStart = startOfShanghaiDay(value);
+  const shifted = new Date(dayStart.getTime() + SHANGHAI_OFFSET_MS);
+  const weekday = shifted.getUTCDay();
+  const daysSinceMonday = (weekday + 6) % 7;
+
+  return new Date(dayStart.getTime() - daysSinceMonday * DAY_MS);
+}
+
+function startOfShanghaiMonth(value: Date) {
+  const shifted = new Date(value.getTime() + SHANGHAI_OFFSET_MS);
+
+  return shanghaiMonthStartUtc(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1);
+}
+
+function addShanghaiMonths(value: Date, months: number) {
+  const shifted = new Date(value.getTime() + SHANGHAI_OFFSET_MS);
+
+  return shanghaiMonthStartUtc(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1 + months);
+}
+
+function shanghaiMonthStartUtc(year: number, month: number) {
+  return new Date(Date.UTC(year, month - 1, 1) - SHANGHAI_OFFSET_MS);
+}
+
+function shanghaiDayStartUtc(dayKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+
+  if (!match) {
+    return new Date(0);
+  }
+
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - SHANGHAI_OFFSET_MS);
+}
+
+function shanghaiHour(value: string) {
+  const time = new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+
+  return shifted.getUTCHours();
+}
+
+function padNumber(value: number) {
+  return String(value).padStart(2, "0");
 }
 
 // Token counts, message counts and costs are never negative; a negative value is

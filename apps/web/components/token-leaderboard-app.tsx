@@ -18,11 +18,12 @@ import { RateLimitPanel } from "@/components/rate-limit/rate-limit-board";
 
 import { AccountUsagePanel } from "./token-leaderboard/account-usage-panel";
 import {
+  CALENDAR_RANGES,
   DATA_LOAD_SLOW_MS,
   METRICS,
   NPX_STATUS_COMMAND,
-  RANGES,
-  ROLLING_RANGE_LABELS,
+  RANGE_LABELS,
+  ROLLING_RANGES,
   TOAST_DISMISS_MS,
 } from "./token-leaderboard/constants";
 import { InstallGuideDialog } from "./token-leaderboard/install-guide-dialog";
@@ -82,12 +83,19 @@ import {
 // 不随之销毁。切回来时先用缓存立即渲染，再在后台静默刷新，避免每次都从骨架屏重拉。
 const statsCache = new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>();
 const accountCache = new Map<string, TokenAccountUsageProfile>();
-function statsCacheKey(base: string, range: TokenBoardRange, metric: TokenBoardMetric): string {
-  return `${base}|${range}|${metric}`;
+function statsCacheKey(base: string, rangeKey: string, metric: TokenBoardMetric): string {
+  return `${base}|${rangeKey}|${metric}`;
 }
 function accountCacheKey(base: string, userId: string, range: TokenBoardRange): string {
   return `${base}|${userId}|${range}`;
 }
+
+type AppliedCustomRange = {
+  from: string;
+  to: string;
+};
+
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 function getTeamTrendMetricValue(
   point: (TokenLeaderboardSummary["daily"][number] & Partial<TokenTrendMetricValues>),
@@ -112,6 +120,35 @@ function getTeamTrendMetricValue(
   return point.tokens;
 }
 
+function shanghaiDayKey(value = new Date()) {
+  const shifted = new Date(value.getTime() + SHANGHAI_OFFSET_MS);
+
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}-${String(shifted.getUTCDate()).padStart(2, "0")}`;
+}
+
+function addDaysToDayKey(dayKey: string, days: number) {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function customRangeKey(range: AppliedCustomRange | null) {
+  return range ? `custom:${range.from}:${range.to}` : "custom:pending";
+}
+
+function chartRangeForDailyLength(days: number): TokenBoardRange {
+  if (days >= 75) {
+    return "90D";
+  }
+
+  if (days >= 21) {
+    return "30D";
+  }
+
+  return days <= 1 ? "1D" : "7D";
+}
+
 export function TokenLeaderboardApp({
   initialNow,
   apiBaseUrl,
@@ -122,8 +159,13 @@ export function TokenLeaderboardApp({
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
   const [range, setRange] = useState<TokenBoardRange>("1D");
   const [metric, setMetric] = useState<TokenBoardMetric>("tokens");
+  const [customFrom, setCustomFrom] = useState(() => addDaysToDayKey(shanghaiDayKey(), -6));
+  const [customTo, setCustomTo] = useState(() => shanghaiDayKey());
+  const [appliedCustomRange, setAppliedCustomRange] = useState<AppliedCustomRange | null>(null);
+  const isCustomRange = Boolean(appliedCustomRange);
+  const statsRangeKey = isCustomRange ? customRangeKey(appliedCustomRange) : range;
   // 首次渲染就读缓存：切回榜单时直接显示上次数据，而不是先闪一帧骨架屏。
-  const initialStats = statsCache.get(statsCacheKey(normalizedApiBaseUrl, range, metric)) ?? null;
+  const initialStats = statsCache.get(statsCacheKey(normalizedApiBaseUrl, statsRangeKey, metric)) ?? null;
   const [status, setStatus] = useState(
     initialStats
       ? `后端数据 ${initialStats.records ?? initialStats.summary.users.length} 条`
@@ -173,9 +215,21 @@ export function TokenLeaderboardApp({
       return;
     }
 
+    if (isCustomRange && !appliedCustomRange) {
+      return;
+    }
+
     let active = true;
-    const params = new URLSearchParams({ range, metric });
-    const cacheKey = statsCacheKey(normalizedApiBaseUrl, range, metric);
+    const params = new URLSearchParams({ metric });
+
+    if (isCustomRange && appliedCustomRange) {
+      params.set("from", appliedCustomRange.from);
+      params.set("to", appliedCustomRange.to);
+    } else {
+      params.set("range", range);
+    }
+
+    const cacheKey = statsCacheKey(normalizedApiBaseUrl, statsRangeKey, metric);
     const cached = statsCache.get(cacheKey);
 
     if (cached) {
@@ -240,7 +294,7 @@ export function TokenLeaderboardApp({
     return () => {
       active = false;
     };
-  }, [metric, normalizedApiBaseUrl, range, reloadKey]);
+  }, [appliedCustomRange, isCustomRange, metric, normalizedApiBaseUrl, range, reloadKey, statsRangeKey]);
 
   useEffect(() => {
     if (!normalizedApiBaseUrl) {
@@ -269,7 +323,7 @@ export function TokenLeaderboardApp({
   }, [normalizedApiBaseUrl]);
 
   useEffect(() => {
-    if (!normalizedApiBaseUrl || !viewer?.authenticated) {
+    if (!normalizedApiBaseUrl || !viewer?.authenticated || isCustomRange) {
       setAccountProfile(null);
       setAccountLoadState("idle");
       setAccountError("");
@@ -330,7 +384,7 @@ export function TokenLeaderboardApp({
     return () => {
       active = false;
     };
-  }, [normalizedApiBaseUrl, range, viewer?.authenticated, viewer?.user?.userId]);
+  }, [isCustomRange, normalizedApiBaseUrl, range, viewer?.authenticated, viewer?.user?.userId]);
 
   const emptySummary = useMemo(
     () => buildTokenLeaderboard([], { range, metric, now }),
@@ -352,7 +406,11 @@ export function TokenLeaderboardApp({
 
   const topUsers = summary.users.slice(0, 8);
   const leader = summary.users[0];
-  const showDailyLeaderboardTrend = range !== "1D";
+  const chartRange = isCustomRange ? chartRangeForDailyLength(summary.daily.length) : range;
+  const activeRangeLabel = isCustomRange && appliedCustomRange
+    ? `${appliedCustomRange.from} - ${appliedCustomRange.to}`
+    : RANGE_LABELS[range];
+  const showDailyLeaderboardTrend = summary.daily.length > 1;
   const leaderboardColumnCount = showDailyLeaderboardTrend ? 8 : 7;
   const trendPointsForPeak = summary.trends?.model.daily?.length ? summary.trends.model.daily : summary.daily;
   const trendPeakValue = Math.max(0, ...trendPointsForPeak.map((point) => getTeamTrendMetricValue(point, metric)));
@@ -457,9 +515,28 @@ export function TokenLeaderboardApp({
     setReloadKey((value) => value + 1);
   }
 
+  function selectPresetRange(nextRange: TokenBoardRange) {
+    setAppliedCustomRange(null);
+    setRange(nextRange);
+  }
+
+  function applyCustomRange() {
+    if (!customFrom || !customTo || customTo < customFrom) {
+      showToast("请选择有效的自定义日期区间", "error");
+      return;
+    }
+
+    setAppliedCustomRange({ from: customFrom, to: customTo });
+  }
+
   function openUsageExport(scope: "leaderboard" | "me", format: "csv" | "json") {
     if (!normalizedApiBaseUrl) {
       showToast("未配置 Token Board API，无法导出", "error");
+      return;
+    }
+
+    if (isCustomRange) {
+      showToast("自定义区间暂不支持导出，请先切换到预设时间范围", "error");
       return;
     }
 
@@ -522,7 +599,7 @@ export function TokenLeaderboardApp({
             <LeaderboardMobileCard
               key={user.userId}
               metric={metric}
-              range={range}
+              range={chartRange}
               showDailyTrend={showDailyLeaderboardTrend}
               user={user}
             />
@@ -552,7 +629,7 @@ export function TokenLeaderboardApp({
               <LeaderboardErrorRow columnCount={leaderboardColumnCount} error={dataLoadError} onRetry={retryDataLoad} />
             ) : summary.users.length ? (
               summary.users.map((user) => (
-                <LeaderboardRow key={user.userId} range={range} showDailyTrend={showDailyLeaderboardTrend} user={user} />
+                <LeaderboardRow key={user.userId} range={chartRange} showDailyTrend={showDailyLeaderboardTrend} user={user} />
               ))
             ) : (
               <LeaderboardEmptyRow columnCount={leaderboardColumnCount} />
@@ -667,7 +744,7 @@ export function TokenLeaderboardApp({
                     {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : sourceLabel}
                   </span>
                   <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-mono text-xs text-slate-500">
-                    {ROLLING_RANGE_LABELS[range]}
+                    {activeRangeLabel}
                   </span>
                 </div>
                 <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
@@ -679,13 +756,52 @@ export function TokenLeaderboardApp({
               </div>
               <div className="flex w-full flex-col gap-2 xl:w-auto xl:items-end">
                 <GitHubAuthControl viewer={viewer} onLogout={logoutGitHub} />
-                <div className="grid w-full gap-2 sm:grid-cols-2 xl:w-auto">
-                  <SegmentedControl
-                    items={RANGES.map((item) => ({ key: item, label: item }))}
-                    value={range}
-                    onChange={(value) => setRange(value as TokenBoardRange)}
-                    label="时间范围"
-                  />
+                <div className="grid w-full gap-2 xl:w-[42rem]">
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-slate-500">滚动窗口</p>
+                      <SegmentedControl
+                        items={ROLLING_RANGES.map((item) => ({ key: item, label: item }))}
+                        value={isCustomRange ? "" : range}
+                        onChange={(value) => selectPresetRange(value as TokenBoardRange)}
+                        label="滚动窗口"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-semibold text-slate-500">日历</p>
+                      <SegmentedControl
+                        items={CALENDAR_RANGES.map((item) => ({ key: item, label: RANGE_LABELS[item] }))}
+                        value={isCustomRange ? "" : range}
+                        onChange={(value) => selectPresetRange(value as TokenBoardRange)}
+                        label="日历时间范围"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2 rounded-lg border border-slate-200 bg-white p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                    <input
+                      type="date"
+                      value={customFrom}
+                      onChange={(event) => setCustomFrom(event.target.value)}
+                      className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                      aria-label="自定义开始日期"
+                    />
+                    <input
+                      type="date"
+                      value={customTo}
+                      onChange={(event) => setCustomTo(event.target.value)}
+                      className="min-h-11 rounded-lg border border-slate-200 px-3 text-sm text-slate-700"
+                      aria-label="自定义结束日期"
+                    />
+                    <button
+                      type="button"
+                      onClick={applyCustomRange}
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600"
+                    >
+                      自定义
+                    </button>
+                  </div>
+                </div>
+                <div className="w-full xl:w-80">
                   <SegmentedControl
                     items={metricItems}
                     value={metric}
@@ -734,7 +850,7 @@ export function TokenLeaderboardApp({
               <HeroSignal
                 label="当前区间记录"
                 value={isDataLoading ? <Skeleton className="h-5 w-20" /> : rangeRecordCountLabel}
-                meta={isDataLoading ? <Skeleton className="h-3 w-24" /> : `${ROLLING_RANGE_LABELS[range]}`}
+                meta={isDataLoading ? <Skeleton className="h-3 w-24" /> : activeRangeLabel}
               />
               <HeroSignal
                 label="高频组合"
@@ -746,7 +862,7 @@ export function TokenLeaderboardApp({
               apiBaseUrl={normalizedApiBaseUrl}
               error={isDataError ? dataLoadError : ""}
               loading={isDataLoading}
-              range={range}
+              range={chartRange}
               rangeRecordCount={rangeRecordCount}
               recordCount={recordCount}
               sourceLabel={sourceLabel}
@@ -847,7 +963,7 @@ export function TokenLeaderboardApp({
               <h2 className="text-base font-semibold">统计口径</h2>
               <div className="mt-3 space-y-2 text-xs leading-5 text-stone-600">
                 <p>
-                  <strong className="text-stone-900">时间窗口</strong>：{ROLLING_RANGE_LABELS[range]}，展示时间按 Asia/Shanghai。
+                  <strong className="text-stone-900">时间窗口</strong>：{activeRangeLabel}，展示时间按 Asia/Shanghai。
                 </p>
                 <p>
                   <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <Skeleton className="h-3 w-48 align-middle" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。

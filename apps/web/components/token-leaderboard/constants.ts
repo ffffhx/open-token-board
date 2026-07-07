@@ -2,13 +2,20 @@ import type { TokenBoardMetric, TokenBoardRange } from "@open-token-board/core";
 
 import type { InstallGuideConfig, InstallGuidePlatform } from "./types";
 
-export const RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
-export const ROLLING_RANGE_LABELS: Record<TokenBoardRange, string> = {
+export const ROLLING_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
+export const CALENDAR_RANGES: TokenBoardRange[] = ["week", "month", "lastweek", "lastmonth"];
+export const RANGES: TokenBoardRange[] = [...ROLLING_RANGES, ...CALENDAR_RANGES];
+export const RANGE_LABELS: Record<TokenBoardRange, string> = {
   "1D": "滚动 24 小时",
   "7D": "滚动 7x24 小时",
   "30D": "滚动 30x24 小时",
   "90D": "滚动 90x24 小时",
+  week: "本周",
+  month: "本月",
+  lastweek: "上周",
+  lastmonth: "上月",
 };
+export const ROLLING_RANGE_LABELS = RANGE_LABELS;
 
 export const METRICS: Array<{ key: TokenBoardMetric; label: string }> = [
   { key: "tokens", label: "总消耗" },
