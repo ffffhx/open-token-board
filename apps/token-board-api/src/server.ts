@@ -31,9 +31,12 @@ import {
 import {
   buildTokenAccountUsageProfile,
   buildTokenLeaderboard,
+  getTokenConsumptionTokens,
   type TokenBoardMetric,
   type TokenBoardRange,
+  type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
+  type TokenUsageEvent,
 } from "@open-token-board/core";
 import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
 import {
@@ -112,6 +115,9 @@ const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
 const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages"];
+const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
+const PUBLIC_PROFILE_DAILY_DAYS = 365;
+const PUBLIC_PROFILE_TOP_LIMIT = 8;
 let leaderboardSnapshotCache = new Map<string, LeaderboardSnapshotEntry>();
 let leaderboardSnapshotRefreshPromise: Promise<void> | undefined;
 let leaderboardSnapshotRefreshTimer: NodeJS.Timeout | undefined;
@@ -411,6 +417,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/usage/user") {
+    await handlePublicUsageUser(request, response, url);
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/usage/me") {
     const identity = readWebIdentity(request);
 
@@ -543,6 +554,310 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   sendJson(request, response, 404, { error: "Not found" });
+}
+
+async function handlePublicUsageUser(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const login = normalizePublicProfileLogin(url.searchParams.get("login"));
+
+  if (!login) {
+    sendJson(request, response, 400, { error: "Invalid github login" });
+    return;
+  }
+
+  const now = parseNow(url.searchParams.get("now"));
+  const store = usageStore();
+  const [events, uploadUsers] = await Promise.all([store.listEvents(), loadUploadUsers()]);
+  const match = findPublicProfileUserEvents(events, uploadUsers, login);
+
+  if (!match) {
+    sendJson(request, response, 404, { error: "User not found" });
+    return;
+  }
+
+  const summary = buildPublicProfileSummary(match.events);
+  const rankings = PUBLIC_PROFILE_RANGES.map((range) => {
+    const rangeSummary = buildTokenLeaderboard(events, { range, metric: "tokens", now });
+    const rankedUser = rangeSummary.users.find((user) => user.userId === match.userId) ?? null;
+
+    return {
+      range,
+      rank: rankedUser?.rank ?? null,
+      totalUsers: rangeSummary.users.length,
+      tokens: rankedUser?.tokens ?? 0,
+      share: rankedUser?.share ?? 0,
+    };
+  });
+
+  sendJson(request, response, 200, {
+    schemaVersion: 1,
+    source: "server",
+    records: match.events.length,
+    totalRecords: events.length,
+    generatedAt: new Date().toISOString(),
+    user: {
+      userId: match.userId,
+      login: match.login,
+      githubLogin: match.login,
+      displayName: summary.displayName,
+      team: summary.team,
+      avatarUrl: `https://github.com/${match.login}.png`,
+    },
+    profile: {
+      joinedAt: summary.joinedAt,
+      lastReportedAt: summary.lastReportedAt,
+      totals: summary.totals,
+      daily365: buildShanghaiDailySeries(match.events, now, PUBLIC_PROFILE_DAILY_DAYS),
+      models: buildPublicNamedUsage(match.events, "model", PUBLIC_PROFILE_TOP_LIMIT),
+      tools: buildPublicNamedUsage(match.events, "tool", PUBLIC_PROFILE_TOP_LIMIT),
+      rankings,
+    },
+  });
+}
+
+type PublicProfileUserMatch = {
+  events: TokenUsageEvent[];
+  login: string;
+  userId: string;
+};
+
+function findPublicProfileUserEvents(
+  events: TokenUsageEvent[],
+  uploadUsers: TokenBoardUploadUser[],
+  login: string
+): PublicProfileUserMatch | null {
+  const configuredUserIds = new Set(
+    uploadUsers
+      .filter((user) => publicProfileTextMatches(user.userId, login) || publicProfileTextMatches(user.displayName, login))
+      .map((user) => user.userId)
+  );
+  const groups = new Map<string, TokenUsageEvent[]>();
+
+  for (const event of events) {
+    const matches =
+      configuredUserIds.has(event.userId) ||
+      publicProfileTextMatches(event.userId, login) ||
+      publicProfileTextMatches(event.displayName, login);
+
+    if (!matches) {
+      continue;
+    }
+
+    const group = groups.get(event.userId) ?? [];
+    group.push(event);
+    groups.set(event.userId, group);
+  }
+
+  if (!groups.size) {
+    return null;
+  }
+
+  const bestMatch = [...groups.entries()]
+    .map(([groupUserId, groupEvents]) => {
+      const latestEvent = latestPublicProfileEvent(groupEvents);
+      const userIdMatch = publicProfileTextMatches(groupUserId, login);
+      const configuredMatch = configuredUserIds.has(groupUserId);
+      const displayNameMatch = latestEvent ? publicProfileTextMatches(latestEvent.displayName, login) : false;
+      const latestTime = latestEvent ? new Date(latestEvent.timestamp).getTime() : 0;
+      const tokens = groupEvents.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+
+      return {
+        userId: groupUserId,
+        events: groupEvents,
+        score: (userIdMatch ? 1000 : 0) + (configuredMatch ? 500 : 0) + (displayNameMatch ? 100 : 0),
+        latestTime: Number.isFinite(latestTime) ? latestTime : 0,
+        tokens,
+      };
+    })
+    .sort((left, right) => right.score - left.score || right.latestTime - left.latestTime || right.tokens - left.tokens)[0];
+
+  return { userId: bestMatch.userId, events: bestMatch.events, login };
+}
+
+function normalizePublicProfileLogin(value: string | null | undefined) {
+  const text = normalizePublicProfileText(value, 180).toLowerCase();
+
+  if (!text) {
+    return "";
+  }
+
+  const withoutGithubUrl = text.replace(/^https?:\/\/(?:www\.)?github\.com\//, "").split(/[/?#]/)[0] || text;
+  const candidate = withoutGithubUrl
+    .replace(/^@+/, "")
+    .replace(/^github:/, "")
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 39);
+
+  return isSafeGithubLogin(candidate) ? candidate : "";
+}
+
+function publicProfileTextMatches(value: string | undefined, login: string) {
+  return publicProfileTextVariants(value).includes(login);
+}
+
+function publicProfileTextVariants(value: string | undefined) {
+  const text = normalizePublicProfileText(value, 180);
+  const withoutGithubPrefix = text.replace(/^github:/i, "");
+  return uniquePublicProfileValues([
+    normalizePublicProfileLogin(text),
+    normalizePublicProfileLogin(withoutGithubPrefix),
+  ]);
+}
+
+function uniquePublicProfileValues(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function isSafeGithubLogin(value: string) {
+  return /^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/.test(value);
+}
+
+function normalizePublicProfileText(value: unknown, maxLength: number) {
+  return typeof value === "string"
+    ? value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength)
+    : "";
+}
+
+function buildPublicProfileSummary(events: TokenUsageEvent[]) {
+  const latestEvent = latestPublicProfileEvent(events);
+  const sortedByTime = [...events].sort((left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime());
+  const sessions = new Set<string>();
+  const activeDays = new Set<string>();
+  let tokens = 0;
+  let inputTokens = 0;
+  let cachedInputTokens = 0;
+  let outputTokens = 0;
+  let reasoningOutputTokens = 0;
+  let costUsd = 0;
+  let messages = 0;
+
+  for (const event of events) {
+    tokens += getTokenConsumptionTokens(event);
+    inputTokens += event.inputTokens;
+    cachedInputTokens += event.cachedInputTokens;
+    outputTokens += event.outputTokens;
+    reasoningOutputTokens += event.reasoningOutputTokens;
+    costUsd += event.costUsd ?? 0;
+    messages += event.messages ?? 0;
+    sessions.add(event.sessionId || event.id);
+    activeDays.add(shanghaiDayKey(event.timestamp));
+  }
+
+  return {
+    displayName: latestEvent?.displayName || sortedByTime[0]?.displayName || "Unknown",
+    team: latestEvent?.team || sortedByTime[0]?.team || "Friends",
+    joinedAt: sortedByTime[0]?.timestamp ?? null,
+    lastReportedAt: latestEvent?.timestamp ?? null,
+    totals: {
+      tokens,
+      inputTokens,
+      cachedInputTokens,
+      outputTokens,
+      reasoningOutputTokens,
+      costUsd,
+      sessions: sessions.size,
+      messages,
+      records: events.length,
+      activeDays: activeDays.size,
+    },
+  };
+}
+
+function buildPublicNamedUsage(events: TokenUsageEvent[], key: "model" | "tool", limit: number) {
+  const totalTokens = events.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+  const usage = new Map<string, { tokens: number; costUsd: number; sessions: Set<string> }>();
+
+  for (const event of events) {
+    const name = key === "model" ? event.model : event.tool || event.source;
+    const item = usage.get(name) ?? { tokens: 0, costUsd: 0, sessions: new Set<string>() };
+    item.tokens += getTokenConsumptionTokens(event);
+    item.costUsd += event.costUsd ?? 0;
+    item.sessions.add(event.sessionId || event.id);
+    usage.set(name, item);
+  }
+
+  return [...usage.entries()]
+    .map(([name, value]) => ({
+      name,
+      tokens: value.tokens,
+      costUsd: value.costUsd,
+      sessions: value.sessions.size,
+      share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+    }))
+    .sort((left, right) => right.tokens - left.tokens || left.name.localeCompare(right.name))
+    .slice(0, limit);
+}
+
+function buildShanghaiDailySeries(events: TokenUsageEvent[], now: Date, days: number): TokenDailyUsagePoint[] {
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
+  const endDay = shanghaiDayKey(safeNow);
+  const endDayStart = shanghaiDayStartUtc(endDay);
+  const startDayStart = addUtcDays(endDayStart, -(days - 1));
+  const values = new Map<string, TokenDailyUsagePoint>();
+
+  for (let index = 0; index < days; index += 1) {
+    const bucketStart = addUtcDays(startDayStart, index);
+    const bucketEnd = addUtcDays(bucketStart, 1);
+    const date = shanghaiDayKey(bucketStart);
+
+    values.set(date, {
+      date,
+      startAt: bucketStart.toISOString(),
+      endAt: new Date(Math.min(bucketEnd.getTime(), safeNow.getTime())).toISOString(),
+      tokens: 0,
+    });
+  }
+
+  for (const event of events) {
+    const timestamp = new Date(event.timestamp).getTime();
+
+    if (!Number.isFinite(timestamp) || timestamp < startDayStart.getTime() || timestamp > safeNow.getTime()) {
+      continue;
+    }
+
+    const point = values.get(shanghaiDayKey(event.timestamp));
+
+    if (point) {
+      point.tokens += getTokenConsumptionTokens(event);
+    }
+  }
+
+  return [...values.values()];
+}
+
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function shanghaiDayKey(value: string | Date) {
+  const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+function shanghaiDayStartUtc(dayKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+
+  if (!match) {
+    return new Date(0);
+  }
+
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - SHANGHAI_OFFSET_MS);
+}
+
+function addUtcDays(value: Date, days: number) {
+  return new Date(value.getTime() + days * DAY_MS);
+}
+
+function latestPublicProfileEvent(events: TokenUsageEvent[]) {
+  return events.reduce<TokenUsageEvent | null>((latest, event) => {
+    if (!latest) {
+      return event;
+    }
+
+    return new Date(event.timestamp).getTime() > new Date(latest.timestamp).getTime() ? event : latest;
+  }, null);
 }
 
 async function handleSelectionExplain(request: IncomingMessage, response: ServerResponse) {
