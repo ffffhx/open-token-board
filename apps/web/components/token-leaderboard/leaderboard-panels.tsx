@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useId, useState, type ReactNode } from "react";
 
 import {
@@ -11,6 +12,7 @@ import {
 } from "@open-token-board/core";
 
 import { METRICS, ROLLING_RANGE_LABELS } from "./constants";
+import { profileHrefForUser } from "@/components/profile/utils";
 import type { ViewerState } from "./types";
 import { Avatar, Icon, Skeleton } from "./shared-ui";
 import {
@@ -389,7 +391,11 @@ export function LeaderboardMobileCard({
   return (
     <article className="rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+        <Link
+          href={profileHrefForUser(user)}
+          className="group/profile-link flex min-w-0 items-center gap-3 rounded-lg transition"
+          title={`查看 ${user.displayName} 的公开个人主页`}
+        >
           <span className="rounded-full border border-amber-600/25 bg-amber-50 px-2.5 py-1 font-mono text-xs font-semibold text-amber-900">
             #{user.rank}
           </span>
@@ -398,11 +404,11 @@ export function LeaderboardMobileCard({
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
-        </div>
+        </Link>
         <div className="shrink-0 text-right">
           <p className="font-mono text-lg font-semibold text-stone-950">{metricValue}</p>
           <p className="text-xs text-stone-500">{metricLabel} ↓</p>
@@ -699,16 +705,20 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
         </div>
       </td>
       <td className="px-4 py-3">
-        <div className="flex items-center gap-3">
+        <Link
+          href={profileHrefForUser(user)}
+          className="group/profile-link flex w-fit max-w-full items-center gap-3 rounded-lg transition"
+          title={`查看 ${user.displayName} 的公开个人主页`}
+        >
           <Avatar name={user.displayName} index={user.rank} />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
-        </div>
+        </Link>
       </td>
       {showDailyTrend ? (
         <td className="w-[18rem] min-w-[18rem] max-w-[18rem] px-4 py-3">
