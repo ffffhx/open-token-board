@@ -21,7 +21,7 @@ export default function WrappedPage() {
 function WrappedPageFallback() {
   return (
     <main className="min-h-[100svh] bg-slate-950 px-4 py-6 text-white">
-      <div className="mx-auto h-[calc(100svh-3rem)] max-w-5xl animate-pulse rounded-lg bg-white/10" />
+      <div className="otb-skeleton mx-auto h-[calc(100svh-3rem)] max-w-5xl rounded-lg bg-white/10" />
     </main>
   );
 }

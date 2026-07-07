@@ -163,7 +163,7 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
         : "text-rose-300";
 
   return (
-    <article className="relative w-[420px] max-w-full overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_15%_-10%,#1e3a8a_0%,#0b1220_45%,#020617_100%)] p-6 text-white shadow-2xl ring-1 ring-white/10">
+    <article className="relative w-[420px] max-w-full overflow-hidden rounded-lg bg-[linear-gradient(135deg,#0b1220_0%,#141a33_48%,#07111f_100%)] p-6 text-white shadow-2xl ring-1 ring-white/10">
       <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-blue-500/20 blur-3xl" />
 
       <header className="relative flex items-center justify-between">
@@ -179,7 +179,7 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
       </header>
 
       <div className="relative mt-6 flex items-center gap-3">
-        <span className="flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-xl font-bold text-white shadow-lg shadow-blue-900/40">
+        <span className="flex size-12 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 text-xl font-bold text-white shadow-lg shadow-blue-900/40">
           {initial}
         </span>
         <div className="min-w-0">
@@ -188,7 +188,7 @@ export function WeeklyReportCard({ report }: { report: WeeklyReport }) {
             {report.rangeLabel}战报 · 共 {report.totalUsers} 位选手
           </p>
         </div>
-        <span className="ml-auto rounded-2xl border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-center">
+        <span className="ml-auto rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-center">
           <span className="block font-mono text-xl font-bold leading-none text-amber-200">#{report.rank}</span>
           <span className="mt-1 block text-[10px] text-amber-200/80">超过 {Math.round(report.percentile * 100)}%</span>
         </span>

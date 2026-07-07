@@ -26,7 +26,7 @@ export default function CardPage() {
       </header>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 py-8">
         <Suspense
-          fallback={<div className="h-[560px] w-[420px] max-w-full animate-pulse rounded-3xl bg-slate-200" />}
+          fallback={<div className="otb-skeleton h-[560px] w-[420px] max-w-full rounded-lg" />}
         >
           <WeeklyReportClient apiBaseUrl={apiBaseUrl} />
         </Suspense>

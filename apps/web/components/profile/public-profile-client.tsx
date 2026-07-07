@@ -547,7 +547,7 @@ function ProfileShareCard({
   const rankLabel = primaryRanking?.rank ? `#${primaryRanking.rank}` : "--";
 
   return (
-    <article className="w-[720px] overflow-hidden rounded-2xl bg-slate-950 p-6 text-white shadow-2xl">
+    <article className="w-[720px] overflow-hidden rounded-lg bg-slate-950 p-6 text-white shadow-2xl">
       <header className="flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <TokenBoardLogoMark className="size-8 shrink-0" decorative />
@@ -556,7 +556,7 @@ function ProfileShareCard({
             <p className="font-mono text-xs text-blue-300">@{profile.user.githubLogin}</p>
           </div>
         </div>
-        <div className="rounded-xl border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-right">
+        <div className="rounded-lg border border-amber-300/25 bg-amber-300/10 px-4 py-2 text-right">
           <p className="font-mono text-3xl font-semibold text-amber-200">{rankLabel}</p>
           <p className="text-xs text-amber-100/70">{primaryRanking ? RANGE_LABELS[primaryRanking.range] : "当前排名"}</p>
         </div>
@@ -575,7 +575,7 @@ function ProfileShareCard({
             <ShareMetric label="峰值日期" value={peakDay ? peakDay.date.slice(5) : "--"} />
           </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
           <p className="text-xs font-semibold text-slate-400">年度热力图</p>
           <div className="mt-3">
             <ContributionHeatmapMini daily={daily} />
@@ -595,7 +595,7 @@ function ProfileShareCard({
 
 function ShareMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-3">
+    <div className="min-w-0 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-3">
       <p className="text-[11px] text-slate-500">{label}</p>
       <p className="mt-1 truncate font-mono text-sm font-semibold text-white" title={value}>
         {value}

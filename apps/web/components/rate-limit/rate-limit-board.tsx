@@ -228,7 +228,7 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
   }
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+    <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-baseline justify-between">
         <h3 className="text-lg font-semibold text-slate-900">{w.label}窗口</h3>
         <span className={`rounded-full border px-2 py-0.5 font-mono text-xs font-semibold ${tone.badge}`}>
@@ -270,7 +270,7 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
         </div>
       </dl>
 
-      <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
+      <div className="mt-5 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
         <span className="font-semibold text-slate-600">容量估算</span> ≈ {fmtTokens(w.estimatedCapacityTokens)} tokens
         <span className="text-slate-300"> · </span>
         剩余 ≈ {fmtTokens(w.estimatedRemainingTokens)}
@@ -563,7 +563,7 @@ function TeamRateLimitSection({
 function TeamRateLimitRow({ user, now }: { user: TeamRateLimitUser; now: number }) {
   return (
     <article
-      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition ${
+      className={`rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition ${
         user.stale ? "opacity-60 grayscale" : ""
       }`}
     >
@@ -811,9 +811,23 @@ function LimitTabSwitcher({ tab, onChange }: { tab: LimitTab; onChange: (next: L
     { key: "claude", label: TAB_CONFIG.claude.label },
     { key: "team", label: "团队" },
   ];
+  const activeIndex = Math.max(0, tabs.findIndex((item) => item.key === tab));
 
   return (
-    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="额度数据源">
+    <div
+      className="relative inline-grid overflow-hidden rounded-lg border border-slate-200 bg-white p-1 shadow-sm"
+      role="tablist"
+      aria-label="额度数据源"
+      style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+    >
+      <span
+        aria-hidden="true"
+        className="absolute bottom-1 left-1 z-0 h-0.5 rounded-full bg-blue-600 transition-transform"
+        style={{
+          width: `calc((100% - 0.5rem) / ${tabs.length})`,
+          transform: `translateX(${activeIndex * 100}%)`,
+        }}
+      />
       {tabs.map(({ key, label }) => {
         const isActive = key === tab;
         return (
@@ -825,8 +839,8 @@ function LimitTabSwitcher({ tab, onChange }: { tab: LimitTab; onChange: (next: L
             onClick={() => onChange(key)}
             className={
               isActive
-                ? "min-h-9 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow transition"
-                : "min-h-9 rounded-lg px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
+                ? "relative z-10 min-h-11 rounded-lg px-4 text-sm font-semibold text-blue-700 transition"
+                : "relative z-10 min-h-11 rounded-lg px-4 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
             }
           >
             {label}
@@ -896,7 +910,7 @@ export function RateLimitBoard({
           <button
             type="button"
             onClick={tab === "team" ? teamData.reload : personalData.reload}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
+            className="otb-energy-bg inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             刷新
           </button>

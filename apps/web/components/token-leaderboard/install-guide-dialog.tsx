@@ -185,7 +185,7 @@ export function InstallGuideDialog({
                 <button
                   type="button"
                   onClick={() => onCopy(guide.uninstall.command, guide.uninstall.commandLabel)}
-                  className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
+                  className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-stone-950/10 bg-white px-3 text-xs font-semibold text-stone-800 transition hover:border-blue-600/35 hover:bg-blue-50"
                 >
                   <Icon name="download" />
                   复制卸载命令

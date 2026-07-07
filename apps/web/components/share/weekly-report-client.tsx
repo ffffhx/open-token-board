@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { buildWeeklyReport, WeeklyReportCard, type WeeklyReport } from "@/components/share/weekly-report-card";
+import { EmptyStatePanel, Skeleton } from "@/components/token-leaderboard/shared-ui";
 import { normalizeApiBaseUrl } from "@/components/token-leaderboard/utils";
 
 const VALID_RANGES = new Set(["1D", "7D", "30D", "90D"]);
@@ -136,21 +137,26 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   if (state === "loading") {
     return (
-      <div className="h-[560px] w-[420px] max-w-full animate-pulse rounded-3xl bg-slate-200" aria-label="加载战报中" />
+      <div className="h-[560px] w-[420px] max-w-full rounded-lg" aria-label="加载战报中" role="status">
+        <Skeleton className="h-full w-full rounded-lg" />
+      </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center">
-      <p className="text-sm font-semibold text-slate-900">
-        {state === "empty" ? "该用户在当前区间没有记录" : "暂时拿不到战报数据"}
-      </p>
-      <p className="mt-2 text-sm text-slate-500">
-        {state === "empty" ? "换一个用户名或时间区间试试。" : "榜单后端不可达，稍后再试。"}
-      </p>
-      <Link href="/board" className="mt-4 inline-block text-sm font-semibold text-blue-600 hover:text-blue-700">
-        返回榜单 →
-      </Link>
+    <div className="w-full max-w-xl">
+      <EmptyStatePanel
+        title={state === "empty" ? "这张战报还没开打" : "暂时拿不到战报数据"}
+        description={state === "empty" ? "该用户在当前区间没有记录，换一个用户名或时间区间试试。" : "榜单后端不可达，稍后再试。"}
+        action={
+          <Link
+            href="/board"
+            className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            返回榜单
+          </Link>
+        }
+      />
     </div>
   );
 }

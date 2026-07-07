@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { normalizeProfileLogin } from "@/components/profile/utils";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { EmptyStateIllustration } from "@/components/token-leaderboard/shared-ui";
 import {
   formatCompact,
   formatNumber,
@@ -105,12 +106,13 @@ export function WrappedClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       <section className="mx-auto flex min-h-[100svh] max-w-4xl flex-col items-center justify-center px-5 py-24 text-center">
         {state === "loading" ? (
           <div className="w-full max-w-xl space-y-4" role="status" aria-label="正在加载 Wrapped">
-            <div className="h-5 w-36 animate-pulse rounded-full bg-[#171018]/15 dark:bg-white/15" />
-            <div className="h-24 animate-pulse rounded-lg bg-[#171018]/15 dark:bg-white/15" />
-            <div className="h-40 animate-pulse rounded-lg bg-[#171018]/10 dark:bg-white/10" />
+            <div className="otb-skeleton h-5 w-36 rounded-full bg-[#171018]/15 dark:bg-white/15" />
+            <div className="otb-skeleton h-24 rounded-lg bg-[#171018]/15 dark:bg-white/15" />
+            <div className="otb-skeleton h-40 rounded-lg bg-[#171018]/10 dark:bg-white/10" />
           </div>
         ) : (
           <div className="max-w-xl">
+            <EmptyStateIllustration className="mx-auto h-32 w-44 text-[#e03a6f] dark:text-[#ff7aa7]" />
             <p className="font-mono text-xs font-semibold uppercase text-[#e03a6f] dark:text-[#ff7aa7]">
               Open Token Board Wrapped
             </p>
@@ -267,7 +269,7 @@ function WrappedTopBar({
                 key={item.period}
                 href={login ? wrappedHref(login, item.period) : "/wrapped/"}
                 aria-current={selected ? "page" : undefined}
-                className={`inline-flex min-h-9 shrink-0 items-center rounded-lg border px-3 text-sm font-semibold transition ${
+                className={`inline-flex min-h-11 shrink-0 items-center rounded-lg border px-3 text-sm font-semibold transition ${
                   selected
                     ? "border-[#171018] bg-[#171018] text-white dark:border-[#fff8e7] dark:bg-[#fff8e7] dark:text-[#171018]"
                     : "border-[#171018]/15 bg-white/55 text-[#4f4248] hover:border-[#e03a6f] hover:text-[#e03a6f] dark:border-white/15 dark:bg-white/10 dark:text-[#d8c9cf] dark:hover:border-[#ff7aa7] dark:hover:text-[#ffb0ca]"
