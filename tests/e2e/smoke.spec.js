@@ -129,7 +129,96 @@ test("/u renders heatmap and badge copy action", async ({ page }) => {
   await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
 
   await expect(page.getByRole("img", { name: "近 365 天 Token 用量热力图" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "3D" })).toBeVisible();
   await expect(page.getByRole("button", { name: /复制徽章/ })).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+test("/u switches between 2D and 3D contribution views and persists the choice", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
+
+  await expect(page.getByRole("img", { name: "近 365 天 Token 用量热力图" })).toBeVisible();
+  await page.getByRole("button", { name: "3D" }).click();
+  await expect(page.getByRole("img", { name: /近 365 天 Token 用量 3D 等距贡献图/ })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("open-token-board:profile-contribution-view"))).toBe("3d");
+
+  const activeDate = await page.locator("[data-contribution-3d-bar]").evaluateAll((nodes) => {
+    const active = nodes.find((node) => Number(node.getAttribute("data-token-height")) > 0);
+    return active?.getAttribute("data-contribution-3d-bar") || "";
+  });
+  expect(activeDate).toBeTruthy();
+  await page.locator(`[data-contribution-3d-bar="${activeDate}"]`).hover();
+  await expect(page.locator("section").filter({ has: page.getByRole("img", { name: /3D 等距贡献图/ }) })).toContainText(activeDate);
+
+  await page.reload();
+  await expect(page.getByRole("img", { name: /近 365 天 Token 用量 3D 等距贡献图/ })).toBeVisible();
+  await page.getByRole("button", { name: "2D" }).click();
+  await expect(page.getByRole("img", { name: "近 365 天 Token 用量热力图" })).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+for (const language of ["zh", "en"]) {
+  for (const theme of ["light", "dark"]) {
+    test(`/u 3D contribution graph renders in ${language}/${theme}`, async ({ page }) => {
+      const errors = trackConsoleErrors(page);
+      await gotoApp(page, `/u/?login=${state.primaryLogin}`, theme, language);
+
+      await page.getByRole("button", { name: "3D" }).click();
+      await expect(page.getByRole("img", { name: /3D/ }).first()).toBeVisible();
+      await expect(page.locator("[data-contribution-3d-bar]")).toHaveCount(365);
+      expect(cleanConsoleErrors(errors)).toEqual([]);
+    });
+  }
+}
+
+test("/u 3D contribution graph keeps extreme token days readable", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await page.route("**/api/usage/user**", async (route) => {
+    const response = await route.fetch();
+    const payload = await response.json();
+    const daily365 = payload.profile.daily365.map((point, index) => ({
+      ...point,
+      tokens: index === 300 ? 10_000_000_000 : index % 6 === 0 ? 850_000 : 120_000,
+    }));
+    payload.profile.daily365 = daily365;
+    payload.profile.totals.tokens = daily365.reduce((sum, point) => sum + point.tokens, 0);
+    await route.fulfill({ response, json: payload });
+  });
+
+  await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
+  await page.getByRole("button", { name: "3D" }).click();
+  const heights = await page.locator("[data-contribution-3d-bar]").evaluateAll((nodes) =>
+    nodes.map((node) => Number(node.getAttribute("data-token-height"))).filter((height) => height > 0)
+  );
+  expect(heights).toHaveLength(365);
+  const minHeight = Math.min(...heights);
+  const maxHeight = Math.max(...heights);
+  expect(maxHeight).toBeGreaterThan(68);
+  expect(minHeight).toBeGreaterThan(30);
+  expect(maxHeight / minHeight).toBeLessThan(2.5);
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+test("/u share card can include the 3D contribution graph", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
+
+  await page.getByRole("button", { name: /生成分享卡/ }).click();
+  await expect(page.getByLabel("分享卡包含 3D 图")).toBeChecked();
+  await expect(page.locator("[data-contribution-3d='true']")).toBeVisible();
+  await page.getByLabel("分享卡包含 3D 图").uncheck();
+  await expect(page.getByText("年度热力图")).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+test("wrapped renders the period 3D thumbnail and share-card option", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, `/wrapped/?login=${state.primaryLogin}&period=${state.currentMonthPeriod}`, "light");
+
+  await expect(page.getByRole("img", { name: /Wrapped 周期 Token 用量 3D 等距贡献图/ })).toBeVisible();
+  await expect(page.getByLabel("分享卡包含 3D 图")).toBeChecked();
+  await expect(page.getByRole("img", { name: /周期每日 token 3D 等距贡献图/ })).toBeVisible();
   expect(cleanConsoleErrors(errors)).toEqual([]);
 });
 
@@ -152,10 +241,28 @@ for (const target of [
   });
 }
 
-async function gotoApp(page, pathname, theme) {
-  await page.addInitScript((nextTheme) => {
+test("/u 3D contribution graph has no horizontal overflow at 390px", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => {
+    window.localStorage.setItem("open-token-board:profile-contribution-view", "3d");
+  });
+  await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
+
+  await expect(page.getByRole("img", { name: /3D 等距贡献图/ })).toBeVisible();
+  const overflow = await page.evaluate(() => {
+    const documentWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+    return documentWidth - document.documentElement.clientWidth;
+  });
+  expect(overflow).toBeLessThanOrEqual(1);
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+async function gotoApp(page, pathname, theme, language = "zh") {
+  await page.addInitScript(({ nextLanguage, nextTheme }) => {
     window.localStorage.setItem("theme", nextTheme);
-  }, theme);
+    window.localStorage.setItem("open-token-board:language", nextLanguage);
+  }, { nextLanguage: language, nextTheme: theme });
   await page.goto(`${state.webUrl}${pathname}`, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => undefined);
 }

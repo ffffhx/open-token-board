@@ -316,6 +316,72 @@ svg [role="button"]:focus-visible {
   box-shadow: 0 0 16px color-mix(in srgb, var(--otb-energy) 35%, transparent);
 }
 
+.otb-iso-graph {
+  --iso-floor: rgba(241, 245, 249, 0.72);
+  --iso-grid-line: rgba(100, 116, 139, 0.14);
+  --iso-grid-line-a: rgba(47, 91, 255, 0.22);
+  --iso-grid-line-b: rgba(0, 184, 217, 0.18);
+  --iso-empty-left: #d9e2ef;
+  --iso-empty-right: #cbd5e1;
+  --iso-empty-top: #f1f5f9;
+  --iso-low-left: #8fd7c3;
+  --iso-low-right: #54b89c;
+  --iso-low-top: #bff3df;
+  --iso-mid-left: #44b8d0;
+  --iso-mid-right: #168ba6;
+  --iso-mid-top: #7de0ef;
+  --iso-high-left: #5969f3;
+  --iso-high-right: #3344c8;
+  --iso-high-top: #8ca0ff;
+  --iso-peak-left: #d6862f;
+  --iso-peak-right: #aa5d12;
+  --iso-peak-top: #ffd166;
+}
+
+.dark .otb-iso-graph {
+  --iso-floor: rgba(15, 23, 42, 0.58);
+  --iso-grid-line: rgba(226, 232, 240, 0.14);
+  --iso-grid-line-a: rgba(140, 160, 255, 0.28);
+  --iso-grid-line-b: rgba(125, 224, 239, 0.22);
+  --iso-empty-left: #293447;
+  --iso-empty-right: #1d2738;
+  --iso-empty-top: #3a4860;
+  --iso-low-left: #208568;
+  --iso-low-right: #17664f;
+  --iso-low-top: #65d7b2;
+  --iso-mid-left: #158399;
+  --iso-mid-right: #0f6176;
+  --iso-mid-top: #58d9ec;
+  --iso-high-left: #4657df;
+  --iso-high-right: #303aa8;
+  --iso-high-top: #94a3ff;
+  --iso-peak-left: #c87522;
+  --iso-peak-right: #8d4a0c;
+  --iso-peak-top: #ffd166;
+}
+
+.otb-iso-graph-share {
+  --iso-floor: rgba(255, 255, 255, 0.07);
+  --iso-grid-line: rgba(255, 255, 255, 0.11);
+  --iso-grid-line-a: rgba(255, 122, 167, 0.32);
+  --iso-grid-line-b: rgba(111, 247, 238, 0.24);
+  --iso-empty-left: #2a202b;
+  --iso-empty-right: #211922;
+  --iso-empty-top: #3a2b3b;
+  --iso-low-left: #256d60;
+  --iso-low-right: #174b43;
+  --iso-low-top: #63d9ba;
+  --iso-mid-left: #158399;
+  --iso-mid-right: #0e5f70;
+  --iso-mid-top: #6ff7ee;
+  --iso-high-left: #8b5cf6;
+  --iso-high-right: #5b3abc;
+  --iso-high-top: #b7a4ff;
+  --iso-peak-left: #d88d2f;
+  --iso-peak-right: #a55f12;
+  --iso-peak-top: #ffd45a;
+}
+
 .otb-stat-number {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;

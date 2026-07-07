@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { TokenDailyUsagePoint } from "@open-token-board/core";
@@ -18,10 +19,14 @@ import {
 } from "@/components/token-leaderboard/utils";
 import { useI18n } from "@/i18n";
 
+import { IsometricContributionGraph } from "./isometric-contribution-graph";
 import type { PublicProfileNamedUsage, PublicProfileResponse } from "./types";
 import { normalizeProfileLogin } from "./utils";
 
 type LoadState = "empty" | "error" | "loading" | "not-found" | "ready";
+type ContributionViewMode = "2d" | "3d";
+
+const CONTRIBUTION_VIEW_STORAGE_KEY = "open-token-board:profile-contribution-view";
 
 export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const { dict } = useI18n();
@@ -136,6 +141,8 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
   const { dict } = useI18n();
   const profileCopy = dict.profile;
   const [shareVisible, setShareVisible] = useState(false);
+  const [contributionView, setContributionView] = useState<ContributionViewMode>("2d");
+  const [shareWith3d, setShareWith3d] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [hint, setHint] = useState("");
   const [pageUrl, setPageUrl] = useState("");
@@ -157,6 +164,26 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
 
   useEffect(() => {
     setPageUrl(window.location.href);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CONTRIBUTION_VIEW_STORAGE_KEY);
+      if (stored === "2d" || stored === "3d") {
+        setContributionView(stored);
+      }
+    } catch {
+      // Keep the default 2D view when storage is unavailable.
+    }
+  }, []);
+
+  const updateContributionView = useCallback((mode: ContributionViewMode) => {
+    setContributionView(mode);
+    try {
+      window.localStorage.setItem(CONTRIBUTION_VIEW_STORAGE_KEY, mode);
+    } catch {
+      // The in-memory view still updates.
+    }
   }, []);
 
   const showShareCard = useCallback(() => {
@@ -301,7 +328,17 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(20rem,0.75fr)]">
-        <ContributionHeatmap daily={profileData.daily365} />
+        {contributionView === "3d" ? (
+          <ContributionIsometricPanel
+            daily={profileData.daily365}
+            toggle={<ContributionViewToggle mode={contributionView} onChange={updateContributionView} />}
+          />
+        ) : (
+          <ContributionHeatmap
+            daily={profileData.daily365}
+            toggle={<ContributionViewToggle mode={contributionView} onChange={updateContributionView} />}
+          />
+        )}
         <DailyUsageBars daily={daily30} peakDay={peakDay} />
       </div>
 
@@ -316,6 +353,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
             <div ref={cardRef} className="w-fit">
               <ProfileShareCard
                 daily={profileData.daily365}
+                include3d={shareWith3d}
                 pageUrl={pageUrl}
                 peakDay={peakDay}
                 primaryRanking={primaryRanking}
@@ -324,6 +362,15 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
             </div>
           </div>
           <div className="space-y-3">
+            <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={shareWith3d}
+                onChange={(event) => setShareWith3d(event.target.checked)}
+                className="size-4 accent-blue-600"
+              />
+              <span>{profileCopy.share.include3d}</span>
+            </label>
             <button
               type="button"
               onClick={download}
@@ -396,7 +443,48 @@ function ProfileStat({
   );
 }
 
-function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
+function ContributionViewToggle({
+  mode,
+  onChange,
+}: {
+  mode: ContributionViewMode;
+  onChange: (mode: ContributionViewMode) => void;
+}) {
+  const { dict } = useI18n();
+  const options: Array<{ label: string; value: ContributionViewMode }> = [
+    { label: dict.profile.sections.view2d, value: "2d" },
+    { label: dict.profile.sections.view3d, value: "3d" },
+  ];
+
+  return (
+    <div
+      aria-label={dict.profile.sections.viewToggleAria}
+      className="inline-grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1 shadow-inner dark:border-slate-700 dark:bg-slate-900"
+      role="group"
+    >
+      {options.map((option) => {
+        const selected = option.value === mode;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            className={`min-h-11 min-w-11 rounded-md px-3 font-mono text-xs font-semibold transition ${
+              selected
+                ? "otb-energy-bg text-white shadow-sm"
+                : "text-slate-600 hover:bg-white hover:text-blue-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-blue-200"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ContributionHeatmap({ daily, toggle }: { daily: TokenDailyUsagePoint[]; toggle?: ReactNode }) {
   const { dict, locale } = useI18n();
   const [hovered, setHovered] = useState<{ date: string; tokens: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -425,8 +513,11 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
           <h2 className="text-base font-semibold">{dict.profile.sections.heatmapTitle}</h2>
           <p className="mt-1 text-xs text-slate-500">{dict.profile.sections.heatmapMeta}</p>
         </div>
-        <div className="min-h-6 text-right font-mono text-xs text-slate-500">
-          {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : `${dict.profile.sections.less} → ${dict.profile.sections.more}`}
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          {toggle}
+          <div className="min-h-6 text-right font-mono text-xs text-slate-500">
+            {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : `${dict.profile.sections.less} → ${dict.profile.sections.more}`}
+          </div>
         </div>
       </div>
       <div ref={scrollRef} aria-label={dict.profile.sections.heatmapAria} className="mt-4 max-w-full overflow-x-auto pb-1">
@@ -478,6 +569,31 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
           <span key={level} className="size-3 rounded-[3px] border border-slate-200" style={{ backgroundColor: heatColor(level) }} />
         ))}
         <span>{dict.profile.sections.more}</span>
+      </div>
+    </section>
+  );
+}
+
+function ContributionIsometricPanel({ daily, toggle }: { daily: TokenDailyUsagePoint[]; toggle?: ReactNode }) {
+  const { dict } = useI18n();
+
+  return (
+    <section className="min-w-0 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold">{dict.profile.sections.isometricTitle}</h2>
+          <p className="mt-1 text-xs text-slate-500">{dict.profile.sections.isometricMeta}</p>
+        </div>
+        {toggle}
+      </div>
+      <div className="mt-4 max-w-full overflow-x-auto pb-1">
+        <IsometricContributionGraph
+          ariaLabel={dict.profile.sections.isometricAria}
+          daily={daily}
+          emptyLabel={dict.profile.sections.noData}
+          peakLabel={dict.profile.sections.isometricPeak}
+          quietLabel={dict.profile.sections.isometricQuiet}
+        />
       </div>
     </section>
   );
@@ -564,12 +680,14 @@ function BreakdownPanel({
 
 function ProfileShareCard({
   daily,
+  include3d,
   pageUrl,
   peakDay,
   primaryRanking,
   profile,
 }: {
   daily: TokenDailyUsagePoint[];
+  include3d: boolean;
   pageUrl: string;
   peakDay: TokenDailyUsagePoint | null;
   primaryRanking: PublicProfileResponse["profile"]["rankings"][number] | undefined;
@@ -609,9 +727,24 @@ function ProfileShareCard({
           </div>
         </div>
         <div className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-          <p className="text-xs font-semibold text-slate-400">{dict.profile.sections.shareHeatmap}</p>
+          <p className="text-xs font-semibold text-slate-400">
+            {include3d ? dict.profile.sections.shareIsometric : dict.profile.sections.shareHeatmap}
+          </p>
           <div className="mt-3">
-            <ContributionHeatmapMini daily={daily} />
+            {include3d ? (
+              <IsometricContributionGraph
+                ariaLabel={dict.profile.sections.isometricAria}
+                daily={daily}
+                emptyLabel={dict.profile.sections.noData}
+                height={132}
+                peakLabel={dict.profile.sections.isometricPeak}
+                quietLabel={dict.profile.sections.isometricQuiet}
+                showHoverLabel={false}
+                variant="share"
+              />
+            ) : (
+              <ContributionHeatmapMini daily={daily} />
+            )}
           </div>
         </div>
       </div>
