@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 import {
@@ -13,12 +15,15 @@ import {
 
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { useI18n } from "@/i18n";
 
 export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
+  const { dict } = useI18n();
+  const copy = dict.benchmark.codexDemo;
   const snapshots = buildCodexBenchmarkDailySnapshots(now);
   const today = snapshots[snapshots.length - 1];
   const maxP90 = Math.max(1, ...snapshots.map((snapshot) => snapshot.p90TotalSeconds));
-  const sampleWeather = today.weather.replace("今日 Codex", "样例 Codex");
+  const sampleWeather = today.weather.replace(copy.sampleWeatherReplaceFrom, copy.sampleWeatherReplaceTo);
 
   return (
     <main className="min-w-0 bg-slate-100 text-slate-950">
@@ -47,52 +52,52 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
               </span>
             </div>
             <h1 className="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
-              今日 Codex 智商与速度评测集
+              {copy.title}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-              固定 S1-S5 每日题库，把“聪明不聪明、快不快、会不会乱改”拆成可复跑指标。当前页面还没有接真实 runner，所有分数和 7 天趋势都是内置示例 run，只用于展示评分口径。
+              {copy.description}
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <ScoreTile
-                label="IQ 示例"
+                label={copy.iqSample}
                 value={`${today.iqScore.toFixed(1)}`}
                 suffix="/100"
-                meta="内置示例，非真实历史"
+                meta={copy.builtinSample}
                 tone="ink"
               />
               <ScoreTile
-                label="速度示例"
+                label={copy.speedSample}
                 value={today.speedBand}
                 suffix={`${today.speedScore.toFixed(1)}/100`}
-                meta="待接入真实 runner"
+                meta={copy.waitingRunner}
                 tone={today.speedBand === "Fast" ? "mint" : today.speedBand === "Normal" ? "blue" : "gold"}
               />
               <ScoreTile
-                label="一次成功率"
+                label={copy.firstPassRate}
                 value={formatPercent(today.firstPassRate)}
                 suffix="first pass"
-                meta={`测试通过 ${formatPercent(today.testPassRate)}`}
+                meta={copy.testPassed(formatPercent(today.testPassRate))}
                 tone="blue"
               />
               <ScoreTile
-                label="P90 完成耗时"
+                label={copy.p90}
                 value={formatDuration(today.p90TotalSeconds)}
                 suffix="per run"
-                meta={`平均重试 ${today.avgRetries.toFixed(1)} 次`}
+                meta={copy.avgRetries(today.avgRetries.toFixed(1))}
                 tone="gold"
               />
             </div>
           </div>
 
           <aside className="rounded-lg border border-slate-200 bg-slate-950 p-5 text-white shadow-sm">
-            <p className="font-mono text-xs font-semibold uppercase text-blue-200">Sample weather</p>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-200">{copy.sampleWeather}</p>
             <h2 className="mt-3 text-xl font-semibold leading-snug">{sampleWeather}</h2>
             <p className="mt-4 text-sm leading-6 text-slate-300">{today.recommendation}</p>
             <div className="mt-5 grid gap-2 border-t border-white/10 pt-4 text-xs text-slate-300">
-              <EvidenceLine label="样本量" value={`${today.sampleRuns} 次完整 S1-S5`} />
-              <EvidenceLine label="IQ 口径" value="测试、范围、指令、根因、路径效率" />
-              <EvidenceLine label="Speed 口径" value="首动作、总耗时、命令等待、重试、输出速度" />
+              <EvidenceLine label={copy.sampleSize} value={copy.sampleRuns(today.sampleRuns)} />
+              <EvidenceLine label={copy.iqMethod} value={copy.iqMethodValue} />
+              <EvidenceLine label={copy.speedMethod} value={copy.speedMethodValue} />
             </div>
           </aside>
         </section>
@@ -100,8 +105,8 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
         <section className="mt-5 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold">示例 7 天趋势</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-500">内置示例数据，用来展示 median IQ、median Speed 与 P90 耗时；接入真实 runner 后再显示真实过去 7 天。</p>
+              <h2 className="text-base font-semibold">{copy.sevenDayTrend}</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{copy.sevenDayDescription}</p>
             </div>
             <div className="flex gap-2 font-mono text-[11px] text-slate-500">
               <span className="rounded-full border border-slate-200 px-2 py-1">IQ</span>
@@ -119,21 +124,21 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
         <section className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-1 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-base font-semibold">今日题目明细</h2>
+              <h2 className="text-base font-semibold">{copy.taskDetails}</h2>
               <span className="font-mono text-xs text-slate-500">S1-S5 · median score</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
                 <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
                   <tr>
-                    <th className="px-4 py-3">任务</th>
-                    <th className="px-4 py-3">状态</th>
+                    <th className="px-4 py-3">{copy.columns.task}</th>
+                    <th className="px-4 py-3">{copy.columns.status}</th>
                     <th className="px-4 py-3 text-right">IQ</th>
                     <th className="px-4 py-3 text-right">Speed</th>
-                    <th className="px-4 py-3 text-right">通过率</th>
-                    <th className="px-4 py-3 text-right">一次成功</th>
+                    <th className="px-4 py-3 text-right">{copy.columns.passRate}</th>
+                    <th className="px-4 py-3 text-right">{copy.columns.firstPass}</th>
                     <th className="px-4 py-3 text-right">P90</th>
-                    <th className="px-4 py-3">失败信号</th>
+                    <th className="px-4 py-3">{copy.columns.failure}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -147,27 +152,19 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
 
           <aside className="grid gap-3">
             <ProtocolCard
-              title="每日协议"
-              lines={[
-                `每个任务跑 ${CODEX_BENCHMARK_REPEAT_COUNT} 次，取 median 分数。`,
-                "同一天固定 prompt、fixture、验收脚本。",
-                "记录 p90 耗时，避免单次慢请求误导结论。",
-              ]}
+              title={copy.dailyProtocol}
+              lines={copy.protocolLines(CODEX_BENCHMARK_REPEAT_COUNT)}
             />
             <ProtocolCard
               title="IQ Score"
               lines={[
-                "测试通过与隐藏验收权重最高。",
-                "范围控制、遵守指令、根因解释单独计分。",
-                "重试越多，路径效率扣分越多。",
+                ...copy.iqLines,
               ]}
             />
             <ProtocolCard
               title="Speed Score"
               lines={[
-                "首个有效动作越快越好。",
-                "总完成耗时和命令等待分开统计。",
-                "Fast mode 应单独标记，不和默认模式混算。",
+                ...copy.speedLines,
               ]}
             />
           </aside>
@@ -176,8 +173,8 @@ export function CodexBenchmarkApp({ now = new Date() }: { now?: Date }) {
         <section className="mt-5">
           <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold">固定每日题库</h2>
-              <p className="mt-1 text-xs leading-5 text-slate-500">这 5 道题覆盖小修、读代码、UI 类型、歧义范围和长上下文。</p>
+              <h2 className="text-base font-semibold">{copy.fixedTasks}</h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{copy.fixedTasksDescription}</p>
             </div>
             <span className="font-mono text-xs text-slate-500">benchmark set v0.1</span>
           </div>
@@ -290,6 +287,7 @@ function TrendBar({
 }
 
 function TaskScoreRow({ summary }: { summary: CodexBenchmarkDailyTaskSummary }) {
+  const { dict } = useI18n();
   return (
     <tr className="align-top">
       <td className="px-4 py-3">
@@ -305,7 +303,7 @@ function TaskScoreRow({ summary }: { summary: CodexBenchmarkDailyTaskSummary }) 
       <td className="px-4 py-3 text-right font-mono">{formatPercent(summary.firstPassRate)}</td>
       <td className="px-4 py-3 text-right font-mono">{formatDuration(summary.p90Seconds)}</td>
       <td className="max-w-[16rem] px-4 py-3 text-xs leading-5 text-slate-500">
-        {summary.failureReason ?? "无明显失败信号"}
+        {summary.failureReason ?? dict.benchmark.codexDemo.noFailure}
       </td>
     </tr>
   );
@@ -346,6 +344,7 @@ function ProtocolCard({ lines, title }: { lines: string[]; title: string }) {
 }
 
 function TaskDefinitionCard({ task }: { task: CodexBenchmarkTask }) {
+  const { dict } = useI18n();
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -363,8 +362,8 @@ function TaskDefinitionCard({ task }: { task: CodexBenchmarkTask }) {
         <p className="mt-2 text-sm leading-6 text-slate-800">{task.prompt}</p>
       </div>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <TaskList title="验收" items={task.verification} />
-        <TaskList title="护栏" items={task.guardrails} />
+        <TaskList title={dict.benchmark.codexDemo.acceptance} items={task.verification} />
+        <TaskList title={dict.benchmark.codexDemo.guardrails} items={task.guardrails} />
       </div>
     </article>
   );

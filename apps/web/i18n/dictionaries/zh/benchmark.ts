@@ -7,6 +7,15 @@ export const benchmark = {
   shell: {
     emptyCommand: "运行：node tools/eval-runner/run.mjs --agent both --task all",
   },
+  kinds: {
+    "typescript-fix": "Bug 修复",
+    "code-reading": "代码阅读",
+    "ui-typecheck": "类型/逻辑",
+    "ambiguity-control": "范围控制",
+    "long-context": "长上下文",
+    refactor: "重构",
+    algorithm: "算法",
+  },
   access: {
     loadingTitle: "正在确认访问权限",
     ownerOnlyTitle: "AI 评测仅所有者可见",

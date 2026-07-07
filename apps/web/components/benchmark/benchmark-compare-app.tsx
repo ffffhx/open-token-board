@@ -6,7 +6,6 @@ import {
   hasUiData,
   summarizeAgent,
   getBenchmarkPayload,
-  kindTitle,
   AGENT_LABELS,
   type BenchmarkAgentId,
   type BenchmarkComparisonMetric,
@@ -21,6 +20,7 @@ import {
   formatDuration,
   formatPercent,
 } from "@/components/benchmark/benchmark-shell";
+import { useI18n } from "@/i18n";
 
 export function BenchmarkCompareApp({ apiBaseUrl }: { apiBaseUrl?: string }) {
   return (
@@ -31,6 +31,7 @@ export function BenchmarkCompareApp({ apiBaseUrl }: { apiBaseUrl?: string }) {
 }
 
 function BenchmarkCompareContent() {
+  const { dict } = useI18n();
   const payload = getBenchmarkPayload();
   const comparison = buildComparison();
   const codex = summarizeAgent("codex");
@@ -39,7 +40,7 @@ function BenchmarkCompareContent() {
   if (!comparison.hasData || !codex || !claude) {
     return (
       <BenchmarkShell active="compare">
-        <EmptyState>还没有可对比的真实数据：需要 Codex 和 Claude Code 两端都跑过同一题集。</EmptyState>
+        <EmptyState>{dict.benchmark.compare.noData}</EmptyState>
       </BenchmarkShell>
     );
   }
@@ -59,15 +60,14 @@ function BenchmarkCompareContent() {
             {comparison.date}
           </span>
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-            真实跑测 · {comparison.taskRows.length} 题
+            {dict.benchmark.compare.realRunTasks(comparison.taskRows.length)}
           </span>
         </div>
         <h1 className="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
           {comparison.headline}
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-          同一套 {comparison.taskRows.length} 道沙盒编程题，分别真实调用 {codex.modelLabel} 和 {claude.modelLabel}，
-          统一隐藏脚本判分。按 IQ 综合分，Codex 赢 {codexWins} 题 · Claude Code 赢 {claudeWins} 题 · 打平 {ties} 题。
+          {dict.benchmark.compare.description(comparison.taskRows.length, codex.modelLabel, claude.modelLabel, codexWins, claudeWins, ties)}
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -100,20 +100,20 @@ function BenchmarkCompareContent() {
 
       <section className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-1 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold">逐题对比</h2>
-          <span className="font-mono text-xs text-slate-500">IQ / Speed / 耗时 · 胜者高亮</span>
+          <h2 className="text-base font-semibold">{dict.benchmark.compare.taskCompare}</h2>
+          <span className="font-mono text-xs text-slate-500">{dict.benchmark.compare.compareMeta}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] border-collapse text-left text-sm">
             <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">任务</th>
-                <th className="px-4 py-3">类型</th>
+                <th className="px-4 py-3">{dict.benchmark.compare.columns.task}</th>
+                <th className="px-4 py-3">{dict.benchmark.compare.columns.type}</th>
                 <th className="px-4 py-3 text-right">Codex IQ</th>
                 <th className="px-4 py-3 text-right">Claude IQ</th>
-                <th className="px-4 py-3 text-right">Codex 耗时</th>
-                <th className="px-4 py-3 text-right">Claude 耗时</th>
-                <th className="px-4 py-3">IQ 胜者</th>
+                <th className="px-4 py-3 text-right">{dict.benchmark.compare.columns.codexDuration}</th>
+                <th className="px-4 py-3 text-right">{dict.benchmark.compare.columns.claudeDuration}</th>
+                <th className="px-4 py-3">{dict.benchmark.compare.columns.winner}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -128,23 +128,24 @@ function BenchmarkCompareContent() {
       {hasUiData() && <UiShowcase rows={buildUiShowcase()} />}
 
       <p className="mt-4 font-mono text-xs text-slate-400">
-        数据生成于 {payload.generatedAt.slice(0, 16).replace("T", " ")} · 由 tools/eval-runner 真实执行
+        {dict.benchmark.compare.generated(payload.generatedAt.slice(0, 16).replace("T", " "))}
       </p>
     </BenchmarkShell>
   );
 }
 
 function UiShowcase({ rows }: { rows: BenchmarkUiShowcaseRow[] }) {
+  const { dict } = useI18n();
   return (
     <section className="mt-5">
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold">UI 还原对比</h2>
+          <h2 className="text-base font-semibold">{dict.benchmark.compare.uiTitle}</h2>
           <p className="mt-1 text-xs leading-5 text-slate-500">
-            给同一份设计稿的文字规格，两个 agent 各写 HTML/CSS，渲染截图后由 codex+claude 双视觉裁判打还原度分。
+            {dict.benchmark.compare.uiDescription}
           </p>
         </div>
-        <span className="font-mono text-xs text-slate-500">{rows.length} 个 UI 题 · fidelity 0-100</span>
+        <span className="font-mono text-xs text-slate-500">{dict.benchmark.compare.uiMeta(rows.length)}</span>
       </div>
       <div className="grid gap-5">
         {rows.map((row) => (
@@ -156,6 +157,7 @@ function UiShowcase({ rows }: { rows: BenchmarkUiShowcaseRow[] }) {
 }
 
 function UiShowcaseCard({ row }: { row: BenchmarkUiShowcaseRow }) {
+  const { dict } = useI18n();
   return (
     <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
@@ -166,23 +168,23 @@ function UiShowcaseCard({ row }: { row: BenchmarkUiShowcaseRow }) {
               row.fidelityWinner === "codex" ? "bg-slate-950 text-white" : "bg-violet-600 text-white"
             }`}
           >
-            {AGENT_LABELS[row.fidelityWinner]} 还原更准
+            {dict.benchmark.compare.fidelityWinner(AGENT_LABELS[row.fidelityWinner])}
           </span>
         )}
       </div>
       <div className="grid gap-4 p-4 lg:grid-cols-3">
-        <Shot label="目标设计稿" src={row.target} badge="target" />
+        <Shot label={dict.benchmark.compare.target} src={row.target} badge="target" />
         <Shot
           label="Codex"
           src={row.codex?.shot}
-          badge={row.codex ? `还原度 ${row.codex.fidelity}` : "—"}
+          badge={row.codex ? dict.benchmark.compare.fidelity(row.codex.fidelity) : "—"}
           notes={row.codex?.notes}
           seconds={row.codex?.totalSeconds}
         />
         <Shot
           label="Claude Code"
           src={row.claude?.shot}
-          badge={row.claude ? `还原度 ${row.claude.fidelity}` : "—"}
+          badge={row.claude ? dict.benchmark.compare.fidelity(row.claude.fidelity) : "—"}
           notes={row.claude?.notes}
           seconds={row.claude?.totalSeconds}
         />
@@ -204,6 +206,7 @@ function Shot({
   seconds?: number;
   src?: string;
 }) {
+  const { dict } = useI18n();
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
@@ -217,7 +220,7 @@ function Shot({
         <img src={src} alt={label} className="w-full rounded-md border border-slate-200 bg-slate-100" />
       ) : (
         <div className="flex h-40 items-center justify-center rounded-md border border-dashed border-slate-300 text-xs text-slate-400">
-          未渲染
+          {dict.benchmark.compare.notRendered}
         </div>
       )}
       {(notes || seconds != null) && (
@@ -231,6 +234,7 @@ function Shot({
 }
 
 function MetricCard({ metric }: { metric: BenchmarkComparisonMetric }) {
+  const { dict } = useI18n();
   const fmt = (v: number) =>
     metric.unit === "percent"
       ? `${Math.round(v)}%`
@@ -245,7 +249,7 @@ function MetricCard({ metric }: { metric: BenchmarkComparisonMetric }) {
         <p className="text-xs font-semibold uppercase text-slate-500">{metric.label}</p>
         {metric.winner !== "tie" && (
           <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-            {AGENT_LABELS[metric.winner]} 胜
+            {dict.benchmark.compare.metricWinner(AGENT_LABELS[metric.winner])}
           </span>
         )}
       </div>
@@ -290,6 +294,7 @@ function AgentMiniCard({
   speed: number;
   weather: string;
 }) {
+  const { dict } = useI18n();
   const accent = agent === "codex" ? "text-slate-950" : "text-violet-700";
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
@@ -301,7 +306,7 @@ function AgentMiniCard({
       <div className="mt-4 grid grid-cols-4 gap-2 text-center">
         <Stat label="IQ" value={iq.toFixed(1)} />
         <Stat label="Speed" value={speed.toFixed(1)} />
-        <Stat label="通过" value={formatPercent(pass)} />
+        <Stat label={dict.benchmark.compare.pass} value={formatPercent(pass)} />
         <Stat label="P90" value={formatDuration(p90)} />
       </div>
     </div>
@@ -318,6 +323,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function CompareRow({ row }: { row: BenchmarkComparisonTaskRow }) {
+  const { dict } = useI18n();
   const winnerCls = (who: BenchmarkAgentId) =>
     row.iqWinner === who ? "font-semibold text-slate-950" : "text-slate-500";
   return (
@@ -328,7 +334,7 @@ function CompareRow({ row }: { row: BenchmarkComparisonTaskRow }) {
       </td>
       <td className="px-4 py-3">
         <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-          {kindTitle(row.kind)} · {row.difficulty}
+          {dict.benchmark.kinds[row.kind]} · {row.difficulty}
         </span>
       </td>
       <td className={`px-4 py-3 text-right font-mono ${winnerCls("codex")}`}>
@@ -343,7 +349,7 @@ function CompareRow({ row }: { row: BenchmarkComparisonTaskRow }) {
       <td className="px-4 py-3 text-right font-mono text-slate-500">{row.claude ? formatDuration(row.claude.totalSeconds) : "—"}</td>
       <td className="px-4 py-3">
         {row.iqWinner === "tie" ? (
-          <span className="text-xs text-slate-400">持平</span>
+          <span className="text-xs text-slate-400">{dict.benchmark.compare.tie}</span>
         ) : (
           <span
             className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${

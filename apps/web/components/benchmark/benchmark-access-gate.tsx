@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { AppNavLinks } from "@/components/app-nav-links";
 import { benchmarkApiBase, usePrivateBenchmarkAccess } from "@/components/private-benchmark-access";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { useI18n } from "@/i18n";
 
 export function BenchmarkAccessGate({
   apiBaseUrl,
@@ -14,6 +15,7 @@ export function BenchmarkAccessGate({
   apiBaseUrl?: string;
   children: React.ReactNode;
 }) {
+  const { dict } = useI18n();
   const access = usePrivateBenchmarkAccess(apiBaseUrl);
   const loginWithGitHub = useCallback(() => {
     const base = benchmarkApiBase(apiBaseUrl);
@@ -24,17 +26,17 @@ export function BenchmarkAccessGate({
     return children;
   }
 
-  const viewer = access.user?.githubLogin ? `@${access.user.githubLogin}` : access.user?.displayName || "当前账号";
+  const viewer = access.user?.githubLogin ? `@${access.user.githubLogin}` : access.user?.displayName || dict.benchmark.access.currentAccount;
   const title = access.loading
-    ? "正在确认访问权限"
+    ? dict.benchmark.access.loadingTitle
     : access.authenticated
-      ? "AI 评测仅所有者可见"
-      : "登录后查看 AI 评测";
+      ? dict.benchmark.access.ownerOnlyTitle
+      : dict.benchmark.access.loginTitle;
   const description = access.loading
-    ? "正在读取当前 GitHub 登录态。"
+    ? dict.benchmark.access.loadingDescription
     : access.authenticated
-      ? `${viewer} 没有查看这个评测页的权限。`
-      : "这个评测页只对站点所有者开放。";
+      ? dict.benchmark.access.deniedDescription(viewer)
+      : dict.benchmark.access.loginDescription;
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-950">
@@ -50,28 +52,27 @@ export function BenchmarkAccessGate({
 
       <section className="mx-auto flex max-w-2xl flex-col items-start px-4 py-16 sm:px-6 lg:px-8">
         <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-mono text-xs font-semibold uppercase text-blue-700">
-          private benchmark
+          {dict.benchmark.access.privateBenchmark}
         </span>
         <h1 className="mt-5 text-3xl font-semibold tracking-normal text-slate-950 sm:text-4xl">{title}</h1>
         <p className="mt-4 text-sm leading-6 text-slate-600">{description}</p>
-        {access.error ? <p className="mt-3 font-mono text-xs text-amber-700">权限接口暂不可用：{access.error}</p> : null}
+        {access.error ? <p className="mt-3 font-mono text-xs text-amber-700">{dict.benchmark.access.error(access.error)}</p> : null}
         {!access.loading && !access.authenticated ? (
           <button
             type="button"
             onClick={loginWithGitHub}
             className="mt-7 inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
           >
-            GitHub 登录
+            {dict.common.actions.githubLogin}
           </button>
         ) : null}
         <Link
           href="/"
           className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
         >
-          返回首页
+          {dict.benchmark.access.backHome}
         </Link>
       </section>
     </main>
   );
 }
-

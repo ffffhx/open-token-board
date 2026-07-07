@@ -1,14 +1,17 @@
+"use client";
+
 import Link from "next/link";
 
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { useI18n } from "@/i18n";
 
 export type BenchmarkTab = "codex" | "claude" | "compare";
 
-const tabs: Array<{ key: BenchmarkTab; href: string; label: string }> = [
-  { key: "compare", href: "/bench", label: "对比总览" },
-  { key: "codex", href: "/bench/codex", label: "Codex 评测" },
-  { key: "claude", href: "/bench/claude", label: "Claude Code 评测" },
+const tabs: Array<{ key: BenchmarkTab; href: string }> = [
+  { key: "compare", href: "/bench" },
+  { key: "codex", href: "/bench/codex" },
+  { key: "claude", href: "/bench/claude" },
 ];
 
 function cx(...values: Array<string | false | undefined>): string {
@@ -22,6 +25,7 @@ export function BenchmarkShell({
   active: BenchmarkTab;
   children: React.ReactNode;
 }) {
+  const { dict } = useI18n();
   return (
     <main className="min-w-0 bg-slate-100 text-slate-950">
       <header className="border-b border-slate-200 bg-white">
@@ -50,7 +54,7 @@ export function BenchmarkShell({
                     : "border border-slate-200 bg-white text-slate-600 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700",
                 )}
               >
-                {tab.label}
+                {dict.benchmark.tabs[tab.key]}
               </Link>
             );
           })}
@@ -75,11 +79,12 @@ export function formatDuration(seconds: number) {
 }
 
 export function EmptyState({ children }: { children: React.ReactNode }) {
+  const { dict } = useI18n();
   return (
     <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center">
       <p className="text-sm leading-6 text-slate-500">{children}</p>
       <p className="mt-3 font-mono text-xs text-slate-400">
-        运行：node tools/eval-runner/run.mjs --agent both --task all
+        {dict.benchmark.shell.emptyCommand}
       </p>
     </div>
   );

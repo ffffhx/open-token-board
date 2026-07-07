@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { usePrivateBenchmarkAccess } from "@/components/private-benchmark-access";
+import { useI18n } from "@/i18n";
 
 export function PrivateBenchmarkLink({
   className,
@@ -11,6 +12,7 @@ export function PrivateBenchmarkLink({
   className?: string;
   href?: string;
 }) {
+  const { dict } = useI18n();
   const access = usePrivateBenchmarkAccess();
 
   if (!access.allowed) {
@@ -19,7 +21,7 @@ export function PrivateBenchmarkLink({
 
   return (
     <Link href={href} className={className}>
-      查看 Codex 评测
+      {dict.benchmark.access.privateLink}
     </Link>
   );
 }

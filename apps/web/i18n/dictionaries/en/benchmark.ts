@@ -9,6 +9,15 @@ export const benchmark = {
   shell: {
     emptyCommand: "Run: node tools/eval-runner/run.mjs --agent both --task all",
   },
+  kinds: {
+    "typescript-fix": "Bug fix",
+    "code-reading": "Code reading",
+    "ui-typecheck": "Types / logic",
+    "ambiguity-control": "Scope control",
+    "long-context": "Long context",
+    refactor: "Refactor",
+    algorithm: "Algorithm",
+  },
   access: {
     loadingTitle: "Checking access",
     ownerOnlyTitle: "AI benchmarks are owner-only",

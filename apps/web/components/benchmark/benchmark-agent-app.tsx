@@ -3,7 +3,6 @@
 import {
   summarizeAgent,
   getBenchmarkPayload,
-  kindTitle,
   type BenchmarkAgentId,
   type BenchmarkTaskStatus,
   type BenchmarkTaskSummary,
@@ -17,6 +16,7 @@ import {
   formatPercent,
   type BenchmarkTab,
 } from "@/components/benchmark/benchmark-shell";
+import { useI18n } from "@/i18n";
 
 export function BenchmarkAgentApp({
   agent,
@@ -35,13 +35,14 @@ export function BenchmarkAgentApp({
 }
 
 function BenchmarkAgentContent({ agent, tab }: { agent: BenchmarkAgentId; tab: BenchmarkTab }) {
+  const { dict, locale } = useI18n();
   const payload = getBenchmarkPayload();
   const summary = summarizeAgent(agent);
 
   if (!summary) {
     return (
       <BenchmarkShell active={tab}>
-        <EmptyState>尚未跑出 {agent === "codex" ? "Codex" : "Claude Code"} 的真实评测数据。</EmptyState>
+        <EmptyState>{dict.benchmark.agent.noData(agent === "codex" ? "Codex" : "Claude Code")}</EmptyState>
       </BenchmarkShell>
     );
   }
@@ -58,65 +59,65 @@ function BenchmarkAgentContent({ agent, tab }: { agent: BenchmarkAgentId; tab: B
               {summary.date}
             </span>
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-              真实跑测
+              {dict.benchmark.agent.realRun}
             </span>
             <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-600">
-              {summary.taskCount} 题 · {summary.sampleRuns} 轮
+              {dict.benchmark.agent.tasksRuns(summary.taskCount, summary.sampleRuns)}
             </span>
           </div>
           <h1 className="mt-4 max-w-3xl text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
-            {summary.agentLabel} 智商与速度评测
+            {dict.benchmark.agent.title(summary.agentLabel)}
           </h1>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            {summary.modelLabel} 在 {summary.taskCount} 道沙盒编程题上的真实表现：每题真正调用 CLI 执行、计时，并用隐藏脚本判分。
+            {dict.benchmark.agent.description(summary.modelLabel, summary.taskCount)}
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <ScoreTile label="IQ 综合" value={summary.iqScore.toFixed(1)} suffix="/100" meta={`根因命中 ${formatPercent(summary.rootCauseRate)}`} tone="ink" />
-            <ScoreTile label="代码质量" value={summary.qualityScore ? summary.qualityScore.toFixed(1) : "—"} suffix="双盲互评" meta="可读/简洁/鲁棒/地道" tone="violet" />
+            <ScoreTile label={dict.benchmark.agent.iqOverall} value={summary.iqScore.toFixed(1)} suffix="/100" meta={dict.benchmark.agent.rootCause(formatPercent(summary.rootCauseRate))} tone="ink" />
+            <ScoreTile label={dict.benchmark.agent.quality} value={summary.qualityScore ? summary.qualityScore.toFixed(1) : "—"} suffix={dict.benchmark.agent.qualitySuffix} meta={dict.benchmark.agent.qualityMeta} tone="violet" />
             <ScoreTile
-              label="速度"
+              label={dict.benchmark.agent.speed}
               value={summary.speedBand}
               suffix={`${summary.speedScore.toFixed(1)}/100`}
-              meta={`中位 ${formatDuration(summary.medianTotalSeconds)}`}
+              meta={dict.benchmark.agent.median(formatDuration(summary.medianTotalSeconds))}
               tone={summary.speedBand === "Fast" ? "mint" : summary.speedBand === "Normal" ? "blue" : "gold"}
             />
-            <ScoreTile label="通过率" value={formatPercent(summary.passRate)} suffix="passed" meta={`一次成功 ${formatPercent(summary.firstPassRate)}`} tone="blue" />
-            <ScoreTile label="P90 耗时" value={formatDuration(summary.p90TotalSeconds)} suffix="per task" meta={`范围控制 ${formatPercent(summary.scopeSafeRate)}`} tone="gold" />
+            <ScoreTile label={dict.benchmark.agent.passRate} value={formatPercent(summary.passRate)} suffix="passed" meta={dict.benchmark.agent.firstPass(formatPercent(summary.firstPassRate))} tone="blue" />
+            <ScoreTile label={dict.benchmark.agent.p90} value={formatDuration(summary.p90TotalSeconds)} suffix="per task" meta={dict.benchmark.agent.scopeSafe(formatPercent(summary.scopeSafeRate))} tone="gold" />
           </div>
         </div>
 
         <aside className="rounded-lg border border-slate-200 bg-slate-950 p-5 text-white shadow-sm">
-          <p className="font-mono text-xs font-semibold uppercase text-blue-200">今日天气</p>
+          <p className="font-mono text-xs font-semibold uppercase text-blue-200">{dict.benchmark.agent.weather}</p>
           <h2 className="mt-3 text-xl font-semibold leading-snug">{summary.weather}</h2>
           <p className="mt-4 text-sm leading-6 text-slate-300">{summary.recommendation}</p>
           <div className="mt-5 grid gap-2 border-t border-white/10 pt-4 text-xs text-slate-300">
-            <EvidenceLine label="模型" value={summary.modelLabel} />
-            <EvidenceLine label="平均重试" value={`${summary.avgRetries.toFixed(1)} 次`} />
-            <EvidenceLine label="输出 token" value={summary.totalOutputTokens.toLocaleString()} />
-            <EvidenceLine label="生成时间" value={payload.generatedAt.slice(0, 16).replace("T", " ")} />
+            <EvidenceLine label={dict.benchmark.agent.model} value={summary.modelLabel} />
+            <EvidenceLine label={dict.benchmark.agent.avgRetries} value={dict.common.units.times(summary.avgRetries.toFixed(1))} />
+            <EvidenceLine label={dict.benchmark.agent.outputTokens} value={summary.totalOutputTokens.toLocaleString(locale)} />
+            <EvidenceLine label={dict.benchmark.agent.generatedAt} value={payload.generatedAt.slice(0, 16).replace("T", " ")} />
           </div>
         </aside>
       </section>
 
       <section className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col gap-1 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-base font-semibold">逐题明细</h2>
+          <h2 className="text-base font-semibold">{dict.benchmark.agent.taskDetails}</h2>
           <span className="font-mono text-xs text-slate-500">{summary.taskCount} tasks · real run</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[880px] border-collapse text-left text-sm">
             <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">任务</th>
-                <th className="px-4 py-3">类型</th>
-                <th className="px-4 py-3">状态</th>
+                <th className="px-4 py-3">{dict.benchmark.agent.columns.task}</th>
+                <th className="px-4 py-3">{dict.benchmark.agent.columns.type}</th>
+                <th className="px-4 py-3">{dict.benchmark.agent.columns.status}</th>
                 <th className="px-4 py-3 text-right">IQ</th>
-                <th className="px-4 py-3 text-right">质量</th>
+                <th className="px-4 py-3 text-right">{dict.benchmark.agent.columns.quality}</th>
                 <th className="px-4 py-3 text-right">Speed</th>
-                <th className="px-4 py-3 text-right">耗时</th>
-                <th className="px-4 py-3 text-right">改动</th>
-                <th className="px-4 py-3">失败信号</th>
+                <th className="px-4 py-3 text-right">{dict.benchmark.agent.columns.duration}</th>
+                <th className="px-4 py-3 text-right">{dict.benchmark.agent.columns.changes}</th>
+                <th className="px-4 py-3">{dict.benchmark.agent.columns.failure}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -132,6 +133,7 @@ function BenchmarkAgentContent({ agent, tab }: { agent: BenchmarkAgentId; tab: B
 }
 
 function TaskRow({ summary }: { summary: BenchmarkTaskSummary }) {
+  const { dict } = useI18n();
   return (
     <tr className="align-top">
       <td className="px-4 py-3">
@@ -140,7 +142,7 @@ function TaskRow({ summary }: { summary: BenchmarkTaskSummary }) {
       </td>
       <td className="px-4 py-3">
         <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-          {kindTitle(summary.kind)} · {summary.difficulty}
+          {dict.benchmark.kinds[summary.kind]} · {summary.difficulty}
         </span>
       </td>
       <td className="px-4 py-3">
@@ -152,7 +154,7 @@ function TaskRow({ summary }: { summary: BenchmarkTaskSummary }) {
       <td className="px-4 py-3 text-right font-mono">{formatDuration(summary.totalSeconds)}</td>
       <td className="px-4 py-3 text-right font-mono">{summary.changedFiles}</td>
       <td className="max-w-[16rem] px-4 py-3 text-xs leading-5 text-slate-500">
-        {summary.failureReason ?? (summary.scopeSafe ? "通过，范围正确" : "改动超范围")}
+        {summary.failureReason ?? (summary.scopeSafe ? dict.benchmark.agent.passScope : dict.benchmark.agent.outOfScope)}
       </td>
     </tr>
   );
