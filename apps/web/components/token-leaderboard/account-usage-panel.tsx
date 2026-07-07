@@ -8,6 +8,9 @@ import {
   getTokenConsumptionTokens,
   type TokenAccountUsageProfile,
   type TokenBoardRange,
+  type TokenGoal,
+  type TokenGoalEvaluation,
+  type TokenGoalType,
 } from "@open-token-board/core";
 
 import type { AccountLoadState, ViewerState } from "./types";
@@ -29,6 +32,7 @@ const SESSION_INITIAL_VISIBLE_COUNT = 20;
 const SESSION_VISIBLE_COUNT_STEP = 20;
 
 export function AccountUsagePanel({
+  apiBaseUrl,
   apiEnabled,
   error,
   loadState,
@@ -38,6 +42,7 @@ export function AccountUsagePanel({
   range,
   viewer,
 }: {
+  apiBaseUrl: string;
   apiEnabled: boolean;
   error: string;
   loadState: AccountLoadState;
@@ -57,6 +62,11 @@ export function AccountUsagePanel({
   const accountTokensPerSession = user?.sessions ? accountConsumptionTokens / user.sessions : 0;
   const dashboardProfile = profile && user ? profile : null;
   const wrappedLogin = viewer?.user?.githubLogin || viewer?.user?.displayName || user?.displayName || "";
+  const [goalEvaluations, setGoalEvaluations] = useState<TokenGoalEvaluation[]>([]);
+
+  useEffect(() => {
+    setGoalEvaluations(profile?.goals ?? []);
+  }, [profile?.goals]);
 
   if (apiEnabled && viewer && !viewer.authenticated) {
     return (
@@ -197,6 +207,11 @@ export function AccountUsagePanel({
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
+          <AccountGoalsPanel
+            apiBaseUrl={apiBaseUrl}
+            goals={goalEvaluations}
+            onGoalsChange={setGoalEvaluations}
+          />
 
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <AccountStatCard
@@ -359,6 +374,348 @@ function AccountHonorPanel({ profile }: { profile: TokenAccountUsageProfile }) {
       <AccountBadgeWall badges={profile.badges} />
     </div>
   );
+}
+
+type GoalPayload = Partial<TokenGoal> & {
+  type: TokenGoalType;
+  target: number;
+};
+
+type GoalDraft = {
+  id: string | null;
+  target: string;
+  type: TokenGoalType;
+};
+
+const GOAL_TYPE_OPTIONS: Array<{ type: TokenGoalType; label: string; suffix: string }> = [
+  { type: "daily_streak", label: "连续活跃", suffix: "天" },
+  { type: "daily_tokens", label: "每日 Token", suffix: "tokens" },
+  { type: "weekly_tokens", label: "本周 Token", suffix: "tokens" },
+  { type: "weekly_cost_cap", label: "本周费用上限", suffix: "USD" },
+];
+
+function AccountGoalsPanel({
+  apiBaseUrl,
+  goals,
+  onGoalsChange,
+}: {
+  apiBaseUrl: string;
+  goals: TokenGoalEvaluation[];
+  onGoalsChange: (goals: TokenGoalEvaluation[]) => void;
+}) {
+  const [draft, setDraft] = useState<GoalDraft>(() => emptyGoalDraft());
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const currentGoals = goals.map((item) => item.goal);
+  const canAdd = currentGoals.length < 3;
+
+  function startAdd(type: TokenGoalType, target: number) {
+    setDraft({ id: null, type, target: String(target) });
+    setError("");
+  }
+
+  function startEdit(goal: TokenGoal) {
+    setDraft({ id: goal.id, type: goal.type, target: String(goal.target) });
+    setError("");
+  }
+
+  async function saveDraft() {
+    if (!apiBaseUrl) {
+      setError("未配置 Token Board API");
+      return;
+    }
+
+    const target = Number(draft.target);
+    if (!Number.isFinite(target) || target <= 0) {
+      setError("目标数值必须是正数");
+      return;
+    }
+
+    const nextGoal: GoalPayload = {
+      ...(currentGoals.find((goal) => goal.id === draft.id) ?? {}),
+      type: draft.type,
+      target,
+    };
+    const nextGoals = draft.id
+      ? currentGoals.map((goal) => (goal.id === draft.id ? nextGoal : goal))
+      : [...currentGoals, nextGoal];
+
+    await saveGoals(nextGoals);
+  }
+
+  async function applyTemplate(type: TokenGoalType, target: number) {
+    if (!canAdd) {
+      return;
+    }
+
+    await saveGoals([...currentGoals, { type, target }]);
+  }
+
+  async function deleteGoal(goalId: string) {
+    await saveGoals(currentGoals.filter((goal) => goal.id !== goalId));
+  }
+
+  async function saveGoals(nextGoals: GoalPayload[]) {
+    setSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/usage/goals`, {
+        method: "PUT",
+        cache: "no-store",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ goals: nextGoals }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        errors?: string[];
+        evaluations?: TokenGoalEvaluation[];
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.errors?.[0] || payload.error || `HTTP ${response.status}`);
+      }
+
+      onGoalsChange(Array.isArray(payload.evaluations) ? payload.evaluations : []);
+      setDraft(emptyGoalDraft());
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "保存失败");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-950">我的目标</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">最多 3 个，按北京时间自然日/自然周评估。</p>
+        </div>
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
+          {currentGoals.length} / 3 goals
+        </span>
+      </div>
+
+      {goals.length ? (
+        <div className="mt-4 space-y-3">
+          {goals.map((evaluation) => (
+            <GoalProgressRow
+              key={evaluation.goal.id}
+              evaluation={evaluation}
+              onDelete={() => void deleteGoal(evaluation.goal.id)}
+              onEdit={() => startEdit(evaluation.goal)}
+              saving={saving}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-4">
+          <p className="text-sm font-medium text-slate-700">还没有目标</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void applyTemplate("daily_streak", 7)}
+              disabled={saving}
+              className="inline-flex min-h-9 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              每天都用
+            </button>
+            <button
+              type="button"
+              onClick={() => void applyTemplate("weekly_tokens", 50_000_000)}
+              disabled={saving}
+              className="inline-flex min-h-9 items-center rounded-md border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              本周 50M
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canAdd || draft.id ? (
+        <div className="mt-4 grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[minmax(10rem,0.9fr)_minmax(8rem,0.8fr)_auto] lg:items-end">
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-500">目标类型</span>
+            <select
+              value={draft.type}
+              onChange={(event) => setDraft((value) => ({ ...value, type: event.target.value as TokenGoalType }))}
+              className="mt-1 h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            >
+              {GOAL_TYPE_OPTIONS.map((option) => (
+                <option key={option.type} value={option.type}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-500">目标数值</span>
+            <div className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] overflow-hidden rounded-md border border-slate-200 bg-white focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+              <input
+                type="number"
+                min="1"
+                step={draft.type === "weekly_cost_cap" ? "0.01" : "1"}
+                value={draft.target}
+                onChange={(event) => setDraft((value) => ({ ...value, target: event.target.value }))}
+                className="h-10 min-w-0 border-0 bg-transparent px-3 text-sm font-medium text-slate-900 outline-none"
+              />
+              <span className="flex items-center justify-center border-l border-slate-200 px-2 text-xs font-semibold text-slate-500">
+                {goalSuffix(draft.type)}
+              </span>
+            </div>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void saveDraft()}
+              disabled={saving || (!draft.id && !canAdd)}
+              className="inline-flex min-h-10 items-center rounded-md bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "保存中" : draft.id ? "保存修改" : "添加目标"}
+            </button>
+            {draft.id ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setDraft(emptyGoalDraft());
+                  setError("");
+                }}
+                className="inline-flex min-h-10 items-center rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100"
+              >
+                取消
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">
+          {error}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function GoalProgressRow({
+  evaluation,
+  onDelete,
+  onEdit,
+  saving,
+}: {
+  evaluation: TokenGoalEvaluation;
+  onDelete: () => void;
+  onEdit: () => void;
+  saving: boolean;
+}) {
+  const tone = goalTone(evaluation);
+  const percent = Math.max(0, Math.min(100, Math.round(evaluation.percent * 100)));
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">{formatGoalName(evaluation.goal)}</p>
+            <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${goalStatusClass(evaluation.status)}`}>
+              {goalStatusLabel(evaluation.status)}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">{goalProgressText(evaluation)}</p>
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={saving}
+            className="inline-flex min-h-8 items-center rounded-md border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            编辑
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            disabled={saving}
+            className="inline-flex min-h-8 items-center rounded-md border border-rose-200 bg-white px-2.5 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            删除
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3">
+        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+          <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, percent)}%` }} />
+        </div>
+        <span className="text-right font-mono text-xs font-semibold text-slate-500">{percent}%</span>
+      </div>
+      <p className="mt-2 truncate text-xs text-slate-500" title={goalChainText(evaluation)}>
+        {goalChainText(evaluation)}
+      </p>
+    </div>
+  );
+}
+
+function emptyGoalDraft(): GoalDraft {
+  return { id: null, type: "daily_streak", target: "7" };
+}
+
+function goalSuffix(type: TokenGoalType) {
+  return GOAL_TYPE_OPTIONS.find((option) => option.type === type)?.suffix ?? "";
+}
+
+function formatGoalName(goal: Pick<TokenGoal, "type" | "target">) {
+  if (goal.type === "daily_tokens") return `每日 ≥ ${formatTokens(goal.target)}`;
+  if (goal.type === "weekly_tokens") return `本周 ≥ ${formatTokens(goal.target)}`;
+  if (goal.type === "weekly_cost_cap") return `本周花费 ≤ ${formatUsd(goal.target)}`;
+  return `连续活跃 ${formatNumber(goal.target)} 天`;
+}
+
+function goalProgressText(evaluation: TokenGoalEvaluation) {
+  if (evaluation.goal.type === "weekly_cost_cap") {
+    return `${formatUsd(evaluation.progress)} / ${formatUsd(evaluation.target)} · ${formatGoalWindow(evaluation)}`;
+  }
+
+  if (evaluation.goal.type === "daily_streak") {
+    return `${formatNumber(evaluation.progress)} / ${formatNumber(evaluation.target)} 天 · ${formatGoalWindow(evaluation)}`;
+  }
+
+  return `${formatTokens(evaluation.progress)} / ${formatTokens(evaluation.target)} · ${formatGoalWindow(evaluation)}`;
+}
+
+function formatGoalWindow(evaluation: TokenGoalEvaluation) {
+  return evaluation.unit === "week" ? `周 ${evaluation.window.key}` : evaluation.window.key;
+}
+
+function goalStatusLabel(status: TokenGoalEvaluation["status"]) {
+  if (status === "achieved") return "已达成";
+  if (status === "failed") return "已失败";
+  return "进行中";
+}
+
+function goalStatusClass(status: TokenGoalEvaluation["status"]) {
+  if (status === "achieved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "failed") return "border-rose-200 bg-rose-50 text-rose-700";
+  return "border-amber-200 bg-amber-50 text-amber-800";
+}
+
+function goalTone(evaluation: TokenGoalEvaluation) {
+  if (evaluation.status === "achieved") return "bg-emerald-500";
+  if (evaluation.status === "failed") return "bg-rose-500";
+  if (evaluation.goal.type === "weekly_cost_cap" && evaluation.percent >= 0.8) return "bg-amber-500";
+  if (evaluation.percent >= 0.8) return "bg-emerald-500";
+  if (evaluation.percent >= 0.4) return "bg-amber-500";
+  return "bg-blue-600";
+}
+
+function goalChainText(evaluation: TokenGoalEvaluation) {
+  if (evaluation.consecutiveSuccessCount <= 0) {
+    return "成败链等待第一段达成记录";
+  }
+
+  return `连续 ${formatNumber(evaluation.consecutiveSuccessCount)} ${evaluation.unit === "week" ? "周" : "天"}达成 🔥`;
 }
 
 function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {

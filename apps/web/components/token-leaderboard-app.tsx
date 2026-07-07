@@ -1001,6 +1001,7 @@ export function TokenLeaderboardApp({
         <RateLimitPanel apiBaseUrl={normalizedApiBaseUrl} />
 
         <AccountUsagePanel
+          apiBaseUrl={normalizedApiBaseUrl}
           apiEnabled={Boolean(normalizedApiBaseUrl)}
           error={accountError}
           loadState={accountLoadState}
