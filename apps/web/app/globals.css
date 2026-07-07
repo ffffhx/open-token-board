@@ -207,3 +207,31 @@ summary:focus-visible {
 ::selection {
   background: rgba(37, 99, 235, 0.18);
 }
+
+.token-trend-segment,
+.token-trend-swatch {
+  fill: var(--trend-fill-light);
+  background-color: var(--trend-fill-light);
+}
+
+.dark .token-trend-segment,
+.dark .token-trend-swatch {
+  fill: var(--trend-fill-dark);
+  background-color: var(--trend-fill-dark);
+}
+
+.token-trend-total {
+  fill: #2563eb;
+}
+
+.token-trend-latest {
+  fill: #dc2626;
+}
+
+.dark .token-trend-total {
+  fill: #60a5fa;
+}
+
+.dark .token-trend-latest {
+  fill: #fb7185;
+}

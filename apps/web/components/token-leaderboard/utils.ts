@@ -117,6 +117,10 @@ export function getUserMetricValue(user: TokenLeaderboardUser, metric: TokenBoar
     return user.messages;
   }
 
+  if (metric === "users") {
+    return user.activeDays;
+  }
+
   return getTokenConsumptionTokens(user);
 }
 
@@ -309,7 +313,7 @@ export function formatMetricValue(value: number, metric: TokenBoardMetric) {
     return formatUsd(value);
   }
 
-  if (metric === "sessions" || metric === "messages") {
+  if (metric === "sessions" || metric === "messages" || metric === "users") {
     return formatNumber(value);
   }
 
