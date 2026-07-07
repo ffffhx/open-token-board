@@ -54,6 +54,7 @@ export function AccountUsagePanel({
   const cacheHitRate = inputContextTokens > 0 ? cacheReadTokens / inputContextTokens : 0;
   const accountTokensPerSession = user?.sessions ? accountConsumptionTokens / user.sessions : 0;
   const dashboardProfile = profile && user ? profile : null;
+  const wrappedLogin = viewer?.user?.githubLogin || viewer?.user?.displayName || user?.displayName || "";
 
   if (apiEnabled && viewer && !viewer.authenticated) {
     return (
@@ -165,6 +166,12 @@ export function AccountUsagePanel({
             className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
           >
             📊 生成我的战报卡 · 一键导出图片分享 →
+          </Link>
+          <Link
+            href={`/wrapped/?login=${encodeURIComponent(wrappedLogin)}`}
+            className="flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
+          >
+            查看我的 Wrapped →
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
