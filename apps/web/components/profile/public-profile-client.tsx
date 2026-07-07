@@ -28,6 +28,10 @@ const RANGE_LABELS = {
   "7D": "7 天",
   "30D": "30 天",
   "90D": "90 天",
+  week: "本周",
+  month: "本月",
+  lastweek: "上周",
+  lastmonth: "上月",
 };
 
 export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
@@ -112,7 +116,7 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       </header>
 
       {state === "ready" && profile ? (
-        <ProfileDashboard profile={profile} />
+        <ProfileDashboard apiBaseUrl={normalizedApiBaseUrl} profile={profile} />
       ) : state === "loading" ? (
         <ProfileLoading />
       ) : (
@@ -137,7 +141,7 @@ export function PublicProfileClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   );
 }
 
-function ProfileDashboard({ profile }: { profile: PublicProfileResponse }) {
+function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile: PublicProfileResponse }) {
   const [shareVisible, setShareVisible] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [hint, setHint] = useState("");
@@ -205,6 +209,19 @@ function ProfileDashboard({ profile }: { profile: PublicProfileResponse }) {
     }
   }, []);
 
+  const copyBadgeMarkdown = useCallback(async () => {
+    const badgeUrl = `${apiBaseUrl}/api/badge?login=${encodeURIComponent(profile.user.login)}&style=weekly`;
+    const targetUrl = pageUrl || `/u?login=${encodeURIComponent(profile.user.login)}`;
+    const markdown = `[![Open Token Board](${badgeUrl})](${targetUrl})`;
+
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setHint("已复制徽章 Markdown。");
+    } catch {
+      setHint("当前浏览器不支持复制文本，请稍后重试。");
+    }
+  }, [apiBaseUrl, pageUrl, profile.user.login]);
+
   return (
     <div className="space-y-5 py-6">
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -255,6 +272,13 @@ function ProfileDashboard({ profile }: { profile: PublicProfileResponse }) {
             >
               <Icon name="download" />
               生成分享卡
+            </button>
+            <button
+              type="button"
+              onClick={copyBadgeMarkdown}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              复制徽章 Markdown
             </button>
             <Link
               href={`/wrapped/?login=${encodeURIComponent(profile.user.login)}`}

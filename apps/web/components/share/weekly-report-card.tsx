@@ -31,9 +31,14 @@ export type WeeklyReport = {
 
 const RANGE_LABEL: Record<string, string> = {
   "1D": "近 24 小时",
-  "7D": "本周",
+  "7D": "近 7 天",
   "30D": "近 30 天",
   "90D": "近 90 天",
+  week: "本周",
+  month: "本月",
+  lastweek: "上周",
+  lastmonth: "上月",
+  custom: "自定义区间",
 };
 
 function shortDate(iso: string): string {

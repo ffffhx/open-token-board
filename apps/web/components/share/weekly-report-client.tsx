@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { buildWeeklyReport, WeeklyReportCard, type WeeklyReport } from "@/components/share/weekly-report-card";
 import { normalizeApiBaseUrl } from "@/components/token-leaderboard/utils";
 
-const VALID_RANGES = new Set(["1D", "7D", "30D", "90D"]);
+const VALID_RANGES = new Set(["1D", "7D", "30D", "90D", "WEEK", "MONTH", "LASTWEEK", "LASTMONTH"]);
 
 type LoadState = "loading" | "ready" | "empty" | "error";
 
@@ -22,7 +22,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const searchParams = useSearchParams();
   const user = searchParams.get("user") ?? undefined;
   const rangeParam = (searchParams.get("range") || "7D").toUpperCase();
-  const range = VALID_RANGES.has(rangeParam) ? rangeParam : "7D";
+  const range = VALID_RANGES.has(rangeParam) ? normalizeRangeParam(rangeParam) : "7D";
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
 
   const [state, setState] = useState<LoadState>("loading");
@@ -153,4 +153,10 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       </Link>
     </div>
   );
+}
+
+function normalizeRangeParam(value: string) {
+  return value === "WEEK" || value === "MONTH" || value === "LASTWEEK" || value === "LASTMONTH"
+    ? value.toLowerCase()
+    : value;
 }
