@@ -5,12 +5,13 @@ import { Suspense } from "react";
 import { AppNavLinks } from "@/components/app-nav-links";
 import { WeeklyReportClient } from "@/components/share/weekly-report-client";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
+import { zh } from "@/i18n/dictionaries/zh";
 
 const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
 
 export const metadata: Metadata = {
-  title: "Token 战报 | Open Token Board",
-  description: "一张可分享的 AI 编码 Token 战报卡：排名、消耗、主力模型与活跃趋势，一键导出图片分享。",
+  title: zh.common.metadata.cardTitle,
+  description: zh.common.metadata.cardDescription,
 };
 
 export default function CardPage() {

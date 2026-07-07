@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PublicProfileClient } from "@/components/profile/public-profile-client";
+import { zh } from "@/i18n/dictionaries/zh";
 
 const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
 
 export const metadata: Metadata = {
-  title: "公开个人主页 | Open Token Board",
-  description: "可分享的 AI 编码 Token 公开个人主页：年度贡献热力图、每日趋势、模型分布与分享卡。",
+  title: zh.common.metadata.profileTitle,
+  description: zh.common.metadata.profileDescription,
 };
 
 export default function UserProfilePage() {
