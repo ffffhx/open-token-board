@@ -4,7 +4,7 @@
 
 **朋友间的 AI 编码 Token 排行榜 —— 自托管、隐私优先、自动上报。**
 
-把 Codex CLI、Claude Code 这些工具的本地用量，
+把 Codex CLI、Claude Code、Gemini CLI、opencode 这些工具的本地用量，
 聚合成一个可以和朋友们一起较劲的实时榜单。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -31,7 +31,7 @@ Open Token Board 是一个**自己就能部署一套**的 AI 编码 Token 排行
 
 ## ✨ 功能特性
 
-- 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code 的本地用量日志
+- 🔌 **多工具采集** — 一个 agent 同时识别 Codex CLI、Claude Code、Gemini CLI、opencode 的本地用量日志
 - 🏅 **实时公共榜单** — 按 1D / 7D / 30D / 90D 滚动窗口，按总消耗 / 费用 / 会话排序，含每日趋势与份额
 - 📊 **个人消耗看板** — 排名、百分位、缓存命中率、模型 / 工具 / 项目分布、分时活跃热力图、Session 明细
 - 📨 **飞书日报 / 周报** — 自定义机器人推送排行榜、今日荣誉事件、周冠军和 7 天趋势
@@ -113,6 +113,8 @@ pnpm codex:limits -- --json --days=30   # 输出原始 JSON / 指定回看天数
 | --- | --- | --- |
 | Codex CLI | `codex` | `~/.codex/sessions`、`~/.codex/projects` |
 | Claude Code | `claude-code` | `~/.claude/projects` |
+| Gemini CLI | `gemini-cli` | `~/.gemini/tmp`（可用 `GEMINI_DATA_DIR` / `GEMINI_CLI_HOME` 覆盖） |
+| opencode | `opencode` | `~/.local/share/opencode`（`opencode*.db` 或 `storage/message/**/*.json`，可用 `OPENCODE_DATA_DIR` 覆盖） |
 
 > agent 只读取这些工具自己写下的用量日志，不修改任何文件，也不访问网络上的其它内容。
 
