@@ -8,6 +8,12 @@ import {
   type TokenLevelProgress,
   type TokenPersonalBests,
 } from "./token-achievements";
+import {
+  buildTokenEfficiencySummary,
+  emptyTokenEfficiencyProfile,
+  type TokenEfficiencyProfile,
+  type TokenEfficiencyTeamSummary,
+} from "./token-efficiency";
 
 export type TokenBoardRange = "1D" | "7D" | "30D" | "90D" | "week" | "month" | "lastweek" | "lastmonth";
 export type TokenLeaderboardSummaryRange = TokenBoardRange | "custom";
@@ -84,6 +90,9 @@ export type TokenUsageEvent = {
   messages?: number;
   sessionId?: string;
   sessionTitle?: string;
+  errorCount?: number | null;
+  interruptedCount?: number | null;
+  toolCallCount?: number | null;
 };
 
 export type TokenLeaderboardUser = {
@@ -107,6 +116,7 @@ export type TokenLeaderboardUser = {
   messages: number;
   records: number;
   activeDays: number;
+  efficiency: TokenEfficiencyProfile;
   lastReportedAt?: string;
   topModel: string;
   topTool: string;
@@ -187,6 +197,7 @@ export type TokenLeaderboardSummary = {
   teams: TokenTeamLeaderboardEntry[];
   projects: TokenProjectLeaderboardEntry[];
   distribution: TokenUsageDistribution;
+  efficiency: TokenEfficiencyTeamSummary;
   users: TokenLeaderboardUser[];
 };
 
@@ -275,6 +286,7 @@ export type TokenAccountUsageProfile = {
   heatmap: TokenUsageActivityCell[];
   topHour: string;
   topWeekday: string;
+  efficiency: TokenEfficiencyProfile;
   config: TokenBoardUserConfig | null;
   goals: TokenGoalEvaluation[];
 };
@@ -412,12 +424,16 @@ export function buildTokenLeaderboard(
   const previousTokensByUser = sumTokensByUser(previousEntries);
   const previousRankByUser = rankEntriesByUser(previousEntries, metric);
   const achievementsByUser = buildTokenAchievementSummariesByUser(normalizedEntries, { now: end });
+  const efficiencySummary = buildTokenEfficiencySummary(currentEntries);
   const users = applyRankDelta(
     rankUsers(
       aggregateUsers(currentEntries, previousTokensByUser, dailyByUser, achievementsByUser, previousRankByUser),
       metric
     )
-  );
+  ).map((user) => ({
+    ...user,
+    efficiency: efficiencySummary.users.get(user.userId) ?? emptyTokenEfficiencyProfile(efficiencySummary.team),
+  }));
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
   const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
   const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
@@ -447,6 +463,7 @@ export function buildTokenLeaderboard(
     teams,
     projects,
     distribution,
+    efficiency: efficiencySummary.team,
     users: users.map((user) => ({
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
@@ -532,10 +549,22 @@ export function buildTokenAccountUsageProfile(
   });
   const accountSummary = buildTokenLeaderboard(accountEntries, { range, metric: "tokens", now: safeNow });
   const rankedUser = globalSummary.users.find((user) => user.userId === userId) ?? null;
+  const accountEfficiencySummary = buildTokenEfficiencySummary(accountEntries);
+  const accountEfficiency =
+    rankedUser?.efficiency ??
+    accountEfficiencySummary.users.get(userId) ??
+    emptyTokenEfficiencyProfile(globalSummary.efficiency);
   const achievements = buildTokenAchievementSummary(
     normalizedEntries.filter((entry) => entry.userId === userId),
     { now: safeNow }
   );
+  const effectiveAchievements = rankedUser
+    ? {
+        level: rankedUser.level,
+        badges: rankedUser.badges,
+        personalBests: rankedUser.personalBests,
+      }
+    : achievements;
   const accountUser = accountSummary.users[0]
     ? {
         ...accountSummary.users[0],
@@ -544,9 +573,10 @@ export function buildTokenAccountUsageProfile(
         rankDelta: rankedUser?.rankDelta ?? accountSummary.users[0].rankDelta,
         share: rankedUser?.share ?? accountSummary.users[0].share,
         deltaTokens: rankedUser?.deltaTokens ?? accountSummary.users[0].deltaTokens,
-        level: achievements.level,
-        badges: achievements.badges,
-        personalBests: achievements.personalBests,
+        level: effectiveAchievements.level,
+        badges: effectiveAchievements.badges,
+        personalBests: effectiveAchievements.personalBests,
+        efficiency: rankedUser?.efficiency ?? accountSummary.users[0].efficiency,
       }
     : null;
   const previousRank = rankedUser?.previousRank ?? null;
@@ -558,9 +588,9 @@ export function buildTokenAccountUsageProfile(
     startAt: globalSummary.startAt,
     endAt: globalSummary.endAt,
     user: accountUser,
-    level: achievements.level,
-    badges: achievements.badges,
-    personalBests: achievements.personalBests,
+    level: effectiveAchievements.level,
+    badges: effectiveAchievements.badges,
+    personalBests: effectiveAchievements.personalBests,
     rank,
     previousRank,
     rankDelta: rank !== null && previousRank !== null ? previousRank - rank : null,
@@ -575,6 +605,7 @@ export function buildTokenAccountUsageProfile(
     heatmap: buildActivityHeatmap(accountEntries),
     topHour: topActivityHour(accountEntries),
     topWeekday: topActivityWeekday(accountEntries),
+    efficiency: accountEfficiency,
     config: null,
     goals: [],
   };
@@ -624,6 +655,16 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
   const reasoningOutputTokens = toFiniteNumber(
     readField(record, ["reasoningOutputTokens", "reasoning_output_tokens", "reasoningTokens"])
   );
+  const errorCount = optionalImportFieldInteger(record, ["errorCount", "error_count"]);
+  const interruptedCount = optionalImportFieldInteger(record, [
+    "interruptedCount",
+    "interrupted_count",
+    "interruptCount",
+    "interrupt_count",
+    "abortedCount",
+    "aborted_count",
+  ]);
+  const toolCallCount = optionalImportFieldInteger(record, ["toolCallCount", "tool_call_count"]);
   const totalTokens = inputTokens + outputTokens;
 
   if (totalTokens <= 0) {
@@ -677,6 +718,9 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
     messages: toFiniteNumber(value.messages),
     sessionId,
     sessionTitle,
+    ...(errorCount !== undefined ? { errorCount } : {}),
+    ...(interruptedCount !== undefined ? { interruptedCount } : {}),
+    ...(toolCallCount !== undefined ? { toolCallCount } : {}),
   };
 }
 
@@ -860,6 +904,16 @@ function recordsToEvents(records: unknown[]) {
         messages: toFiniteNumber(readField(value, ["messages", "messageCount"])),
         sessionId: normalizeText(readField(value, ["sessionId", "session", "conversationId"])),
         sessionTitle: normalizeText(readField(value, ["sessionTitle", "session_title", "conversationTitle"])),
+        errorCount: optionalImportFieldInteger(value, ["errorCount", "error_count"]),
+        interruptedCount: optionalImportFieldInteger(value, [
+          "interruptedCount",
+          "interrupted_count",
+          "interruptCount",
+          "interrupt_count",
+          "abortedCount",
+          "aborted_count",
+        ]),
+        toolCallCount: optionalImportFieldInteger(value, ["toolCallCount", "tool_call_count"]),
       }),
     ];
   });
@@ -888,6 +942,7 @@ function aggregateUsers(
       | "daily"
       | "level"
       | "badges"
+      | "efficiency"
       | "personalBests"
     > & {
       modelTokens: Map<string, number>;
@@ -970,6 +1025,7 @@ function aggregateUsers(
       messages: user.messages,
       records: user.records,
       activeDays: user.days.size,
+      efficiency: emptyTokenEfficiencyProfile(),
       lastReportedAt: user.lastReportedAt,
       topModel: topMapEntry(user.modelTokens),
       topTool: topMapEntry(user.toolTokens),
@@ -2176,6 +2232,16 @@ function firstImportFieldNumber(record: Record<string, unknown>, names: string[]
   }
 
   return fallback;
+}
+
+function optionalImportFieldInteger(record: Record<string, unknown>, names: string[]) {
+  const value = readField(record, names);
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const number = toFiniteNumber(value);
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : undefined;
 }
 
 function cacheCreationInputTokensFromImportRecord(record: Record<string, unknown>) {

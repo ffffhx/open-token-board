@@ -45,6 +45,12 @@ type ExtractionContext = {
   sessionTitle?: string;
 };
 
+type SessionQualityCounts = {
+  errorCount: number;
+  interruptedCount: number;
+  toolCallCount: number;
+};
+
 const DEFAULT_SINCE_HOURS = 24 * 30;
 const DEFAULT_MAX_FILES = 800;
 const DEFAULT_MAX_FILE_BYTES = 5 * 1024 * 1024;
@@ -526,12 +532,15 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
   let sessionTitle = context.sessionTitle || "";
   let sequence = 0;
   let previousTotalUsage: Record<string, unknown> = {};
+  const quality = createSessionQualityCounts();
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
 
     if (
       !line.includes('"token_count"') &&
+      !line.includes('"mcp_tool_call_end"') &&
+      !line.includes('"turn_aborted"') &&
       !line.includes('"model"') &&
       !line.includes('"cwd"') &&
       !line.includes('"user_message"') &&
@@ -548,6 +557,7 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
 
     const payload = isRecord(parsed.payload) ? parsed.payload : {};
     const type = typeof parsed.type === "string" ? parsed.type : "";
+    addCodexQualityCounts(payload, quality);
 
     const extractedTitle = extractSessionTitle(parsed);
     if (extractedTitle && (!sessionTitle || hasExplicitSessionTitle(parsed))) {
@@ -605,7 +615,7 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
     }
   }
 
-  return dedupeTokenEvents(entries);
+  return attachSessionQualityCounts(dedupeTokenEvents(entries), quality);
 }
 
 function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
@@ -622,9 +632,11 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
   let aiTitle = "";
   let lastPrompt = "";
   let firstUserMessage = "";
+  const quality = createSessionQualityCounts();
   for (const line of lines) {
     const wantFirstUser = !firstUserMessage && line.includes('"type":"user"');
-    if (!wantFirstUser && !line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
+    const wantQuality = line.includes('"tool_result"') || line.includes("[Request interrupted by user]");
+    if (!wantFirstUser && !wantQuality && !line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
       continue;
     }
 
@@ -632,6 +644,8 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
     if (!isRecord(parsed)) {
       continue;
     }
+
+    addClaudeQualityCounts(parsed, quality);
 
     if (parsed.type === "ai-title") {
       const title = normalizeTextField(parsed.aiTitle);
@@ -660,7 +674,114 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
 
   const objects = lines.flatMap((line) => parseJsonLine(line));
 
-  return dedupeTokenEvents(objects.flatMap((object) => extractTokenUsageEventsFromJson(object, enrichedContext)));
+  return attachSessionQualityCounts(
+    dedupeTokenEvents(objects.flatMap((object) => extractTokenUsageEventsFromJson(object, enrichedContext))),
+    quality
+  );
+}
+
+function createSessionQualityCounts(): SessionQualityCounts {
+  return {
+    errorCount: 0,
+    interruptedCount: 0,
+    toolCallCount: 0,
+  };
+}
+
+function addClaudeQualityCounts(record: Record<string, unknown>, quality: SessionQualityCounts) {
+  const message = isRecord(record.message) ? record.message : {};
+  const content = message.content ?? record.content;
+
+  if (record.type === "user" && messageContainsInterruptMarker(content)) {
+    quality.interruptedCount = 1;
+  }
+
+  const items = Array.isArray(content) ? content : isRecord(content) ? [content] : [];
+  for (const item of items) {
+    if (!isRecord(item) || item.type !== "tool_result" || typeof item.is_error !== "boolean") {
+      continue;
+    }
+
+    quality.toolCallCount += 1;
+    if (item.is_error) {
+      quality.errorCount += 1;
+    }
+  }
+}
+
+function addCodexQualityCounts(payload: Record<string, unknown>, quality: SessionQualityCounts) {
+  if (payload.type === "turn_aborted") {
+    quality.interruptedCount = 1;
+    return;
+  }
+
+  if (payload.type !== "mcp_tool_call_end") {
+    return;
+  }
+
+  const isError = codexMcpToolIsError(payload);
+  if (isError === null) {
+    return;
+  }
+
+  quality.toolCallCount += 1;
+  if (isError) {
+    quality.errorCount += 1;
+  }
+}
+
+function codexMcpToolIsError(payload: Record<string, unknown>) {
+  const result = isRecord(payload.result) ? payload.result : {};
+  const ok = isRecord(result.Ok) ? result.Ok : isRecord(result.ok) ? result.ok : {};
+
+  return typeof ok.isError === "boolean" ? ok.isError : null;
+}
+
+function attachSessionQualityCounts(entries: TokenUsageEvent[], quality: SessionQualityCounts) {
+  if (!entries.length) {
+    return entries;
+  }
+
+  let anchorIndex = 0;
+  let anchorTime = Number.NEGATIVE_INFINITY;
+  entries.forEach((entry, index) => {
+    const time = new Date(entry.timestamp).getTime();
+    if (Number.isFinite(time) && time > anchorTime) {
+      anchorIndex = index;
+      anchorTime = time;
+    }
+  });
+
+  return entries.map((entry, index) =>
+    index === anchorIndex
+      ? normalizeTokenUsageEvent({
+          ...entry,
+          errorCount: quality.errorCount,
+          interruptedCount: quality.interruptedCount > 0 ? 1 : 0,
+          toolCallCount: quality.toolCallCount,
+        })
+      : entry
+  );
+}
+
+function messageContainsInterruptMarker(value: unknown, depth = 0): boolean {
+  if (depth > 8 || value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return value.includes("[Request interrupted by user]");
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => messageContainsInterruptMarker(item, depth + 1));
+  }
+
+  if (isRecord(value)) {
+    return Object.values(value).some((item) => messageContainsInterruptMarker(item, depth + 1));
+  }
+
+  return false;
 }
 
 type GeminiTokenBlock = {
@@ -1495,6 +1616,16 @@ function recordToUsageEvent(record: Record<string, unknown>, context: Extraction
     messages: numberFromFields(record, ["messages", "messageCount", "message_count"]),
     sessionId,
     sessionTitle: sanitizeSessionTitle(sessionTitle),
+    errorCount: optionalNumberFromFields(record, ["errorCount", "error_count"]),
+    interruptedCount: optionalNumberFromFields(record, [
+      "interruptedCount",
+      "interrupted_count",
+      "interruptCount",
+      "interrupt_count",
+      "abortedCount",
+      "aborted_count",
+    ]),
+    toolCallCount: optionalNumberFromFields(record, ["toolCallCount", "tool_call_count"]),
   });
 }
 
@@ -1562,6 +1693,15 @@ function sumKnownTokens(record: Record<string, unknown>) {
 
 function numberFromFields(record: Record<string, unknown>, fields: string[]) {
   return fields.reduce((sum, field) => sum + toNumber(record[field]), 0);
+}
+
+function optionalNumberFromFields(record: Record<string, unknown>, fields: string[]) {
+  for (const field of fields) {
+    if (record[field] !== undefined && record[field] !== null && record[field] !== "") {
+      return Math.trunc(toNumber(record[field]));
+    }
+  }
+  return undefined;
 }
 
 function cacheReadInputTokensFromRecord(record: Record<string, unknown>) {

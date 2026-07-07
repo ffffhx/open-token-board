@@ -1,4 +1,10 @@
 import type { TokenUsageEvent } from "./token-leaderboard";
+import {
+  buildTokenEfficiencySummary,
+  summarizeTokenEfficiencyCounts,
+  TOKEN_EFFICIENCY_STABLE_TOOL_CALLS,
+  type TokenEfficiencyProfile,
+} from "./token-efficiency";
 
 export type TokenLevelDefinition = {
   id: string;
@@ -79,7 +85,15 @@ const EMPTY_PERSONAL_BESTS: TokenPersonalBests = {
 
 export function buildTokenAchievementSummary(
   entries: TokenUsageEvent[],
-  { now = new Date() }: { now?: Date } = {}
+  {
+    now = new Date(),
+    weeklyEfficiency,
+    weeklyTeamErrorRateMedian,
+  }: {
+    now?: Date;
+    weeklyEfficiency?: TokenEfficiencyProfile;
+    weeklyTeamErrorRateMedian?: number | null;
+  } = {}
 ): TokenAchievementSummary {
   const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
   const sortedEntries = [...entries]
@@ -87,10 +101,21 @@ export function buildTokenAchievementSummary(
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   const totalTokens = sortedEntries.reduce((sum, entry) => sum + consumptionTokens(entry), 0);
   const personalBests = buildPersonalBests(sortedEntries, safeNow);
+  const weeklyEntries = entriesInCurrentShanghaiWeek(sortedEntries, safeNow);
+  const fallbackWeeklyEfficiency = buildTokenEfficiencySummary(weeklyEntries);
+  const userId = sortedEntries[0]?.userId ?? "";
+  const effectiveWeeklyEfficiency =
+    weeklyEfficiency ??
+    (userId ? fallbackWeeklyEfficiency.users.get(userId) : undefined) ??
+    null;
 
   return {
     level: buildTokenLevelProgress(totalTokens),
-    badges: buildAchievementBadges(sortedEntries, totalTokens, personalBests),
+    badges: buildAchievementBadges(sortedEntries, totalTokens, personalBests, {
+      now: safeNow,
+      weeklyEfficiency: effectiveWeeklyEfficiency,
+      weeklyTeamErrorRateMedian: weeklyTeamErrorRateMedian ?? fallbackWeeklyEfficiency.team.errorRateMedian,
+    }),
     personalBests,
   };
 }
@@ -99,7 +124,9 @@ export function buildTokenAchievementSummariesByUser(
   entries: TokenUsageEvent[],
   { now = new Date() }: { now?: Date } = {}
 ): Map<string, TokenAchievementSummary> {
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
   const entriesByUser = new Map<string, TokenUsageEvent[]>();
+  const weeklyEfficiency = buildTokenEfficiencySummary(entriesInCurrentShanghaiWeek(entries, safeNow));
 
   for (const entry of entries) {
     const userEntries = entriesByUser.get(entry.userId) ?? [];
@@ -110,7 +137,11 @@ export function buildTokenAchievementSummariesByUser(
   return new Map(
     [...entriesByUser.entries()].map(([userId, userEntries]) => [
       userId,
-      buildTokenAchievementSummary(userEntries, { now }),
+      buildTokenAchievementSummary(userEntries, {
+        now: safeNow,
+        weeklyEfficiency: weeklyEfficiency.users.get(userId),
+        weeklyTeamErrorRateMedian: weeklyEfficiency.team.errorRateMedian,
+      }),
     ])
   );
 }
@@ -141,7 +172,16 @@ export function buildTokenLevelProgress(totalTokens: number): TokenLevelProgress
 function buildAchievementBadges(
   entries: TokenUsageEvent[],
   totalTokens: number,
-  personalBests: TokenPersonalBests
+  personalBests: TokenPersonalBests,
+  {
+    now,
+    weeklyEfficiency,
+    weeklyTeamErrorRateMedian,
+  }: {
+    now: Date;
+    weeklyEfficiency: TokenEfficiencyProfile | null;
+    weeklyTeamErrorRateMedian: number | null;
+  }
 ): TokenAchievementBadge[] {
   const totalInputTokens = entries.reduce((sum, entry) => sum + finiteNumber(entry.inputTokens), 0);
   const totalCachedInputTokens = entries.reduce((sum, entry) => sum + finiteNumber(entry.cachedInputTokens), 0);
@@ -154,8 +194,40 @@ function buildAchievementBadges(
   const weekendRatio = totalTokens > 0 ? weekendTokens / totalTokens : 0;
   const gptRatio = totalTokens > 0 ? gptTokens / totalTokens : 0;
   const opusRatio = totalTokens > 0 ? opusTokens / totalTokens : 0;
+  const weeklyCounts = summarizeTokenEfficiencyCounts(entriesInCurrentShanghaiWeek(entries, now));
+  const zeroInterruptWeekAchieved =
+    weeklyEfficiency?.interruptionRate.status === "ready" &&
+    weeklyEfficiency.interruptionRate.numerator === 0 &&
+    weeklyEfficiency.interruptionRate.denominator >= 10;
+  const lowNoiseSteadyAchieved =
+    weeklyEfficiency?.errorRate.status === "ready" &&
+    weeklyEfficiency.errorRate.value !== null &&
+    weeklyTeamErrorRateMedian !== null &&
+    weeklyTeamErrorRateMedian > 0 &&
+    weeklyCounts.toolCallCount >= TOKEN_EFFICIENCY_STABLE_TOOL_CALLS &&
+    weeklyEfficiency.errorRate.value < weeklyTeamErrorRateMedian / 2;
 
   return [
+    badge({
+      id: "zero-interrupt-week",
+      name: "零中断周",
+      description: "本周会话保持连续完成，没有被手动中断。",
+      condition: "本周有质量信号的会话不少于 10 个，且中断会话为 0。",
+      icon: "0",
+      category: "efficiency",
+      achieved: zeroInterruptWeekAchieved,
+      achievedAt: zeroInterruptWeekAchieved ? now.toISOString() : null,
+    }),
+    badge({
+      id: "low-noise-steady",
+      name: "低噪稳态",
+      description: "本周工具调用错误率显著低于团队中位数。",
+      condition: "本周有明确结果的工具调用不少于 100 次，且错误率低于团队中位数的一半。",
+      icon: "LS",
+      category: "efficiency",
+      achieved: lowNoiseSteadyAchieved,
+      achievedAt: lowNoiseSteadyAchieved ? now.toISOString() : null,
+    }),
     badge({
       id: "night-owl",
       name: "夜猫子",
@@ -446,6 +518,24 @@ function firstRatioAchievementAt(
   }
 
   return null;
+}
+
+function entriesInCurrentShanghaiWeek(entries: TokenUsageEvent[], now: Date) {
+  const weekStart = startOfCurrentShanghaiWeek(now).getTime();
+  const end = Number.isFinite(now.getTime()) ? now.getTime() : Date.now();
+
+  return entries.filter((entry) => {
+    const timestamp = new Date(entry.timestamp).getTime();
+    return Number.isFinite(timestamp) && timestamp >= weekStart && timestamp <= end;
+  });
+}
+
+function startOfCurrentShanghaiWeek(now: Date) {
+  const parts = localDateParts(now.toISOString());
+  const dayStartUtc = Date.UTC(parts.year, parts.month - 1, parts.day) - SHANGHAI_OFFSET_MS;
+  const daysSinceMonday = (parts.weekday + 6) % 7;
+
+  return new Date(dayStartUtc - daysSinceMonday * DAY_MS);
 }
 
 function modelTokens(entries: TokenUsageEvent[], predicate: (model: string) => boolean) {

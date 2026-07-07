@@ -9,6 +9,10 @@ import {
   buildTokenAchievementSummariesByUser,
 } from "./token-achievements";
 import {
+  buildTokenEfficiencySummary,
+  emptyTokenEfficiencyProfile,
+} from "./token-efficiency";
+import {
   buildTokenLeaderboardTrends,
   buildTokenProjectLeaderboard,
   buildTokenTeamLeaderboard,
@@ -170,13 +174,13 @@ function createFileTokenUsageStore({
         // A re-ingested event can carry a session title we only discovered later;
         // treat that as a change to flush, so the update is not silently dropped
         // (mirrors the Postgres ON CONFLICT DO UPDATE of session_title).
-        const hasTitleUpdate = events.some((event) => {
+        const hasMetadataUpdate = events.some((event) => {
           const prior = existingById.get(event.id);
-          return Boolean(prior && event.sessionTitle && event.sessionTitle !== prior.sessionTitle);
+          return Boolean(prior && hasTokenEventMetadataUpdate(prior, event));
         });
         const merged = mergeTokenEvents(existing, events, maxEvents);
 
-        if (incomingNew.length || hasTitleUpdate) {
+        if (incomingNew.length || hasMetadataUpdate) {
           await writeTokenUsageEventsToFile(dataFile, merged);
         }
 
@@ -258,11 +262,17 @@ function createPostgresTokenUsageStore({
           messages INTEGER NOT NULL DEFAULT 0,
           session_id TEXT,
           session_title TEXT,
+          error_count BIGINT,
+          interrupted_count BIGINT,
+          tool_call_count BIGINT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
       `);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS session_title TEXT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS cache_creation_input_tokens BIGINT NOT NULL DEFAULT 0`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS error_count BIGINT`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS interrupted_count BIGINT`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS tool_call_count BIGINT`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_reported_at_idx ON ${table} (reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_user_reported_at_idx ON ${table} (user_id, reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_model_idx ON ${table} (model)`);
@@ -398,6 +408,19 @@ function createPostgresTokenUsageStore({
     },
     close: () => pool.end(),
   } satisfies TokenUsageStore & { initialize: () => Promise<void> };
+}
+
+function hasTokenEventMetadataUpdate(prior: TokenUsageEvent, next: TokenUsageEvent) {
+  return (
+    Boolean(next.sessionTitle && next.sessionTitle !== prior.sessionTitle) ||
+    hasQualityCountUpdate(prior.errorCount, next.errorCount) ||
+    hasQualityCountUpdate(prior.interruptedCount, next.interruptedCount) ||
+    hasQualityCountUpdate(prior.toolCallCount, next.toolCallCount)
+  );
+}
+
+function hasQualityCountUpdate(prior: number | null | undefined, next: number | null | undefined) {
+  return next !== undefined && next !== null && prior !== next;
 }
 
 type PostgresLeaderboardUserRow = {
@@ -646,6 +669,8 @@ async function readPostgresLeaderboardSummary(
 
   const userIds = userResult.rows.map((row) => row.user_id).filter(Boolean);
   const achievementEvents = await readPostgresEventsForUsers(pool, table, userIds);
+  const currentEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
+  const efficiencySummary = buildTokenEfficiencySummary(currentEvents);
   const achievementsByUser = buildTokenAchievementSummariesByUser(achievementEvents, { now: end });
   const previousRankByUser = rankPostgresPreviousUsers(previousRankResult.rows, metric);
   const users = applyLeaderboardRankDelta(rankLeaderboardUsers(
@@ -675,6 +700,7 @@ async function readPostgresLeaderboardSummary(
         messages: toFiniteNumber(row.messages),
         records: toFiniteInteger(row.records),
         activeDays: toFiniteInteger(row.active_days),
+        efficiency: efficiencySummary.users.get(row.user_id) ?? emptyTokenEfficiencyProfile(efficiencySummary.team),
         lastReportedAt: row.last_reported_at ? toIsoString(row.last_reported_at) : undefined,
         topModel: row.top_model || "unknown",
         topTool: row.top_tool || "unknown",
@@ -714,7 +740,6 @@ async function readPostgresLeaderboardSummary(
     };
   });
   const dailyValues = new Map(dailyResult.rows.map((row) => [row.date, toFiniteNumber(row.tokens)]));
-  const currentEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
   const previousEvents = await readPostgresEventsInRange(pool, table, previousStart, previousEnd);
   const trends = buildTokenLeaderboardTrends(currentEvents, start, rangeWindow.end);
   const teams = buildTokenTeamLeaderboard(currentEvents, previousEvents);
@@ -741,6 +766,7 @@ async function readPostgresLeaderboardSummary(
       teams,
       projects,
       distribution,
+      efficiency: efficiencySummary.team,
       users: usersWithShare,
     },
   };
@@ -995,6 +1021,9 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     "messages",
     "session_id",
     "session_title",
+    "error_count",
+    "interrupted_count",
+    "tool_call_count",
   ];
   const values: Array<string | number | null> = [];
   const rows = events.map((event, eventIndex) => {
@@ -1018,7 +1047,10 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       event.costUsd ?? null,
       event.messages ?? 0,
       event.sessionId || null,
-      event.sessionTitle || null
+      event.sessionTitle || null,
+      event.errorCount ?? null,
+      event.interruptedCount ?? null,
+      event.toolCallCount ?? null
     );
 
     return `(${columns.map((_, columnIndex) => `$${base + columnIndex + 1}`).join(", ")})`;
@@ -1029,9 +1061,17 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       INSERT INTO ${table} (${columns.map(sqlIdentifier).join(", ")})
       VALUES ${rows.join(", ")}
       ON CONFLICT (id) DO UPDATE
-      SET "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title")
-      WHERE NULLIF(EXCLUDED."session_title", '') IS NOT NULL
-        AND COALESCE(${table}."session_title", '') <> EXCLUDED."session_title"
+      SET "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title"),
+          "error_count" = COALESCE(EXCLUDED."error_count", ${table}."error_count"),
+          "interrupted_count" = COALESCE(EXCLUDED."interrupted_count", ${table}."interrupted_count"),
+          "tool_call_count" = COALESCE(EXCLUDED."tool_call_count", ${table}."tool_call_count")
+      WHERE (
+          NULLIF(EXCLUDED."session_title", '') IS NOT NULL
+          AND COALESCE(${table}."session_title", '') <> EXCLUDED."session_title"
+        )
+        OR (EXCLUDED."error_count" IS NOT NULL AND ${table}."error_count" IS DISTINCT FROM EXCLUDED."error_count")
+        OR (EXCLUDED."interrupted_count" IS NOT NULL AND ${table}."interrupted_count" IS DISTINCT FROM EXCLUDED."interrupted_count")
+        OR (EXCLUDED."tool_call_count" IS NOT NULL AND ${table}."tool_call_count" IS DISTINCT FROM EXCLUDED."tool_call_count")
       RETURNING (xmax = 0) AS inserted
     `,
     values,
@@ -1071,6 +1111,9 @@ function rowToTokenUsageEvent(row: TokenUsageEventRow): TokenUsageEvent | undefi
     messages: toNumber(row.messages),
     sessionId: row.session_id || undefined,
     sessionTitle: row.session_title || undefined,
+    errorCount: optionalRowNumber(row.error_count),
+    interruptedCount: optionalRowNumber(row.interrupted_count),
+    toolCallCount: optionalRowNumber(row.tool_call_count),
   });
 }
 
@@ -1110,6 +1153,14 @@ function toNumber(value: string | number | null | undefined) {
   return Number.isFinite(number) ? number : 0;
 }
 
+function optionalRowNumber(value: string | number | null | undefined) {
+  if (value === null || value === undefined) {
+    return undefined;
+  }
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : undefined;
+}
+
 type TokenUsageEventRow = {
   id: string;
   user_id: string;
@@ -1130,4 +1181,7 @@ type TokenUsageEventRow = {
   messages: string | number | null;
   session_id: string | null;
   session_title: string | null;
+  error_count: string | number | null;
+  interrupted_count: string | number | null;
+  tool_call_count: string | number | null;
 };

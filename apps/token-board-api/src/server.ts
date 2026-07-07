@@ -945,12 +945,19 @@ async function buildUsageMePayload(
   profile.rankDelta = rank !== null && previousRank !== null ? previousRank - rank : null;
   profile.totalUsers = totalUsers;
   profile.percentile = rank !== null && totalUsers > 0 ? (totalUsers - rank) / totalUsers : null;
+  if (rankedUser) {
+    profile.level = rankedUser.level;
+    profile.badges = rankedUser.badges;
+    profile.personalBests = rankedUser.personalBests;
+    profile.efficiency = rankedUser.efficiency;
+  }
   if (profile.user && rankedUser) {
     profile.user.rank = rankedUser.rank;
     profile.user.previousRank = previousRank;
     profile.user.rankDelta = profile.rankDelta;
     profile.user.share = rankedUser.share;
     profile.user.deltaTokens = rankedUser.deltaTokens;
+    profile.user.efficiency = rankedUser.efficiency;
   }
   const userConfig = await store.getUserConfig(identity.userId);
   const goals = normalizeStoredTokenGoals(userConfig?.goals);
@@ -2498,6 +2505,12 @@ const TOKEN_NUMBER_FIELDS = [
   "totalTokens",
   "total_tokens",
   "messages",
+  "errorCount",
+  "error_count",
+  "interruptedCount",
+  "interrupted_count",
+  "toolCallCount",
+  "tool_call_count",
 ] as const;
 
 function validateRawIngestEvents(events: unknown[]) {
@@ -2531,6 +2544,9 @@ function validateRawIngestEvents(events: unknown[]) {
       readRawNumber(record, ["cacheReadInputTokens", "cache_read_input_tokens"]);
     const cacheCreationTokens = readRawCacheCreationInputTokens(record);
     const reasoningOutputTokens = readRawNumber(record, ["reasoningOutputTokens", "reasoning_output_tokens"]);
+    const errorCount = readRawOptionalNumber(record, ["errorCount", "error_count"]);
+    const interruptedCount = readRawOptionalNumber(record, ["interruptedCount", "interrupted_count"]);
+    const toolCallCount = readRawOptionalNumber(record, ["toolCallCount", "tool_call_count"]);
     const computedTotalTokens = inputTokens + outputTokens;
 
     if (totalTokens > 0 && Math.abs(totalTokens - computedTotalTokens) > 1) {
@@ -2549,6 +2565,14 @@ function validateRawIngestEvents(events: unknown[]) {
       errors.push(
         `第 ${index + 1} 条记录 reasoningOutputTokens ${reasoningOutputTokens} 超过 outputTokens ${outputTokens}`
       );
+    }
+
+    if (errorCount !== null && toolCallCount !== null && errorCount > toolCallCount) {
+      errors.push(`第 ${index + 1} 条记录 errorCount 不能超过 toolCallCount`);
+    }
+
+    if (interruptedCount !== null && interruptedCount > 1) {
+      errors.push(`第 ${index + 1} 条记录 interruptedCount 只能是 0 或 1`);
     }
 
     if (MAX_EVENT_TOTAL_TOKENS > 0 && computedTotalTokens > MAX_EVENT_TOTAL_TOKENS) {
@@ -2577,10 +2601,24 @@ async function validateNormalizedIngestEvents(
       reasoningOutputTokens: event.reasoningOutputTokens,
       totalTokens: event.totalTokens,
     };
+    const optionalCountFields = {
+      errorCount: event.errorCount,
+      interruptedCount: event.interruptedCount,
+      toolCallCount: event.toolCallCount,
+    };
 
     for (const [field, value] of Object.entries(fields)) {
       if (!Number.isFinite(value) || value < 0) {
         errors.push(`第 ${index + 1} 条记录 ${field} 必须是非负数`);
+      }
+    }
+
+    for (const [field, value] of Object.entries(optionalCountFields)) {
+      if (value === undefined || value === null) {
+        continue;
+      }
+      if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
+        errors.push(`第 ${index + 1} 条记录 ${field} 必须是非负整数`);
       }
     }
 
@@ -2594,6 +2632,20 @@ async function validateNormalizedIngestEvents(
 
     if (event.reasoningOutputTokens > event.outputTokens + 1) {
       errors.push(`第 ${index + 1} 条记录 reasoningOutputTokens 超过 outputTokens`);
+    }
+
+    if (
+      event.errorCount !== undefined &&
+      event.errorCount !== null &&
+      event.toolCallCount !== undefined &&
+      event.toolCallCount !== null &&
+      event.errorCount > event.toolCallCount
+    ) {
+      errors.push(`第 ${index + 1} 条记录 errorCount 不能超过 toolCallCount`);
+    }
+
+    if (event.interruptedCount !== undefined && event.interruptedCount !== null && event.interruptedCount > 1) {
+      errors.push(`第 ${index + 1} 条记录 interruptedCount 只能是 0 或 1`);
     }
 
     if (MAX_EVENT_TOTAL_TOKENS > 0 && event.totalTokens > MAX_EVENT_TOTAL_TOKENS) {
@@ -2721,6 +2773,15 @@ function readRawNumber(record: Record<string, unknown>, fields: string[]) {
   const value = readRawField(record, fields);
   const parsed = value === undefined ? 0 : parseRawNumber(value);
   return parsed === null ? 0 : parsed;
+}
+
+function readRawOptionalNumber(record: Record<string, unknown>, fields: string[]) {
+  const value = readRawField(record, fields);
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+  const parsed = parseRawNumber(value);
+  return parsed === null ? null : parsed;
 }
 
 function readRawField(record: Record<string, unknown>, fields: string[]) {

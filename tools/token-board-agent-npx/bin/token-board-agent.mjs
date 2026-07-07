@@ -1117,6 +1117,10 @@ async function parseUsageFile(filePath, target, config) {
     return parseCsvUsage(text, context);
   }
 
+  if (target.source === "claude-code" && (ext === ".jsonl" || ext === ".log")) {
+    return parseClaudeJsonlText(text, context);
+  }
+
   if (ext === ".jsonl" || ext === ".log") {
     return dedupe(
       text
@@ -1141,6 +1145,7 @@ async function parseCodexJsonl(filePath, target, config) {
   let sessionTitle = config.codexTitleIndex?.get(sessionIdFromPath(filePath)) || "";
   let sequence = 0;
   let previousTotalUsage = {};
+  const quality = createSessionQualityCounts();
 
   let lines;
   try {
@@ -1157,6 +1162,8 @@ async function parseCodexJsonl(filePath, target, config) {
       const line = rawLine.trim();
       if (
         !line.includes('"token_count"') &&
+        !line.includes('"mcp_tool_call_end"') &&
+        !line.includes('"turn_aborted"') &&
         !line.includes('"model"') &&
         !line.includes('"cwd"') &&
         !line.includes('"user_message"') &&
@@ -1167,6 +1174,7 @@ async function parseCodexJsonl(filePath, target, config) {
 
       const parsed = safeJson(line);
       const payload = parsed && typeof parsed.payload === "object" ? parsed.payload : {};
+      addCodexQualityCounts(payload, quality);
 
       if (config.includeSessionTitle !== false) {
         const extractedTitle = extractSessionTitle(parsed);
@@ -1222,7 +1230,132 @@ async function parseCodexJsonl(filePath, target, config) {
     return [];
   }
 
-  return entries;
+  return attachSessionQualityCounts(entries, quality);
+}
+
+function parseClaudeJsonlText(text, context) {
+  const quality = createSessionQualityCounts();
+  const entries = dedupe(
+    text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .flatMap((line) => {
+        const parsed = safeJson(line);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          addClaudeQualityCounts(parsed, quality);
+        }
+        return parsed === undefined ? [] : extractUsageEventsFromJson(parsed, context);
+      })
+  );
+
+  return attachSessionQualityCounts(entries, quality);
+}
+
+function createSessionQualityCounts() {
+  return {
+    errorCount: 0,
+    interruptedCount: 0,
+    toolCallCount: 0,
+  };
+}
+
+function addClaudeQualityCounts(record, quality) {
+  const message = record?.message && typeof record.message === "object" ? record.message : {};
+  const content = message.content ?? record?.content;
+
+  if (record?.type === "user" && messageContainsInterruptMarker(content)) {
+    quality.interruptedCount = 1;
+  }
+
+  const items = Array.isArray(content) ? content : isRecord(content) ? [content] : [];
+  for (const item of items) {
+    if (!isRecord(item) || item.type !== "tool_result" || typeof item.is_error !== "boolean") {
+      continue;
+    }
+    quality.toolCallCount += 1;
+    if (item.is_error) {
+      quality.errorCount += 1;
+    }
+  }
+}
+
+function addCodexQualityCounts(payload, quality) {
+  if (!payload || typeof payload !== "object") {
+    return;
+  }
+
+  if (payload.type === "turn_aborted") {
+    quality.interruptedCount = 1;
+    return;
+  }
+
+  if (payload.type !== "mcp_tool_call_end") {
+    return;
+  }
+
+  const isError = codexMcpToolIsError(payload);
+  if (isError === null) {
+    return;
+  }
+
+  quality.toolCallCount += 1;
+  if (isError) {
+    quality.errorCount += 1;
+  }
+}
+
+function codexMcpToolIsError(payload) {
+  const result = isRecord(payload.result) ? payload.result : {};
+  const ok = isRecord(result.Ok) ? result.Ok : isRecord(result.ok) ? result.ok : {};
+  return typeof ok.isError === "boolean" ? ok.isError : null;
+}
+
+function attachSessionQualityCounts(entries, quality) {
+  if (!entries.length) {
+    return entries;
+  }
+
+  let anchorIndex = 0;
+  let anchorTime = Number.NEGATIVE_INFINITY;
+  entries.forEach((entry, index) => {
+    const time = new Date(entry.timestamp).getTime();
+    if (Number.isFinite(time) && time > anchorTime) {
+      anchorIndex = index;
+      anchorTime = time;
+    }
+  });
+
+  return entries.map((entry, index) =>
+    index === anchorIndex
+      ? {
+          ...entry,
+          errorCount: quality.errorCount,
+          interruptedCount: quality.interruptedCount > 0 ? 1 : 0,
+          toolCallCount: quality.toolCallCount,
+        }
+      : entry
+  );
+}
+
+function messageContainsInterruptMarker(value, depth = 0) {
+  if (depth > 8 || value === null || value === undefined) {
+    return false;
+  }
+
+  if (typeof value === "string") {
+    return value.includes("[Request interrupted by user]");
+  }
+
+  if (Array.isArray(value)) {
+    return value.some((item) => messageContainsInterruptMarker(item, depth + 1));
+  }
+
+  if (isRecord(value)) {
+    return Object.values(value).some((item) => messageContainsInterruptMarker(item, depth + 1));
+  }
+
+  return false;
 }
 
 async function parseGeminiCliUsageFile(filePath, target, config) {
@@ -1815,6 +1948,16 @@ function usageRecordToEvent(usage, context) {
     totalTokens,
     messages: numberFromFields(usage, ["messages", "messageCount", "message_count"]),
     sessionTitle,
+    errorCount: optionalNumberFromFields(usage, ["errorCount", "error_count"]),
+    interruptedCount: optionalNumberFromFields(usage, [
+      "interruptedCount",
+      "interrupted_count",
+      "interruptCount",
+      "interrupt_count",
+      "abortedCount",
+      "aborted_count",
+    ]),
+    toolCallCount: optionalNumberFromFields(usage, ["toolCallCount", "tool_call_count"]),
   };
 }
 
@@ -2010,6 +2153,15 @@ function sumKnownTokens(record) {
 
 function numberFromFields(record, fields) {
   return fields.reduce((sum, field) => sum + toNumber(record[field]), 0);
+}
+
+function optionalNumberFromFields(record, fields) {
+  for (const field of fields) {
+    if (record[field] !== undefined && record[field] !== null && record[field] !== "") {
+      return Math.max(0, Math.trunc(toNumber(record[field])));
+    }
+  }
+  return undefined;
 }
 
 function cacheReadInputTokensFromRecord(record) {
