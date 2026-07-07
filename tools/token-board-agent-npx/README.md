@@ -7,6 +7,8 @@ Local token usage and Codex quota uploader for [Open Token Board](https://ffffhx
 ```bash
 npx --yes token-board-agent install
 npx --yes token-board-agent status
+npx --yes token-board-agent statusline
+npx --yes token-board-agent mcp
 npx --yes token-board-agent uninstall
 ```
 
@@ -25,6 +27,53 @@ npx --yes token-board-agent replace
 npx --yes token-board-agent collect
 npx --yes token-board-agent watch
 ```
+
+## MCP Server
+
+`token-board-agent mcp` starts a stdio MCP server that reuses the saved
+`~/.token-board-agent.json` server URL and agent token. It exposes:
+
+- `get_leaderboard(range, metric)` - leaderboard Top N
+- `get_my_usage(range)` - your usage, rank, percentile, level, badges, and PB
+- `get_user_profile(login)` - public profile for a GitHub login
+- `get_rate_limits()` - Codex / Claude Code quota snapshots synced by the agent
+
+Claude Code CLI:
+
+```bash
+claude mcp add token-board -- npx --yes token-board-agent mcp
+```
+
+Project `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "token-board": {
+      "command": "npx",
+      "args": ["--yes", "token-board-agent", "mcp"]
+    }
+  }
+}
+```
+
+## Claude Code statusLine
+
+For a compact local status line, point Claude Code at:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /Users/you/.token-board-agent/token-board-agent.mjs statusline"
+  }
+}
+```
+
+The command prints one short line such as `🏆#3 · 12.4M`. If the saved login is
+missing or the service is unreachable, it exits silently within one second.
+For one-off checks, `npx --yes token-board-agent statusline` works too; for the
+actual statusLine, the installed local script avoids `npx` startup overhead.
 
 ## What It Reads
 

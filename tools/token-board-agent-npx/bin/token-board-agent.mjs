@@ -44,7 +44,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.22";
+const VERSION = "0.4.23";
 // Reject any single event above this many tokens: no real API call approaches it, but
 // a cumulative usage counter mis-read as one call (e.g. Trae's stats file) can blow
 // past it. Mirrors the server-side cap in token-board-automation.ts.
@@ -202,20 +202,36 @@ const TRAE_LEDGER_FILE = homePath(".token-board-agent", "trae-usage-ledger.jsonl
 let invalidUsageWarningCount = 0;
 
 main().catch((error) => {
+  if (process.argv[2] === "statusline") {
+    process.exitCode = 0;
+    return;
+  }
+
   logError(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 });
 
 async function main() {
   const command = process.argv[2] || "sync";
+  const quietCommand = command === "mcp" || command === "statusline";
   if (command === "watch") {
     logInfo(`[token-board-agent] running ${command}`);
-  } else {
+  } else if (!quietCommand) {
     console.log(`[token-board-agent] running ${command}`);
   }
 
   if (command === "help" || command === "--help" || command === "-h") {
     printHelp();
+    return;
+  }
+
+  if (command === "mcp") {
+    await runMcpServer();
+    return;
+  }
+
+  if (command === "statusline") {
+    await printStatusline();
     return;
   }
 
@@ -2444,11 +2460,555 @@ function normalizePlatform(value) {
   return value;
 }
 
+const MCP_PROTOCOL_VERSION = "2025-03-26";
+const MCP_TOOL_DEFINITIONS = [
+  {
+    name: "get_leaderboard",
+    description: "查询 Open Token Board 榜单 Top N。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        range: { type: "string", enum: ["1d", "7d", "30d", "90d"], description: "时间范围，默认 1d。" },
+        metric: { type: "string", enum: ["tokens", "cost", "sessions", "messages"], description: "排序指标，默认 tokens。" },
+        limit: { type: "number", minimum: 1, maximum: 30, description: "返回人数，默认 10。" },
+      },
+    },
+  },
+  {
+    name: "get_my_usage",
+    description: "查询当前登录账号的用量、排名、等级、徽章和个人最佳。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        range: { type: "string", enum: ["1d", "7d", "30d", "90d"], description: "时间范围，默认 1d。" },
+      },
+    },
+  },
+  {
+    name: "get_user_profile",
+    description: "查询某个 GitHub login 的公开 Token Board profile。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        login: { type: "string", description: "GitHub login，例如 ffffhx。" },
+      },
+      required: ["login"],
+    },
+  },
+  {
+    name: "get_rate_limits",
+    description: "查询当前登录账号已同步到服务端的 Codex / Claude Code 额度快照。",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+];
+
+async function runMcpServer() {
+  const lines = createInterface({ input: process.stdin, crlfDelay: Infinity });
+
+  for await (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    let message;
+    try {
+      message = JSON.parse(line);
+    } catch {
+      writeRpc({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } });
+      continue;
+    }
+
+    const messages = Array.isArray(message) ? message : [message];
+    for (const item of messages) {
+      await handleMcpMessage(item);
+    }
+  }
+}
+
+async function handleMcpMessage(message) {
+  const id = rpcId(message);
+
+  try {
+    const result = await handleMcpRequest(message);
+
+    if (result !== undefined && id !== undefined) {
+      writeRpc({ jsonrpc: "2.0", id, result });
+    }
+  } catch (error) {
+    if (id === undefined) {
+      return;
+    }
+    writeRpc({
+      jsonrpc: "2.0",
+      id,
+      error: {
+        code: typeof error?.rpcCode === "number" ? error.rpcCode : -32000,
+        message: error instanceof Error ? error.message : String(error),
+      },
+    });
+  }
+}
+
+async function handleMcpRequest(message) {
+  if (!message || typeof message !== "object" || Array.isArray(message) || typeof message.method !== "string") {
+    throw rpcError(-32600, "Invalid Request");
+  }
+
+  if (message.method.startsWith("notifications/")) {
+    return undefined;
+  }
+
+  if (message.method === "initialize") {
+    return {
+      protocolVersion: MCP_PROTOCOL_VERSION,
+      capabilities: { tools: { listChanged: false } },
+      serverInfo: { name: "token-board-agent", version: VERSION },
+    };
+  }
+
+  if (message.method === "ping") {
+    return {};
+  }
+
+  if (message.method === "tools/list") {
+    return { tools: MCP_TOOL_DEFINITIONS };
+  }
+
+  if (message.method === "tools/call") {
+    const params = message.params && typeof message.params === "object" ? message.params : {};
+    const name = typeof params.name === "string" ? params.name : "";
+    const args = params.arguments && typeof params.arguments === "object" && !Array.isArray(params.arguments) ? params.arguments : {};
+
+    try {
+      return mcpText(await callMcpTool(name, args));
+    } catch (error) {
+      return mcpText(toHelpfulMcpError(error), true);
+    }
+  }
+
+  throw rpcError(-32601, `Method not found: ${message.method}`);
+}
+
+async function callMcpTool(name, args) {
+  if (name === "get_leaderboard") {
+    return getMcpLeaderboard(args);
+  }
+
+  if (name === "get_my_usage") {
+    return getMcpMyUsage(args);
+  }
+
+  if (name === "get_user_profile") {
+    return getMcpUserProfile(args);
+  }
+
+  if (name === "get_rate_limits") {
+    return getMcpRateLimits();
+  }
+
+  throw new Error(`未知工具：${name || "(empty)"}`);
+}
+
+async function getMcpLeaderboard(args) {
+  const config = await readAgentConfig();
+  const range = normalizeMcpRange(args.range, "1D");
+  const metric = normalizeMcpMetric(args.metric);
+  const limit = clampInteger(args.limit, 10, 1, 30);
+  const params = new URLSearchParams({ range, metric, limit: String(limit) });
+  const payload = await fetchApiJson(config, `/api/usage/leaderboard?${params.toString()}`, {
+    label: "读取榜单",
+    timeoutMs: 12_000,
+  });
+  const users = Array.isArray(payload.users) ? payload.users : Array.isArray(payload.summary?.users) ? payload.summary.users.slice(0, limit) : [];
+  const summary = payload.summary && typeof payload.summary === "object" ? payload.summary : {};
+
+  if (!users.length) {
+    return `${rangeLabel(range)}暂无榜单数据。`;
+  }
+
+  const lines = users.slice(0, limit).map((user) => {
+    const rank = user.rank ?? "?";
+    const name = user.displayName || user.userId || "Unknown";
+    const metricValue = formatLeaderboardMetric(user, metric);
+    const level = user.level?.current?.name ? ` · ${user.level.current.name}` : "";
+    return `#${rank} ${name}：${metricValue} · ${formatCompactTokens(toNumber(user.tokens))} token · ${formatNumberCompact(toNumber(user.sessions))} 会话${level}`;
+  });
+
+  return [
+    `${rangeLabel(range)}${metricLabel(metric)}榜 Top ${Math.min(limit, users.length)}（${payload.generatedAt || summary.endAt || "live"}）`,
+    ...lines,
+  ].join("\n");
+}
+
+async function getMcpMyUsage(args) {
+  const config = await readAgentConfig();
+  ensureAgentToken(config);
+  const range = normalizeMcpRange(args.range, "1D");
+  const payload = await fetchApiJson(config, `/api/usage/export?format=json&scope=me&range=${encodeURIComponent(range)}`, {
+    auth: true,
+    label: "读取我的用量",
+    timeoutMs: 12_000,
+  });
+  const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  const user = profile?.user && typeof profile.user === "object" ? profile.user : null;
+
+  if (!profile || !user) {
+    return `${rangeLabel(range)}你还没有上报数据。请运行 npx --yes token-board-agent upload，或等待后台同步完成。`;
+  }
+
+  const badges = Array.isArray(profile.badges)
+    ? profile.badges.filter((badge) => badge?.achieved).map((badge) => badge.name).filter(Boolean).slice(0, 6)
+    : [];
+  const bests = profile.personalBests || {};
+  const projects = Array.isArray(profile.projects) ? profile.projects : [];
+  const rankText = profile.rank ? `#${profile.rank}/${profile.totalUsers || "?"}` : "暂无排名";
+  const delta = formatRankDelta(profile.rankDelta);
+  const percentile = profile.percentile === null || profile.percentile === undefined ? "暂无" : `超过 ${formatPercentValue(profile.percentile)}`;
+
+  return [
+    `${rangeLabel(range)}我的用量：${rankText}${delta ? `（${delta}）` : ""}，${formatCompactTokens(toNumber(user.tokens))} token，${formatUsdShort(toNumber(user.costUsd))}，${formatNumberCompact(toNumber(user.sessions))} 会话。`,
+    `位置：${percentile}；等级：${profile.level?.current?.name || "未知"}（累计 ${formatCompactTokens(toNumber(profile.level?.totalTokens))}）。`,
+    `徽章：${badges.length ? badges.join("、") : "暂无已解锁徽章"}。`,
+    `PB：单日 ${bests.singleDay?.date || "--"} ${formatCompactTokens(toNumber(bests.singleDay?.tokens))}；7 日 ${formatCompactTokens(toNumber(bests.rolling7Day?.tokens))}；最长连续 ${toNumber(bests.longestStreak?.days)} 天。`,
+    `常用：${user.topModel || "unknown"} · ${user.topTool || "unknown"}；项目：${projects[0]?.name || "暂无"}。`,
+  ].join("\n");
+}
+
+async function getMcpUserProfile(args) {
+  const login = normalizeGithubLogin(args.login);
+
+  if (!login) {
+    throw new Error("login 必须是有效 GitHub 用户名，例如 ffffhx。");
+  }
+
+  const config = await readAgentConfig();
+  const payload = await fetchApiJson(config, `/api/usage/user?login=${encodeURIComponent(login)}`, {
+    label: "读取公开 profile",
+    timeoutMs: 12_000,
+  });
+  const user = payload.user && typeof payload.user === "object" ? payload.user : {};
+  const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : {};
+  const totals = profile.totals && typeof profile.totals === "object" ? profile.totals : {};
+  const rankings = Array.isArray(profile.rankings) ? profile.rankings : [];
+  const models = Array.isArray(profile.models) ? profile.models : [];
+  const tools = Array.isArray(profile.tools) ? profile.tools : [];
+
+  return [
+    `@${user.githubLogin || user.login || login}：${user.displayName || "Unknown"}，${formatCompactTokens(toNumber(totals.tokens))} token，${formatUsdShort(toNumber(totals.costUsd))}，${formatNumberCompact(toNumber(totals.sessions))} 会话。`,
+    `活跃：${formatNumberCompact(toNumber(totals.activeDays))} 天，记录 ${formatNumberCompact(toNumber(totals.records))} 条，最近上报 ${profile.lastReportedAt || "--"}。`,
+    `排名：${rankings.map((item) => `${item.range} #${item.rank ?? "--"}/${item.totalUsers ?? "?"}`).join("；") || "暂无"}。`,
+    `常用模型：${models.slice(0, 3).map((item) => `${item.name} ${formatCompactTokens(toNumber(item.tokens))}`).join("、") || "暂无"}。`,
+    `工具分布：${tools.slice(0, 3).map((item) => `${item.name} ${formatCompactTokens(toNumber(item.tokens))}`).join("、") || "暂无"}。`,
+  ].join("\n");
+}
+
+async function getMcpRateLimits() {
+  const config = await readAgentConfig();
+  ensureAgentToken(config);
+  const payload = await fetchApiJson(config, "/api/usage/export?format=json&scope=me&range=1D", {
+    auth: true,
+    label: "读取额度快照",
+    timeoutMs: 12_000,
+  });
+  const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : {};
+  const userConfig = profile.config && typeof profile.config === "object" ? profile.config : {};
+  const codex = userConfig.rateLimits;
+  const claude = userConfig.claudeCodeRateLimits;
+
+  if (!codex && !claude) {
+    return [
+      "服务端还没有你的额度快照。",
+      "请运行 npx --yes token-board-agent upload 或等待后台同步；Claude Code 额度还需要先配置 statusLine 捕获脚本。",
+    ].join("\n");
+  }
+
+  return [formatRateLimitReport("Codex", codex), formatRateLimitReport("Claude Code", claude)].join("\n");
+}
+
+async function printStatusline() {
+  const text = await Promise.race([buildStatuslineText(), sleep(800).then(() => "")]).catch(() => "");
+
+  if (text) {
+    process.stdout.write(text);
+  }
+}
+
+async function buildStatuslineText() {
+  const config = await readAgentConfig();
+  if (!config.agentToken) {
+    return "";
+  }
+
+  const payload = await fetchApiJson(config, "/api/usage/export?format=json&scope=me&range=1D", {
+    auth: true,
+    label: "Statusline",
+    timeoutMs: 750,
+  });
+  const profile = payload.profile && typeof payload.profile === "object" ? payload.profile : null;
+  const user = profile?.user && typeof profile.user === "object" ? profile.user : null;
+
+  if (!profile || !user) {
+    return "";
+  }
+
+  const rank = profile.rank || user.rank;
+  const tokens = toNumber(user.tokens);
+  return rank ? `🏆#${rank} · ${formatCompactTokens(tokens)}` : `🏆-- · ${formatCompactTokens(tokens)}`;
+}
+
+function writeRpc(message) {
+  process.stdout.write(`${JSON.stringify(message)}\n`);
+}
+
+function rpcId(message) {
+  if (!message || typeof message !== "object" || Array.isArray(message) || !Object.prototype.hasOwnProperty.call(message, "id")) {
+    return undefined;
+  }
+
+  return message.id === undefined ? null : message.id;
+}
+
+function rpcError(code, message) {
+  const error = new Error(message);
+  error.rpcCode = code;
+  return error;
+}
+
+function mcpText(text, isError = false) {
+  return {
+    content: [{ type: "text", text }],
+    ...(isError ? { isError: true } : {}),
+  };
+}
+
+function ensureAgentToken(config) {
+  if (!config.agentToken) {
+    throw new Error("还没有登录 Token Board。请先运行 npx --yes token-board-agent login 或 npx --yes token-board-agent install。");
+  }
+}
+
+function normalizeMcpRange(value, fallback = "1D") {
+  const range = typeof value === "string" && value.trim() ? value.trim().toUpperCase() : fallback;
+
+  if (range === "1D" || range === "7D" || range === "30D" || range === "90D") {
+    return range;
+  }
+
+  throw new Error("range 只能是 1d、7d、30d 或 90d。");
+}
+
+function normalizeMcpMetric(value) {
+  const metric = typeof value === "string" && value.trim() ? value.trim().toLowerCase() : "tokens";
+
+  if (metric === "tokens" || metric === "cost" || metric === "sessions" || metric === "messages") {
+    return metric;
+  }
+
+  throw new Error("metric 只能是 tokens、cost、sessions 或 messages。");
+}
+
+function normalizeGithubLogin(value) {
+  const text = cleanLabel(value, 120).toLowerCase().replace(/^@+/, "");
+  const candidate = text.replace(/^https?:\/\/(?:www\.)?github\.com\//, "").split(/[/?#]/)[0] || text;
+  return /^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$/.test(candidate) ? candidate : "";
+}
+
+async function fetchApiJson(config, endpoint, options = {}) {
+  const url = apiEndpointUrl(config, endpoint);
+  const headers = { Accept: "application/json" };
+
+  if (options.auth) {
+    ensureAgentToken(config);
+    headers.Authorization = `Bearer ${config.agentToken}`;
+  }
+
+  const { response, text } = await fetchTextOnce(url, { method: "GET", headers }, options.timeoutMs || 15_000);
+  const payload = parseJsonPayload(text);
+
+  if (!response.ok) {
+    const message = typeof payload.error === "string" && payload.error ? payload.error : `HTTP ${response.status}`;
+    const error = new Error(`${options.label || "请求"}失败：${message}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  return payload;
+}
+
+async function fetchTextOnce(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const text = await response.text();
+    return { response, text };
+  } catch (error) {
+    if (isAbortError(error)) {
+      const timeoutError = new Error(`请求超时（${timeoutMs}ms）`);
+      timeoutError.code = "ETIMEDOUT";
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function apiEndpointUrl(config, endpoint) {
+  const base = apiBaseUrlFromConfig(config);
+  return `${base}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+}
+
+function apiBaseUrlFromConfig(config) {
+  return (cleanLabel(config.serverUrl, 500) || cleanLabel(config.apiUrl, 500) || API_URL).replace(/\/+$/, "");
+}
+
+function toHelpfulMcpError(error) {
+  const status = typeof error?.status === "number" ? error.status : 0;
+  const message = error instanceof Error ? error.message : String(error);
+
+  if (status === 401 || status === 403) {
+    return "登录已失效或无权限。请运行 npx --yes token-board-agent login 重新登录，然后再试。";
+  }
+
+  if (status === 404) {
+    return `${message}。请确认用户名、serverUrl 和服务路径是否正确。`;
+  }
+
+  if (error?.code === "ETIMEDOUT") {
+    return `${message}。请检查 Token Board 服务是否可访问，或稍后重试。`;
+  }
+
+  if (/fetch failed|ECONNREFUSED|ENOTFOUND|network/i.test(message)) {
+    return `连接 Token Board 服务失败：${message}。请检查 ~/.token-board-agent.json 里的 serverUrl/apiUrl，或确认服务已启动。`;
+  }
+
+  return message;
+}
+
+function clampInteger(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return fallback;
+  }
+  return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function rangeLabel(range) {
+  return range === "1D" ? "今日" : `近 ${range.replace("D", "")} 天`;
+}
+
+function metricLabel(metric) {
+  if (metric === "cost") return "费用";
+  if (metric === "sessions") return "会话";
+  if (metric === "messages") return "消息";
+  return "Token";
+}
+
+function formatLeaderboardMetric(user, metric) {
+  if (metric === "cost") return formatUsdShort(toNumber(user.costUsd));
+  if (metric === "sessions") return `${formatNumberCompact(toNumber(user.sessions))} 会话`;
+  if (metric === "messages") return `${formatNumberCompact(toNumber(user.messages))} 消息`;
+  return `${formatCompactTokens(toNumber(user.tokens))} token`;
+}
+
+function formatRateLimitReport(label, report) {
+  if (!report || typeof report !== "object") {
+    return `${label}：暂无快照。`;
+  }
+
+  const windows = Array.isArray(report.windows) ? report.windows : [];
+  const notes = Array.isArray(report.notes) ? report.notes.filter(Boolean).slice(0, 2).join("；") : "";
+
+  if (!report.available || !windows.length) {
+    return `${label}：暂无可用额度。${notes ? ` ${notes}` : ""}`;
+  }
+
+  const header = `${label}：${report.plan || "未知计划"}，更新 ${report.latestEventAt || report.generatedAt || "--"}`;
+  const rows = windows.map((window) => {
+    const reset = window.resetsInSeconds === null || window.resetsInSeconds === undefined ? "未知" : formatDurationSeconds(window.resetsInSeconds);
+    const remainingTokens =
+      window.estimatedRemainingTokens === null || window.estimatedRemainingTokens === undefined
+        ? ""
+        : `，约剩 ${formatCompactTokens(toNumber(window.estimatedRemainingTokens))} token`;
+    const eta = window.etaSeconds ? `，预计 ${formatDurationSeconds(window.etaSeconds)} 后耗尽` : "";
+    return `- ${window.label || window.key}：已用 ${formatPercentNumber(toNumber(window.usedPercent))}，剩余 ${formatPercentNumber(toNumber(window.remainingPercent))}，重置 ${reset}${remainingTokens}${eta}`;
+  });
+
+  return [header, ...rows, ...(notes ? [`备注：${notes}`] : [])].join("\n");
+}
+
+function formatRankDelta(value) {
+  const delta = Number(value);
+  if (!Number.isFinite(delta) || delta === 0) return "";
+  return delta > 0 ? `上升 ${delta}` : `下降 ${Math.abs(delta)}`;
+}
+
+function formatCompactTokens(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "0";
+  if (number >= 1_000_000_000) return `${trimFixed(number / 1_000_000_000)}B`;
+  if (number >= 1_000_000) return `${trimFixed(number / 1_000_000)}M`;
+  if (number >= 1_000) return `${trimFixed(number / 1_000)}K`;
+  return String(Math.round(number));
+}
+
+function formatNumberCompact(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "0";
+  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(number);
+}
+
+function formatUsdShort(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "$0";
+  if (number < 1) return `$${number.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`;
+  return `$${number.toFixed(2)}`;
+}
+
+function formatPercentValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${Math.round(number * 100)}%` : "--";
+}
+
+function formatPercentNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toFixed(1).replace(/\.0$/, "")}%` : "--";
+}
+
+function formatDurationSeconds(value) {
+  const seconds = Math.max(0, Math.round(Number(value) || 0));
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+
+  if (hours >= 24) {
+    const days = Math.floor(hours / 24);
+    return `${days}天${hours % 24}小时`;
+  }
+
+  if (hours > 0) {
+    return `${hours}小时${minutes}分钟`;
+  }
+
+  return `${minutes}分钟`;
+}
+
+function trimFixed(value) {
+  return value.toFixed(1).replace(/\.0$/, "");
+}
+
 function printHelp() {
   console.log(`Usage:
   ${NPX_COMMAND}
   ${NPX_COMMAND} install
   ${NPX_COMMAND} status
+  ${NPX_COMMAND} statusline
+  ${NPX_COMMAND} mcp
   ${NPX_COMMAND} uninstall
   ${NPX_COMMAND} watch
   ${NPX_COMMAND} login
