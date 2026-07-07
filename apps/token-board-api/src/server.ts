@@ -752,7 +752,7 @@ function buildPublicProfileSummary(events: TokenUsageEvent[]) {
     costUsd += event.costUsd ?? 0;
     messages += event.messages ?? 0;
     sessions.add(event.sessionId || event.id);
-    activeDays.add(shanghaiDayKey(event.timestamp));
+    activeDays.add(publicProfileShanghaiDayKey(event.timestamp));
   }
 
   return {
@@ -803,15 +803,15 @@ function buildPublicNamedUsage(events: TokenUsageEvent[], key: "model" | "tool",
 
 function buildShanghaiDailySeries(events: TokenUsageEvent[], now: Date, days: number): TokenDailyUsagePoint[] {
   const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
-  const endDay = shanghaiDayKey(safeNow);
-  const endDayStart = shanghaiDayStartUtc(endDay);
-  const startDayStart = addUtcDays(endDayStart, -(days - 1));
+  const endDay = publicProfileShanghaiDayKey(safeNow);
+  const endDayStart = publicProfileShanghaiDayStartUtc(endDay);
+  const startDayStart = addPublicProfileUtcDays(endDayStart, -(days - 1));
   const values = new Map<string, TokenDailyUsagePoint>();
 
   for (let index = 0; index < days; index += 1) {
-    const bucketStart = addUtcDays(startDayStart, index);
-    const bucketEnd = addUtcDays(bucketStart, 1);
-    const date = shanghaiDayKey(bucketStart);
+    const bucketStart = addPublicProfileUtcDays(startDayStart, index);
+    const bucketEnd = addPublicProfileUtcDays(bucketStart, 1);
+    const date = publicProfileShanghaiDayKey(bucketStart);
 
     values.set(date, {
       date,
@@ -828,7 +828,7 @@ function buildShanghaiDailySeries(events: TokenUsageEvent[], now: Date, days: nu
       continue;
     }
 
-    const point = values.get(shanghaiDayKey(event.timestamp));
+    const point = values.get(publicProfileShanghaiDayKey(event.timestamp));
 
     if (point) {
       point.tokens += getTokenConsumptionTokens(event);
@@ -838,28 +838,28 @@ function buildShanghaiDailySeries(events: TokenUsageEvent[], now: Date, days: nu
   return [...values.values()];
 }
 
-const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+const PUBLIC_PROFILE_SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const PUBLIC_PROFILE_DAY_MS = 24 * 60 * 60 * 1000;
 
-function shanghaiDayKey(value: string | Date) {
+function publicProfileShanghaiDayKey(value: string | Date) {
   const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
-  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + PUBLIC_PROFILE_SHANGHAI_OFFSET_MS);
 
   return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
 }
 
-function shanghaiDayStartUtc(dayKey: string) {
+function publicProfileShanghaiDayStartUtc(dayKey: string) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
 
   if (!match) {
     return new Date(0);
   }
 
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - SHANGHAI_OFFSET_MS);
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - PUBLIC_PROFILE_SHANGHAI_OFFSET_MS);
 }
 
-function addUtcDays(value: Date, days: number) {
-  return new Date(value.getTime() + days * DAY_MS);
+function addPublicProfileUtcDays(value: Date, days: number) {
+  return new Date(value.getTime() + days * PUBLIC_PROFILE_DAY_MS);
 }
 
 function latestPublicProfileEvent(events: TokenUsageEvent[]) {
