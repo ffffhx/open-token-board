@@ -33,10 +33,12 @@ import {
   buildTokenLeaderboard,
   getTokenConsumptionTokens,
   getUnmatchedTokenPricingModels,
+  type TokenAccountUsageProfile,
   type TokenBoardMetric,
   type TokenBoardRange,
   type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
+  type TokenLeaderboardUser,
   type TokenUsageEvent,
 } from "@open-token-board/core";
 import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
@@ -467,57 +469,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
     const range = parseRange(url.searchParams.get("range"));
     const now = parseNow(url.searchParams.get("now"));
-    const store = usageStore();
-    // Load only this user's events for the per-user breakdown, and derive the
-    // cross-user ranking from the aggregated leaderboard, so neither path scans the
-    // whole event table on every request.
-    const userEvents = await store.listEventsForUser(identity.userId);
-    const profile = buildTokenAccountUsageProfile(userEvents, {
-      userId: identity.userId,
-      range,
-      now,
-    });
-    const { summary } = await readUsageLeaderboard({
-      range,
-      metric: "tokens",
-      now,
-      preferSnapshot: !url.searchParams.has("now"),
-    });
-    const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
-    const totalUsers = summary.users.length;
-    const rank = rankedUser?.rank ?? null;
-    const { summary: previousSummary } = await readUsageLeaderboard({
-      range,
-      metric: "tokens",
-      now: new Date(summary.startAt),
-    });
-    const previousRank = previousSummary.users.find((entry) => entry.userId === identity.userId)?.rank ?? null;
-    profile.rank = rank;
-    profile.previousRank = previousRank;
-    profile.rankDelta = rank !== null && previousRank !== null ? previousRank - rank : null;
-    profile.totalUsers = totalUsers;
-    profile.percentile = rank !== null && totalUsers > 0 ? (totalUsers - rank) / totalUsers : null;
-    if (profile.user && rankedUser) {
-      profile.user.rank = rankedUser.rank;
-      profile.user.previousRank = previousRank;
-      profile.user.rankDelta = profile.rankDelta;
-      profile.user.share = rankedUser.share;
-      profile.user.deltaTokens = rankedUser.deltaTokens;
-    }
-    const userConfig = await store.getUserConfig(identity.userId);
-
-    sendJson(request, response, 200, {
-      schemaVersion: 1,
-      source: "server",
-      records: profile.records,
-      totalRecords: await store.countEvents(),
-      generatedAt: new Date().toISOString(),
-      user: identity,
-      profile: {
-        ...profile,
-        config: userConfig,
-      },
-    });
+    sendJson(request, response, 200, await buildUsageMePayload(identity, { range, now, preferSnapshot: !url.searchParams.has("now") }));
     return;
   }
 
@@ -580,6 +532,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  if (request.method === "GET" && url.pathname === "/api/usage/export") {
+    await handleUsageExport(request, response, url);
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/usage/ingest") {
     await handleIngest(request, response);
     return;
@@ -591,6 +548,368 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   sendJson(request, response, 404, { error: "Not found" });
+}
+
+async function handleUsageExport(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const format = parseExportFormat(url.searchParams.get("format") || "csv");
+  const scope = parseExportScope(url.searchParams.get("scope") || "leaderboard");
+
+  if (!format) {
+    sendJson(request, response, 400, { error: "format must be csv or json" });
+    return;
+  }
+
+  if (!scope) {
+    sendJson(request, response, 400, { error: "scope must be leaderboard or me" });
+    return;
+  }
+
+  const range = parseRange(url.searchParams.get("range"));
+  const metric = parseMetric(url.searchParams.get("metric"));
+  const now = parseNow(url.searchParams.get("now"));
+  const generatedAt = new Date().toISOString();
+
+  if (scope === "leaderboard") {
+    const { records, source, summary } = await readUsageLeaderboard({
+      range,
+      metric,
+      now,
+      preferSnapshot: !url.searchParams.has("now"),
+    });
+    const payload = {
+      schemaVersion: 1,
+      source,
+      scope,
+      range,
+      metric,
+      records,
+      generatedAt,
+      users: summary.users,
+      summary,
+    };
+
+    response.setHeader("Content-Disposition", exportContentDisposition(scope, range, format));
+    if (format === "json") {
+      sendJson(request, response, 200, payload);
+      return;
+    }
+
+    sendCsv(request, response, 200, leaderboardExportCsv(payload));
+    return;
+  }
+
+  const identity = await readUsageRequestIdentity(request);
+
+  if (!identity) {
+    sendJson(request, response, 401, { error: "Login required" });
+    return;
+  }
+
+  const payload = await buildUsageMePayload(identity, {
+    range,
+    now,
+    preferSnapshot: !url.searchParams.has("now"),
+  });
+  const exportPayload = {
+    ...payload,
+    scope,
+    range,
+  };
+
+  response.setHeader("Content-Disposition", exportContentDisposition(scope, range, format));
+  if (format === "json") {
+    sendJson(request, response, 200, exportPayload);
+    return;
+  }
+
+  sendCsv(request, response, 200, accountExportCsv(exportPayload));
+}
+
+async function buildUsageMePayload(
+  identity: TokenBoardIdentity,
+  {
+    range,
+    now,
+    preferSnapshot,
+  }: {
+    range: TokenBoardRange;
+    now: Date;
+    preferSnapshot: boolean;
+  }
+) {
+  const store = usageStore();
+  // Load only this user's events for the per-user breakdown, and derive the
+  // cross-user ranking from the aggregated leaderboard, so neither path scans the
+  // whole event table on every request.
+  const userEvents = await store.listEventsForUser(identity.userId);
+  const profile = buildTokenAccountUsageProfile(userEvents, {
+    userId: identity.userId,
+    range,
+    now,
+  });
+  const { summary } = await readUsageLeaderboard({
+    range,
+    metric: "tokens",
+    now,
+    preferSnapshot,
+  });
+  const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
+  const totalUsers = summary.users.length;
+  const rank = rankedUser?.rank ?? null;
+  const { summary: previousSummary } = await readUsageLeaderboard({
+    range,
+    metric: "tokens",
+    now: new Date(summary.startAt),
+  });
+  const previousRank = previousSummary.users.find((entry) => entry.userId === identity.userId)?.rank ?? null;
+  profile.rank = rank;
+  profile.previousRank = previousRank;
+  profile.rankDelta = rank !== null && previousRank !== null ? previousRank - rank : null;
+  profile.totalUsers = totalUsers;
+  profile.percentile = rank !== null && totalUsers > 0 ? (totalUsers - rank) / totalUsers : null;
+  if (profile.user && rankedUser) {
+    profile.user.rank = rankedUser.rank;
+    profile.user.previousRank = previousRank;
+    profile.user.rankDelta = profile.rankDelta;
+    profile.user.share = rankedUser.share;
+    profile.user.deltaTokens = rankedUser.deltaTokens;
+  }
+  const userConfig = await store.getUserConfig(identity.userId);
+
+  return {
+    schemaVersion: 1,
+    source: "server",
+    records: profile.records,
+    totalRecords: await store.countEvents(),
+    generatedAt: new Date().toISOString(),
+    user: identity,
+    profile: {
+      ...profile,
+      config: userConfig,
+    },
+  };
+}
+
+type UsageMeExportPayload = Awaited<ReturnType<typeof buildUsageMePayload>> & {
+  range: TokenBoardRange;
+  scope: "me";
+};
+type CsvValue = string | number | boolean | null | undefined;
+type CsvRow = Record<string, CsvValue>;
+
+const LEADERBOARD_EXPORT_COLUMNS = [
+  "generatedAt",
+  "source",
+  "range",
+  "metric",
+  "startAt",
+  "endAt",
+  "rank",
+  "previousRank",
+  "rankDelta",
+  "userId",
+  "displayName",
+  "team",
+  "level",
+  "levelTotalTokens",
+  "badges",
+  "tokens",
+  "inputTokens",
+  "cacheCreationInputTokens",
+  "cachedInputTokens",
+  "outputTokens",
+  "reasoningOutputTokens",
+  "costUsd",
+  "sessions",
+  "messages",
+  "records",
+  "activeDays",
+  "share",
+  "deltaTokens",
+  "topModel",
+  "topTool",
+  "lastReportedAt",
+];
+
+const ACCOUNT_EXPORT_COLUMNS = [
+  "generatedAt",
+  "source",
+  "range",
+  "startAt",
+  "endAt",
+  "userId",
+  "githubLogin",
+  "displayName",
+  "team",
+  "rank",
+  "previousRank",
+  "rankDelta",
+  "totalUsers",
+  "percentile",
+  "level",
+  "levelTotalTokens",
+  "badges",
+  "personalBestSingleDayDate",
+  "personalBestSingleDayTokens",
+  "personalBestRolling7DayStart",
+  "personalBestRolling7DayEnd",
+  "personalBestRolling7DayTokens",
+  "longestStreakDays",
+  "todayTokens",
+  "brokeDailyPbToday",
+  "tokens",
+  "inputTokens",
+  "cacheCreationInputTokens",
+  "cachedInputTokens",
+  "outputTokens",
+  "reasoningOutputTokens",
+  "costUsd",
+  "sessions",
+  "messages",
+  "records",
+  "activeDays",
+  "share",
+  "deltaTokens",
+  "topModel",
+  "topTool",
+  "topProject",
+  "topHour",
+  "topWeekday",
+  "lastReportedAt",
+];
+
+function leaderboardExportCsv(payload: {
+  generatedAt: string;
+  source: "live" | "snapshot";
+  range: TokenBoardRange;
+  metric: TokenBoardMetric;
+  summary: TokenLeaderboardSummary;
+}) {
+  return stringifyCsv(
+    LEADERBOARD_EXPORT_COLUMNS,
+    payload.summary.users.map((user) => leaderboardExportRow(user, payload))
+  );
+}
+
+function leaderboardExportRow(
+  user: TokenLeaderboardUser,
+  context: {
+    generatedAt: string;
+    source: "live" | "snapshot";
+    range: TokenBoardRange;
+    metric: TokenBoardMetric;
+    summary: TokenLeaderboardSummary;
+  }
+): CsvRow {
+  return {
+    generatedAt: context.generatedAt,
+    source: context.source,
+    range: context.range,
+    metric: context.metric,
+    startAt: context.summary.startAt,
+    endAt: context.summary.endAt,
+    rank: user.rank,
+    previousRank: user.previousRank,
+    rankDelta: user.rankDelta,
+    userId: user.userId,
+    displayName: user.displayName,
+    team: user.team,
+    level: user.level.current.name,
+    levelTotalTokens: user.level.totalTokens,
+    badges: achievedBadgeNames(user.badges),
+    tokens: user.tokens,
+    inputTokens: user.inputTokens,
+    cacheCreationInputTokens: user.cacheCreationInputTokens,
+    cachedInputTokens: user.cachedInputTokens,
+    outputTokens: user.outputTokens,
+    reasoningOutputTokens: user.reasoningOutputTokens,
+    costUsd: user.costUsd,
+    sessions: user.sessions,
+    messages: user.messages,
+    records: user.records,
+    activeDays: user.activeDays,
+    share: user.share,
+    deltaTokens: user.deltaTokens,
+    topModel: user.topModel,
+    topTool: user.topTool,
+    lastReportedAt: user.lastReportedAt,
+  };
+}
+
+function accountExportCsv(payload: UsageMeExportPayload) {
+  const profile: TokenAccountUsageProfile = payload.profile;
+  const user = profile.user;
+  const bests = profile.personalBests;
+
+  return stringifyCsv(ACCOUNT_EXPORT_COLUMNS, [
+    {
+      generatedAt: payload.generatedAt,
+      source: payload.source,
+      range: payload.range,
+      startAt: profile.startAt,
+      endAt: profile.endAt,
+      userId: payload.user.userId,
+      githubLogin: payload.user.githubLogin,
+      displayName: user?.displayName ?? payload.user.displayName,
+      team: user?.team ?? payload.user.team,
+      rank: profile.rank,
+      previousRank: profile.previousRank,
+      rankDelta: profile.rankDelta,
+      totalUsers: profile.totalUsers,
+      percentile: profile.percentile,
+      level: profile.level.current.name,
+      levelTotalTokens: profile.level.totalTokens,
+      badges: achievedBadgeNames(profile.badges),
+      personalBestSingleDayDate: bests.singleDay.date,
+      personalBestSingleDayTokens: bests.singleDay.tokens,
+      personalBestRolling7DayStart: bests.rolling7Day.startDate,
+      personalBestRolling7DayEnd: bests.rolling7Day.endDate,
+      personalBestRolling7DayTokens: bests.rolling7Day.tokens,
+      longestStreakDays: bests.longestStreak.days,
+      todayTokens: bests.todayTokens,
+      brokeDailyPbToday: bests.brokeDailyPbToday,
+      tokens: user?.tokens ?? 0,
+      inputTokens: user?.inputTokens ?? 0,
+      cacheCreationInputTokens: user?.cacheCreationInputTokens ?? 0,
+      cachedInputTokens: user?.cachedInputTokens ?? 0,
+      outputTokens: user?.outputTokens ?? 0,
+      reasoningOutputTokens: user?.reasoningOutputTokens ?? 0,
+      costUsd: user?.costUsd ?? 0,
+      sessions: user?.sessions ?? 0,
+      messages: user?.messages ?? 0,
+      records: profile.records,
+      activeDays: user?.activeDays ?? 0,
+      share: user?.share ?? null,
+      deltaTokens: user?.deltaTokens ?? null,
+      topModel: user?.topModel ?? "",
+      topTool: user?.topTool ?? "",
+      topProject: profile.projects[0]?.name ?? "",
+      topHour: profile.topHour,
+      topWeekday: profile.topWeekday,
+      lastReportedAt: user?.lastReportedAt ?? "",
+    },
+  ]);
+}
+
+function achievedBadgeNames(badges: TokenLeaderboardUser["badges"]) {
+  return badges
+    .filter((badge) => badge.achieved)
+    .map((badge) => badge.name)
+    .join("|");
+}
+
+function stringifyCsv(columns: string[], rows: CsvRow[]) {
+  const lines = [
+    columns.map(csvEscape).join(","),
+    ...rows.map((row) => columns.map((column) => csvEscape(row[column])).join(",")),
+  ];
+
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
+}
+
+function csvEscape(value: CsvValue) {
+  const text = value === null || value === undefined ? "" : String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
 async function handlePublicUsageUser(request: IncomingMessage, response: ServerResponse, url: URL) {
@@ -1741,6 +2060,10 @@ function readWebIdentity(request: IncomingMessage) {
   return verifyWebSessionToken(token, authSecret());
 }
 
+async function readUsageRequestIdentity(request: IncomingMessage) {
+  return readWebIdentity(request) ?? (await authenticateIngestRequest(request));
+}
+
 async function loadUploadUsers(): Promise<TokenBoardUploadUser[]> {
   if (process.env.TOKEN_BOARD_USERS_JSON) {
     return normalizeUploadUsers(JSON.parse(process.env.TOKEN_BOARD_USERS_JSON));
@@ -1988,8 +2311,19 @@ function readBearerToken(request: IncomingMessage) {
   return Array.isArray(header) ? header[0] || "" : header || "";
 }
 
+function parseExportFormat(value: string | null): "csv" | "json" | null {
+  const format = value?.trim().toLowerCase();
+  return format === "csv" || format === "json" ? format : null;
+}
+
+function parseExportScope(value: string | null): "leaderboard" | "me" | null {
+  const scope = value?.trim().toLowerCase();
+  return scope === "leaderboard" || scope === "me" ? scope : null;
+}
+
 function parseRange(value: string | null): TokenBoardRange {
-  return value && isTokenBoardRange(value) ? value : "7D";
+  const normalized = value?.trim().toUpperCase() || "";
+  return isTokenBoardRange(normalized) ? normalized : "7D";
 }
 
 function parseMetric(value: string | null): TokenBoardMetric {
@@ -2803,6 +3137,20 @@ function sendJson(request: IncomingMessage, response: ServerResponse, status: nu
     "Cache-Control": "no-store",
   });
   response.end(JSON.stringify(payload, null, 2));
+}
+
+function sendCsv(request: IncomingMessage, response: ServerResponse, status: number, csv: string) {
+  applyCors(request, response);
+  response.writeHead(status, {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  response.end(csv);
+}
+
+function exportContentDisposition(scope: "leaderboard" | "me", range: TokenBoardRange, format: "csv" | "json") {
+  const day = new Date().toISOString().slice(0, 10);
+  return `attachment; filename="token-board-${scope}-${range.toLowerCase()}-${day}.${format}"`;
 }
 
 async function run() {

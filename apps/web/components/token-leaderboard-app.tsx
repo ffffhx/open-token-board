@@ -457,6 +457,21 @@ export function TokenLeaderboardApp({
     setReloadKey((value) => value + 1);
   }
 
+  function openUsageExport(scope: "leaderboard" | "me", format: "csv" | "json") {
+    if (!normalizedApiBaseUrl) {
+      showToast("未配置 Token Board API，无法导出", "error");
+      return;
+    }
+
+    const params = new URLSearchParams({ format, range, scope });
+    if (scope === "leaderboard") {
+      params.set("metric", metric);
+    }
+
+    window.open(`${normalizedApiBaseUrl}/api/usage/export?${params.toString()}`, "_blank", "noopener,noreferrer");
+    showToast(`正在导出${scope === "leaderboard" ? "排行榜" : "个人看板"}`);
+  }
+
   async function copyCommand(command: string, label: string) {
     try {
       await navigator.clipboard.writeText(command);
@@ -475,7 +490,27 @@ export function TokenLeaderboardApp({
       <PanelHeader
         title="排行榜"
         meta={isDataLoading ? <Skeleton className="h-3 w-40 align-middle" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
-        action={`按${selectedMetricLabel}降序`}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <span>按{selectedMetricLabel}降序</span>
+            <button
+              type="button"
+              onClick={() => openUsageExport("leaderboard", "csv")}
+              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-2 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <Icon name="download" />
+              CSV
+            </button>
+            <button
+              type="button"
+              onClick={() => openUsageExport("leaderboard", "json")}
+              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-stone-950/10 bg-white px-2 text-xs font-semibold text-stone-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+            >
+              <Icon name="file" />
+              JSON
+            </button>
+          </div>
+        }
       />
       <div className="grid gap-3 p-3 sm:hidden">
         {isDataLoading ? (
@@ -841,6 +876,7 @@ export function TokenLeaderboardApp({
           error={accountError}
           loadState={accountLoadState}
           onLogin={loginWithGitHub}
+          onExport={(format) => openUsageExport("me", format)}
           profile={accountProfile}
           range={range}
           viewer={viewer}

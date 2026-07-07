@@ -32,6 +32,7 @@ export function AccountUsagePanel({
   apiEnabled,
   error,
   loadState,
+  onExport,
   onLogin,
   profile,
   range,
@@ -40,6 +41,7 @@ export function AccountUsagePanel({
   apiEnabled: boolean;
   error: string;
   loadState: AccountLoadState;
+  onExport?: (format: "csv" | "json") => void;
   onLogin: () => void;
   profile: TokenAccountUsageProfile | null;
   range: TokenBoardRange;
@@ -91,6 +93,26 @@ export function AccountUsagePanel({
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-600">
               {range}
             </span>
+            {dashboardProfile ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onExport?.("csv")}
+                  className="inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Icon name="download" />
+                  CSV
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onExport?.("json")}
+                  className="inline-flex min-h-8 items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Icon name="file" />
+                  JSON
+                </button>
+              </>
+            ) : null}
             {viewer?.authenticated ? (
               <span className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
                 {viewer.user?.avatarUrl ? (
