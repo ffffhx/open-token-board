@@ -4049,14 +4049,21 @@ async function refreshLeaderboardSnapshots(reason: string) {
 async function refreshLeaderboardSnapshotsNow(reason: string) {
   const refreshedAt = new Date().toISOString();
   const nextCache = new Map<string, LeaderboardSnapshotEntry>();
+  const store = usageStore();
+  const snapshotEvents = store.kind === "file" ? await store.listEvents() : null;
 
   for (const range of LEADERBOARD_SNAPSHOT_RANGES) {
     for (const metric of LEADERBOARD_SNAPSHOT_METRICS) {
-      const { records, summary } = await readLiveUsageLeaderboard({
-        range,
-        metric,
-        now: new Date(refreshedAt),
-      });
+      const { records, summary } = snapshotEvents
+        ? {
+            records: snapshotEvents.length,
+            summary: buildTokenLeaderboard(snapshotEvents, { range, metric, now: new Date(refreshedAt) }),
+          }
+        : await readLiveUsageLeaderboard({
+            range,
+            metric,
+            now: new Date(refreshedAt),
+          });
       nextCache.set(leaderboardSnapshotKey(range, metric), {
         generatedAt: refreshedAt,
         key: leaderboardSnapshotKey(range, metric),

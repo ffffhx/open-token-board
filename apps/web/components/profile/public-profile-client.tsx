@@ -1,6 +1,5 @@
 "use client";
 
-import { toBlob, toPng } from "html-to-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -171,6 +170,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
     setHint("");
 
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       const link = document.createElement("a");
       link.download = `token-profile-${safeFileName(profile.user.login)}.png`;
@@ -190,6 +190,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
     setHint("");
 
     try {
+      const { toBlob } = await import("html-to-image");
       const blob = await toBlob(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
         throw new Error("clipboard unsupported");

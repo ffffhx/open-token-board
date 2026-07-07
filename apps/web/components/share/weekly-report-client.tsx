@@ -1,7 +1,6 @@
 "use client";
 
 import type { TokenLeaderboardSummary } from "@open-token-board/core";
-import { toBlob, toPng } from "html-to-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -69,6 +68,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     setExporting(true);
     setHint("");
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement("a");
       link.download = `token-report-${safeFileName(report.displayName)}.png`;
@@ -87,6 +87,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     setExporting(true);
     setHint("");
     try {
+      const { toBlob } = await import("html-to-image");
       const blob = await toBlob(cardRef.current, { pixelRatio: 2, cacheBust: true });
       if (!blob) throw new Error("no blob");
       if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
