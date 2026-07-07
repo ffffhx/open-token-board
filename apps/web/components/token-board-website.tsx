@@ -2,9 +2,8 @@ import type { TokenLeaderboardSummary } from "@open-token-board/core";
 import Link from "next/link";
 
 import { AppNavLinks } from "@/components/app-nav-links";
-import { PrivateBenchmarkLink } from "@/components/private-benchmark-link";
+import { LandingCommandCopy, LandingLiveNumbers } from "@/components/landing-interactions";
 import { TokenBoardLogo } from "@/components/token-board-logo";
-import { formatTokens } from "@/components/token-leaderboard/utils";
 
 const DEFAULT_API_URL = "https://8-218-149-148.anyip.dev/token-board";
 
@@ -17,16 +16,19 @@ const capabilityCards = [
     title: "朋友排行榜",
     body: "按 1D、7D、30D、90D 查看 Token、费用和会话排名，适合小团队或朋友局做透明对比。",
     meta: "Rank by tokens, cost, sessions",
+    preview: "rank",
   },
   {
     title: "自动同步",
     body: "本机 agent 后台采集 AI 编码工具的用量记录，安装后定时上报，不需要手动整理日志。",
     meta: "macOS LaunchAgent / Windows Task",
+    preview: "sync",
   },
   {
     title: "个人洞察",
     body: "登录 GitHub 后查看自己的模型、项目、缓存命中率、活跃时间和 session 明细。",
     meta: "GitHub account view",
+    preview: "profile",
   },
 ];
 
@@ -77,10 +79,13 @@ export function TokenBoardWebsite() {
 
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {capabilityCards.map((card) => (
-              <article key={card.title} className="rounded-lg border border-slate-200 bg-slate-50 p-5">
-                <p className="font-mono text-xs text-blue-600">{card.meta}</p>
-                <h3 className="mt-4 text-lg font-semibold">{card.title}</h3>
-                <p className="mt-3 text-sm leading-6 text-slate-600">{card.body}</p>
+              <article key={card.title} className="otb-card-hover overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
+                <FeaturePreview variant={card.preview as "profile" | "rank" | "sync"} />
+                <div className="p-5">
+                  <p className="font-mono text-xs text-blue-600">{card.meta}</p>
+                  <h3 className="mt-4 text-lg font-semibold">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{card.body}</p>
+                </div>
               </article>
             ))}
           </div>
@@ -151,9 +156,15 @@ export function TokenBoardWebsite() {
   );
 }
 
-type HeroStat = { label: string; value: string; meta: string };
+type HeroStats = {
+  activeUsers: number;
+  leaderName: string;
+  leaderTokens: number;
+  topModel: string;
+  totalTokens: number;
+};
 
-async function loadHeroStats(): Promise<HeroStat[] | null> {
+async function loadHeroStats(): Promise<HeroStats | null> {
   const base = (process.env.NEXT_PUBLIC_TOKEN_BOARD_API_URL || DEFAULT_API_URL).replace(/\/+$/, "");
   try {
     const response = await fetch(`${base}/api/usage/stats?range=7D&metric=tokens`, {
@@ -171,11 +182,13 @@ async function loadHeroStats(): Promise<HeroStat[] | null> {
     if (!summary || !leader || summary.activeUsers <= 0) {
       return null;
     }
-    return [
-      { label: "当前榜首", value: leader.displayName, meta: `${formatTokens(leader.tokens)} tokens` },
-      { label: "7 日总量", value: formatTokens(summary.totalTokens), meta: `${summary.activeUsers} 人活跃` },
-      { label: "高频模型", value: summary.topModel || "—", meta: summary.topTool || "rolling 7D" },
-    ];
+    return {
+      activeUsers: summary.activeUsers,
+      leaderName: leader.displayName,
+      leaderTokens: leader.tokens,
+      topModel: summary.topModel || "—",
+      totalTokens: summary.totalTokens,
+    };
   } catch {
     return null;
   }
@@ -184,9 +197,9 @@ async function loadHeroStats(): Promise<HeroStat[] | null> {
 async function HeroSection() {
   const stats = await loadHeroStats();
   return (
-    <section className="relative min-h-[78svh] overflow-hidden bg-slate-950 text-white">
+    <section className="relative min-h-[82svh] overflow-hidden bg-slate-950 text-white">
       <HeroDashboardScene />
-      <div className="absolute inset-0 bg-slate-950/72" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,6,23,0.92),rgba(15,23,42,0.72)_48%,rgba(15,23,42,0.88))]" />
 
       <nav className="relative z-10 mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <Link href="/" className="text-white">
@@ -203,48 +216,109 @@ async function HeroSection() {
         </div>
       </nav>
 
-      <div className="relative z-10 mx-auto flex max-w-7xl flex-col justify-end px-4 pb-12 pt-16 sm:px-6 sm:pt-20 lg:px-8">
-        <div className="max-w-3xl">
-          <p className="font-mono text-xs font-semibold uppercase text-blue-200">AI coding token leaderboard</p>
-          <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-6xl">Open Token Board</h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg">
-            给朋友、团队和开源协作者看的 AI 编码 Token 排行榜。自动同步本机用量，公开趋势和效率，不公开完整 prompt。
-          </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/board"
-              className="inline-flex min-h-12 items-center justify-center rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              查看实时榜单
-            </Link>
-            <a
-              href="#workflow"
-              className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15"
-            >
-              了解使用流程
-            </a>
-            <PrivateBenchmarkLink className="inline-flex min-h-12 items-center justify-center rounded-lg border border-white/20 bg-white/10 px-5 text-sm font-semibold text-white transition hover:bg-white/15" />
+      <div className="relative z-10 mx-auto flex max-w-7xl flex-col justify-end px-4 pb-10 pt-14 sm:px-6 sm:pt-20 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(26rem,0.72fr)] lg:items-end">
+          <div className="max-w-4xl">
+            <p className="font-mono text-xs font-semibold uppercase text-blue-200">AI coding token arena</p>
+            <h1 className="mt-4 text-5xl font-black leading-[0.96] sm:text-7xl lg:text-8xl">Open Token Board</h1>
+            <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-100 sm:text-xl">
+              把 AI 编码用量变成一场看得见的排位赛。
+            </p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+              自动同步本机 token，公开趋势、效率和榜首高光，不公开完整 prompt。
+            </p>
+            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-[auto_minmax(18rem,1fr)]">
+              <Link
+                href="/board"
+                className="otb-energy-bg inline-flex min-h-12 items-center justify-center rounded-lg px-5 text-sm font-semibold text-white shadow-lg shadow-blue-950/30 transition hover:-translate-y-0.5 hover:shadow-xl"
+              >
+                看实时榜单
+              </Link>
+              <LandingCommandCopy command={NPX_INSTALL_COMMAND} />
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            {stats ? (
+              <LandingLiveNumbers stats={stats} />
+            ) : (
+              <div className="rounded-lg border border-white/12 bg-white/10 p-4 backdrop-blur">
+                <p className="font-mono text-xs font-semibold uppercase text-blue-100">Live summary</p>
+                <p className="mt-3 text-2xl font-black text-white">榜单数据正在接线</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">summary 接口可用后，这里会滚动展示全站 token 和参与人数。</p>
+              </div>
+            )}
+            <div className="mt-3 rounded-lg border border-white/10 bg-white/[0.07] px-4 py-3 text-xs leading-5 text-slate-300 backdrop-blur">
+              榜首不会只出现在表格第一行，Open Token Board 会把高光、趋势和效率一起拉出来。
+            </div>
           </div>
         </div>
-
-        {stats ? (
-          <div className="mt-10 hidden max-w-4xl gap-3 sm:grid sm:grid-cols-3">
-            {stats.map((stat) => (
-              <HeroMetric key={stat.label} label={stat.label} value={stat.value} meta={stat.meta} />
-            ))}
-          </div>
-        ) : null}
       </div>
     </section>
   );
 }
 
-function HeroMetric({ label, meta, value }: { label: string; meta: string; value: string }) {
+function FeaturePreview({ variant }: { variant: "profile" | "rank" | "sync" }) {
+  if (variant === "sync") {
+    return (
+      <div className="border-b border-slate-200 bg-slate-950 p-4 text-slate-100">
+        <div className="flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-red-400" />
+          <span className="size-2 rounded-full bg-amber-300" />
+          <span className="size-2 rounded-full bg-emerald-300" />
+        </div>
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/[0.06] p-3 font-mono text-xs leading-6">
+          <p className="text-blue-200">$ token-board-agent status</p>
+          <p className="text-emerald-200">✓ LaunchAgent running</p>
+          <p className="text-slate-300">last upload: 2 min ago</p>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+            <div className="otb-energy-bar h-full w-[72%] rounded-full" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === "profile") {
+    return (
+      <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#f8fafc,#edf2ff)] p-4">
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="size-10 rounded-lg bg-[linear-gradient(135deg,#2f5bff,#8a3ffc)]" />
+            <div className="min-w-0 flex-1">
+              <div className="h-3 w-28 rounded-full bg-slate-900" />
+              <div className="mt-2 h-2 w-20 rounded-full bg-slate-200" />
+            </div>
+            <div className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 font-mono text-xs font-black text-amber-800">#3</div>
+          </div>
+          <div className="mt-4 grid grid-cols-4 gap-1">
+            {[2, 4, 1, 5, 3, 6, 2, 7, 5, 8, 4, 6].map((level, index) => (
+              <span key={index} className="h-3 rounded-[3px]" style={{ backgroundColor: `rgba(47,91,255,${0.1 + level * 0.08})` }} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg border border-white/12 bg-white/10 p-4 backdrop-blur">
-      <p className="text-xs font-semibold uppercase text-slate-300">{label}</p>
-      <p className="mt-2 truncate font-mono text-2xl font-semibold text-white">{value}</p>
-      <p className="mt-1 text-xs text-blue-200">{meta}</p>
+    <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#f8fafc,#eef4ff)] p-4">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        {["Syfyivan", "ffffhx", "OpenBoard"].map((name, index) => (
+          <div key={name} className={`grid grid-cols-[3rem_1fr_4.5rem] items-center gap-3 border-b border-slate-100 px-3 py-3 last:border-b-0 ${index === 0 ? "bg-amber-50/70" : ""}`}>
+            <span className={`rounded-full border px-2 py-1 text-center font-mono text-xs font-black ${index === 0 ? "border-amber-300 bg-white text-amber-800" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+              #{index + 1}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900">{name}</p>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="otb-energy-bar h-full rounded-full" style={{ width: `${82 - index * 18}%` }} />
+              </div>
+            </div>
+            <span className="text-right font-mono text-sm font-black text-slate-950">{["8.7M", "6.1M", "4.8M"][index]}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
