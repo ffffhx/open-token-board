@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { IsometricContributionGraph } from "@/components/profile/isometric-contribution-graph";
 import { normalizeProfileLogin } from "@/components/profile/utils";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
 import { EmptyStateIllustration } from "@/components/token-leaderboard/shared-ui";
@@ -239,6 +240,7 @@ function WrappedStory({
               <SignalStat label={copy.story.longestStreak} value={`${formatNumber(wrapped.streak.days)}d`} meta={formatDateRange(wrapped.streak.startDate, wrapped.streak.endDate, locale)} />
               <SignalStat label={copy.story.nightRatio} value={formatPercent(wrapped.night.ratio)} meta={copy.story.nightMeta(formatTokens(wrapped.night.tokens))} />
             </div>
+            <WrappedIsometricPreview wrapped={wrapped} />
           </div>
           <HonorStrip wrapped={wrapped} />
         </div>
@@ -411,6 +413,7 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
   const { dict } = useI18n();
   const shareCopy = dict.wrapped.share;
   const [exporting, setExporting] = useState(false);
+  const [include3d, setInclude3d] = useState(true);
   const [hint, setHint] = useState(shareCopy.initialHint);
   const [pageUrl, setPageUrl] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
@@ -468,13 +471,22 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
       <div className="mx-auto grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
         <div className="overflow-x-auto pb-2">
           <div ref={cardRef} className="w-[390px] max-w-full">
-            <WrappedShareCard pageUrl={pageUrl} wrapped={wrapped} />
+            <WrappedShareCard include3d={include3d} pageUrl={pageUrl} wrapped={wrapped} />
           </div>
         </div>
         <div>
           <p className="font-mono text-xs font-black uppercase text-[#e03a6f] dark:text-[#ff7aa7]">{shareCopy.eyebrow}</p>
           <h2 className="mt-4 text-4xl font-black leading-tight">{shareCopy.title}</h2>
           <div className="mt-6 space-y-3">
+            <label className="flex min-h-12 items-center gap-3 rounded-lg border border-[#171018]/15 bg-white/60 px-4 text-sm font-black dark:border-white/15 dark:bg-white/10">
+              <input
+                type="checkbox"
+                checked={include3d}
+                onChange={(event) => setInclude3d(event.target.checked)}
+                className="size-4 accent-[#e03a6f]"
+              />
+              <span>{shareCopy.include3d}</span>
+            </label>
             <button
               type="button"
               onClick={download}
@@ -501,12 +513,52 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
   );
 }
 
-function WrappedShareCard({ pageUrl, wrapped }: { pageUrl: string; wrapped: TokenWrappedResponse }) {
+function WrappedIsometricPreview({ wrapped }: { wrapped: TokenWrappedResponse }) {
+  const { dict } = useI18n();
+  const columns = Math.max(2, Math.ceil(wrapped.daily.length / 7));
+
+  return (
+    <div className="mt-6 rounded-lg border border-[#171018]/12 bg-white/60 p-4 shadow-[0_16px_42px_rgba(23,16,24,0.08)] backdrop-blur dark:border-white/12 dark:bg-white/10">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-[#5c4a50] dark:text-[#d8c9cf]">{dict.wrapped.story.isometricTitle}</p>
+          <p className="mt-1 text-xs font-semibold text-[#6d5b62] dark:text-[#c8b8bf]">{dict.wrapped.story.isometricMeta}</p>
+        </div>
+        <p className="font-mono text-xs font-black text-[#171018] dark:text-[#fff8e7]">{wrapped.period.value}</p>
+      </div>
+      <div className="mt-3 overflow-hidden">
+        <IsometricContributionGraph
+          ariaLabel={dict.wrapped.story.isometricAria}
+          daily={wrapped.daily}
+          emptyLabel={dict.common.states.noData}
+          height={150}
+          maxColumns={columns}
+          minHeight={5}
+          peakLabel={dict.wrapped.story.isometricPeak}
+          quietLabel={dict.wrapped.story.isometricQuiet}
+          showHoverLabel={false}
+          variant="compact"
+        />
+      </div>
+    </div>
+  );
+}
+
+function WrappedShareCard({
+  include3d,
+  pageUrl,
+  wrapped,
+}: {
+  include3d: boolean;
+  pageUrl: string;
+  wrapped: TokenWrappedResponse;
+}) {
   const { dict, locale } = useI18n();
   const copy = dict.wrapped.share;
   const topModel = wrapped.topModels[0]?.name ?? "--";
   const topProject = wrapped.topProjects[0]?.name ?? "--";
   const periodLabel = formatWrappedPeriodLabel(wrapped.period.value, locale);
+  const columns = Math.max(2, Math.ceil(wrapped.daily.length / 7));
 
   return (
     <article className="overflow-hidden rounded-lg bg-[#171018] p-5 text-[#fff8e7] shadow-2xl">
@@ -539,7 +591,22 @@ function WrappedShareCard({ pageUrl, wrapped }: { pageUrl: string; wrapped: Toke
       </div>
 
       <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.06] p-3">
-        <MiniDailyGraphic daily={wrapped.daily} mode={wrapped.daily.length > 70 ? "heatmap" : "bars"} />
+        {include3d ? (
+          <IsometricContributionGraph
+            ariaLabel={copy.daily3dAria}
+            daily={wrapped.daily}
+            emptyLabel={dict.common.states.noData}
+            height={118}
+            maxColumns={columns}
+            minHeight={5}
+            peakLabel={dict.wrapped.story.isometricPeak}
+            quietLabel={dict.wrapped.story.isometricQuiet}
+            showHoverLabel={false}
+            variant="share"
+          />
+        ) : (
+          <MiniDailyGraphic daily={wrapped.daily} mode={wrapped.daily.length > 70 ? "heatmap" : "bars"} />
+        )}
       </div>
 
       <footer className="mt-5 flex items-center justify-between gap-3 border-t border-white/10 pt-4 text-[11px] text-[#c8b8bf]">
