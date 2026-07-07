@@ -10,6 +10,7 @@
     "test": "pnpm typecheck && pnpm agent:help",
     "typecheck": "pnpm -r --if-present typecheck",
     "pack:agent": "node scripts/pack-agent.mjs",
+    "verify:new-sources": "pnpm --dir apps/token-board-api exec tsx ../../scripts/verify-new-sources-fixtures.ts",
     "agent:help": "node tools/token-board-agent-npx/bin/token-board-agent.mjs help",
     "token:server": "pnpm --filter @open-token-board/api token:server",
     "selection:server": "pnpm --filter @open-token-board/api selection:server",

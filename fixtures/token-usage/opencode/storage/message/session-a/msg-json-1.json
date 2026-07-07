@@ -1,0 +1,19 @@
+{
+  "id": "msg-json-1",
+  "sessionID": "session-a",
+  "providerID": "google",
+  "modelID": "gemini-3-pro-high",
+  "time": {
+    "created": 1779019500000
+  },
+  "tokens": {
+    "input": 100,
+    "output": 50,
+    "cache": {
+      "read": 10,
+      "write": 20
+    },
+    "reasoning": 5
+  },
+  "cost": 0
+}
