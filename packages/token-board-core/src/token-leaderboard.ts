@@ -114,6 +114,57 @@ export type TokenLeaderboardUser = {
   daily: TokenDailyUsagePoint[];
 };
 
+export type TokenTeamMemberSummary = {
+  userId: string;
+  displayName: string;
+  tokens: number;
+  share: number;
+};
+
+export type TokenTeamLeaderboardEntry = {
+  rank: number;
+  name: string;
+  tokens: number;
+  costUsd: number;
+  activeUsers: number;
+  tokensPerUser: number;
+  deltaTokens: number | null;
+  share: number;
+  members: TokenTeamMemberSummary[];
+};
+
+export type TokenProjectLeaderboardEntry = {
+  rank: number;
+  name: string;
+  tokens: number;
+  costUsd: number;
+  activeUsers: number;
+  sessions: number;
+  topModel: string;
+  share: number;
+  other?: boolean;
+};
+
+export type TokenUsageDistributionBucket = {
+  key: string;
+  label: string;
+  minTokens: number;
+  maxTokens: number | null;
+  count: number;
+  share: number;
+};
+
+export type TokenUsageDistribution = {
+  totalUsers: number;
+  maxTokens: number;
+  percentiles: {
+    p50: number;
+    p90: number;
+    p99: number;
+  };
+  buckets: TokenUsageDistributionBucket[];
+};
+
 export type TokenLeaderboardSummary = {
   range: TokenLeaderboardSummaryRange;
   startAt: string;
@@ -132,6 +183,9 @@ export type TokenLeaderboardSummary = {
   };
   models: Array<{ name: string; tokens: number; costUsd: number; share: number }>;
   tools: Array<{ name: string; tokens: number; sessions: number; share: number }>;
+  teams: TokenTeamLeaderboardEntry[];
+  projects: TokenProjectLeaderboardEntry[];
+  distribution: TokenUsageDistribution;
   users: TokenLeaderboardUser[];
 };
 
@@ -240,6 +294,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const TREND_STACK_LIMIT = 5;
 const HOURLY_DRILLDOWN_DAYS = 7;
+const PROJECT_LEADERBOARD_LIMIT = 15;
+const UNKNOWN_PROJECT_LABEL = "未知项目";
+const DISTRIBUTION_BUCKET_DEFS = [
+  { key: "lt-1m", label: "<1M", minTokens: 0, maxTokens: 1_000_000 },
+  { key: "1m-10m", label: "1-10M", minTokens: 1_000_000, maxTokens: 10_000_000 },
+  { key: "10m-100m", label: "10-100M", minTokens: 10_000_000, maxTokens: 100_000_000 },
+  { key: "100m-1b", label: "100M-1B", minTokens: 100_000_000, maxTokens: 1_000_000_000 },
+  { key: "gte-1b", label: ">1B", minTokens: 1_000_000_000, maxTokens: null },
+] satisfies Array<{ key: string; label: string; minTokens: number; maxTokens: number | null }>;
 
 export type TokenModelPricing = {
   id: string;
@@ -359,6 +422,9 @@ export function buildTokenLeaderboard(
   const models = aggregateNamedUsage(currentEntries, "model");
   const tools = aggregateNamedUsage(currentEntries, "tool");
   const trends = buildTokenLeaderboardTrends(currentEntries, start, rangeWindow.end);
+  const teams = buildTokenTeamLeaderboard(currentEntries, previousEntries);
+  const projects = buildTokenProjectLeaderboard(currentEntries);
+  const distribution = buildTokenUsageDistribution(currentEntries);
 
   return {
     range: rangeWindow.range,
@@ -375,6 +441,9 @@ export function buildTokenLeaderboard(
     trends,
     models,
     tools,
+    teams,
+    projects,
+    distribution,
     users: users.map((user) => ({
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
@@ -1039,6 +1108,193 @@ function aggregateNamedUsage(entries: TokenUsageEvent[], key: "model" | "tool") 
     .slice(0, 12);
 }
 
+export function buildTokenTeamLeaderboard(
+  entries: TokenUsageEvent[],
+  previousEntries: TokenUsageEvent[] = []
+): TokenTeamLeaderboardEntry[] {
+  const totalTokens = entries.reduce((sum, entry) => sum + getTokenConsumptionTokens(entry), 0);
+  const previousTokensByTeam = sumTokensByTeam(previousEntries);
+  const teams = new Map<
+    string,
+    {
+      tokens: number;
+      costUsd: number;
+      members: Map<string, { displayName: string; tokens: number }>;
+    }
+  >();
+
+  for (const entry of entries) {
+    const teamName = normalizeTeamName(entry.team);
+    const tokens = getTokenConsumptionTokens(entry);
+    const team = teams.get(teamName) ?? {
+      tokens: 0,
+      costUsd: 0,
+      members: new Map<string, { displayName: string; tokens: number }>(),
+    };
+    const member = team.members.get(entry.userId) ?? {
+      displayName: entry.displayName || entry.userId,
+      tokens: 0,
+    };
+
+    team.tokens += tokens;
+    team.costUsd += entry.costUsd ?? 0;
+    member.displayName = entry.displayName || member.displayName;
+    member.tokens += tokens;
+    team.members.set(entry.userId, member);
+    teams.set(teamName, team);
+  }
+
+  return [...teams.entries()]
+    .map(([name, value]) => {
+      const previousTokens = previousTokensByTeam.get(name) ?? 0;
+      const activeUsers = value.members.size;
+      const members = [...value.members.entries()]
+        .map(([userId, member]) => ({
+          userId,
+          displayName: member.displayName,
+          tokens: member.tokens,
+          share: value.tokens > 0 ? member.tokens / value.tokens : 0,
+        }))
+        .sort((left, right) => right.tokens - left.tokens || left.displayName.localeCompare(right.displayName));
+
+      return {
+        rank: 0,
+        name,
+        tokens: value.tokens,
+        costUsd: value.costUsd,
+        activeUsers,
+        tokensPerUser: activeUsers > 0 ? value.tokens / activeUsers : 0,
+        deltaTokens: previousTokens > 0 ? (value.tokens - previousTokens) / previousTokens : null,
+        share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+        members,
+      };
+    })
+    .sort((left, right) => right.tokens - left.tokens || left.name.localeCompare(right.name))
+    .map((team, index) => ({ ...team, rank: index + 1 }));
+}
+
+export function buildTokenProjectLeaderboard(
+  entries: TokenUsageEvent[],
+  limit = PROJECT_LEADERBOARD_LIMIT
+): TokenProjectLeaderboardEntry[] {
+  const totalTokens = entries.reduce((sum, entry) => sum + getTokenConsumptionTokens(entry), 0);
+  const projects = new Map<
+    string,
+    {
+      tokens: number;
+      costUsd: number;
+      users: Set<string>;
+      sessions: Set<string>;
+      modelTokens: Map<string, number>;
+      other?: boolean;
+    }
+  >();
+
+  for (const entry of entries) {
+    const projectName = normalizeProjectName(entry.project);
+    const tokens = getTokenConsumptionTokens(entry);
+    const project = projects.get(projectName) ?? {
+      tokens: 0,
+      costUsd: 0,
+      users: new Set<string>(),
+      sessions: new Set<string>(),
+      modelTokens: new Map<string, number>(),
+    };
+
+    project.tokens += tokens;
+    project.costUsd += entry.costUsd ?? 0;
+    project.users.add(entry.userId);
+    project.sessions.add(entry.sessionId || entry.id);
+    addMapValue(project.modelTokens, entry.model || "unknown", tokens);
+    projects.set(projectName, project);
+  }
+
+  const ranked = [...projects.entries()]
+    .sort((left, right) => right[1].tokens - left[1].tokens || left[0].localeCompare(right[0]));
+  const topProjects = ranked.slice(0, Math.max(1, limit));
+  const overflowProjects = ranked.slice(topProjects.length);
+
+  if (overflowProjects.length) {
+    const other = {
+      tokens: 0,
+      costUsd: 0,
+      users: new Set<string>(),
+      sessions: new Set<string>(),
+      modelTokens: new Map<string, number>(),
+      other: true,
+    };
+
+    for (const [, project] of overflowProjects) {
+      other.tokens += project.tokens;
+      other.costUsd += project.costUsd;
+      for (const userId of project.users) {
+        other.users.add(userId);
+      }
+      for (const sessionId of project.sessions) {
+        other.sessions.add(sessionId);
+      }
+      for (const [model, tokens] of project.modelTokens) {
+        addMapValue(other.modelTokens, model, tokens);
+      }
+    }
+
+    topProjects.push(["其他项目", other]);
+  }
+
+  return topProjects
+    .map(([name, value]) => ({
+      rank: 0,
+      name,
+      tokens: value.tokens,
+      costUsd: value.costUsd,
+      activeUsers: value.users.size,
+      sessions: value.sessions.size,
+      topModel: topMapEntry(value.modelTokens) || "unknown",
+      share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+      other: value.other || undefined,
+    }))
+    .map((project, index) => ({ ...project, rank: index + 1 }));
+}
+
+export function buildTokenUsageDistribution(entries: TokenUsageEvent[]): TokenUsageDistribution {
+  const tokensByUser = new Map<string, number>();
+
+  for (const entry of entries) {
+    addMapValue(tokensByUser, entry.userId, getTokenConsumptionTokens(entry));
+  }
+
+  const values = [...tokensByUser.values()].filter((value) => value > 0).sort((left, right) => left - right);
+  const totalUsers = values.length;
+  const buckets = DISTRIBUTION_BUCKET_DEFS.flatMap((bucket) => {
+    const count = values.filter((value) =>
+      value >= bucket.minTokens && (bucket.maxTokens === null ? true : value < bucket.maxTokens)
+    ).length;
+
+    if (!count) {
+      return [];
+    }
+
+    return [
+      {
+        ...bucket,
+        count,
+        share: totalUsers > 0 ? count / totalUsers : 0,
+      },
+    ];
+  });
+
+  return {
+    totalUsers,
+    maxTokens: values.at(-1) ?? 0,
+    percentiles: {
+      p50: percentileNearestRank(values, 50),
+      p90: percentileNearestRank(values, 90),
+      p99: percentileNearestRank(values, 99),
+    },
+    buckets,
+  };
+}
+
 const OTHER_TREND_KEY = "__token-board-other__";
 
 type TrendGroupKind = "model" | "user";
@@ -1580,6 +1836,44 @@ function sumTokensByUser(entries: TokenUsageEvent[]) {
   }
 
   return result;
+}
+
+function sumTokensByTeam(entries: TokenUsageEvent[]) {
+  const result = new Map<string, number>();
+
+  for (const entry of entries) {
+    const teamName = normalizeTeamName(entry.team);
+    result.set(teamName, (result.get(teamName) ?? 0) + getTokenConsumptionTokens(entry));
+  }
+
+  return result;
+}
+
+function normalizeTeamName(value: unknown) {
+  return normalizeText(value) || "Friends";
+}
+
+function normalizeProjectName(value: unknown) {
+  const normalized = normalizeText(value);
+
+  if (!normalized || normalized.toLowerCase() === "none") {
+    return UNKNOWN_PROJECT_LABEL;
+  }
+
+  return normalized;
+}
+
+function percentileNearestRank(sortedAscendingValues: number[], percentile: number) {
+  if (!sortedAscendingValues.length) {
+    return 0;
+  }
+
+  const index = Math.min(
+    sortedAscendingValues.length - 1,
+    Math.max(0, Math.ceil((percentile / 100) * sortedAscendingValues.length) - 1)
+  );
+
+  return sortedAscendingValues[index] ?? 0;
 }
 
 function parseCsvRows(input: string) {

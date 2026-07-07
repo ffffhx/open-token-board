@@ -18,6 +18,11 @@ import { RateLimitPanel } from "@/components/rate-limit/rate-limit-board";
 
 import { AccountUsagePanel } from "./token-leaderboard/account-usage-panel";
 import {
+  ProjectConsumptionPanel,
+  TeamBattlePanel,
+  UsageDistributionPanel,
+} from "./token-leaderboard/board-dimension-panels";
+import {
   CALENDAR_RANGES,
   DATA_LOAD_SLOW_MS,
   METRICS,
@@ -919,6 +924,14 @@ export function TokenLeaderboardApp({
               loading={isDataLoading}
               tokensPerSession={tokensPerSession}
             />
+
+            <div className="grid gap-5">
+              <TeamBattlePanel loading={isDataLoading} summary={summary} />
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.05fr)_minmax(20rem,0.95fr)]">
+                <ProjectConsumptionPanel loading={isDataLoading} summary={summary} />
+                <UsageDistributionPanel loading={isDataLoading} summary={summary} viewer={viewer} />
+              </div>
+            </div>
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.82fr)]">
               <section className="otb-panel rounded-lg p-4">

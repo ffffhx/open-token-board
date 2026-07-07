@@ -10,6 +10,9 @@ import {
 } from "./token-achievements";
 import {
   buildTokenLeaderboardTrends,
+  buildTokenProjectLeaderboard,
+  buildTokenTeamLeaderboard,
+  buildTokenUsageDistribution,
   normalizeTokenUsageEvent,
   parseTokenUsageImport,
   resolveTokenLeaderboardWindow,
@@ -711,8 +714,12 @@ async function readPostgresLeaderboardSummary(
     };
   });
   const dailyValues = new Map(dailyResult.rows.map((row) => [row.date, toFiniteNumber(row.tokens)]));
-  const trendEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
-  const trends = buildTokenLeaderboardTrends(trendEvents, start, rangeWindow.end);
+  const currentEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
+  const previousEvents = await readPostgresEventsInRange(pool, table, previousStart, previousEnd);
+  const trends = buildTokenLeaderboardTrends(currentEvents, start, rangeWindow.end);
+  const teams = buildTokenTeamLeaderboard(currentEvents, previousEvents);
+  const projects = buildTokenProjectLeaderboard(currentEvents);
+  const distribution = buildTokenUsageDistribution(currentEvents);
 
   return {
     records: usersWithShare.reduce((sum, user) => sum + user.records, 0),
@@ -731,6 +738,9 @@ async function readPostgresLeaderboardSummary(
       trends,
       models,
       tools,
+      teams,
+      projects,
+      distribution,
       users: usersWithShare,
     },
   };
