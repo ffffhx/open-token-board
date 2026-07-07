@@ -1,5 +1,6 @@
 import {
   buildEmptyTokenAchievementSummary,
+  emptyTokenEfficiencyProfile,
   getTokenConsumptionTokens,
   type TokenAccountUsageProfile,
   type TokenBoardMetric,
@@ -150,6 +151,7 @@ export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric:
     teams: normalizeRemoteTeams(summary.teams),
     projects: normalizeRemoteProjects(summary.projects),
     distribution: normalizeRemoteDistribution(summary.distribution),
+    efficiency: normalizeRemoteTeamEfficiency(summary.efficiency),
     users: users.map((user) => ({
       ...user,
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
@@ -263,6 +265,60 @@ function normalizeRemoteDistribution(value: unknown): TokenLeaderboardSummary["d
   };
 }
 
+function normalizeRemoteTeamEfficiency(value: unknown): TokenLeaderboardSummary["efficiency"] {
+  const efficiency = value as Partial<TokenLeaderboardSummary["efficiency"]>;
+  const qualifiedUsers =
+    (efficiency?.qualifiedUsers as Partial<TokenLeaderboardSummary["efficiency"]["qualifiedUsers"]> | undefined) ??
+    {};
+
+  return {
+    errorRateMedian: finiteNumberOrNull(efficiency?.errorRateMedian),
+    interruptionRateMedian: finiteNumberOrNull(efficiency?.interruptionRateMedian),
+    qualifiedUsers: {
+      errorRate: finiteNumberOrZero(qualifiedUsers.errorRate),
+      interruptionRate: finiteNumberOrZero(qualifiedUsers.interruptionRate),
+      tokensPerSession: finiteNumberOrZero(qualifiedUsers.tokensPerSession),
+    },
+    tokensPerSessionMedian: finiteNumberOrNull(efficiency?.tokensPerSessionMedian),
+  };
+}
+
+function normalizeRemoteEfficiencyProfile(value: unknown): TokenAccountUsageProfile["efficiency"] {
+  const fallback = emptyTokenEfficiencyProfile();
+  const profile = value as Partial<TokenAccountUsageProfile["efficiency"]>;
+
+  return {
+    errorRate: normalizeRemoteEfficiencyMetric(profile?.errorRate, fallback.errorRate),
+    interruptionRate: normalizeRemoteEfficiencyMetric(profile?.interruptionRate, fallback.interruptionRate),
+    tokensPerSession: normalizeRemoteEfficiencyMetric(profile?.tokensPerSession, fallback.tokensPerSession),
+  };
+}
+
+function normalizeRemoteEfficiencyMetric(
+  value: unknown,
+  fallback: TokenAccountUsageProfile["efficiency"]["errorRate"]
+): TokenAccountUsageProfile["efficiency"]["errorRate"] {
+  const metric = value as Partial<TokenAccountUsageProfile["efficiency"]["errorRate"]>;
+  const status =
+    metric?.status === "ready" || metric?.status === "insufficient" || metric?.status === "no_data"
+      ? metric.status
+      : fallback.status;
+  const comparison =
+    metric?.comparison === "higher" || metric?.comparison === "lower" || metric?.comparison === "same"
+      ? metric.comparison
+      : null;
+
+  return {
+    comparison,
+    denominator: finiteNumberOrZero(metric?.denominator),
+    minimumDenominator: finiteNumberOrZero(metric?.minimumDenominator) || fallback.minimumDenominator,
+    numerator: finiteNumberOrZero(metric?.numerator),
+    status,
+    teamMedian: finiteNumberOrNull(metric?.teamMedian),
+    value: finiteNumberOrNull(metric?.value),
+  };
+}
+
 function normalizeDailyBucketTime(value: unknown, date: string, dayOffset: number) {
   if (typeof value === "string" && value.trim()) {
     const parsed = new Date(value);
@@ -302,6 +358,7 @@ export function normalizeRemoteAccountProfile(profile: TokenAccountUsageProfile)
     ...achievements,
     config: normalizeRemoteUserConfig(profile.config),
     daily: normalizeDailyUsageSeries(profile.daily),
+    efficiency: normalizeRemoteEfficiencyProfile(profile.efficiency),
     goals: normalizeRemoteGoalEvaluations(profile.goals),
     sessions: Array.isArray(profile.sessions) ? profile.sessions.map(normalizeRemoteSession) : [],
     user: profile.user
@@ -335,6 +392,7 @@ function normalizeRemoteLeaderboardUser(user: TokenLeaderboardUser): TokenLeader
     messages: finiteNumberOrZero(user.messages),
     records: finiteNumberOrZero(user.records),
     activeDays: finiteNumberOrZero(user.activeDays),
+    efficiency: normalizeRemoteEfficiencyProfile(user.efficiency),
   };
 }
 

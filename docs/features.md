@@ -32,6 +32,20 @@ Open Token Board 的费用估算按四类 token 计算：普通输入、缓存�
 
 使用方法：默认价格表在 `token-leaderboard.ts` 内置。自托管时可设置 `TOKEN_BOARD_PRICING_FILE=/data/pricing.json` 覆盖或补充，文件支持 `models` 和 `fallback`。模型匹配支持精确别名 `aliases`、前缀 `startsWith`、包含项 `includes`。
 
+## 效率指标
+
+效率指标只用于个人看板和荣誉系统，不参与排行榜排序。`GET /api/usage/stats` 和 `GET /api/usage/me` 会返回增量的 `efficiency` 字段；网页只在登录后的“我的 Token 消耗”中展示本人效率，不在公开个人主页展示他人效率明细。
+
+当前口径包含三项：
+
+- 工具错误率：`errorCount / toolCallCount`。分母只统计日志中明确带成功/失败布尔值的工具结果，例如 Claude Code 的 `tool_result.is_error`、Codex MCP 工具结束事件的 `result.Ok.isError`；没有结构化错误标志的工具输出不会当作成功计入分母。
+- 中断率：`interruptedSessions / interruptionSignalSessions`。Claude Code 使用用户消息中的显式中断标记，Codex 使用 `turn_aborted` 事件；同一会话只计一次。
+- Tokens / 会话：当前窗口内 `inputTokens + outputTokens` 除以会话数，作为任务粒度参考值。
+
+数据不足时不会显示误导性的 `0%`：工具错误率要求至少 50 次明确工具结果，中断率要求至少 10 个有中断信号口径的会话，低于阈值显示“数据不足”；旧 agent 或旧数据缺少新增字段时按“暂无数据”处理，并在团队中位数计算中跳过。
+
+隐私边界：agent 只上报 `errorCount`、`interruptedCount`、`toolCallCount` 这类计数字段，不上传错误内容、工具输出正文、用户指令文本或完整 transcript。服务端 JSON 存储和 PostgreSQL 存储都把这些字段作为可选字段保存，缺省为无质量信号。
+
 ## 上报校验
 
 服务端在 `/api/usage/ingest` 和 `/api/usage/replace` 入口做反作弊与误报保护：token 数必须是非负数，`totalTokens` 要与 `inputTokens + outputTokens` 自洽，缓存读写合计不能超过输入，`reasoningOutputTokens` 不能超过输出，时间不能超出允许范围，单事件默认上限 50,000,000 token，单用户单日默认上限 500,000,000 token。

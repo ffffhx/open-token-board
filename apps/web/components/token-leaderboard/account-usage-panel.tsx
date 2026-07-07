@@ -218,6 +218,7 @@ export function AccountUsagePanel({
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
+          <AccountEfficiencyPanel efficiency={dashboardProfile.efficiency} />
           <AccountGoalsPanel
             apiBaseUrl={apiBaseUrl}
             goals={goalEvaluations}
@@ -385,6 +386,136 @@ function AccountHonorPanel({ profile }: { profile: TokenAccountUsageProfile }) {
       <AccountBadgeWall badges={profile.badges} />
     </div>
   );
+}
+
+function AccountEfficiencyPanel({ efficiency }: { efficiency: TokenAccountUsageProfile["efficiency"] }) {
+  const { dict } = useI18n();
+  const copy = dict.board.account.efficiency;
+  const items = [
+    {
+      detail: copy.toolCallDetail(
+        formatNumber(efficiency.errorRate.numerator),
+        formatNumber(efficiency.errorRate.denominator)
+      ),
+      label: copy.errorRate,
+      meta: efficiencyToolMeta(efficiency.errorRate, copy),
+      metric: efficiency.errorRate,
+      tone: "blue",
+      value: efficiencyRateValue(efficiency.errorRate, copy),
+      medianValue: efficiency.errorRate.teamMedian === null ? null : formatPercent(efficiency.errorRate.teamMedian),
+    },
+    {
+      detail: copy.interruptionDetail(
+        formatNumber(efficiency.interruptionRate.numerator),
+        formatNumber(efficiency.interruptionRate.denominator)
+      ),
+      label: copy.interruptionRate,
+      meta: efficiencySessionMeta(efficiency.interruptionRate, copy),
+      metric: efficiency.interruptionRate,
+      tone: "emerald",
+      value: efficiencyRateValue(efficiency.interruptionRate, copy),
+      medianValue: efficiency.interruptionRate.teamMedian === null ? null : formatPercent(efficiency.interruptionRate.teamMedian),
+    },
+    {
+      detail: copy.tokenSessionDetail(
+        formatTokens(efficiency.tokensPerSession.numerator),
+        formatNumber(efficiency.tokensPerSession.denominator)
+      ),
+      label: copy.tokensPerSession,
+      meta: copy.observedTokenSessions(formatNumber(efficiency.tokensPerSession.denominator)),
+      metric: efficiency.tokensPerSession,
+      tone: "amber",
+      value:
+        efficiency.tokensPerSession.status === "ready" && efficiency.tokensPerSession.value !== null
+          ? formatTokens(efficiency.tokensPerSession.value)
+          : efficiency.tokensPerSession.status === "insufficient"
+            ? copy.insufficient
+            : copy.noData,
+      medianValue:
+        efficiency.tokensPerSession.teamMedian === null ? null : formatTokens(efficiency.tokensPerSession.teamMedian),
+    },
+  ] as const;
+
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{copy.title}</h3>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.description}</p>
+        </div>
+        <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+          {copy.privacy}
+        </span>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900/70"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.label}</p>
+                <p className="mt-2 truncate font-mono text-2xl font-semibold text-slate-950 dark:text-slate-50" title={item.value}>
+                  {item.value}
+                </p>
+              </div>
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${efficiencyToneClass(item.tone)}`} />
+            </div>
+            <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400" title={item.detail}>
+              {item.detail}
+            </p>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{item.meta}</p>
+            <div className="mt-3 border-t border-slate-200 pt-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:text-slate-300">
+              {item.medianValue ? (
+                <>
+                  <p>{copy.teamMedian(item.medianValue)}</p>
+                  {item.metric.comparison ? (
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">
+                      {copy.comparison[item.metric.comparison]}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p>{copy.unavailableMedian}</p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function efficiencyRateValue(
+  metric: TokenAccountUsageProfile["efficiency"]["errorRate"],
+  copy: Dictionary["board"]["account"]["efficiency"]
+) {
+  if (metric.status === "ready" && metric.value !== null) {
+    return formatPercent(metric.value);
+  }
+
+  return metric.status === "insufficient" ? copy.insufficient : copy.noData;
+}
+
+function efficiencyToolMeta(
+  metric: TokenAccountUsageProfile["efficiency"]["errorRate"],
+  copy: Dictionary["board"]["account"]["efficiency"]
+) {
+  return copy.observedToolCalls(formatNumber(metric.denominator), formatNumber(metric.minimumDenominator));
+}
+
+function efficiencySessionMeta(
+  metric: TokenAccountUsageProfile["efficiency"]["interruptionRate"],
+  copy: Dictionary["board"]["account"]["efficiency"]
+) {
+  return copy.observedSessions(formatNumber(metric.denominator), formatNumber(metric.minimumDenominator));
+}
+
+function efficiencyToneClass(tone: "amber" | "blue" | "emerald") {
+  if (tone === "emerald") return "bg-emerald-500";
+  if (tone === "amber") return "bg-amber-500";
+  return "bg-blue-600";
 }
 
 function translateLevel(level: TokenAccountUsageProfile["level"]["current"], dict: Dictionary) {
