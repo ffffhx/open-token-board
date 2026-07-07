@@ -48,7 +48,11 @@ import {
   type TokenWrappedResponse,
   type TokenUsageEvent,
 } from "@open-token-board/core";
-import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
+import {
+  analyzeCodexRateLimits,
+  type CodexRateLimitReport,
+  type CodexRateWindow,
+} from "@open-token-board/core/codex-rate-limits";
 import {
   createTokenUsageStore,
   importTokenUsageEventsFromJsonFile,
@@ -150,6 +154,7 @@ const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "ses
 const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const PUBLIC_PROFILE_DAILY_DAYS = 365;
 const PUBLIC_PROFILE_TOP_LIMIT = 8;
+const RATE_LIMIT_TEAM_STALE_SECONDS = 2 * 60 * 60;
 let leaderboardSnapshotCache = new Map<string, LeaderboardSnapshotEntry>();
 let leaderboardSnapshotRefreshPromise: Promise<void> | undefined;
 let leaderboardSnapshotRefreshTimer: NodeJS.Timeout | undefined;
@@ -338,6 +343,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       ],
       sourcePaths: [],
     });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/usage/rate-limits/team") {
+    await handleTeamRateLimits(request, response);
     return;
   }
 
@@ -560,6 +570,242 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   sendJson(request, response, 404, { error: "Not found" });
+}
+
+type TeamRateLimitWindowSnapshot = Pick<
+  CodexRateWindow,
+  | "key"
+  | "windowMinutes"
+  | "label"
+  | "usedPercent"
+  | "remainingPercent"
+  | "resetsAt"
+  | "observedAt"
+  | "staleSeconds"
+  | "burnPercentPerHour"
+  | "burnTokensPerHour"
+  | "etaAt"
+  | "willExhaustBeforeReset"
+> & {
+  resetsInSeconds: number | null;
+  etaSeconds: number | null;
+};
+
+type TeamRateLimitToolSnapshot = {
+  available: boolean;
+  plan: string | null;
+  generatedAt: string;
+  latestEventAt: string | null;
+  windows: TeamRateLimitWindowSnapshot[];
+};
+
+type TeamUserProfile = {
+  login: string;
+  displayName: string;
+  team?: string;
+  avatarUrl?: string;
+};
+
+async function handleTeamRateLimits(request: IncomingMessage, response: ServerResponse) {
+  const identity = readWebIdentity(request);
+
+  if (!identity) {
+    sendJson(request, response, 401, { error: "GitHub login required" });
+    return;
+  }
+
+  const nowMs = Date.now();
+  const store = usageStore();
+  const [configs, uploadUsers, events] = await Promise.all([
+    store.listUserConfigs(),
+    loadUploadUsers(),
+    store.listEvents(),
+  ]);
+  const profiles = buildTeamUserProfiles(uploadUsers, events);
+  const users = configs.flatMap(({ userId, config }) => {
+    const codex = teamToolSnapshotFromReport(config.rateLimits, nowMs);
+    const claudeCode = teamToolSnapshotFromReport(config.claudeCodeRateLimits, nowMs);
+
+    if (!codex && !claudeCode) {
+      return [];
+    }
+
+    const profile = profiles.get(userId) ?? teamFallbackProfile(userId);
+    const updatedAt = sanitizeTeamIsoDate(config.updatedAt) || new Date(0).toISOString();
+    const snapshotAgeSeconds = Math.max(0, Math.round((nowMs - Date.parse(updatedAt)) / 1000));
+    const weeklyRemainingPercent = minWindowRemaining([codex, claudeCode], "weekly");
+    const fiveHourRemainingPercent = minWindowRemaining([codex, claudeCode], "5h");
+
+    return [
+      {
+        userId,
+        login: profile.login,
+        displayName: profile.displayName,
+        team: profile.team ?? null,
+        avatarUrl: profile.avatarUrl ?? null,
+        updatedAt,
+        snapshotAgeSeconds,
+        stale: snapshotAgeSeconds > RATE_LIMIT_TEAM_STALE_SECONDS,
+        weeklyRemainingPercent,
+        fiveHourRemainingPercent,
+        codex,
+        claudeCode,
+      },
+    ];
+  });
+
+  users.sort((left, right) => {
+    const weekly = nullableNumberSort(left.weeklyRemainingPercent, right.weeklyRemainingPercent);
+    if (weekly !== 0) return weekly;
+    const fiveHour = nullableNumberSort(left.fiveHourRemainingPercent, right.fiveHourRemainingPercent);
+    if (fiveHour !== 0) return fiveHour;
+    if (left.stale !== right.stale) return left.stale ? 1 : -1;
+    return left.login.localeCompare(right.login);
+  });
+
+  sendJson(request, response, 200, {
+    schemaVersion: 1,
+    generatedAt: new Date(nowMs).toISOString(),
+    staleAfterSeconds: RATE_LIMIT_TEAM_STALE_SECONDS,
+    users,
+  });
+}
+
+function teamToolSnapshotFromReport(
+  report: CodexRateLimitReport | null | undefined,
+  nowMs: number
+): TeamRateLimitToolSnapshot | null {
+  if (!report?.available || !report.windows.length) {
+    return null;
+  }
+
+  return {
+    available: true,
+    plan: report.plan,
+    generatedAt: report.generatedAt,
+    latestEventAt: report.latestEventAt,
+    windows: report.windows.map((window) => teamWindowSnapshot(window, nowMs)),
+  };
+}
+
+function teamWindowSnapshot(window: CodexRateWindow, nowMs: number): TeamRateLimitWindowSnapshot {
+  const resetsInSeconds = secondsUntilIso(window.resetsAt, nowMs) ?? window.resetsInSeconds;
+  const etaSeconds = secondsUntilIso(window.etaAt, nowMs) ?? window.etaSeconds;
+
+  return {
+    key: window.key,
+    windowMinutes: window.windowMinutes,
+    label: window.label,
+    usedPercent: window.usedPercent,
+    remainingPercent: window.remainingPercent,
+    resetsAt: window.resetsAt,
+    resetsInSeconds,
+    observedAt: window.observedAt,
+    staleSeconds: window.staleSeconds,
+    burnPercentPerHour: window.burnPercentPerHour,
+    burnTokensPerHour: window.burnTokensPerHour,
+    etaSeconds,
+    etaAt: window.etaAt,
+    willExhaustBeforeReset: window.willExhaustBeforeReset,
+  };
+}
+
+function buildTeamUserProfiles(uploadUsers: TokenBoardUploadUser[], events: TokenUsageEvent[]) {
+  const profiles = new Map<string, TeamUserProfile>();
+
+  for (const user of uploadUsers) {
+    profiles.set(user.userId, {
+      login: inferTeamLogin(user.userId, user.displayName),
+      displayName: user.displayName,
+      team: user.team,
+      avatarUrl: teamAvatarUrl(inferTeamLogin(user.userId, user.displayName)),
+    });
+  }
+
+  const latestEvents = new Map<string, TokenUsageEvent>();
+  for (const event of events) {
+    const current = latestEvents.get(event.userId);
+    if (!current || Date.parse(event.timestamp) > Date.parse(current.timestamp)) {
+      latestEvents.set(event.userId, event);
+    }
+  }
+
+  for (const [userId, event] of latestEvents) {
+    const current = profiles.get(userId);
+    const login = current?.login || inferTeamLogin(userId, event.displayName);
+    profiles.set(userId, {
+      login,
+      displayName: current?.displayName || event.displayName || login || userId,
+      team: current?.team || event.team,
+      avatarUrl: current?.avatarUrl || teamAvatarUrl(login),
+    });
+  }
+
+  return profiles;
+}
+
+function teamFallbackProfile(userId: string): TeamUserProfile {
+  const login = inferTeamLogin(userId, userId);
+  return {
+    login,
+    displayName: login || userId,
+    avatarUrl: teamAvatarUrl(login),
+  };
+}
+
+function inferTeamLogin(userId: string, displayName: string) {
+  const displayLogin = normalizePublicProfileLogin(displayName);
+
+  if (displayLogin && !/^\d+$/.test(displayLogin)) {
+    return displayLogin;
+  }
+
+  const withoutGithubPrefix = userId.replace(/^github:/i, "");
+  const userIdLogin = normalizePublicProfileLogin(withoutGithubPrefix);
+
+  if (userIdLogin && !/^\d+$/.test(userIdLogin)) {
+    return userIdLogin;
+  }
+
+  return displayLogin || userIdLogin || userId;
+}
+
+function teamAvatarUrl(login: string) {
+  return isSafeGithubLogin(login) && !/^\d+$/.test(login) ? `https://github.com/${login}.png` : undefined;
+}
+
+function minWindowRemaining(tools: Array<TeamRateLimitToolSnapshot | null>, key: CodexRateWindow["key"]) {
+  const values = tools.flatMap((tool) => {
+    const window = tool?.windows.find((item) => item.key === key);
+    return typeof window?.remainingPercent === "number" ? [window.remainingPercent] : [];
+  });
+
+  return values.length ? Math.min(...values) : null;
+}
+
+function nullableNumberSort(left: number | null, right: number | null) {
+  if (left === null && right === null) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  return left - right;
+}
+
+function secondsUntilIso(iso: string | null, nowMs: number) {
+  if (!iso) {
+    return null;
+  }
+
+  const ts = Date.parse(iso);
+  return Number.isFinite(ts) ? Math.round((ts - nowMs) / 1000) : null;
+}
+
+function sanitizeTeamIsoDate(value: unknown) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  const ts = Date.parse(value);
+  return Number.isFinite(ts) ? new Date(ts).toISOString() : "";
 }
 
 async function handleUsageExport(request: IncomingMessage, response: ServerResponse, url: URL) {

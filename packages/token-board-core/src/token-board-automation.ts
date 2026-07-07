@@ -326,6 +326,14 @@ function sanitizeCodexRateWindow(value: unknown): CodexRateWindow | null {
     return null;
   }
 
+  const burnPercentPerHour = sanitizeNonNegativeNumberOrNull(value.burnPercentPerHour);
+  const estimatedCapacityTokens = sanitizeNonNegativeIntegerOrNull(value.estimatedCapacityTokens);
+  const burnTokensPerHour =
+    sanitizeNonNegativeIntegerOrNull(value.burnTokensPerHour ?? value.burn_tokens_per_hour) ??
+    (burnPercentPerHour !== null && estimatedCapacityTokens !== null
+      ? Math.round((estimatedCapacityTokens * burnPercentPerHour) / 100)
+      : null);
+
   return {
     key,
     windowMinutes,
@@ -336,11 +344,12 @@ function sanitizeCodexRateWindow(value: unknown): CodexRateWindow | null {
     resetsInSeconds: sanitizeIntegerOrNull(value.resetsInSeconds),
     observedAt,
     staleSeconds: sanitizeNonNegativeInteger(value.staleSeconds) ?? 0,
-    burnPercentPerHour: sanitizeNonNegativeNumberOrNull(value.burnPercentPerHour),
+    burnPercentPerHour,
+    burnTokensPerHour,
     etaSeconds: sanitizeIntegerOrNull(value.etaSeconds),
     etaAt: sanitizeIsoDate(value.etaAt) || null,
     willExhaustBeforeReset: value.willExhaustBeforeReset === true,
-    estimatedCapacityTokens: sanitizeNonNegativeIntegerOrNull(value.estimatedCapacityTokens),
+    estimatedCapacityTokens,
     estimatedRemainingTokens: sanitizeNonNegativeIntegerOrNull(value.estimatedRemainingTokens),
     localConsumedTokensThisWindow: sanitizeNonNegativeIntegerOrNull(value.localConsumedTokensThisWindow),
   };
