@@ -486,7 +486,7 @@ export function TokenLeaderboardApp({
   }
 
   const leaderboardPanel = (
-    <section id="token-leaderboard-rankings" className="min-w-0 overflow-hidden rounded-lg border border-stone-950/10 bg-white shadow-sm">
+    <section id="token-leaderboard-rankings" className="otb-panel min-w-0 overflow-hidden rounded-lg">
       <PanelHeader
         title="排行榜"
         meta={isDataLoading ? <Skeleton className="h-3 w-40 align-middle" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
@@ -533,7 +533,7 @@ export function TokenLeaderboardApp({
       </div>
       <div className="hidden overflow-x-auto sm:block">
         <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
-          <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
+          <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500 dark:bg-slate-900 dark:text-slate-400">
             <tr>
               <th className="px-4 py-3">排名</th>
               <th className="px-4 py-3">用户</th>
@@ -564,7 +564,7 @@ export function TokenLeaderboardApp({
   );
 
   const sharePanel = (
-    <section className="rounded-lg border border-stone-950/10 bg-slate-50 p-4 shadow-sm">
+    <section className="otb-panel-muted rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold">{selectedMetricLabel}份额</h2>
         <span className="font-mono text-xs text-stone-500">
@@ -580,7 +580,7 @@ export function TokenLeaderboardApp({
   );
 
   const dataEntryPanel = (
-    <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
+    <section className="otb-panel rounded-lg p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">加入榜单</h2>
@@ -613,7 +613,7 @@ export function TokenLeaderboardApp({
           <button
             type="button"
             onClick={openInstallGuide}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-600"
+            className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <Icon name="guide" />
             使用安装指南
@@ -645,9 +645,9 @@ export function TokenLeaderboardApp({
   );
 
   return (
-    <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8">
+    <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8 dark:text-slate-50">
       <div className="space-y-4">
-        <header className="overflow-hidden rounded-lg border border-slate-200 bg-white px-5 py-5 shadow-sm sm:px-6 lg:px-7">
+        <header className="otb-panel overflow-hidden rounded-lg px-5 py-5 sm:px-6 lg:px-7">
           <div className="space-y-5">
             <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-950">
@@ -697,7 +697,7 @@ export function TokenLeaderboardApp({
                   <button
                     type="button"
                     onClick={openInstallGuide}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700"
+                    className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <Icon name="guide" />
                     使用安装指南
@@ -706,7 +706,7 @@ export function TokenLeaderboardApp({
                     <button
                       type="button"
                       onClick={loginWithGitHub}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm"
                     >
                       <Icon name="github" />
                       GitHub 登录
@@ -715,7 +715,7 @@ export function TokenLeaderboardApp({
                     <button
                       type="button"
                       onClick={retryDataLoad}
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm"
                     >
                       <Icon name="refresh" />
                       刷新榜单
@@ -805,7 +805,7 @@ export function TokenLeaderboardApp({
             />
 
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.82fr)]">
-              <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
+              <section className="otb-panel rounded-lg p-4">
                 <div className="flex items-center justify-between gap-3">
                   <h2 className="text-base font-semibold">{selectedMetricLabel}趋势</h2>
                   <p className="font-mono text-xs text-stone-500">
@@ -843,7 +843,7 @@ export function TokenLeaderboardApp({
           <aside className="space-y-5 xl:sticky xl:top-24 xl:self-start">
             {dataEntryPanel}
 
-            <section className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
+            <section className="otb-panel rounded-lg p-4">
               <h2 className="text-base font-semibold">统计口径</h2>
               <div className="mt-3 space-y-2 text-xs leading-5 text-stone-600">
                 <p>

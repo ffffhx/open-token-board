@@ -150,13 +150,24 @@ export function SegmentedControl({
   onChange: (value: string) => void;
   label: string;
 }) {
+  const activeIndex = Math.max(0, items.findIndex((item) => item.key === value));
+
   return (
     <div
-      className="grid w-full rounded-lg border border-slate-200 bg-slate-100 p-1"
+      className="relative grid w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 p-1 shadow-inner dark:border-slate-700 dark:bg-slate-900"
       role="radiogroup"
       aria-label={label}
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
+      <span
+        aria-hidden="true"
+        className="absolute bottom-1 top-1 z-0 rounded-lg bg-white shadow-sm transition-transform dark:bg-slate-800"
+        style={{
+          left: "0.25rem",
+          width: `calc((100% - 0.5rem) / ${items.length})`,
+          transform: `translateX(${activeIndex * 100}%)`,
+        }}
+      />
       {items.map((item) => (
         <button
           key={item.key}
@@ -167,12 +178,12 @@ export function SegmentedControl({
           disabled={item.disabled}
           title={item.disabled ? item.disabledReason : undefined}
           onClick={() => onChange(item.key)}
-          className={`min-h-11 rounded-lg px-2 text-sm font-semibold transition ${
+          className={`relative z-10 min-h-11 rounded-lg px-2 text-sm font-semibold transition ${
             value === item.key
-              ? "bg-white text-slate-950 shadow-sm"
+              ? "text-slate-950 dark:text-slate-50"
               : item.disabled
                 ? "cursor-not-allowed text-slate-400"
-                : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
+                : "text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
           }`}
         >
           {item.label}
@@ -198,21 +209,21 @@ export function StatTile({
   tone: "ink" | "mint" | "blue" | "gold";
 }) {
   const tones = {
-    ink: "border-slate-950 bg-slate-950 text-white",
-    mint: "border-blue-600/20 bg-blue-50 text-blue-900",
-    blue: "border-sky-600/18 bg-sky-50 text-sky-900",
-    gold: "border-amber-600/18 bg-amber-50 text-amber-900",
+    ink: "border-slate-950 bg-slate-950 text-white dark:border-slate-700 dark:bg-slate-900",
+    mint: "border-blue-600/20 bg-blue-50 text-blue-900 dark:border-blue-400/25 dark:bg-blue-950/40 dark:text-blue-100",
+    blue: "border-sky-600/18 bg-sky-50 text-sky-900 dark:border-sky-400/25 dark:bg-sky-950/40 dark:text-sky-100",
+    gold: "border-amber-600/18 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-950/40 dark:text-amber-100",
   };
-  const className = `min-h-32 rounded-lg border p-4 text-left shadow-sm transition ${
+  const className = `otb-card-hover min-h-32 rounded-lg border p-4 text-left shadow-sm transition ${
     tones[tone]
-  } ${active ? "ring-2 ring-blue-600/35 ring-offset-2 ring-offset-white" : onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""}`;
+  } ${active ? "ring-2 ring-blue-600/35 ring-offset-2 ring-offset-white dark:ring-blue-300/30 dark:ring-offset-slate-950" : ""}`;
   const content = (
     <>
       <div className="flex items-start justify-between gap-3">
         <p className="text-xs font-semibold uppercase opacity-65">{label}</p>
         <span className="mt-0.5 size-2 rounded-full bg-current opacity-55" />
       </div>
-      <p className="mt-5 font-mono text-3xl font-semibold leading-none sm:text-4xl" title={typeof value === "string" ? value : undefined}>{value}</p>
+      <p className="otb-stat-number mt-5 font-mono text-3xl font-black leading-none sm:text-4xl" title={typeof value === "string" ? value : undefined}>{value}</p>
       <p className="mt-3 truncate text-xs opacity-60" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
     </>
   );
@@ -234,9 +245,9 @@ export function StatTile({
 
 export function HeroSignal({ label, value, meta }: { label: string; value: ReactNode; meta: ReactNode }) {
   return (
-    <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3">
+    <div className="otb-panel-muted min-w-0 rounded-lg px-3 py-3">
       <p className="truncate text-[11px] font-semibold uppercase text-slate-500 sm:text-xs">{label}</p>
-      <p className="mt-2 truncate text-base font-semibold text-slate-950 sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
+      <p className="otb-stat-number mt-2 truncate text-base font-black text-slate-950 sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
       <p className="mt-1 truncate font-mono text-[11px] text-blue-600 sm:text-xs" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
     </div>
   );
@@ -353,7 +364,7 @@ export function DailyTokenTrendChart({
                   isHidden
                     ? "border-slate-200 bg-slate-50 text-slate-400 line-through dark:border-slate-800 dark:bg-slate-900"
                     : isFocused
-                      ? "border-blue-600/35 bg-blue-50 text-blue-900 shadow-sm"
+                      ? "border-blue-600/35 bg-blue-50 text-blue-900 shadow-sm dark:border-blue-300/35 dark:bg-blue-950/40 dark:text-blue-100"
                       : focusedKey
                         ? "border-stone-950/10 bg-white text-stone-500 opacity-65 hover:opacity-100"
                         : "border-stone-950/10 bg-white text-stone-700 hover:border-blue-600/25 hover:bg-blue-50"
@@ -377,7 +388,7 @@ export function DailyTokenTrendChart({
       ) : null}
 
       <div
-        className="relative rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(17,19,15,0.04),transparent)] px-2 pb-3 pt-4"
+        className="relative rounded-lg border border-stone-950/8 bg-[linear-gradient(180deg,rgba(47,91,255,0.06),transparent)] px-2 pb-3 pt-4 dark:border-white/10 dark:bg-[linear-gradient(180deg,rgba(96,165,250,0.08),transparent)]"
         onMouseLeave={() => setHoveredPointIndex(null)}
       >
         <svg
@@ -440,7 +451,7 @@ export function DailyTokenTrendChart({
                       fill="none"
                       height={Math.max(2, barHeight)}
                       rx={Math.min(4, barWidth / 2)}
-                      stroke={isSelected ? "#dc2626" : "#2563eb"}
+                      stroke={isSelected ? "var(--otb-energy-strong)" : "var(--otb-energy)"}
                       strokeOpacity={isSelected ? 0.85 : 0.55}
                       strokeWidth="1.5"
                       vectorEffect="non-scaling-stroke"
@@ -487,7 +498,7 @@ export function DailyTokenTrendChart({
                     fill="none"
                     height={Math.max(2, barHeight)}
                     rx={Math.min(4, barWidth / 2)}
-                    stroke={isSelected ? "#dc2626" : "#2563eb"}
+                    stroke={isSelected ? "var(--otb-energy-strong)" : "var(--otb-energy)"}
                     strokeOpacity={isSelected ? 0.85 : 0.55}
                     strokeWidth="1.5"
                     vectorEffect="non-scaling-stroke"
@@ -522,7 +533,7 @@ export function DailyTokenTrendChart({
         {hoveredPoint ? (
           <div
             role="tooltip"
-            className={`pointer-events-none absolute top-2 z-30 min-w-[12rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-100 shadow-sm backdrop-blur ${hoverAlignClass}`}
+            className={`pointer-events-none absolute top-2 z-30 min-w-[12rem] max-w-[min(18rem,calc(100vw-3rem))] rounded-lg border border-blue-600/18 bg-white/98 px-3 py-2 text-stone-950 opacity-100 shadow-sm backdrop-blur dark:border-blue-300/20 dark:bg-slate-950/95 dark:text-slate-50 ${hoverAlignClass}`}
             style={{ left: `${hoveredX}%` }}
             data-token-trend-tooltip={hoveredPoint.date}
           >
@@ -749,15 +760,15 @@ function HourlyTrendDrilldown({
 }
 
 const TREND_SEGMENT_COLORS = [
-  { dark: "#60a5fa", light: "#2563eb" },
-  { dark: "#2dd4bf", light: "#0f766e" },
-  { dark: "#fbbf24", light: "#d97706" },
+  { dark: "#7aa2ff", light: "#2f5bff" },
+  { dark: "#b28cff", light: "#8a3ffc" },
+  { dark: "#58e0ef", light: "#00b8d9" },
+  { dark: "#ffd76b", light: "#b86b00" },
   { dark: "#fb7185", light: "#be123c" },
-  { dark: "#a78bfa", light: "#7c3aed" },
-  { dark: "#38bdf8", light: "#0284c7" },
-  { dark: "#f97316", light: "#ea580c" },
+  { dark: "#34d399", light: "#047857" },
+  { dark: "#f59e0b", light: "#d97706" },
 ];
-const OTHER_TREND_COLOR = { dark: "#94a3b8", light: "#64748b" };
+const OTHER_TREND_COLOR = { dark: "#94a3b8", light: "#607086" };
 
 function trendSegmentColorStyle(segment: TokenTrendSegment) {
   const color = segment.other ? OTHER_TREND_COLOR : TREND_SEGMENT_COLORS[hashTrendKey(segment.key) % TREND_SEGMENT_COLORS.length];
@@ -870,7 +881,7 @@ export function SortableColumnHeader({
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
           active
-            ? "bg-slate-950 text-white"
+            ? "otb-energy-bg text-white shadow-sm"
             : "text-stone-500"
         }`}
         title={active ? "当前按此列降序排列" : undefined}
@@ -880,6 +891,42 @@ export function SortableColumnHeader({
       </span>
     </th>
   );
+}
+
+function rankVisual(rank: number) {
+  if (rank === 1) {
+    return {
+      badgeClass: "border-amber-500/45 bg-[linear-gradient(135deg,var(--otb-gold-soft),#ffffff)] text-amber-900 dark:bg-[linear-gradient(135deg,var(--otb-gold-soft),rgba(15,23,42,0.92))] dark:text-amber-100",
+      mobileCardClass: "otb-leader-breathe border-amber-500/35 bg-[linear-gradient(135deg,rgba(255,244,204,0.95),rgba(255,255,255,0.88))] dark:bg-[linear-gradient(135deg,rgba(120,75,10,0.3),rgba(15,23,42,0.94))]",
+      modelClass: "border-amber-500/30 bg-amber-50 text-amber-900 dark:border-amber-400/25 dark:bg-amber-950/40 dark:text-amber-100",
+      rowClass: "otb-leader-breathe bg-[linear-gradient(90deg,rgba(255,244,204,0.7),transparent_62%)] dark:bg-[linear-gradient(90deg,rgba(120,75,10,0.22),transparent_62%)]",
+    };
+  }
+
+  if (rank === 2) {
+    return {
+      badgeClass: "border-slate-400/40 bg-[linear-gradient(135deg,var(--otb-silver-soft),#ffffff)] text-slate-700 dark:bg-[linear-gradient(135deg,var(--otb-silver-soft),rgba(15,23,42,0.92))] dark:text-slate-100",
+      mobileCardClass: "border-slate-300/60 bg-[linear-gradient(135deg,rgba(238,243,248,0.92),rgba(255,255,255,0.86))] dark:bg-[linear-gradient(135deg,rgba(75,85,99,0.24),rgba(15,23,42,0.94))]",
+      modelClass: "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100",
+      rowClass: "bg-[linear-gradient(90deg,rgba(238,243,248,0.72),transparent_58%)] dark:bg-[linear-gradient(90deg,rgba(75,85,99,0.2),transparent_58%)]",
+    };
+  }
+
+  if (rank === 3) {
+    return {
+      badgeClass: "border-orange-500/35 bg-[linear-gradient(135deg,var(--otb-bronze-soft),#ffffff)] text-orange-900 dark:bg-[linear-gradient(135deg,var(--otb-bronze-soft),rgba(15,23,42,0.92))] dark:text-orange-100",
+      mobileCardClass: "border-orange-300/55 bg-[linear-gradient(135deg,rgba(255,240,228,0.92),rgba(255,255,255,0.86))] dark:bg-[linear-gradient(135deg,rgba(124,58,18,0.24),rgba(15,23,42,0.94))]",
+      modelClass: "border-orange-300 bg-orange-50 text-orange-900 dark:border-orange-500/30 dark:bg-orange-950/35 dark:text-orange-100",
+      rowClass: "bg-[linear-gradient(90deg,rgba(255,240,228,0.72),transparent_58%)] dark:bg-[linear-gradient(90deg,rgba(124,58,18,0.2),transparent_58%)]",
+    };
+  }
+
+  return {
+    badgeClass: "border-stone-950/10 bg-white text-stone-500 dark:border-white/10 dark:bg-slate-950 dark:text-slate-300",
+    mobileCardClass: "border-stone-950/10 bg-white dark:border-white/10 dark:bg-slate-950",
+    modelClass: "border-stone-950/10 bg-slate-50 text-stone-700 dark:border-white/10 dark:bg-slate-900 dark:text-slate-200",
+    rowClass: "",
+  };
 }
 
 export function LeaderboardMobileCard({
@@ -898,16 +945,17 @@ export function LeaderboardMobileCard({
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
   const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
+  const rankStyle = rankVisual(user.rank);
 
   return (
-    <article className="rounded-lg border border-stone-950/10 bg-white p-3 shadow-sm">
+    <article className={`otb-card-hover rounded-lg border p-3 shadow-sm ${rankStyle.mobileCardClass}`}>
       <div className="flex items-start justify-between gap-3">
         <Link
           href={profileHrefForUser(user)}
           className="group/profile-link flex min-w-0 items-center gap-3 rounded-lg transition"
           title={`查看 ${user.displayName} 的公开个人主页`}
         >
-          <span className="rounded-full border border-amber-600/25 bg-amber-50 px-2.5 py-1 font-mono text-xs font-semibold text-amber-900">
+          <span className={`rounded-full border px-2.5 py-1 font-mono text-xs font-black ${rankStyle.badgeClass}`}>
             #{user.rank}
           </span>
           <RankDeltaBadge previousRank={user.previousRank} rankDelta={user.rankDelta} />
@@ -915,13 +963,13 @@ export function LeaderboardMobileCard({
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700 dark:text-slate-50 dark:group-hover/profile-link:text-blue-300">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
         </Link>
         <div className="shrink-0 text-right">
-          <p className="font-mono text-lg font-semibold text-stone-950">{metricValue}</p>
+          <p className="otb-stat-number font-mono text-xl font-black text-stone-950 dark:text-slate-50">{metricValue}</p>
           <p className="text-xs text-stone-500">{metricLabel} ↓</p>
         </div>
       </div>
@@ -944,7 +992,7 @@ export function LeaderboardMobileCard({
         </div>
       ) : null}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-stone-500">
-        <span className="rounded-md border border-stone-950/10 bg-slate-50 px-2 py-1 font-semibold text-stone-700">
+        <span className={`rounded-md border px-2 py-1 font-semibold ${rankStyle.modelClass}`}>
           {user.topModel}
         </span>
         <span>{formatNumber(user.records)} records</span>
@@ -959,7 +1007,7 @@ function MetricMini({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <p className="text-stone-500">{label}</p>
-      <p className="mt-1 truncate font-mono font-semibold text-stone-900" title={value}>{value}</p>
+      <p className="otb-stat-number mt-1 truncate font-mono font-black text-stone-900 dark:text-slate-50" title={value}>{value}</p>
     </div>
   );
 }
@@ -1056,8 +1104,8 @@ function DailyUsageSparkline({
         >
           <defs>
             <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.22" />
-              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
+              <stop offset="0%" stopColor="var(--otb-energy)" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="var(--otb-energy)" stopOpacity="0.02" />
             </linearGradient>
           </defs>
           <line x1={paddingX} x2={width - paddingX} y1={height - paddingY} y2={height - paddingY} stroke="#cbd5e1" strokeWidth="1" />
@@ -1068,7 +1116,7 @@ function DailyUsageSparkline({
             <path
               d={path}
               fill="none"
-              stroke="#2563eb"
+              stroke="var(--otb-energy)"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="3"
@@ -1081,7 +1129,7 @@ function DailyUsageSparkline({
               x2={activePoint.x}
               y1={paddingY}
               y2={height - paddingY}
-              stroke="#2563eb"
+              stroke="var(--otb-energy)"
               strokeDasharray="3 3"
               strokeOpacity="0.5"
               strokeWidth="1"
@@ -1119,7 +1167,7 @@ function DailyUsageSparkline({
             const isHovered = hoveredPointIndex === index;
             const isLatest = index === points.length - 1;
             const dotSize = isHovered ? "size-[9px]" : isLatest ? "size-2" : "size-[7px]";
-            const dotFill = isHovered ? "bg-blue-600" : isLatest ? "bg-red-600" : "bg-white";
+            const dotFill = isHovered ? "bg-blue-600" : isLatest ? "bg-violet-600" : "bg-white";
 
             return (
               <span
@@ -1196,20 +1244,13 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
   const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
-  const rankTone =
-    user.rank === 1
-      ? "border-amber-600/30 bg-amber-50 text-amber-900"
-      : user.rank === 2
-        ? "border-sky-600/20 bg-sky-50 text-sky-900"
-        : user.rank === 3
-          ? "border-blue-600/20 bg-blue-50 text-blue-900"
-          : "border-stone-950/10 bg-white text-stone-500";
+  const rankStyle = rankVisual(user.rank);
 
   return (
-    <tr className="transition hover:bg-slate-50">
+    <tr className={`transition hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-sm dark:hover:bg-slate-900/70 ${rankStyle.rowClass}`}>
       <td className="px-4 py-3">
         <div className="flex flex-col items-start gap-1.5">
-          <span className={`inline-flex min-w-10 justify-center rounded-full border px-2 py-1 font-mono text-xs font-semibold ${rankTone}`}>
+          <span className={`inline-flex justify-center rounded-full border px-2 py-1 font-mono text-xs font-black ${rankStyle.badgeClass} ${user.rank === 1 ? "min-w-12 text-sm" : "min-w-10"}`}>
             #{user.rank}
           </span>
           <RankDeltaBadge previousRank={user.previousRank} rankDelta={user.rankDelta} />
@@ -1225,7 +1266,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-1.5">
               <LevelSymbol level={user.level} />
-              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700">{user.displayName}</p>
+              <p className="truncate font-semibold text-stone-950 transition group-hover/profile-link:text-blue-700 dark:text-slate-50 dark:group-hover/profile-link:text-blue-300">{user.displayName}</p>
             </div>
             <p className="truncate text-xs text-stone-500">{user.team}</p>
           </div>
@@ -1236,15 +1277,15 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           <DailyUsageSparkline fixedWidth daily={daily} label={`${user.displayName} 用量趋势`} range={range} />
         </td>
       ) : null}
-      <td className="px-4 py-3 text-right font-mono font-semibold text-stone-950" title={cacheBreakdownTitle}>
+      <td className="otb-stat-number px-4 py-3 text-right font-mono text-base font-black text-stone-950 dark:text-slate-50" title={cacheBreakdownTitle}>
         {formatTokens(consumptionTokens)}
       </td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatUsd(user.costUsd)}</td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
-      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.activeDays)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatUsd(user.costUsd)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatNumber(user.sessions)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600 dark:text-slate-300">{formatNumber(user.activeDays)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md border border-stone-950/10 bg-slate-50 px-2 py-1 text-xs font-semibold text-stone-700">
+          <span className={`rounded-md border px-2 py-1 text-xs font-semibold ${rankStyle.modelClass}`}>
             {user.topModel}
           </span>
           {user.deltaTokens !== null ? (
@@ -1440,7 +1481,7 @@ export function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; to
         </div>
         <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/80 shadow-inner">
           <div
-            className="h-full rounded-full bg-blue-600"
+            className="otb-energy-bar h-full rounded-full"
             style={{ width: `${Math.max(2, share * 100)}%` }}
           />
         </div>
@@ -1476,7 +1517,7 @@ function TrendLoadingBars() {
         <span
           key={index}
           aria-hidden="true"
-          className="block w-full rounded-t-[3px] bg-slate-200/80 motion-safe:animate-pulse"
+          className="otb-skeleton block w-full rounded-t-[3px]"
           style={{ height }}
         />
       ))}
@@ -1514,7 +1555,7 @@ export function BreakdownPanel({
             </div>
             <div className="mt-1 grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-3">
               <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full rounded-full bg-blue-600" style={{ width: `${Math.max(2, item.share * 100)}%` }} />
+                <div className="otb-energy-bar h-full rounded-full" style={{ width: `${Math.max(2, item.share * 100)}%` }} />
               </div>
               <p className="truncate text-right text-xs text-stone-500">{item.meta}</p>
             </div>

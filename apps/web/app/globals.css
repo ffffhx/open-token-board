@@ -404,17 +404,17 @@ summary:focus-visible {
 }
 
 .token-trend-total {
-  fill: #2563eb;
+  fill: var(--otb-energy);
 }
 
 .token-trend-latest {
-  fill: #dc2626;
+  fill: var(--otb-energy-strong);
 }
 
 .dark .token-trend-total {
-  fill: #60a5fa;
+  fill: var(--otb-energy);
 }
 
 .dark .token-trend-latest {
-  fill: #fb7185;
+  fill: var(--otb-energy-strong);
 }
