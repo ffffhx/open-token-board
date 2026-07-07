@@ -8,6 +8,8 @@
     "build": "pnpm pack:agent && pnpm --filter @open-token-board/web build",
     "start": "pnpm --filter @open-token-board/web start",
     "test": "pnpm typecheck && pnpm agent:help",
+    "test:api": "node --import tsx --test tests/api/*.test.ts",
+    "test:e2e": "playwright test tests/e2e",
     "typecheck": "pnpm -r --if-present typecheck",
     "pack:agent": "node scripts/pack-agent.mjs",
     "verify:new-sources": "pnpm --dir apps/token-board-api exec tsx ../../scripts/verify-new-sources-fixtures.ts",
@@ -21,5 +23,9 @@
     "codex:limits": "pnpm --filter @open-token-board/codex-limits start",
     "codex:limits:watch": "pnpm --filter @open-token-board/codex-limits watch",
     "codex:limits:serve": "pnpm --filter @open-token-board/codex-limits serve"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "tsx": "4.21.0"
   }
 }
