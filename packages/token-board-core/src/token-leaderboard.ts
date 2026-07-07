@@ -22,6 +22,7 @@ export type TokenUsageEvent = {
   tool?: string;
   timestamp: string;
   inputTokens: number;
+  cacheCreationInputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
   reasoningOutputTokens: number;
@@ -39,6 +40,7 @@ export type TokenLeaderboardUser = {
   team: string;
   tokens: number;
   inputTokens: number;
+  cacheCreationInputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
   reasoningOutputTokens: number;
@@ -88,6 +90,7 @@ export type TokenUsageSessionBreakdown = {
   title?: string;
   tokens: number;
   inputTokens: number;
+  cacheCreationInputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
   reasoningOutputTokens: number;
@@ -162,28 +165,71 @@ const RANGE_DAYS: Record<TokenBoardRange, number> = {
   "90D": 90,
 };
 
-// Order matters: estimateCostUsd takes the FIRST matching entry, so cheaper
-// mini/nano variants must precede their flagship arms, and the broad catch-all
-// arms use word boundaries so they cannot swallow lighter siblings (gpt-5-mini)
-// or unrelated strings (my-gpt-5000).
-const MODEL_PRICING = [
-  // OpenAI gpt-5 family — mini/nano variants (any suffix depth, e.g. gpt-5.1-codex-mini) first
-  { match: /gpt-5.*\b(mini|nano)\b/i, input: 0.75, cachedInput: 0.075, output: 4.5 },
-  { match: /gpt-5\.5/i, input: 5, cachedInput: 0.5, output: 30 },
-  { match: /gpt-5\.4/i, input: 2.5, cachedInput: 0.25, output: 15 },
-  { match: /gpt-5(\.[0-3])?\b/i, input: 1.25, cachedInput: 0.125, output: 10 },
-  // OpenAI o-series reasoning models
-  { match: /\bo[34](-mini)?\b/i, input: 1.1, cachedInput: 0.275, output: 4.4 },
-  // OpenAI gpt-4 family
-  { match: /gpt-4\.1.*\b(mini|nano)\b/i, input: 0.4, cachedInput: 0.1, output: 1.6 },
-  { match: /gpt-4\.1/i, input: 2, cachedInput: 0.5, output: 8 },
-  { match: /gpt-4o-mini/i, input: 0.15, cachedInput: 0.075, output: 0.6 },
-  { match: /gpt-4o/i, input: 2.5, cachedInput: 1.25, output: 10 },
-  // Anthropic Claude
-  { match: /claude.*opus/i, input: 15, cachedInput: 1.5, output: 75 },
-  { match: /claude.*sonnet/i, input: 3, cachedInput: 0.3, output: 15 },
-  { match: /claude.*haiku/i, input: 0.8, cachedInput: 0.08, output: 4 },
+export type TokenModelPricing = {
+  id: string;
+  aliases?: string[];
+  startsWith?: string[];
+  includes?: string[];
+  input: number;
+  output: number;
+  cachedInput?: number;
+  cacheReadInput?: number;
+  cacheCreationInput?: number;
+  source?: string;
+};
+
+export type TokenPricingFile = {
+  models?: TokenModelPricing[];
+  fallback?: Pick<TokenModelPricing, "input" | "output" | "cachedInput" | "cacheReadInput" | "cacheCreationInput">;
+};
+
+const DEFAULT_MODEL_PRICING: TokenModelPricing[] = [
+  { id: "gpt-5.5-pro", startsWith: ["gpt-5.5-pro"], input: 15, output: 90, source: "openai" },
+  { id: "gpt-5.5", startsWith: ["gpt-5.5"], input: 2.5, cachedInput: 0.25, output: 15, source: "openai" },
+  { id: "gpt-5.4-pro", startsWith: ["gpt-5.4-pro"], input: 15, output: 90, source: "openai" },
+  { id: "gpt-5.4-mini", startsWith: ["gpt-5.4-mini"], input: 0.375, cachedInput: 0.0375, output: 2.25, source: "openai" },
+  { id: "gpt-5.4-nano", startsWith: ["gpt-5.4-nano"], input: 0.1, cachedInput: 0.01, output: 0.625, source: "openai" },
+  { id: "gpt-5.4", startsWith: ["gpt-5.4"], input: 1.25, cachedInput: 0.13, output: 7.5, source: "openai" },
+  { id: "gpt-5.3-codex", startsWith: ["gpt-5.3-codex"], input: 1.75, cachedInput: 0.175, output: 14, source: "openai" },
+  { id: "gpt-5-mini", startsWith: ["gpt-5-mini", "gpt-5.3-mini", "gpt-5.2-mini", "gpt-5.1-mini"], input: 0.75, cachedInput: 0.075, output: 4.5, source: "openai-compat" },
+  { id: "gpt-5-nano", startsWith: ["gpt-5-nano", "gpt-5.3-nano", "gpt-5.2-nano", "gpt-5.1-nano"], input: 0.2, cachedInput: 0.02, output: 1.25, source: "openai-compat" },
+  { id: "gpt-5", startsWith: ["gpt-5.3", "gpt-5.2", "gpt-5.1", "gpt-5"], input: 1.25, cachedInput: 0.125, output: 10, source: "openai-compat" },
+  { id: "o3-deep-research", startsWith: ["o3-deep-research"], input: 5, output: 20, source: "openai" },
+  { id: "o4-mini-deep-research", startsWith: ["o4-mini-deep-research"], input: 1, output: 4, source: "openai" },
+  { id: "o4-mini", startsWith: ["o4-mini"], input: 1.1, cachedInput: 0.275, output: 4.4, source: "openai-compat" },
+  { id: "o3-mini", startsWith: ["o3-mini"], input: 1.1, cachedInput: 0.55, output: 4.4, source: "openai-compat" },
+  { id: "o3", startsWith: ["o3"], input: 10, cachedInput: 2.5, output: 40, source: "openai-compat" },
+  { id: "gpt-4.1-mini", startsWith: ["gpt-4.1-mini", "gpt-4.1-nano"], input: 0.4, cachedInput: 0.1, output: 1.6, source: "openai-compat" },
+  { id: "gpt-4.1", startsWith: ["gpt-4.1"], input: 2, cachedInput: 0.5, output: 8, source: "openai-compat" },
+  { id: "gpt-4o-mini", startsWith: ["gpt-4o-mini"], input: 0.15, cachedInput: 0.075, output: 0.6, source: "openai-compat" },
+  { id: "gpt-4o", startsWith: ["gpt-4o"], input: 2.5, cachedInput: 1.25, output: 10, source: "openai-compat" },
+  { id: "claude-fable-5", startsWith: ["claude-fable-5"], input: 10, cacheCreationInput: 12.5, cacheReadInput: 1, output: 50, source: "anthropic" },
+  { id: "claude-mythos-5", startsWith: ["claude-mythos-5", "claude-mythos-preview"], input: 10, cacheCreationInput: 12.5, cacheReadInput: 1, output: 50, source: "anthropic" },
+  { id: "claude-opus-4.8", startsWith: ["claude-opus-4.8"], input: 5, cacheCreationInput: 6.25, cacheReadInput: 0.5, output: 25, source: "anthropic" },
+  { id: "claude-opus-4.7", startsWith: ["claude-opus-4.7"], input: 5, cacheCreationInput: 6.25, cacheReadInput: 0.5, output: 25, source: "anthropic" },
+  { id: "claude-opus-4.6", startsWith: ["claude-opus-4.6"], input: 5, cacheCreationInput: 6.25, cacheReadInput: 0.5, output: 25, source: "anthropic" },
+  { id: "claude-opus-4.5", startsWith: ["claude-opus-4.5"], input: 5, cacheCreationInput: 6.25, cacheReadInput: 0.5, output: 25, source: "anthropic" },
+  { id: "claude-opus-4.1", startsWith: ["claude-opus-4.1"], input: 15, cacheCreationInput: 18.75, cacheReadInput: 1.5, output: 75, source: "anthropic" },
+  { id: "claude-opus-4", startsWith: ["claude-opus-4", "claude-4-opus"], includes: ["claude", "opus"], input: 15, cacheCreationInput: 18.75, cacheReadInput: 1.5, output: 75, source: "anthropic" },
+  { id: "claude-sonnet-5", startsWith: ["claude-sonnet-5"], input: 2, cacheCreationInput: 2.5, cacheReadInput: 0.2, output: 10, source: "anthropic" },
+  { id: "claude-sonnet-4", startsWith: ["claude-sonnet-4", "claude-4-sonnet"], includes: ["claude", "sonnet"], input: 3, cacheCreationInput: 3.75, cacheReadInput: 0.3, output: 15, source: "anthropic" },
+  { id: "claude-haiku-4.5", startsWith: ["claude-haiku-4.5"], input: 1, cacheCreationInput: 1.25, cacheReadInput: 0.1, output: 5, source: "anthropic" },
+  { id: "claude-haiku-3.5", startsWith: ["claude-haiku-3.5"], input: 0.8, cacheCreationInput: 1, cacheReadInput: 0.08, output: 4, source: "anthropic" },
+  { id: "claude-haiku", startsWith: ["claude-haiku"], includes: ["claude", "haiku"], input: 0.8, cacheCreationInput: 1, cacheReadInput: 0.08, output: 4, source: "anthropic-compat" },
 ];
+
+const DEFAULT_FALLBACK_PRICING: Pick<
+  TokenModelPricing,
+  "input" | "output" | "cachedInput" | "cacheReadInput" | "cacheCreationInput"
+> = {
+  input: 1,
+  output: 5,
+  cacheReadInput: 0.1,
+  cacheCreationInput: 1.25,
+};
+const unmatchedPricingModels = new Set<string>();
+let pricingFileCacheKey = "";
+let pricingFileCache: { models: TokenModelPricing[]; fallback: typeof DEFAULT_FALLBACK_PRICING } | undefined;
 
 export function buildTokenLeaderboard(
   entries: TokenUsageEvent[],
@@ -330,11 +376,20 @@ export function dedupeTokenEvents(entries: TokenUsageEvent[]) {
 }
 
 export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): TokenUsageEvent {
-  const inputTokens = toFiniteNumber(value.inputTokens);
-  const rawCachedInputTokens = toFiniteNumber(value.cachedInputTokens);
-  const cachedInputTokens = inputTokens > 0 ? Math.min(inputTokens, rawCachedInputTokens) : rawCachedInputTokens;
-  const outputTokens = toFiniteNumber(value.outputTokens);
-  const reasoningOutputTokens = toFiniteNumber(value.reasoningOutputTokens);
+  const record = value as Record<string, unknown>;
+  const inputTokens = toFiniteNumber(readField(record, ["inputTokens", "input_tokens"]));
+  const cacheCreationInputTokens = cacheCreationInputTokensFromImportRecord(record);
+  const cachedInputTokens = firstImportFieldNumber(record, [
+    "cachedInputTokens",
+    "cached_input_tokens",
+    "cachedTokens",
+    "cacheReadInputTokens",
+    "cache_read_input_tokens",
+  ]);
+  const outputTokens = toFiniteNumber(readField(record, ["outputTokens", "output_tokens"]));
+  const reasoningOutputTokens = toFiniteNumber(
+    readField(record, ["reasoningOutputTokens", "reasoning_output_tokens", "reasoningTokens"])
+  );
   const totalTokens = inputTokens + outputTokens;
 
   if (totalTokens <= 0) {
@@ -370,6 +425,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
     tool: normalizeText(value.tool) || source,
     timestamp,
     inputTokens,
+    cacheCreationInputTokens,
     cachedInputTokens,
     outputTokens,
     reasoningOutputTokens,
@@ -380,6 +436,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
         : estimateCostUsd({
             model,
             inputTokens,
+            cacheCreationInputTokens,
             cachedInputTokens,
             outputTokens,
           }),
@@ -434,6 +491,7 @@ export function createDemoTokenEntries(now = new Date()): TokenUsageEvent[] {
       const reasoningOutputTokens = Math.round(outputTokens * (0.18 + (day % 2) * 0.04));
       const inputTokens = Math.max(0, totalTokens - outputTokens);
       const cachedInputTokens = Math.round(inputTokens * (0.36 + (day % 3) * 0.05));
+      const cacheCreationInputTokens = Math.round(inputTokens * (0.03 + (day % 2) * 0.01));
       const timestamp = new Date(
         today.getTime() - day * 24 * 60 * 60 * 1000 + (9 + ((userIndex + day) % 10)) * 60 * 60 * 1000
       );
@@ -450,6 +508,7 @@ export function createDemoTokenEntries(now = new Date()): TokenUsageEvent[] {
           project: projects[(userIndex + day) % projects.length],
           timestamp: timestamp.toISOString(),
           inputTokens,
+          cacheCreationInputTokens,
           cachedInputTokens,
           outputTokens,
           reasoningOutputTokens,
@@ -516,18 +575,20 @@ function recordsToEvents(records: unknown[]) {
     }
     const timestamp = new Date(timestampMs ?? Date.now()).toISOString();
     const userId = normalizeText(readField(value, ["userId", "user", "username", "name"]));
-    const baseInputTokens = toFiniteNumber(
-      readField(value, ["inputTokens", "input_tokens", "promptTokens", "prompt_tokens"])
+    const boardInputTokens = readField(value, ["inputTokens"]);
+    const inputFieldTokens = toFiniteNumber(
+      boardInputTokens ?? readField(value, ["input_tokens", "promptTokens", "prompt_tokens"])
     );
     // cache_read = discounted reads (billed at the cachedInput rate); cache_creation =
     // premium writes (billed at the full input rate, NOT the discounted cached rate).
-    const cacheReadTokens = toFiniteNumber(readField(value, ["cache_read_input_tokens", "cacheReadInputTokens"]));
-    const cacheCreationTokens = toFiniteNumber(
-      readField(value, ["cache_creation_input_tokens", "cacheCreationInputTokens"])
-    );
+    const cacheReadTokens = sumImportFields(value, ["cache_read_input_tokens", "cacheReadInputTokens"]);
+    const cacheCreationTokens = cacheCreationInputTokensFromImportRecord(value);
     const cachedInputTokens =
       toFiniteNumber(readField(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"])) + cacheReadTokens;
-    const inputTokens = baseInputTokens + cacheReadTokens + cacheCreationTokens;
+    const inputTokens =
+      boardInputTokens === undefined
+        ? inputFieldTokens + cacheReadTokens + cacheCreationTokens
+        : inputFieldTokens;
     const outputTokens = toFiniteNumber(
       readField(value, ["outputTokens", "output_tokens", "completionTokens", "completion_tokens"])
     );
@@ -556,6 +617,7 @@ function recordsToEvents(records: unknown[]) {
         project: normalizeText(readField(value, ["project", "repo", "workspace"])),
         timestamp,
         inputTokens,
+        cacheCreationInputTokens: cacheCreationTokens,
         cachedInputTokens,
         outputTokens,
         reasoningOutputTokens: toFiniteNumber(readField(value, ["reasoningOutputTokens", "reasoning_output_tokens", "reasoningTokens"])),
@@ -597,6 +659,7 @@ function aggregateUsers(
         team: entry.team || "Friends",
         tokens: 0,
         inputTokens: 0,
+        cacheCreationInputTokens: 0,
         cachedInputTokens: 0,
         outputTokens: 0,
         reasoningOutputTokens: 0,
@@ -616,6 +679,7 @@ function aggregateUsers(
     user.team = entry.team || user.team;
     user.tokens += tokens;
     user.inputTokens += entry.inputTokens;
+    user.cacheCreationInputTokens += entry.cacheCreationInputTokens;
     user.cachedInputTokens += entry.cachedInputTokens;
     user.outputTokens += entry.outputTokens;
     user.reasoningOutputTokens += entry.reasoningOutputTokens;
@@ -642,6 +706,7 @@ function aggregateUsers(
       team: user.team,
       tokens: user.tokens,
       inputTokens: user.inputTokens,
+      cacheCreationInputTokens: user.cacheCreationInputTokens,
       cachedInputTokens: user.cachedInputTokens,
       outputTokens: user.outputTokens,
       reasoningOutputTokens: user.reasoningOutputTokens,
@@ -768,6 +833,7 @@ function aggregateSessionUsage(entries: TokenUsageEvent[]): TokenUsageSessionBre
     {
       tokens: number;
       inputTokens: number;
+      cacheCreationInputTokens: number;
       cachedInputTokens: number;
       outputTokens: number;
       reasoningOutputTokens: number;
@@ -791,6 +857,7 @@ function aggregateSessionUsage(entries: TokenUsageEvent[]): TokenUsageSessionBre
       {
         tokens: 0,
         inputTokens: 0,
+        cacheCreationInputTokens: 0,
         cachedInputTokens: 0,
         outputTokens: 0,
         reasoningOutputTokens: 0,
@@ -807,6 +874,7 @@ function aggregateSessionUsage(entries: TokenUsageEvent[]): TokenUsageSessionBre
 
     current.tokens += tokens;
     current.inputTokens += entry.inputTokens;
+    current.cacheCreationInputTokens += entry.cacheCreationInputTokens;
     current.cachedInputTokens += entry.cachedInputTokens;
     current.outputTokens += entry.outputTokens;
     current.reasoningOutputTokens += entry.reasoningOutputTokens;
@@ -837,6 +905,7 @@ function aggregateSessionUsage(entries: TokenUsageEvent[]): TokenUsageSessionBre
       title: topOptionalMapEntry(value.titleTokens),
       tokens: value.tokens,
       inputTokens: value.inputTokens,
+      cacheCreationInputTokens: value.cacheCreationInputTokens,
       cachedInputTokens: value.cachedInputTokens,
       outputTokens: value.outputTokens,
       reasoningOutputTokens: value.reasoningOutputTokens,
@@ -1048,32 +1117,211 @@ function parseCsvRows(input: string) {
   return rows;
 }
 
-function estimateCostUsd({
+export function estimateCostUsd({
   model,
   inputTokens,
+  cacheCreationInputTokens,
   cachedInputTokens,
   outputTokens,
 }: {
   model: string;
   inputTokens: number;
+  cacheCreationInputTokens?: number;
   cachedInputTokens: number;
   outputTokens: number;
 }) {
-  const pricing = MODEL_PRICING.find((item) => item.match.test(model));
-
-  if (!pricing) {
+  const normalizedModel = normalizeModelName(model);
+  if (!normalizedModel || normalizedModel === "hidden") {
     return 0;
   }
 
-  // cachedInputTokens is a subset of inputTokens, so charge the full rate only on
-  // the uncached remainder and the discounted rate on the cached portion.
-  const billableInputTokens = Math.max(0, inputTokens - cachedInputTokens);
+  const pricing = resolveModelPricing(normalizedModel);
+  const cacheReadTokens = Math.max(0, toFiniteNumber(cachedInputTokens));
+  const cacheCreationTokens = Math.max(0, toFiniteNumber(cacheCreationInputTokens));
+  const billableInputTokens = Math.max(0, toFiniteNumber(inputTokens) - cacheReadTokens - cacheCreationTokens);
+  const output = Math.max(0, toFiniteNumber(outputTokens));
+  const cacheReadPrice = pricing.cacheReadInput ?? pricing.cachedInput ?? pricing.input * 0.1;
+  const cacheCreationPrice = pricing.cacheCreationInput ?? pricing.input * 1.25;
 
   return (
     (billableInputTokens / 1_000_000) * pricing.input +
-    (cachedInputTokens / 1_000_000) * pricing.cachedInput +
-    (outputTokens / 1_000_000) * pricing.output
+    (cacheCreationTokens / 1_000_000) * cacheCreationPrice +
+    (cacheReadTokens / 1_000_000) * cacheReadPrice +
+    (output / 1_000_000) * pricing.output
   );
+}
+
+export function getUnmatchedTokenPricingModels() {
+  return [...unmatchedPricingModels].sort();
+}
+
+export function clearUnmatchedTokenPricingModels() {
+  unmatchedPricingModels.clear();
+}
+
+function resolveModelPricing(model: string) {
+  const pricing = loadModelPricing().models.find((item) => matchesModelPricing(item, model));
+
+  if (pricing) {
+    return pricing;
+  }
+
+  unmatchedPricingModels.add(model);
+  const fallback = loadModelPricing().fallback;
+  return {
+    id: "fallback",
+    input: fallback.input,
+    output: fallback.output,
+    cachedInput: fallback.cachedInput,
+    cacheReadInput: fallback.cacheReadInput,
+    cacheCreationInput: fallback.cacheCreationInput,
+  };
+}
+
+function loadModelPricing() {
+  const filePath = getPricingFilePath();
+
+  if (pricingFileCache && pricingFileCacheKey === filePath) {
+    return pricingFileCache;
+  }
+
+  const override = filePath ? readPricingFile(filePath) : null;
+  pricingFileCacheKey = filePath;
+  pricingFileCache = {
+    models: [...(override?.models ?? []), ...DEFAULT_MODEL_PRICING],
+    fallback: {
+      ...DEFAULT_FALLBACK_PRICING,
+      ...(override?.fallback ?? {}),
+    },
+  };
+  return pricingFileCache;
+}
+
+function readPricingFile(filePath: string): TokenPricingFile | null {
+  try {
+    const fs = getNodeFs();
+    if (!fs) {
+      return null;
+    }
+
+    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+    const pricing = normalizePricingFile(parsed);
+    if (pricing.models?.length || pricing.fallback) {
+      return pricing;
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`TOKEN_BOARD_PRICING_FILE ignored: ${message}`);
+  }
+
+  return null;
+}
+
+function normalizePricingFile(value: unknown): TokenPricingFile {
+  const record = isRecordLike(value) ? value : {};
+  const rawModels = Array.isArray(value)
+    ? value
+    : Array.isArray(record.models)
+      ? record.models
+      : Array.isArray(record.pricing)
+        ? record.pricing
+        : [];
+  const models = rawModels.flatMap((item) => {
+    if (!isRecordLike(item)) {
+      return [];
+    }
+
+    const id = normalizeText(item.id ?? item.model ?? item.name);
+    const input = toFiniteNumber(item.input ?? item.inputUsdPerMillion ?? item.input_per_million);
+    const output = toFiniteNumber(item.output ?? item.outputUsdPerMillion ?? item.output_per_million);
+    if (!id || input <= 0 || output <= 0) {
+      return [];
+    }
+
+    const aliases = stringList(item.aliases ?? item.models ?? item.exact);
+    const startsWith = stringList(item.startsWith ?? item.prefixes ?? item.prefix);
+    const includes = stringList(item.includes ?? item.contains ?? item.match);
+    return [
+      {
+        id,
+        ...(aliases.length ? { aliases } : {}),
+        ...(startsWith.length ? { startsWith } : {}),
+        ...(includes.length ? { includes } : {}),
+        input,
+        output,
+        cachedInput: positiveOptionalNumber(item.cachedInput ?? item.cached_input),
+        cacheReadInput: positiveOptionalNumber(item.cacheReadInput ?? item.cache_read_input ?? item.cacheRead),
+        cacheCreationInput: positiveOptionalNumber(
+          item.cacheCreationInput ?? item.cache_creation_input ?? item.cacheWriteInput ?? item.cache_write_input
+        ),
+        source: normalizeText(item.source) || "custom",
+      },
+    ];
+  });
+  const fallbackRecord = isRecordLike(record.fallback) ? record.fallback : {};
+  const fallbackInput = positiveOptionalNumber(fallbackRecord.input);
+  const fallbackOutput = positiveOptionalNumber(fallbackRecord.output);
+  const fallback =
+    fallbackInput !== undefined && fallbackOutput !== undefined
+      ? {
+          input: fallbackInput,
+          output: fallbackOutput,
+          cachedInput: positiveOptionalNumber(fallbackRecord.cachedInput ?? fallbackRecord.cached_input),
+          cacheReadInput: positiveOptionalNumber(fallbackRecord.cacheReadInput ?? fallbackRecord.cache_read_input),
+          cacheCreationInput: positiveOptionalNumber(
+            fallbackRecord.cacheCreationInput ?? fallbackRecord.cache_creation_input ?? fallbackRecord.cacheWriteInput
+          ),
+        }
+      : undefined;
+
+  return {
+    ...(models.length ? { models } : {}),
+    ...(fallback ? { fallback } : {}),
+  };
+}
+
+function matchesModelPricing(pricing: TokenModelPricing, model: string) {
+  const aliases = pricing.aliases ?? [pricing.id];
+  if (aliases.some((alias) => model === normalizeModelName(alias))) {
+    return true;
+  }
+
+  if (pricing.startsWith?.some((prefix) => model.startsWith(normalizeModelName(prefix)))) {
+    return true;
+  }
+
+  return Boolean(pricing.includes?.length && pricing.includes.every((part) => model.includes(normalizeModelName(part))));
+}
+
+function normalizeModelName(value: unknown) {
+  return normalizeText(value).toLowerCase();
+}
+
+function stringList(value: unknown) {
+  const values = Array.isArray(value) ? value : value === undefined ? [] : [value];
+  return values.map((item) => normalizeModelName(item)).filter(Boolean);
+}
+
+function positiveOptionalNumber(value: unknown) {
+  const number = toFiniteNumber(value);
+  return number > 0 ? number : undefined;
+}
+
+function getPricingFilePath() {
+  const processLike = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  return typeof processLike?.env?.TOKEN_BOARD_PRICING_FILE === "string"
+    ? processLike.env.TOKEN_BOARD_PRICING_FILE.trim()
+    : "";
+}
+
+function getNodeFs(): { readFileSync: (filePath: string, encoding: "utf8") => string } | null {
+  const processLike = (globalThis as {
+    process?: { getBuiltinModule?: (name: string) => unknown };
+  }).process;
+  const fs = processLike?.getBuiltinModule?.("fs") ?? processLike?.getBuiltinModule?.("node:fs");
+  return isRecordLike(fs) && typeof fs.readFileSync === "function"
+    ? (fs as { readFileSync: (filePath: string, encoding: "utf8") => string })
+    : null;
 }
 
 function addMapValue(map: Map<string, number>, key: string, value: number) {
@@ -1101,6 +1349,60 @@ function readField(record: Record<string, unknown>, names: string[]) {
   }
 
   return undefined;
+}
+
+function sumImportFields(record: Record<string, unknown>, names: string[]) {
+  return names.reduce((sum, name) => sum + toFiniteNumber(readField(record, [name])), 0);
+}
+
+function firstImportFieldNumber(record: Record<string, unknown>, names: string[]) {
+  let fallback = 0;
+
+  for (const name of names) {
+    const value = readField(record, [name]);
+    if (value === undefined) {
+      continue;
+    }
+    const number = toFiniteNumber(value);
+    if (number > 0) {
+      return number;
+    }
+    fallback = number;
+  }
+
+  return fallback;
+}
+
+function cacheCreationInputTokensFromImportRecord(record: Record<string, unknown>) {
+  const total = sumImportFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+  if (total > 0) {
+    return total;
+  }
+
+  const cacheCreation = readField(record, ["cache_creation", "cacheCreation"]);
+  const nested = isRecordLike(cacheCreation) ? cacheCreation : {};
+  return (
+    sumImportFields(record, [
+      "cache_creation_input_tokens_5m",
+      "cacheCreationInputTokens5m",
+      "cache_creation_input_tokens_1h",
+      "cacheCreationInputTokens1h",
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ]) +
+    sumImportFields(nested, [
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ])
+  );
+}
+
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 function normalizeHeader(value: string) {

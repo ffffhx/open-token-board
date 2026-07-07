@@ -391,6 +391,7 @@ function stableTokenEventId(event: TokenUsageEvent) {
       event.project || "",
       event.sessionId || "",
       event.inputTokens,
+      event.cacheCreationInputTokens,
       event.cachedInputTokens,
       event.outputTokens,
       event.reasoningOutputTokens,

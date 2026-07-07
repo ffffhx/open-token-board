@@ -51,9 +51,19 @@ const TOKEN_KEYS = new Set([
   "cached_input_tokens",
   "cachedInputTokens",
   "cache_creation_input_tokens",
+  "cache_creation_input_tokens_1h",
+  "cache_creation_input_tokens_5m",
   "cache_read_input_tokens",
+  "cacheCreationInputTokens",
+  "cacheCreationInputTokens1h",
+  "cacheCreationInputTokens5m",
+  "cacheReadInputTokens",
   "completion_tokens",
   "completionTokens",
+  "ephemeral_1h_input_tokens",
+  "ephemeral_5m_input_tokens",
+  "ephemeral1hInputTokens",
+  "ephemeral5mInputTokens",
   "input_tokens",
   "inputTokenCount",
   "inputTokens",
@@ -76,9 +86,19 @@ const USAGE_SHAPE_KEYS = new Set([
   "cached_input_tokens",
   "cachedInputTokens",
   "cache_creation_input_tokens",
+  "cache_creation_input_tokens_1h",
+  "cache_creation_input_tokens_5m",
   "cache_read_input_tokens",
+  "cacheCreationInputTokens",
+  "cacheCreationInputTokens1h",
+  "cacheCreationInputTokens5m",
+  "cacheReadInputTokens",
   "completion_tokens",
   "completionTokens",
+  "ephemeral_1h_input_tokens",
+  "ephemeral_5m_input_tokens",
+  "ephemeral1hInputTokens",
+  "ephemeral5mInputTokens",
   "input_tokens",
   "inputTokenCount",
   "inputTokens",
@@ -796,7 +816,15 @@ function finalizeSessionTitle(value: string) {
 }
 
 function tokenUsageDelta(current: Record<string, unknown>, previous: Record<string, unknown>) {
-  const fields = ["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"];
+  const fields = [
+    "input_tokens",
+    "cached_input_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+    "total_tokens",
+  ];
 
   return Object.fromEntries(
     fields.map((field) => [field, Math.max(0, toNumber(current[field]) - toNumber(previous[field]))])
@@ -804,7 +832,12 @@ function tokenUsageDelta(current: Record<string, unknown>, previous: Record<stri
 }
 
 function tokenUsageTotal(record: Record<string, unknown>) {
-  return toNumber(record.input_tokens) + toNumber(record.output_tokens);
+  return (
+    toNumber(record.input_tokens) +
+    cacheCreationInputTokensFromRecord(record) +
+    cacheReadInputTokensFromRecord(record) +
+    toNumber(record.output_tokens)
+  );
 }
 
 export function defaultSourceTargets(): SourceTarget[] {
@@ -941,8 +974,8 @@ function recordToUsageEvent(record: Record<string, unknown>, context: Extraction
   const baseInputTokens = numberFromFields(record, ["inputTokens", "input_tokens", "inputTokenCount", "promptTokens", "prompt_tokens"]);
   // cache_read = discounted reads (counted as cachedInput); cache_creation = premium
   // writes (counted as full-rate input only, never as discounted cached input).
-  const cacheReadTokens = numberFromFields(record, ["cache_read_input_tokens", "cacheReadInputTokens"]);
-  const cacheCreationTokens = numberFromFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+  const cacheReadTokens = cacheReadInputTokensFromRecord(record);
+  const cacheCreationTokens = cacheCreationInputTokensFromRecord(record);
   const inputTokens = baseInputTokens + cacheReadTokens + cacheCreationTokens;
   const cachedInputTokens =
     numberFromFields(record, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) + cacheReadTokens;
@@ -968,6 +1001,7 @@ function recordToUsageEvent(record: Record<string, unknown>, context: Extraction
   return normalizeTokenUsageEvent({
     id: stableCollectorId(context, timestamp, model, sessionId, sequence, {
       inputTokens,
+      cacheCreationInputTokens: cacheCreationTokens,
       cachedInputTokens,
       outputTokens,
       reasoningOutputTokens,
@@ -982,6 +1016,7 @@ function recordToUsageEvent(record: Record<string, unknown>, context: Extraction
     project,
     timestamp,
     inputTokens,
+    cacheCreationInputTokens: cacheCreationTokens,
     cachedInputTokens,
     outputTokens,
     reasoningOutputTokens,
@@ -1056,6 +1091,37 @@ function sumKnownTokens(record: Record<string, unknown>) {
 
 function numberFromFields(record: Record<string, unknown>, fields: string[]) {
   return fields.reduce((sum, field) => sum + toNumber(record[field]), 0);
+}
+
+function cacheReadInputTokensFromRecord(record: Record<string, unknown>) {
+  return numberFromFields(record, ["cache_read_input_tokens", "cacheReadInputTokens"]);
+}
+
+function cacheCreationInputTokensFromRecord(record: Record<string, unknown>) {
+  const total = numberFromFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+  if (total > 0) {
+    return total;
+  }
+
+  const nested = isRecord(record.cache_creation) ? record.cache_creation : {};
+  return (
+    numberFromFields(record, [
+      "cache_creation_input_tokens_5m",
+      "cacheCreationInputTokens5m",
+      "cache_creation_input_tokens_1h",
+      "cacheCreationInputTokens1h",
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ]) +
+    numberFromFields(nested, [
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ])
+  );
 }
 
 function textFromFields(record: Record<string, unknown>, fields: string[]) {
@@ -1140,6 +1206,7 @@ function stableCollectorId(
   sequence: number,
   tokens: {
     inputTokens: number;
+    cacheCreationInputTokens: number;
     cachedInputTokens: number;
     outputTokens: number;
     reasoningOutputTokens: number;
@@ -1156,6 +1223,7 @@ function stableCollectorId(
         sessionId,
         sequence,
         tokens.inputTokens,
+        tokens.cacheCreationInputTokens,
         tokens.cachedInputTokens,
         tokens.outputTokens,
         tokens.reasoningOutputTokens,

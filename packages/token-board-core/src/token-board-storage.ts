@@ -239,6 +239,7 @@ function createPostgresTokenUsageStore({
           tool TEXT,
           reported_at TIMESTAMPTZ NOT NULL,
           input_tokens BIGINT NOT NULL DEFAULT 0,
+          cache_creation_input_tokens BIGINT NOT NULL DEFAULT 0,
           cached_input_tokens BIGINT NOT NULL DEFAULT 0,
           output_tokens BIGINT NOT NULL DEFAULT 0,
           reasoning_output_tokens BIGINT NOT NULL DEFAULT 0,
@@ -251,6 +252,7 @@ function createPostgresTokenUsageStore({
         )
       `);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS session_title TEXT`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS cache_creation_input_tokens BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_reported_at_idx ON ${table} (reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_user_reported_at_idx ON ${table} (user_id, reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_model_idx ON ${table} (model)`);
@@ -368,6 +370,7 @@ type PostgresLeaderboardUserRow = {
   display_name: string;
   team: string | null;
   input_tokens: string | number;
+  cache_creation_input_tokens: string | number;
   cached_input_tokens: string | number;
   output_tokens: string | number;
   reasoning_output_tokens: string | number;
@@ -427,6 +430,7 @@ async function readPostgresLeaderboardSummary(
         SELECT
           user_id,
           SUM(input_tokens)::double precision AS input_tokens,
+          SUM(cache_creation_input_tokens)::double precision AS cache_creation_input_tokens,
           SUM(cached_input_tokens)::double precision AS cached_input_tokens,
           SUM(output_tokens)::double precision AS output_tokens,
           SUM(reasoning_output_tokens)::double precision AS reasoning_output_tokens,
@@ -486,6 +490,7 @@ async function readPostgresLeaderboardSummary(
         COALESCE(NULLIF(latest_user.display_name, ''), user_totals.user_id) AS display_name,
         COALESCE(NULLIF(latest_user.team, ''), 'Friends') AS team,
         user_totals.input_tokens,
+        user_totals.cache_creation_input_tokens,
         user_totals.cached_input_tokens,
         user_totals.output_tokens,
         user_totals.reasoning_output_tokens,
@@ -590,6 +595,7 @@ async function readPostgresLeaderboardSummary(
         team: row.team || "Friends",
         tokens,
         inputTokens: toFiniteNumber(row.input_tokens),
+        cacheCreationInputTokens: toFiniteNumber(row.cache_creation_input_tokens),
         cachedInputTokens: toFiniteNumber(row.cached_input_tokens),
         outputTokens: toFiniteNumber(row.output_tokens),
         reasoningOutputTokens: toFiniteNumber(row.reasoning_output_tokens),
@@ -801,6 +807,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     "tool",
     "reported_at",
     "input_tokens",
+    "cache_creation_input_tokens",
     "cached_input_tokens",
     "output_tokens",
     "reasoning_output_tokens",
@@ -824,6 +831,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       event.tool || null,
       event.timestamp,
       event.inputTokens,
+      event.cacheCreationInputTokens,
       event.cachedInputTokens,
       event.outputTokens,
       event.reasoningOutputTokens,
@@ -875,6 +883,7 @@ function rowToTokenUsageEvent(row: TokenUsageEventRow): TokenUsageEvent | undefi
     tool: row.tool || undefined,
     timestamp: new Date(row.reported_at).toISOString(),
     inputTokens,
+    cacheCreationInputTokens: toNumber(row.cache_creation_input_tokens),
     cachedInputTokens: toNumber(row.cached_input_tokens),
     outputTokens,
     reasoningOutputTokens: toNumber(row.reasoning_output_tokens),
@@ -933,6 +942,7 @@ type TokenUsageEventRow = {
   tool: string | null;
   reported_at: Date | string;
   input_tokens: string | number;
+  cache_creation_input_tokens: string | number;
   cached_input_tokens: string | number;
   output_tokens: string | number;
   reasoning_output_tokens: string | number;
