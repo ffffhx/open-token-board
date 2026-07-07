@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useId, useMemo, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 
 import {
   getTokenConsumptionTokens,
@@ -33,6 +33,15 @@ import {
   normalizeDailyUsageSeries,
   sanitizeSvgId,
 } from "./utils";
+
+function activateSvgControl(event: KeyboardEvent<SVGElement>, action: () => void) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return;
+  }
+
+  event.preventDefault();
+  action();
+}
 
 export function InsightStrip({ loading, text }: { loading: boolean; text: string }) {
   const { dict } = useI18n();
@@ -364,7 +373,7 @@ export function DailyTokenTrendChart({
                 aria-pressed={isFocused}
                 onClick={() => cycleLegendSegment(segment)}
                 title={dict.board.trend.legendTitle(segment.label)}
-                className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                className={`inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition ${
                   isHidden
                     ? "border-slate-200 bg-slate-50 text-slate-400 line-through"
                     : isFocused
@@ -383,7 +392,7 @@ export function DailyTokenTrendChart({
             <button
               type="button"
               onClick={resetLegend}
-              className="inline-flex min-h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-semibold text-slate-500 transition hover:border-blue-600/25 hover:bg-blue-50 hover:text-blue-700"
+              className="inline-flex min-h-11 items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs font-semibold text-slate-500 transition hover:border-blue-600/25 hover:bg-blue-50 hover:text-blue-700"
             >
               {dict.board.trend.reset}
             </button>
@@ -396,7 +405,7 @@ export function DailyTokenTrendChart({
         onMouseLeave={() => setHoveredPointIndex(null)}
       >
         <svg
-          aria-label={dict.board.trend.dayTrendAria(metricLabel)}
+          aria-label={dict.board.trend.dayTrendAria(metricLabel, formatNumber(chartPoints.length), formatTrendMetricValue(maxValue, effectiveMetric, dict))}
           className="h-64 w-full overflow-visible"
           preserveAspectRatio="none"
           role="img"
@@ -466,15 +475,19 @@ export function DailyTokenTrendChart({
                   ) : null}
                   <rect
                     aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)}`}
-                    className="cursor-crosshair outline-none"
+                    aria-pressed={isSelected}
+                    className="cursor-crosshair"
                     data-token-trend-point={point.date}
                     fill="transparent"
                     height={height}
                     onClick={() => setSelectedDate((date) => (date === point.date ? null : point.date))}
+                    onBlur={() => setHoveredPointIndex((current) => (current === index ? null : current))}
                     onFocus={() => setHoveredPointIndex(index)}
+                    onKeyDown={(event) => activateSvgControl(event, () => setSelectedDate((date) => (date === point.date ? null : point.date)))}
                     onMouseEnter={() => setHoveredPointIndex(index)}
                     onMouseMove={() => setHoveredPointIndex(index)}
                     pointerEvents="all"
+                    role="button"
                     tabIndex={0}
                     width={Math.max(8, barWidth + gap)}
                     x={Math.max(0, x - gap / 2)}
@@ -513,15 +526,19 @@ export function DailyTokenTrendChart({
                 ) : null}
                 <rect
                   aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)}`}
-                  className="cursor-crosshair outline-none"
+                  aria-pressed={isSelected}
+                  className="cursor-crosshair"
                   data-token-trend-point={point.date}
                   fill="transparent"
                   height={height}
                   onClick={() => setSelectedDate((date) => (date === point.date ? null : point.date))}
+                  onBlur={() => setHoveredPointIndex((current) => (current === index ? null : current))}
                   onFocus={() => setHoveredPointIndex(index)}
+                  onKeyDown={(event) => activateSvgControl(event, () => setSelectedDate((date) => (date === point.date ? null : point.date)))}
                   onMouseEnter={() => setHoveredPointIndex(index)}
                   onMouseMove={() => setHoveredPointIndex(index)}
                   pointerEvents="all"
+                  role="button"
                   tabIndex={0}
                   width={Math.max(8, barWidth + gap)}
                   x={Math.max(0, x - gap / 2)}
@@ -657,7 +674,7 @@ function HourlyTrendDrilldown({
       </div>
       <div className="relative mt-2" onMouseLeave={() => setHoveredHourIndex(null)}>
         <svg
-          aria-label={dict.board.trend.hourlyTitle(selectedDate)}
+          aria-label={dict.board.trend.hourlyAria(selectedDate, formatTrendMetricValue(maxValue, metric, dict))}
           className="h-32 w-full overflow-visible"
           preserveAspectRatio="none"
           role="img"
@@ -711,9 +728,14 @@ function HourlyTrendDrilldown({
                     className="cursor-crosshair"
                     fill="transparent"
                     height={height}
+                    onBlur={() => setHoveredHourIndex((current) => (current === index ? null : current))}
+                    onFocus={() => setHoveredHourIndex(index)}
+                    onKeyDown={(event) => activateSvgControl(event, () => setHoveredHourIndex(index))}
                     onMouseEnter={() => setHoveredHourIndex(index)}
                     onMouseMove={() => setHoveredHourIndex(index)}
                     pointerEvents="all"
+                    role="button"
+                    tabIndex={0}
                     width={Math.max(10, barWidth + gap)}
                     x={Math.max(0, x - gap / 2)}
                     y={0}
@@ -739,9 +761,14 @@ function HourlyTrendDrilldown({
                   className="cursor-crosshair"
                   fill="transparent"
                   height={height}
+                  onBlur={() => setHoveredHourIndex((current) => (current === index ? null : current))}
+                  onFocus={() => setHoveredHourIndex(index)}
+                  onKeyDown={(event) => activateSvgControl(event, () => setHoveredHourIndex(index))}
                   onMouseEnter={() => setHoveredHourIndex(index)}
                   onMouseMove={() => setHoveredHourIndex(index)}
                   pointerEvents="all"
+                  role="button"
+                  tabIndex={0}
                   width={Math.max(10, barWidth + gap)}
                   x={Math.max(0, x - gap / 2)}
                   y={0}
@@ -884,7 +911,7 @@ export function SortableColumnHeader({
   const { dict } = useI18n();
 
   return (
-    <th className={`px-4 py-3 ${align === "right" ? "text-right" : ""}`}>
+    <th aria-sort={active ? "descending" : undefined} className={`px-4 py-3 ${align === "right" ? "text-right" : ""}`}>
       <span
         className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${
           active
@@ -1076,7 +1103,7 @@ function DailyUsageSparkline({
   const activeSummary = activePoint
     ? `${activePoint.label} ${formatTokens(activePoint.tokens)}`
     : dict.board.trend.peak(formatTokens(peak.tokens));
-  const exactActiveLabel = activePoint ? `${formatNumber(activePoint.tokens)} tokens` : "";
+  const exactActiveLabel = activePoint ? formatTokens(activePoint.tokens) : "";
 
   return (
     <div aria-label={title} className={`min-w-0 ${fixedWidth ? "w-[16rem] min-w-[16rem] max-w-[16rem]" : ""}`}>
@@ -1110,7 +1137,7 @@ function DailyUsageSparkline({
         onMouseLeave={() => setHoveredPointIndex(null)}
       >
         <svg
-          aria-label={label}
+          aria-label={title}
           className="h-full w-full overflow-visible"
           preserveAspectRatio="none"
           role="img"
@@ -1153,20 +1180,25 @@ function DailyUsageSparkline({
           {points.map((point, index) => {
             const left = index === 0 ? 0 : (points[index - 1].x + point.x) / 2;
             const right = index === points.length - 1 ? width : (point.x + points[index + 1].x) / 2;
-            const exactLabel = `${point.label} ${formatNumber(point.tokens)} tokens`;
+            const exactLabel = `${point.label} ${formatTokens(point.tokens)}`;
 
             return (
               <rect
                 key={`${point.startDate}:${point.endDate}:hit`}
                 aria-label={exactLabel}
-                className="cursor-crosshair outline-none"
+                className="cursor-crosshair"
                 data-daily-usage-point={point.label}
                 fill="transparent"
                 height={height}
                 onClick={() => setHoveredPointIndex(index)}
+                onBlur={() => setHoveredPointIndex((current) => (current === index ? null : current))}
+                onFocus={() => setHoveredPointIndex(index)}
+                onKeyDown={(event) => activateSvgControl(event, () => setHoveredPointIndex(index))}
                 onMouseEnter={() => setHoveredPointIndex(index)}
                 onMouseMove={() => setHoveredPointIndex(index)}
                 pointerEvents="all"
+                role="button"
+                tabIndex={0}
                 width={Math.max(8, right - left)}
                 x={left}
                 y={0}
@@ -1505,8 +1537,11 @@ export function LeaderboardEmptyRow({ columnCount }: { columnCount: number }) {
 }
 
 export function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; total: number; user: TokenLeaderboardUser }) {
+  const { dict } = useI18n();
   const value = getUserMetricValue(user, metric);
   const share = total > 0 ? value / total : 0;
+  const sharePercent = Math.round(share * 100);
+  const shareLabel = formatPercent(share);
 
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_5rem] items-center gap-3">
@@ -1514,9 +1549,16 @@ export function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; to
       <div className="min-w-0">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-semibold">{user.displayName}</p>
-          <p className="font-mono text-xs font-semibold text-stone-500">{formatPercent(share)}</p>
+          <p className="font-mono text-xs font-semibold text-stone-500">{shareLabel}</p>
         </div>
-        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/80 shadow-inner">
+        <div
+          aria-label={dict.board.leaderboard.shareProgressAria(user.displayName, shareLabel)}
+          aria-valuemax={100}
+          aria-valuemin={0}
+          aria-valuenow={sharePercent}
+          className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/80 shadow-inner"
+          role="progressbar"
+        >
           <div
             className="otb-energy-bar h-full rounded-full"
             style={{ width: `${Math.max(2, share * 100)}%` }}
@@ -1640,14 +1682,14 @@ export function GitHubAuthControl({
   if (viewer.authenticated) {
     return (
       <div className="flex w-full items-center gap-2 xl:w-auto">
-        <span className="inline-flex min-h-10 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 xl:flex-none">
+        <span className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 xl:flex-none">
           <Icon name="github" />
           <span className="truncate">@{viewer.user?.githubLogin || viewer.user?.displayName || "GitHub"}</span>
         </span>
         <button
           type="button"
           onClick={onLogout}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
+          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
           title={dict.board.status.logoutConfirm}
         >
           <Icon name="logout" />

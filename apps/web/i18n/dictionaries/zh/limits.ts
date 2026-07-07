@@ -29,6 +29,7 @@ export const limits = {
     afterReset: "(晚于重置，会先刷新)",
     title: (label: string) => `${label}窗口`,
     used: (percent: string) => `已用 ${percent}%`,
+    progressAria: (label: string, used: string, remaining: string) => `${label}额度进度：已用 ${used}%，剩余 ${remaining}%`,
     remainingQuota: "剩余额度",
     usedRemainingWindow: (used: string, remaining: string, minutes: number) => ({ used: `已用 ${used}%`, remaining: `剩余 ${remaining}%`, minutes: `${minutes} 分钟` }),
     resetCountdown: "重置倒计时",
@@ -61,6 +62,7 @@ export const limits = {
     noSnapshot: "暂无快照",
     remaining: (percent: string) => `剩余 ${percent}%`,
     reset: (duration: string) => `重置 ${duration}`,
+    progressAria: (tool: string, label: string, used: string, remaining: string) => `${tool} ${label}额度进度：已用 ${used}%，剩余 ${remaining}%`,
   },
   embedded: {
     title: "Codex 额度面板",

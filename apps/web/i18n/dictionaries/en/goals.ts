@@ -41,6 +41,7 @@ export const goals = {
   progress: {
     generic: (progress, target, window) => `${progress} / ${target} · ${window}`,
     dailyStreak: (progress, target, window) => `${progress} / ${target} days · ${window}`,
+    progressAria: (name, percent) => `${name} goal progress ${percent}%`,
   },
   status: {
     achieved: "Achieved",

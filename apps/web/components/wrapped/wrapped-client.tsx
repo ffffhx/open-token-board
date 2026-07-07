@@ -1,7 +1,6 @@
 "use client";
 
 import type { TokenDailyUsagePoint, TokenWrappedResponse } from "@open-token-board/core";
-import { toBlob, toPng } from "html-to-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -430,6 +429,7 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
     setHint("");
 
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       const link = document.createElement("a");
       link.download = `token-wrapped-${safeFileName(wrapped.user.login)}-${safeFileName(wrapped.period.value)}.png`;
@@ -449,6 +449,7 @@ function ShareSection({ wrapped }: { wrapped: TokenWrappedResponse }) {
     setHint("");
 
     try {
+      const { toBlob } = await import("html-to-image");
       const blob = await toBlob(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
         throw new Error("clipboard unsupported");

@@ -39,6 +39,7 @@ export const goals = {
   progress: {
     generic: (progress: string, target: string, window: string) => `${progress} / ${target} · ${window}`,
     dailyStreak: (progress: string, target: string, window: string) => `${progress} / ${target} 天 · ${window}`,
+    progressAria: (name: string, percent: string) => `${name} 目标进度 ${percent}%`,
   },
   status: {
     achieved: "已达成",

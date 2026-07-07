@@ -1,7 +1,6 @@
 "use client";
 
 import type { TokenLeaderboardSummary } from "@open-token-board/core";
-import { toBlob, toPng } from "html-to-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -69,6 +68,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     setExporting(true);
     setHint("");
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, { pixelRatio: 2, cacheBust: true });
       const link = document.createElement("a");
       link.download = `token-report-${safeFileName(report.displayName)}.png`;
@@ -87,6 +87,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     setExporting(true);
     setHint("");
     try {
+      const { toBlob } = await import("html-to-image");
       const blob = await toBlob(cardRef.current, { pixelRatio: 2, cacheBust: true });
       if (!blob) throw new Error("no blob");
       if (!navigator.clipboard || typeof ClipboardItem === "undefined") {
@@ -112,7 +113,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             type="button"
             onClick={download}
             disabled={exporting}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
           >
             {exporting ? dict.common.actions.generating : dict.share.client.saveImage}
           </button>
@@ -120,7 +121,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             type="button"
             onClick={copy}
             disabled={exporting}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
+            className="inline-flex min-h-11 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 disabled:opacity-60"
           >
             {dict.share.client.copyImage}
           </button>

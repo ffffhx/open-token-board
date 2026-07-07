@@ -27,6 +27,7 @@ export const limits = {
     afterReset: "(after reset; reset comes first)",
     title: (label) => `${label} window`,
     used: (percent) => `${percent}% used`,
+    progressAria: (label, used, remaining) => `${label} quota progress: ${used}% used, ${remaining}% remaining`,
     remainingQuota: "quota remaining",
     usedRemainingWindow: (used, remaining, minutes) => ({ used: `Used ${used}%`, remaining: `Remaining ${remaining}%`, minutes: `${minutes} minutes` }),
     resetCountdown: "Reset countdown",
@@ -59,6 +60,7 @@ export const limits = {
     noSnapshot: "No snapshot",
     remaining: (percent) => `${percent}% remaining`,
     reset: (duration) => `Reset ${duration}`,
+    progressAria: (tool, label, used, remaining) => `${tool} ${label} quota progress: ${used}% used, ${remaining}% remaining`,
   },
   embedded: {
     title: "Codex quota panel",

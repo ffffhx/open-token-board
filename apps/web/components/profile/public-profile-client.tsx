@@ -1,6 +1,5 @@
 "use client";
 
-import { toBlob, toPng } from "html-to-image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -171,6 +170,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
     setHint("");
 
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       const link = document.createElement("a");
       link.download = `token-profile-${safeFileName(profile.user.login)}.png`;
@@ -190,6 +190,7 @@ function ProfileDashboard({ apiBaseUrl, profile }: { apiBaseUrl: string; profile
     setHint("");
 
     try {
+      const { toBlob } = await import("html-to-image");
       const blob = await toBlob(cardRef.current, { cacheBust: true, pixelRatio: 2 });
       if (!blob || !navigator.clipboard || typeof ClipboardItem === "undefined") {
         throw new Error("clipboard unsupported");
@@ -428,7 +429,7 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
           {hovered ? `${hovered.date} · ${formatTokens(hovered.tokens)}` : `${dict.profile.sections.less} → ${dict.profile.sections.more}`}
         </div>
       </div>
-      <div ref={scrollRef} className="mt-4 max-w-full overflow-x-auto pb-1">
+      <div ref={scrollRef} aria-label={dict.profile.sections.heatmapAria} className="mt-4 max-w-full overflow-x-auto pb-1">
         <svg
           aria-label={dict.profile.sections.heatmapAria}
           className="block"
@@ -451,23 +452,21 @@ function ContributionHeatmap({ daily }: { daily: TokenDailyUsagePoint[] }) {
             const x = left + cell.week * (cellSize + gap);
             const y = top + cell.weekday * (cellSize + gap);
             const level = heatLevel(cell.tokens, maxTokens);
+            const label = `${cell.date} · ${formatTokens(cell.tokens)}`;
 
             return (
               <rect
                 key={cell.date}
                 fill={heatColor(level)}
                 height={cellSize}
-                onBlur={() => setHovered(null)}
-                onFocus={() => setHovered({ date: cell.date, tokens: cell.tokens })}
                 onMouseEnter={() => setHovered({ date: cell.date, tokens: cell.tokens })}
                 onMouseLeave={() => setHovered(null)}
                 rx="2"
-                tabIndex={0}
                 width={cellSize}
                 x={x}
                 y={y}
               >
-                <title>{`${cell.date} · ${formatNumber(cell.tokens)} tokens`}</title>
+                <title>{label}</title>
               </rect>
             );
           })}
