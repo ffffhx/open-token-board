@@ -13,6 +13,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 
 const POLL_INTERVAL_MS = 15_000;
 const TEAM_SNAPSHOT_STALE_SECONDS = 2 * 60 * 60;
+const AGENT_SYNC_NOTE_RE = /^\u5df2\u4ece (.+) \u7684 token-board-agent \u540e\u53f0\u540c\u6b65\u8bfb\u53d6\u3002$/;
 
 type LoadState = "idle" | "loading" | "ready" | "error";
 
@@ -196,6 +197,17 @@ function burnLabel(metrics: ReturnType<typeof effectiveWindowMetrics>, burn: Dic
   return burn.label(metrics.burnPercentPerHour.toFixed(1), tokens, metrics.burnIsAverage);
 }
 
+function limitWindowLabel(w: Pick<CodexRateWindow, "key" | "label">, copy: Dictionary["limits"]): string {
+  if (w.key === "5h") return copy.window.labels.fiveHour;
+  if (w.key === "weekly") return copy.window.labels.weekly;
+  return w.label;
+}
+
+function formatLimitNote(note: string, copy: Dictionary["limits"]): string {
+  const match = AGENT_SYNC_NOTE_RE.exec(note);
+  return match ? copy.page.agentSyncedNote(match[1]) : note;
+}
+
 function ProgressBar({ usedPercent, height = "h-2.5" }: { usedPercent: number; height?: string }) {
   const tone = toneFor(usedPercent);
   return (
@@ -235,7 +247,7 @@ function WindowCard({ window: w, now }: { window: CodexRateWindow; now: number }
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <div className="flex items-baseline justify-between">
-        <h3 className="text-lg font-semibold text-slate-900">{copy.window.title(w.label)}</h3>
+        <h3 className="text-lg font-semibold text-slate-900">{copy.window.title(limitWindowLabel(w, copy))}</h3>
         <span className={`rounded-full border px-2 py-0.5 font-mono text-xs font-semibold ${tone.badge}`}>
           {copy.tone[tone.labelKey]} · {copy.window.used(w.usedPercent.toFixed(0))}
         </span>
@@ -937,7 +949,7 @@ export function RateLimitBoard({
                   <span>{dict.limits.page.emptyDescription}</span>
                   {report.notes.map((note) => (
                     <span key={note} className="mt-1 block">
-                      {note}
+                      {formatLimitNote(note, dict.limits)}
                     </span>
                   ))}
                 </>
@@ -974,7 +986,7 @@ export function RateLimitBoard({
             </div>
             {report.notes.map((note) => (
               <p key={note} className="mt-5 text-xs leading-5 text-slate-400">
-                {dict.limits.page.note(note)}
+                {dict.limits.page.note(formatLimitNote(note, dict.limits))}
               </p>
             ))}
           </>

@@ -18,6 +18,10 @@ export const limits = {
     label: (percent: string, tokens: string, average: boolean) => `${percent}%/小时 · ${tokens}${average ? " · 周期平均" : ""}`,
   },
   window: {
+    labels: {
+      fiveHour: "5 小时",
+      weekly: "每周",
+    },
     noExhaust: "当前速度下本周期不会耗尽",
     exhaustBeforeReset: (duration: string) => `约 ${duration}后耗尽`,
     beforeReset: "(早于重置)",
@@ -76,6 +80,7 @@ export const limits = {
     unavailableDescription: "额度接口暂时没有回应。",
     emptyDescription: "额度侦察机还没发现可用快照。运行 agent 后等一次同步，这里就会出现倒计时和剩余额度。",
     note: (text: string) => `注：${text}`,
+    agentSyncedNote: (source: string) => `已从 ${source} 的 token-board-agent 后台同步读取。`,
   },
   config: {
     codex: {

@@ -29,6 +29,15 @@ import {
 
 const SESSION_INITIAL_VISIBLE_COUNT = 20;
 const SESSION_VISIBLE_COUNT_STEP = 20;
+const WEEKDAY_VALUE_TO_INDEX: Record<string, number> = {
+  "\u5468\u65e5": 0,
+  "\u5468\u4e00": 1,
+  "\u5468\u4e8c": 2,
+  "\u5468\u4e09": 3,
+  "\u5468\u56db": 4,
+  "\u5468\u4e94": 5,
+  "\u5468\u516d": 6,
+};
 
 export function AccountUsagePanel({
   apiEnabled,
@@ -264,7 +273,7 @@ export function AccountUsagePanel({
             <AccountStatCard
               label={account.activeDays}
               value={`${formatNumber(user.activeDays)}d`}
-              meta={dashboardProfile.topWeekday}
+              meta={formatTopWeekday(dashboardProfile.topWeekday, account)}
               tone="green"
               tooltip={{
                 title: account.activeDays,
@@ -779,6 +788,11 @@ function AccountStatCard({
       ) : null}
     </div>
   );
+}
+
+function formatTopWeekday(value: string, account: Dictionary["board"]["account"]): string {
+  const index = WEEKDAY_VALUE_TO_INDEX[value];
+  return index === undefined ? value : account.weekdays[index];
 }
 
 function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"] }) {

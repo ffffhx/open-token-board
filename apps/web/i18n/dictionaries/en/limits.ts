@@ -16,6 +16,10 @@ export const limits = {
     label: (percent, tokens, average) => `${percent}%/hour · ${tokens}${average ? " · period average" : ""}`,
   },
   window: {
+    labels: {
+      fiveHour: "5-hour",
+      weekly: "weekly",
+    },
     noExhaust: "At the current pace, this period will not be exhausted",
     exhaustBeforeReset: (duration) => `Exhausts in about ${duration}`,
     beforeReset: "(before reset)",
@@ -74,6 +78,7 @@ export const limits = {
     unavailableDescription: "The quota endpoint is not responding.",
     emptyDescription: "The quota scout has not found an available snapshot yet. Run the agent and wait for one sync; reset countdowns and remaining quota will appear here.",
     note: (text) => `Note: ${text}`,
+    agentSyncedNote: (source) => `Read from ${source}'s token-board-agent background sync.`,
   },
   config: {
     codex: {
