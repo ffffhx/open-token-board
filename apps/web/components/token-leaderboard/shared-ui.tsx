@@ -111,7 +111,7 @@ export function EmptyStatePanel({
     <div className="otb-panel-muted rounded-lg px-5 py-8 text-center text-slate-600 dark:text-slate-300">
       <EmptyStateIllustration className="mx-auto h-28 w-40 text-blue-600 dark:text-blue-300" />
       <p className="mt-2 text-base font-semibold text-slate-950 dark:text-slate-50">{title}</p>
-      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</p>
+      <div className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">{description}</div>
       {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
     </div>
   );

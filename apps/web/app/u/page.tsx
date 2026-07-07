@@ -21,9 +21,8 @@ export default function UserProfilePage() {
 function ProfilePageFallback() {
   return (
     <main className="mx-auto min-h-[100svh] max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <div className="h-20 animate-pulse rounded-lg bg-slate-200" />
-      <div className="mt-5 h-80 animate-pulse rounded-lg bg-slate-200" />
+      <div className="otb-skeleton h-20 rounded-lg" />
+      <div className="otb-skeleton mt-5 h-80 rounded-lg" />
     </main>
   );
 }
-

@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TokenDailyUsagePoint } from "@open-token-board/core";
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
-import { Icon, LoadingSpinner, Skeleton } from "@/components/token-leaderboard/shared-ui";
+import { EmptyStatePanel, Icon, LoadingSpinner, Skeleton } from "@/components/token-leaderboard/shared-ui";
 import {
   formatNumber,
   formatPercent,
@@ -654,15 +654,19 @@ function ProfileLoading() {
 
 function ProfileEmpty({ description, title }: { description: string; title: string }) {
   return (
-    <section className="mx-auto mt-10 max-w-2xl rounded-lg border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
-      <p className="text-lg font-semibold text-slate-950">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
-      <Link
-        href="/board"
-        className="mt-5 inline-flex min-h-10 items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600"
-      >
-        返回榜单
-      </Link>
+    <section className="mx-auto mt-10 max-w-2xl">
+      <EmptyStatePanel
+        title={title}
+        description={description}
+        action={
+          <Link
+            href="/board"
+            className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            返回榜单
+          </Link>
+        }
+      />
     </section>
   );
 }

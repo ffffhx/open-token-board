@@ -11,7 +11,7 @@ import {
 } from "@open-token-board/core";
 
 import type { AccountLoadState, ViewerState } from "./types";
-import { Avatar, Icon, Skeleton } from "./shared-ui";
+import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
   formatNumber,
   formatPercent,
@@ -657,9 +657,8 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
 
 function AccountEmptyState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="px-5 py-8 text-center sm:px-6">
-      <p className="text-lg font-semibold">{title}</p>
-      <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-500">{description}</p>
+    <div className="px-5 py-6 sm:px-6">
+      <EmptyStatePanel title={title} description={description} />
     </div>
   );
 }

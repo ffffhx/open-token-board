@@ -7,6 +7,7 @@ import type { CodexRateLimitReport, CodexRateWindow } from "@open-token-board/co
 
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogo } from "@/components/token-board-logo";
+import { EmptyStatePanel, Skeleton } from "@/components/token-leaderboard/shared-ui";
 
 const POLL_INTERVAL_MS = 15_000;
 const TEAM_SNAPSHOT_STALE_SECONDS = 2 * 60 * 60;
@@ -459,6 +460,31 @@ function WindowGrid({ report, now }: { report: CodexRateLimitReport; now: number
   );
 }
 
+function LimitLoadingState({ label }: { label: string }) {
+  return (
+    <div className="mt-8 space-y-5" role="status" aria-label={label}>
+      <div className="otb-panel rounded-lg p-5">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="mt-3 h-8 w-72 max-w-full" />
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          {Array.from({ length: 2 }, (_, index) => (
+            <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="mt-5 h-12 w-32" />
+              <Skeleton className="mt-4 h-3 w-full rounded-full" />
+              <div className="mt-5 grid grid-cols-2 gap-4">
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <p className="text-center text-xs text-slate-500">{label}</p>
+    </div>
+  );
+}
+
 function TeamRateLimitSection({
   data,
   authenticated,
@@ -469,16 +495,20 @@ function TeamRateLimitSection({
   loginWithGitHub: () => void;
 }) {
   const authBox = (
-    <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-      <p className="font-semibold">团队额度墙需要 GitHub 登录</p>
-      <p className="mt-1">登录后可查看团队内 agent 最近上传的 Codex 与 Claude Code 额度百分比。</p>
-      <button
-        type="button"
-        onClick={loginWithGitHub}
-        className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
-      >
-        GitHub 登录后查看团队墙
-      </button>
+    <div className="mt-8">
+      <EmptyStatePanel
+        title="团队额度墙需要 GitHub 登录"
+        description="登录后可查看团队内 agent 最近上传的 Codex 与 Claude Code 额度百分比。没登录时，这面墙只是一面墙。"
+        action={
+          <button
+            type="button"
+            onClick={loginWithGitHub}
+            className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+          >
+            GitHub 登录后查看团队墙
+          </button>
+        }
+      />
     </div>
   );
 
@@ -487,27 +517,28 @@ function TeamRateLimitSection({
   }
 
   if (data.state === "loading") {
-    return (
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-        正在汇总团队额度快照…
-      </div>
-    );
+    return <LimitLoadingState label="正在汇总团队额度快照…" />;
   }
 
   if (data.state === "error") {
     if (data.error === "HTTP 401") return authBox;
     return (
-      <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-        <p className="font-semibold">无法获取团队额度墙</p>
-        <p className="mt-1">{data.error}</p>
+      <div className="mt-8">
+        <EmptyStatePanel
+          title="无法获取团队额度墙"
+          description={data.error || "额度快照暂时读不到，可以刷新或稍后再试。"}
+        />
       </div>
     );
   }
 
   if (!data.report || data.report.users.length === 0) {
     return (
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-        暂无团队额度快照。
+      <div className="mt-8">
+        <EmptyStatePanel
+          title="暂无团队额度快照"
+          description="还没有成员上传额度。等第一台 agent 把 5 小时和每周窗口送上来，这里就会亮起来。"
+        />
       </div>
     );
   }
@@ -898,41 +929,56 @@ export function RateLimitBoard({
         {tab === "team" ? (
           <TeamRateLimitSection data={teamData} authenticated={authenticated} loginWithGitHub={loginWithGitHub} />
         ) : state === "loading" && (
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">
-            {config.loadingText}
-          </div>
+          <LimitLoadingState label={config.loadingText} />
         )}
 
         {tab !== "team" && state === "error" && (
-          <div className="mt-8 rounded-2xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700">
-            <p className="font-semibold">无法获取额度数据</p>
-            <p className="mt-1">{error}</p>
-            {config.errorHint(base)}
+          <div className="mt-8">
+            <EmptyStatePanel
+              title="无法获取额度数据"
+              description={
+                <>
+                  <span>{error || "额度接口暂时没有回应。"}</span>
+                  {config.errorHint(base)}
+                </>
+              }
+            />
           </div>
         )}
 
         {tab !== "team" && state === "ready" && report && !report.available && (
-          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-800">
-            <p className="font-semibold">{config.emptyTitle}</p>
-            {report.notes.map((note) => (
-              <p key={note} className="mt-1">
-                {note}
-              </p>
-            ))}
-            {config.emptyExtra(report)}
-            {authenticated === true ? (
-              <p className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-3 py-2 text-sm font-semibold text-emerald-800">
-                {config.waitingLabel}
-              </p>
-            ) : authenticated === false ? (
-              <button
-                type="button"
-                onClick={loginWithGitHub}
-                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-amber-600 px-4 text-sm font-semibold text-white transition hover:bg-amber-700"
-              >
-                {config.loginLabel}
-              </button>
-            ) : null}
+          <div className="mt-8">
+            <EmptyStatePanel
+              title={config.emptyTitle}
+              description={
+                <>
+                  <span>额度侦察机还没发现可用快照。运行 agent 后等一次同步，这里就会出现倒计时和剩余额度。</span>
+                  {report.notes.map((note) => (
+                    <span key={note} className="mt-1 block">
+                      {note}
+                    </span>
+                  ))}
+                </>
+              }
+              action={
+                authenticated === true ? (
+                  <span className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-emerald-100 px-3 text-sm font-semibold text-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-100">
+                    {config.waitingLabel}
+                  </span>
+                ) : authenticated === false ? (
+                  <button
+                    type="button"
+                    onClick={loginWithGitHub}
+                    className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    {config.loginLabel}
+                  </button>
+                ) : null
+              }
+            />
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-400/25 dark:bg-amber-950/30 dark:text-amber-100">
+              {config.emptyExtra(report)}
+            </div>
           </div>
         )}
 

@@ -17,7 +17,7 @@ import {
 import { METRICS, ROLLING_RANGE_LABELS } from "./constants";
 import { profileHrefForUser } from "@/components/profile/utils";
 import type { ViewerState } from "./types";
-import { Avatar, Icon, Skeleton } from "./shared-ui";
+import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
   buildLeaderboardInsight,
   formatMetricValue,
@@ -1424,18 +1424,20 @@ export function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: numb
 
 export function LeaderboardErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <div className="rounded-lg border border-red-600/20 bg-red-50 p-5 text-center">
-      <p className="font-semibold text-red-900">真实用户数据读取失败</p>
-      <p className="mt-1 text-xs text-red-900/72">{error || "请稍后再试"}</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="mt-4 inline-flex min-h-9 items-center justify-center gap-2 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white transition hover:bg-blue-600"
-      >
-        <Icon name="refresh" />
-        重试
-      </button>
-    </div>
+    <EmptyStatePanel
+      title="榜单信号暂时断线"
+      description={error || "真实用户数据读取失败，可以先刷新一次；如果还不行，看看 agent 有没有把战报送到后端。"}
+      action={
+        <button
+          type="button"
+          onClick={onRetry}
+          className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <Icon name="refresh" />
+          重试
+        </button>
+      }
+    />
   );
 }
 
@@ -1451,17 +1453,18 @@ export function LeaderboardErrorRow({ columnCount, error, onRetry }: { columnCou
 
 export function LeaderboardEmptyState() {
   return (
-    <div className="rounded-lg border border-stone-950/8 bg-slate-50 px-4 py-8 text-center text-sm text-stone-500">
-      暂无真实用户数据，可以切换时间范围或运行 agent 上报本机记录。
-    </div>
+    <EmptyStatePanel
+      title="这个时间窗还没人开火"
+      description="切换时间范围，或运行 agent 上报本机记录。等第一条 token 到场，这里就会开始排位。"
+    />
   );
 }
 
 export function LeaderboardEmptyRow({ columnCount }: { columnCount: number }) {
   return (
     <tr>
-      <td colSpan={columnCount} className="px-4 py-10 text-center text-sm text-stone-500">
-        暂无真实用户数据
+      <td colSpan={columnCount} className="px-4 py-6">
+        <LeaderboardEmptyState />
       </td>
     </tr>
   );
