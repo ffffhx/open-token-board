@@ -161,6 +161,16 @@ const DEFAULT_SOURCE_TARGETS = [
     paths: [homePath(".claude", "projects"), homePath(".claude", "history.jsonl")],
   },
   {
+    source: "gemini-cli",
+    tool: "Gemini CLI",
+    paths: geminiCliDataPaths(),
+  },
+  {
+    source: "opencode",
+    tool: "opencode",
+    paths: opencodeDataPaths(),
+  },
+  {
     source: "cursor",
     tool: "Cursor",
     paths: [
@@ -410,6 +420,7 @@ async function printLaunchAgentStatus() {
   console.log(`Upload state: ${STATE_FILE}`);
   console.log(`Last uploaded: ${stateMatches && state.lastUploadedAt ? state.lastUploadedAt : "never"}`);
   console.log(`Tracked uploaded IDs: ${uploadedIds}`);
+  console.log(await sourceDiscoveryStatus(config));
 
   if (process.env.TOKEN_BOARD_AGENT_SKIP_LAUNCHCTL === "1") {
     return;
@@ -442,6 +453,7 @@ async function printWindowsTaskStatus() {
   console.log(`Upload state: ${STATE_FILE}`);
   console.log(`Last uploaded: ${stateMatches && state.lastUploadedAt ? state.lastUploadedAt : "never"}`);
   console.log(`Tracked uploaded IDs: ${uploadedIds}`);
+  console.log(await sourceDiscoveryStatus(config));
 
   const result = await runSchtasks(["/Query", "/TN", WINDOWS_TASK_NAME, "/V", "/FO", "LIST"], { allowFailure: true });
   if (result.code === 0) {
@@ -450,6 +462,30 @@ async function printWindowsTaskStatus() {
   } else {
     console.log("Task Scheduler status: not installed");
   }
+}
+
+async function sourceDiscoveryStatus(config) {
+  const targets = sourceTargets(config);
+  const minMtime = Date.now() - SINCE_MS;
+  const lines = ["Source discovery:"];
+
+  for (const target of targets) {
+    let existingRoots = 0;
+    let recentFiles = 0;
+    for (const targetPath of target.paths) {
+      const expanded = expandHome(targetPath);
+      const stat = await fs.stat(expanded).catch(() => undefined);
+      if (stat) {
+        existingRoots += 1;
+      }
+      const files = [];
+      await collectFiles(expanded, target, files, minMtime, 0);
+      recentFiles += files.length;
+    }
+    lines.push(`- ${target.tool} (${target.source}): ${recentFiles} recent usage file(s), ${existingRoots}/${target.paths.length} roots found`);
+  }
+
+  return lines.join("\n");
 }
 
 async function installAgentScript() {
@@ -634,7 +670,7 @@ async function uploadOnce(config, options = {}) {
         ? "No token usage events collected for resync."
         : "No new token usage events to upload."
     );
-    logInfo("Checked Codex, Claude Code, Cursor, and custom usage paths for recent token logs.");
+    logInfo("Checked Codex, Claude Code, Gemini CLI, opencode, Cursor, and custom usage paths for recent token logs.");
     return;
   }
 
@@ -1024,7 +1060,7 @@ async function collectFiles(inputPath, target, files, minMtime, depth) {
 
   if (stat.isFile()) {
     const maxFileBytes = maxUsageFileBytes(inputPath, target);
-    if (stat.size <= maxFileBytes && stat.mtimeMs >= minMtime && isUsageFile(inputPath)) {
+    if (stat.size <= maxFileBytes && stat.mtimeMs >= minMtime && isUsageFile(inputPath, target)) {
       files.push({ path: inputPath, mtimeMs: stat.mtimeMs, target, dev: stat.dev, ino: stat.ino });
     }
     return;
@@ -1052,6 +1088,17 @@ async function collectFiles(inputPath, target, files, minMtime, depth) {
 async function parseUsageFile(filePath, target, config) {
   if (target.source === "codex" && path.extname(filePath).toLowerCase() === ".jsonl") {
     return parseCodexJsonl(filePath, target, config);
+  }
+
+  if (target.source === "gemini-cli") {
+    return parseGeminiCliUsageFile(filePath, target, config);
+  }
+
+  if (target.source === "opencode") {
+    if (isOpencodeSqliteFile(filePath)) {
+      return parseOpencodeSqliteUsageFile(filePath, target, config);
+    }
+    return parseOpencodeUsageFile(filePath, target, config);
   }
 
   if (isSqliteUsageFile(filePath)) {
@@ -1178,6 +1225,395 @@ async function parseCodexJsonl(filePath, target, config) {
   return entries;
 }
 
+async function parseGeminiCliUsageFile(filePath, target, config) {
+  const text = await fs.readFile(filePath, "utf8").catch(() => "");
+  if (!text) {
+    return [];
+  }
+
+  const context = baseExtractionContext(filePath, target, config);
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".jsonl" || ext === ".log") {
+    return parseGeminiCliJsonlText(text, context);
+  }
+
+  const parsed = safeJson(text);
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return [];
+  }
+
+  const sessionId =
+    textFromFields(parsed, ["sessionId", "session_id"]) ||
+    path.basename(filePath, path.extname(filePath)) ||
+    context.sessionId;
+  const timestamp =
+    textFromFields(parsed, ["timestamp", "created_at", "createdAt", "startTime", "lastUpdated"]) ||
+    context.timestamp ||
+    "";
+  const modelHint = textFromFields(parsed, ["model", "modelName", "model_name"]) || context.model || "";
+  const pending = [];
+
+  if (Array.isArray(parsed.messages)) {
+    for (const message of parsed.messages) {
+      if (!message || typeof message !== "object" || Array.isArray(message)) {
+        continue;
+      }
+      const event = geminiRecordToPendingEvent(message, {
+        modelHint,
+        sessionId,
+        timestamp,
+        normalizeInput: normalizeGeminiSessionInput,
+      });
+      if (event) {
+        pending.push(event);
+      }
+    }
+  } else {
+    const direct = geminiRecordToPendingEvent(parsed, {
+      modelHint,
+      sessionId,
+      timestamp,
+      normalizeInput: normalizeGeminiSessionInput,
+    });
+    if (direct) {
+      pending.push(direct);
+    } else {
+      pending.push(
+        ...geminiStatsToPendingEvents(parsed.stats ?? (isRecord(parsed.result) ? parsed.result.stats : undefined), {
+          modelHint,
+          sessionId,
+          timestamp,
+        })
+      );
+    }
+  }
+
+  return pendingGeminiEventsToUsageEvents(pending, context);
+}
+
+function parseGeminiCliJsonlText(text, context) {
+  const pending = [];
+  const directIndexesById = new Map();
+  let sessionId = context.sessionId || (context.filePath ? path.basename(context.filePath, path.extname(context.filePath)) : "");
+  let currentModel = context.model || "";
+  let currentTimestamp = context.timestamp || "";
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || (!line.includes('"tokens"') && !line.includes('"stats"') && !line.includes('"session'))) {
+      continue;
+    }
+
+    const parsed = safeJson(line);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      continue;
+    }
+
+    sessionId = textFromFields(parsed, ["sessionId", "session_id"]) || sessionId;
+    currentModel = textFromFields(parsed, ["model", "modelName", "model_name"]) || currentModel;
+    currentTimestamp = textFromFields(parsed, ["timestamp", "created_at", "createdAt", "startTime", "lastUpdated"]) || currentTimestamp;
+
+    if (isRecord(parsed.tokens)) {
+      const event = geminiRecordToPendingEvent(parsed, {
+        modelHint: currentModel,
+        sessionId,
+        timestamp: currentTimestamp,
+        normalizeInput: normalizeGeminiSessionInput,
+      });
+      if (!event) {
+        continue;
+      }
+      if (event.messageId) {
+        const existingIndex = directIndexesById.get(event.messageId);
+        if (existingIndex !== undefined) {
+          pending[existingIndex] = event;
+        } else {
+          directIndexesById.set(event.messageId, pending.length);
+          pending.push(event);
+        }
+      } else {
+        pending.push(event);
+      }
+      continue;
+    }
+
+    pending.push(
+      ...geminiStatsToPendingEvents(parsed.stats ?? (isRecord(parsed.result) ? parsed.result.stats : undefined), {
+        modelHint: currentModel,
+        sessionId,
+        timestamp: currentTimestamp,
+      })
+    );
+  }
+
+  return pendingGeminiEventsToUsageEvents(pending, context);
+}
+
+function geminiRecordToPendingEvent(record, { modelHint, sessionId, timestamp, normalizeInput }) {
+  const tokens = parseGeminiTokens(record.tokens);
+  if (!tokens) {
+    return null;
+  }
+
+  return {
+    usage: geminiTokensToUsageRecord(tokens, normalizeInput),
+    timestamp: textFromFields(record, ["timestamp", "created_at", "createdAt", "time"]) || timestamp,
+    model: textFromFields(record, ["model", "modelName", "model_name"]) || modelHint || "unknown",
+    sessionId,
+    messageId: textFromFields(record, ["id", "messageId", "message_id"]),
+  };
+}
+
+function geminiStatsToPendingEvents(value, { modelHint, sessionId, timestamp }) {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  if (isRecord(value.models)) {
+    const entries = [];
+    for (const [model, data] of Object.entries(value.models)) {
+      if (!isRecord(data)) {
+        continue;
+      }
+      const tokens = parseGeminiTokens(data.tokens ?? data);
+      if (tokens) {
+        entries.push({
+          usage: geminiTokensToUsageRecord(tokens, subtractGeminiCachedOverlap),
+          timestamp,
+          model,
+          sessionId,
+        });
+      }
+    }
+    if (entries.length) {
+      return entries;
+    }
+  }
+
+  const tokens = parseGeminiTokens(value.tokens ?? value);
+  return tokens
+    ? [
+        {
+          usage: geminiTokensToUsageRecord(tokens, subtractGeminiCachedOverlap),
+          timestamp,
+          model: modelHint || "unknown",
+          sessionId,
+        },
+      ]
+    : [];
+}
+
+function pendingGeminiEventsToUsageEvents(pending, context) {
+  const entries = [];
+  let sequence = 0;
+  for (const event of pending) {
+    if (tokenUsageTotal(event.usage) <= 0) {
+      continue;
+    }
+    sequence += 1;
+    const usageEvent = tryUsageRecordToEvent(event.usage, {
+      ...context,
+      timestamp: event.timestamp || context.timestamp,
+      model: event.model,
+      sessionId: event.sessionId || context.sessionId || context.filePath,
+      sequence,
+    });
+    if (usageEvent) {
+      entries.push(usageEvent);
+    }
+  }
+  return dedupe(entries);
+}
+
+function parseGeminiTokens(value) {
+  if (!isRecord(value)) {
+    return null;
+  }
+  const tokens = {
+    input: numberFromFields(value, ["input", "prompt", "input_tokens", "prompt_tokens", "promptTokenCount"]),
+    output: numberFromFields(value, [
+      "output",
+      "candidates",
+      "output_tokens",
+      "completion_tokens",
+      "candidates_tokens",
+      "candidatesTokenCount",
+    ]),
+    cached: numberFromFields(value, ["cached", "cached_tokens", "cachedContentTokenCount"]),
+    thoughts: numberFromFields(value, ["thoughts", "reasoning", "thoughts_tokens", "reasoning_tokens"]),
+    tool: numberFromFields(value, ["tool", "tool_tokens"]),
+    total: positiveInteger(value.total ?? value.total_tokens ?? value.totalTokenCount),
+  };
+  return tokens.input + tokens.output + tokens.cached + tokens.thoughts + tokens.tool + (tokens.total || 0) > 0
+    ? tokens
+    : null;
+}
+
+function geminiTokensToUsageRecord(tokens, normalizeInput) {
+  const { inputWithoutCache, cacheReadTokens } = normalizeInput(tokens);
+  return {
+    input_tokens: inputWithoutCache + tokens.tool,
+    cache_read_input_tokens: cacheReadTokens,
+    output_tokens: tokens.output + tokens.thoughts,
+    reasoning_output_tokens: tokens.thoughts,
+  };
+}
+
+function subtractGeminiCachedOverlap(tokens) {
+  const cacheReadTokens = tokens.cached;
+  const cachedPortion = Math.min(tokens.input, cacheReadTokens);
+  return {
+    inputWithoutCache: Math.max(0, tokens.input - cachedPortion),
+    cacheReadTokens,
+  };
+}
+
+function normalizeGeminiSessionInput(tokens) {
+  const inclusiveTotal = tokens.input + tokens.output + tokens.thoughts + tokens.tool;
+  const exclusiveTotal = inclusiveTotal + tokens.cached;
+  if (tokens.cached > 0 && tokens.total === inclusiveTotal && tokens.total !== exclusiveTotal) {
+    return subtractGeminiCachedOverlap(tokens);
+  }
+  return {
+    inputWithoutCache: tokens.input,
+    cacheReadTokens: tokens.cached,
+  };
+}
+
+async function parseOpencodeSqliteUsageFile(filePath, target, config) {
+  const rows = await querySqliteJson(filePath, "select id, session_id, data from message;");
+  const context = baseExtractionContext(filePath, target, config);
+  const entries = [];
+  let sequence = 0;
+  for (const row of rows) {
+    if (!isRecord(row) || typeof row.data !== "string") {
+      continue;
+    }
+    const message = safeJson(row.data);
+    if (!isRecord(message)) {
+      continue;
+    }
+    sequence += 1;
+    const event = opencodeMessageToUsageEvent(
+      message,
+      {
+        ...context,
+        sessionId: cleanLabel(row.session_id, 240) || context.sessionId || filePath,
+      },
+      sequence,
+      cleanLabel(row.id, 240)
+    );
+    if (event) {
+      entries.push(event);
+    }
+  }
+  return dedupe(entries);
+}
+
+async function parseOpencodeUsageFile(filePath, target, config) {
+  const text = await fs.readFile(filePath, "utf8").catch(() => "");
+  if (!text) {
+    return [];
+  }
+
+  const context = baseExtractionContext(filePath, target, config);
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".jsonl" || ext === ".log") {
+    const entries = [];
+    const state = { sequence: 0 };
+    for (const line of text.split(/\r?\n/)) {
+      const parsed = line.trim() ? safeJson(line.trim()) : undefined;
+      if (parsed !== undefined) {
+        entries.push(...parseOpencodeMessagesFromJson(parsed, context, state));
+      }
+    }
+    return dedupe(entries);
+  }
+
+  const parsed = safeJson(text);
+  return parsed === undefined ? [] : dedupe(parseOpencodeMessagesFromJson(parsed, context, { sequence: 0 }));
+}
+
+function parseOpencodeMessagesFromJson(value, context, state, depth = 0) {
+  const entries = [];
+  if (depth > 14 || value === null || value === undefined) {
+    return entries;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      entries.push(...parseOpencodeMessagesFromJson(item, context, state, depth + 1));
+    }
+    return entries;
+  }
+
+  if (!isRecord(value)) {
+    return entries;
+  }
+
+  if (isRecord(value.tokens)) {
+    state.sequence += 1;
+    const event = opencodeMessageToUsageEvent(value, context, state.sequence);
+    if (event) {
+      entries.push(event);
+    }
+    return entries;
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (isSensitiveTextKey(key) && (typeof child === "string" || Array.isArray(child))) {
+      continue;
+    }
+    entries.push(...parseOpencodeMessagesFromJson(child, context, state, depth + 1));
+  }
+  return entries;
+}
+
+function opencodeMessageToUsageEvent(message, context, sequence, overrideMessageId = "") {
+  const tokens = isRecord(message.tokens) ? message.tokens : {};
+  const cache = isRecord(tokens.cache) ? tokens.cache : {};
+  const time = isRecord(message.time) ? message.time : {};
+  const timestamp = isoFromEpochFields(time, ["created"]) || context.timestamp || new Date().toISOString();
+  const model = normalizeOpencodeModelName(
+    textFromFields(message, ["modelID", "modelId", "model", "modelName"]) || context.model || "unknown"
+  );
+  const sessionId = textFromFields(message, ["sessionID", "sessionId", "session_id"]) || context.sessionId || context.filePath;
+  const messageId = overrideMessageId || textFromFields(message, ["id", "messageId", "message_id"]);
+
+  return tryUsageRecordToEvent(
+    {
+      input_tokens: numberFromFields(tokens, ["input", "input_tokens", "prompt_tokens"]),
+      output_tokens: numberFromFields(tokens, ["output", "output_tokens", "completion_tokens"]),
+      cache_read_input_tokens: numberFromFields(cache, ["read", "cache_read_input_tokens", "cacheReadInputTokens"]),
+      cache_creation_input_tokens: numberFromFields(cache, ["write", "cache_creation_input_tokens", "cacheCreationInputTokens"]),
+      reasoning_output_tokens: numberFromFields(tokens, [
+        "reasoning",
+        "reasoning_tokens",
+        "reasoningTokens",
+        "reasoning_output_tokens",
+        "reasoningOutputTokens",
+      ]),
+    },
+    {
+      ...context,
+      timestamp,
+      model,
+      sessionId: messageId ? `${sessionId}:${messageId}` : sessionId,
+      sequence,
+    }
+  );
+}
+
+function normalizeOpencodeModelName(model) {
+  if (model === "gemini-3-pro-high") {
+    return "gemini-3-pro-preview";
+  }
+  if (model === "k2p6") {
+    return "kimi-k2.6";
+  }
+  return model;
+}
+
 function extractSessionTitle(record) {
   const payload = record && typeof record.payload === "object" ? record.payload : {};
   const payloadType = typeof payload.type === "string" ? payload.type : "";
@@ -1257,7 +1693,8 @@ function tokenUsageTotal(usage) {
 }
 
 function maxUsageFileBytes(filePath, target) {
-  return target.source === "codex" && path.extname(filePath).toLowerCase() === ".jsonl"
+  return (target.source === "codex" && path.extname(filePath).toLowerCase() === ".jsonl") ||
+    (target.source === "opencode" && isOpencodeSqliteFile(filePath))
     ? MAX_CODEX_FILE_BYTES
     : MAX_FILE_BYTES;
 }
@@ -1634,6 +2071,17 @@ function toNumber(value) {
   return 0;
 }
 
+function isoFromEpochFields(record, fields) {
+  for (const field of fields) {
+    const value = record?.[field];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const ms = value < 1e12 ? value * 1000 : value;
+      return new Date(ms).toISOString();
+    }
+  }
+  return "";
+}
+
 function normalizeTimestamp(value) {
   const date = new Date(value || Date.now());
   return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
@@ -1774,14 +2222,22 @@ function isSensitiveTextKey(key) {
   return /^(content|prompt|text|body|transcript)$/i.test(key);
 }
 
-function isUsageFile(filePath) {
+function isUsageFile(filePath, target = {}) {
   const name = path.basename(filePath).toLowerCase();
+  if (target.source === "opencode" && isOpencodeSqliteFile(filePath)) {
+    return true;
+  }
   return USAGE_FILE_EXTENSIONS.has(path.extname(filePath).toLowerCase()) || USAGE_FILE_NAMES.has(name);
 }
 
 function isSqliteUsageFile(filePath) {
   const name = path.basename(filePath).toLowerCase();
   return name === "state.vscdb" || name === "state.vscdb.backup" || path.extname(filePath).toLowerCase() === ".vscdb";
+}
+
+function isOpencodeSqliteFile(filePath) {
+  const name = path.basename(filePath).toLowerCase();
+  return name === "opencode.db" || /^opencode-[a-z0-9_-]+\.db$/.test(name);
 }
 
 function shouldSkipDirectory(dirPath) {
@@ -1819,6 +2275,22 @@ function readListEnv(name) {
         .map((item) => item.trim())
         .filter(Boolean)
     : undefined;
+}
+
+function geminiCliDataPaths() {
+  return uniquePaths([
+    ...(readListEnv("GEMINI_DATA_DIR") || []),
+    ...(process.env.GEMINI_CLI_HOME ? [path.join(process.env.GEMINI_CLI_HOME, "tmp")] : []),
+    homePath(".gemini", "tmp"),
+  ]);
+}
+
+function opencodeDataPaths() {
+  return uniquePaths([...(readListEnv("OPENCODE_DATA_DIR") || []), homePath(".local", "share", "opencode")]);
+}
+
+function uniquePaths(paths) {
+  return [...new Set(paths.filter(Boolean))];
 }
 
 function createIngestPayload(events, userConfig) {
