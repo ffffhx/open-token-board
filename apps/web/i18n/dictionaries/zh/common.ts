@@ -57,6 +57,7 @@ export const common = {
     generating: "生成中…",
     backToBoard: "返回榜单",
     githubLogin: "GitHub 登录",
+    logout: "退出",
   },
   units: {
     people: (count: string) => `${count} 人`,

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Icon } from "@/components/token-leaderboard/shared-ui";
 import { formatNumber, formatTokens } from "@/components/token-leaderboard/utils";
+import { useI18n } from "@/i18n";
 
 type LandingStats = {
   activeUsers: number;
@@ -49,16 +50,18 @@ function useAnimatedNumber(value: number, durationMs = 900) {
 }
 
 export function LandingLiveNumbers({ stats }: { stats: LandingStats }) {
+  const { dict } = useI18n();
   const animatedTokens = useAnimatedNumber(stats.totalTokens);
   const animatedUsers = useAnimatedNumber(stats.activeUsers, 700);
   const leaderTokens = useAnimatedNumber(stats.leaderTokens, 760);
+  const live = dict.landing.live;
   const items = useMemo(
     () => [
-      { label: "7 日总 token", value: formatTokens(animatedTokens), meta: "全站滚动消耗" },
-      { label: "参与人数", value: `${formatNumber(animatedUsers)} 人`, meta: "自动上报中" },
-      { label: "当前榜首", value: stats.leaderName, meta: `${formatTokens(leaderTokens)} · ${stats.topModel}` },
+      { label: live.total7d, value: formatTokens(animatedTokens), meta: live.rollingTotal },
+      { label: live.participants, value: dict.common.units.people(formatNumber(animatedUsers)), meta: live.reporting },
+      { label: live.leader, value: stats.leaderName, meta: `${formatTokens(leaderTokens)} · ${stats.topModel}` },
     ],
-    [animatedTokens, animatedUsers, leaderTokens, stats.leaderName, stats.topModel]
+    [animatedTokens, animatedUsers, dict.common.units, leaderTokens, live, stats.leaderName, stats.topModel]
   );
 
   return (
@@ -79,6 +82,7 @@ export function LandingLiveNumbers({ stats }: { stats: LandingStats }) {
 }
 
 export function LandingCommandCopy({ command }: { command: string }) {
+  const { dict } = useI18n();
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -112,10 +116,10 @@ export function LandingCommandCopy({ command }: { command: string }) {
           type="button"
           onClick={copyCommand}
           className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 border-l border-white/14 px-4 text-sm font-semibold transition hover:bg-white/12"
-          aria-label="复制加入命令"
+          aria-label={dict.landing.command.aria}
         >
           <Icon name={copied ? "check" : "copy"} />
-          <span className="hidden sm:inline">{copied ? "已复制" : "复制"}</span>
+          <span className="hidden sm:inline">{copied ? dict.common.actions.copied : dict.common.actions.copy}</span>
         </button>
       </div>
       {copied || failed ? (
@@ -128,7 +132,7 @@ export function LandingCommandCopy({ command }: { command: string }) {
               : "border-blue-300/50 bg-blue-50 text-blue-900 ring-blue-500/10"
           }`}
         >
-          {failed ? "复制失败，请手动复制命令" : "加入命令已复制"}
+          {failed ? dict.landing.command.failedToast : dict.landing.command.copiedToast}
         </div>
       ) : null}
     </>

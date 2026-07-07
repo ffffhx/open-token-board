@@ -15,6 +15,7 @@ import {
 import { AppNavLinks } from "@/components/app-nav-links";
 import { TokenBoardLogoMark } from "@/components/token-board-logo";
 import { RateLimitPanel } from "@/components/rate-limit/rate-limit-board";
+import { useI18n } from "@/i18n";
 
 import { AccountUsagePanel } from "./token-leaderboard/account-usage-panel";
 import {
@@ -25,9 +26,8 @@ import {
 import {
   CALENDAR_RANGES,
   DATA_LOAD_SLOW_MS,
-  METRICS,
+  METRIC_KEYS,
   NPX_STATUS_COMMAND,
-  RANGE_LABELS,
   ROLLING_RANGES,
   TOAST_DISMISS_MS,
 } from "./token-leaderboard/constants";
@@ -161,6 +161,7 @@ export function TokenLeaderboardApp({
   initialNow: string;
   apiBaseUrl?: string;
 }) {
+  const { dict } = useI18n();
   const normalizedApiBaseUrl = normalizeApiBaseUrl(apiBaseUrl);
   const [range, setRange] = useState<TokenBoardRange>("1D");
   const [metric, setMetric] = useState<TokenBoardMetric>("tokens");
@@ -173,8 +174,8 @@ export function TokenLeaderboardApp({
   const initialStats = statsCache.get(statsCacheKey(normalizedApiBaseUrl, statsRangeKey, metric)) ?? null;
   const [status, setStatus] = useState(
     initialStats
-      ? `后端数据 ${initialStats.records ?? initialStats.summary.users.length} 条`
-      : "正在加载真实用户数据"
+      ? dict.board.status.backendRows(formatNumber(initialStats.records ?? initialStats.summary.users.length))
+      : dict.board.status.loadingRealUsers
   );
   const [dataLoadState, setDataLoadState] = useState<DataLoadState>(initialStats ? "ready" : "loading");
   const [dataLoadError, setDataLoadError] = useState("");
@@ -215,8 +216,8 @@ export function TokenLeaderboardApp({
       setRemoteSummary(null);
       setRemoteRecordCount(null);
       setDataLoadState("error");
-      setDataLoadError("未配置 Token Board API，无法读取自动上报数据");
-      setStatus("需要连接 Token Board 后端后才能加载榜单");
+      setDataLoadError(dict.board.status.apiMissing);
+      setStatus(dict.board.status.apiRequired);
       return;
     }
 
@@ -243,13 +244,13 @@ export function TokenLeaderboardApp({
       setRemoteRecordCount(cached.records);
       setDataLoadState("ready");
       setDataLoadError("");
-      setStatus(`后端数据 ${cached.records ?? cached.summary.users.length} 条`);
+      setStatus(dict.board.status.backendRows(formatNumber(cached.records ?? cached.summary.users.length)));
     } else {
       setRemoteSummary(null);
       setRemoteRecordCount(null);
       setDataLoadState("loading");
       setDataLoadError("");
-      setStatus("正在加载真实用户数据");
+      setStatus(dict.board.status.loadingRealUsers);
     }
     fetch(`${normalizedApiBaseUrl}/api/usage/stats?${params.toString()}`, {
       cache: "no-store",
@@ -265,7 +266,7 @@ export function TokenLeaderboardApp({
       .then((payload) => {
         const summary = "summary" in payload && payload.summary ? payload.summary : payload;
         if (!isTokenLeaderboardSummary(summary)) {
-          throw new Error("后端返回格式不正确");
+          throw new Error(dict.board.status.invalidBackendShape);
         }
 
         const normalized = normalizeRemoteSummary(summary, metric);
@@ -280,7 +281,7 @@ export function TokenLeaderboardApp({
         setRemoteRecordCount(records);
         setDataLoadState("ready");
         setDataLoadError("");
-        setStatus(`后端数据 ${records ?? summary.users.length} 条`);
+        setStatus(dict.board.status.backendRows(formatNumber(records ?? summary.users.length)));
       })
       .catch((error) => {
         // 后台刷新失败时继续展示缓存数据，不打断用户
@@ -291,15 +292,15 @@ export function TokenLeaderboardApp({
         setRemoteSummary(null);
         setRemoteRecordCount(null);
         setDataLoadState("error");
-        const message = error instanceof Error ? error.message : "读取失败";
+        const message = error instanceof Error ? error.message : dict.board.status.readFailed;
         setDataLoadError(message);
-        setStatus(`真实用户数据读取失败：${message}`);
+        setStatus(dict.board.status.realUsersFailed(message));
       });
 
     return () => {
       active = false;
     };
-  }, [appliedCustomRange, isCustomRange, metric, normalizedApiBaseUrl, range, reloadKey, statsRangeKey]);
+  }, [appliedCustomRange, dict, isCustomRange, metric, normalizedApiBaseUrl, range, reloadKey, statsRangeKey]);
 
   useEffect(() => {
     if (!normalizedApiBaseUrl) {
@@ -362,7 +363,7 @@ export function TokenLeaderboardApp({
       })
       .then((payload) => {
         if (!isTokenAccountUsageProfile(payload.profile)) {
-          throw new Error("后端返回格式不正确");
+          throw new Error(dict.board.status.invalidBackendShape);
         }
 
         const normalized = normalizeRemoteAccountProfile(payload.profile);
@@ -383,13 +384,13 @@ export function TokenLeaderboardApp({
 
         setAccountProfile(null);
         setAccountLoadState("error");
-        setAccountError(error instanceof Error ? error.message : "读取失败");
+        setAccountError(error instanceof Error ? error.message : dict.board.status.readFailed);
       });
 
     return () => {
       active = false;
     };
-  }, [isCustomRange, normalizedApiBaseUrl, range, viewer?.authenticated, viewer?.user?.userId]);
+  }, [dict.board.status.invalidBackendShape, dict.board.status.readFailed, isCustomRange, normalizedApiBaseUrl, range, viewer?.authenticated, viewer?.user?.userId]);
 
   const emptySummary = useMemo(
     () => buildTokenLeaderboard([], { range, metric, now }),
@@ -399,14 +400,14 @@ export function TokenLeaderboardApp({
   const recordCount = remoteRecordCount ?? 0;
   const isDataLoading = dataLoadState === "loading" && !remoteSummary;
   const isDataError = dataLoadState === "error" && !remoteSummary;
-  const metricItems = METRICS.map((item) => ({ key: item.key, label: item.label }));
-  const sourceLabel = isDataLoading ? "loading" : isDataError ? "error" : "server";
+  const metricItems = METRIC_KEYS.map((item) => ({ key: item, label: dict.common.metrics[item] }));
+  const sourceLabel = isDataLoading ? dict.board.hero.sourceLoading : isDataError ? dict.board.hero.sourceError : dict.board.hero.sourceServer;
   const statusMessage = isDataLoading
     ? isLoadSlow
-      ? "数据加载较慢，可以稍后重试，或确认 agent 是否已上报"
+      ? dict.board.status.slow
       : status
     : remoteSummary
-      ? `后端数据 ${recordCount} 条`
+      ? dict.board.status.backendRows(formatNumber(recordCount))
       : status;
 
   const topUsers = summary.users.slice(0, 8);
@@ -414,12 +415,12 @@ export function TokenLeaderboardApp({
   const chartRange = isCustomRange ? chartRangeForDailyLength(summary.daily.length) : range;
   const activeRangeLabel = isCustomRange && appliedCustomRange
     ? `${appliedCustomRange.from} - ${appliedCustomRange.to}`
-    : RANGE_LABELS[range];
+    : dict.common.ranges[range];
   const showDailyLeaderboardTrend = summary.daily.length > 1;
   const leaderboardColumnCount = showDailyLeaderboardTrend ? 8 : 7;
   const trendPointsForPeak = summary.trends?.model.daily?.length ? summary.trends.model.daily : summary.daily;
   const trendPeakValue = Math.max(0, ...trendPointsForPeak.map((point) => getTeamTrendMetricValue(point, metric)));
-  const selectedMetricLabel = METRICS.find((item) => item.key === metric)?.label ?? "总消耗";
+  const selectedMetricLabel = dict.common.metrics[metric];
   const shareTotal = Math.max(0, summary.users.reduce((sum, user) => sum + getUserMetricValue(user, metric), 0));
   const totalInputContextTokens = summary.users.reduce((sum, user) => sum + getInputContextTokens(user), 0);
   const totalCachedInputTokens = summary.users.reduce((sum, user) => sum + user.cachedInputTokens, 0);
@@ -436,8 +437,8 @@ export function TokenLeaderboardApp({
   const rangeRecordCount = summary.users.reduce((sum, user) => sum + user.records, 0);
   const rangeRecordCountLabel = formatNumber(rangeRecordCount);
   const insightText = isDataLoading
-    ? "正在生成自动洞察"
-    : buildLeaderboardInsight(summary, cacheHitRate);
+    ? dict.board.status.insightLoading
+    : buildLeaderboardInsight(summary, cacheHitRate, dict.board.insight, dict.common.punctuation);
 
   useEffect(() => {
     if (!toast) {
@@ -502,7 +503,7 @@ export function TokenLeaderboardApp({
       return;
     }
 
-    const confirmed = window.confirm("确认退出当前 GitHub 账号吗？退出后将暂时看不到个人 Token 消耗。");
+    const confirmed = window.confirm(dict.board.status.logoutConfirm);
     if (!confirmed) {
       return;
     }
@@ -515,8 +516,8 @@ export function TokenLeaderboardApp({
     accountCache.clear();
     setDataLoadState("loading");
     setDataLoadError("");
-    setStatus("正在重新加载真实用户数据");
-    showToast("正在刷新榜单");
+    setStatus(dict.board.status.reloadRealUsers);
+    showToast(dict.board.status.refreshingBoard);
     setReloadKey((value) => value + 1);
   }
 
@@ -527,7 +528,7 @@ export function TokenLeaderboardApp({
 
   function applyCustomRange() {
     if (!customFrom || !customTo || customTo < customFrom) {
-      showToast("请选择有效的自定义日期区间", "error");
+      showToast(dict.board.status.invalidCustomRange, "error");
       return;
     }
 
@@ -536,12 +537,12 @@ export function TokenLeaderboardApp({
 
   function openUsageExport(scope: "leaderboard" | "me", format: "csv" | "json") {
     if (!normalizedApiBaseUrl) {
-      showToast("未配置 Token Board API，无法导出", "error");
+      showToast(dict.board.status.exportApiMissing, "error");
       return;
     }
 
     if (isCustomRange) {
-      showToast("自定义区间暂不支持导出，请先切换到预设时间范围", "error");
+      showToast(dict.board.status.exportCustomRangeUnsupported, "error");
       return;
     }
 
@@ -551,17 +552,17 @@ export function TokenLeaderboardApp({
     }
 
     window.open(`${normalizedApiBaseUrl}/api/usage/export?${params.toString()}`, "_blank", "noopener,noreferrer");
-    showToast(`正在导出${scope === "leaderboard" ? "排行榜" : "个人看板"}`);
+    showToast(dict.board.status.exporting(scope));
   }
 
   async function copyCommand(command: string, label: string) {
     try {
       await navigator.clipboard.writeText(command);
-      const message = `已复制${label}`;
+      const message = dict.board.status.copied(label);
       setStatus(message);
       showToast(message);
     } catch {
-      const message = `${label}复制失败，请手动复制`;
+      const message = dict.board.status.copyFailed(label);
       setStatus(message);
       showToast(message, "error");
     }
@@ -570,11 +571,11 @@ export function TokenLeaderboardApp({
   const leaderboardPanel = (
     <section id="token-leaderboard-rankings" className="otb-panel min-w-0 overflow-hidden rounded-lg">
       <PanelHeader
-        title="排行榜"
-        meta={isDataLoading ? <Skeleton className="h-3 w-40 align-middle" /> : `${summary.users.length} 位用户 · 当前区间 ${rangeRecordCountLabel} 条`}
+        title={dict.board.leaderboard.title}
+        meta={isDataLoading ? <Skeleton className="h-3 w-40 align-middle" /> : dict.board.leaderboard.meta(formatNumber(summary.users.length), rangeRecordCountLabel)}
         action={
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <span>按{selectedMetricLabel}降序</span>
+            <span>{dict.board.leaderboard.sortedBy(selectedMetricLabel)}</span>
             <button
               type="button"
               onClick={() => openUsageExport("leaderboard", "csv")}
@@ -617,14 +618,14 @@ export function TokenLeaderboardApp({
         <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
-              <th className="px-4 py-3">排名</th>
-              <th className="px-4 py-3">用户</th>
-              {showDailyLeaderboardTrend ? <th className="w-[18rem] min-w-[18rem] max-w-[18rem] px-4 py-3">用量趋势</th> : null}
-              <SortableColumnHeader active={metric === "tokens"} align="right">总消耗 Token</SortableColumnHeader>
-              <SortableColumnHeader active={metric === "cost"} align="right">费用</SortableColumnHeader>
-              <SortableColumnHeader active={metric === "sessions"} align="right">会话</SortableColumnHeader>
-              <SortableColumnHeader active={metric === "users"} align="right">活跃天数</SortableColumnHeader>
-              <th className="px-4 py-3">常用模型</th>
+              <th className="px-4 py-3">{dict.board.leaderboard.columns.rank}</th>
+              <th className="px-4 py-3">{dict.board.leaderboard.columns.user}</th>
+              {showDailyLeaderboardTrend ? <th className="w-[18rem] min-w-[18rem] max-w-[18rem] px-4 py-3">{dict.board.leaderboard.columns.trend}</th> : null}
+              <SortableColumnHeader active={metric === "tokens"} align="right">{dict.board.leaderboard.columns.totalTokens}</SortableColumnHeader>
+              <SortableColumnHeader active={metric === "cost"} align="right">{dict.board.leaderboard.columns.cost}</SortableColumnHeader>
+              <SortableColumnHeader active={metric === "sessions"} align="right">{dict.board.leaderboard.columns.sessions}</SortableColumnHeader>
+              <SortableColumnHeader active={metric === "users"} align="right">{dict.board.leaderboard.columns.activeDays}</SortableColumnHeader>
+              <th className="px-4 py-3">{dict.board.leaderboard.columns.model}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-950/8">
@@ -648,9 +649,9 @@ export function TokenLeaderboardApp({
   const sharePanel = (
     <section className="otb-panel-muted rounded-lg p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold">{selectedMetricLabel}份额</h2>
+        <h2 className="text-base font-semibold">{dict.board.leaderboard.shareTitle(selectedMetricLabel)}</h2>
         <span className="font-mono text-xs text-stone-500">
-          {isDataLoading ? <Skeleton className="h-3 w-10 align-middle" /> : `${topUsers.length} 人`}
+          {isDataLoading ? <Skeleton className="h-3 w-10 align-middle" /> : dict.board.leaderboard.topUsers(formatNumber(topUsers.length))}
         </span>
       </div>
       <div className="mt-4 space-y-3">
@@ -665,8 +666,8 @@ export function TokenLeaderboardApp({
     <section className="otb-panel rounded-lg p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">加入榜单</h2>
-          <p className="mt-1 text-xs text-stone-500">安装 agent 后从本机采集 token 记录并自动上报。</p>
+          <h2 className="text-base font-semibold">{dict.board.dataEntry.title}</h2>
+          <p className="mt-1 text-xs text-stone-500">{dict.board.dataEntry.description}</p>
         </div>
         <span className="rounded-full bg-stone-950 px-2.5 py-1 font-mono text-xs text-white">
           {isDataLoading ? <Skeleton className="h-3 w-10 align-middle" /> : rangeRecordCountLabel}
@@ -676,19 +677,19 @@ export function TokenLeaderboardApp({
         {normalizedApiBaseUrl ? (
           <div className="rounded-lg border border-blue-600/25 bg-blue-50 p-3 text-xs text-blue-900">
             <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold">自动上报</p>
-              <span className="rounded-full bg-white/80 px-2 py-0.5 font-mono text-[11px]">live</span>
+              <p className="font-semibold">{dict.board.dataEntry.autoReport}</p>
+              <span className="rounded-full bg-white/80 px-2 py-0.5 font-mono text-[11px]">{dict.board.dataEntry.live}</span>
             </div>
             <p className="mt-2 text-blue-600">
               {viewer?.authenticated
-                ? `当前账号 @${viewer.user?.githubLogin || viewer.user?.displayName}`
-                : "GitHub 登录 + npx agent，从你的电脑上报"}
+                ? dict.board.dataEntry.currentAccount(viewer.user?.githubLogin || viewer.user?.displayName || "")
+                : dict.board.dataEntry.loginAndAgent}
             </p>
           </div>
         ) : (
           <div className="rounded-lg border border-red-600/25 bg-red-50 p-3 text-xs text-red-900">
-            <p className="font-semibold">等待 Token Board 后端</p>
-            <p className="mt-2">页面已关闭静态 JSON、本地缓存和手动导入，只会读取自动上报服务。</p>
+            <p className="font-semibold">{dict.board.dataEntry.waitingBackend}</p>
+            <p className="mt-2">{dict.board.dataEntry.backendOnly}</p>
           </div>
         )}
         <div className="grid gap-2">
@@ -698,15 +699,15 @@ export function TokenLeaderboardApp({
             className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
           >
             <Icon name="guide" />
-            使用安装指南
+            {dict.board.hero.installGuide}
           </button>
           <button
             type="button"
-            onClick={() => void copyCommand(NPX_STATUS_COMMAND, "状态检查命令")}
+            onClick={() => void copyCommand(NPX_STATUS_COMMAND, dict.board.dataEntry.statusCommand)}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-blue-600/40 hover:bg-blue-50"
           >
             <Icon name="refresh" />
-            复制状态检查命令
+            {dict.board.dataEntry.copyStatusCommand}
           </button>
           {!viewer?.authenticated && normalizedApiBaseUrl ? (
             <button
@@ -715,7 +716,7 @@ export function TokenLeaderboardApp({
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-stone-950/15 bg-white px-3 text-sm font-semibold text-stone-700 transition hover:border-blue-600/40 hover:bg-blue-50"
             >
               <Icon name="github" />
-              GitHub 登录
+              {dict.common.actions.githubLogin}
             </button>
           ) : null}
         </div>
@@ -753,7 +754,7 @@ export function TokenLeaderboardApp({
                   </span>
                 </div>
                 <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
-                  朋友间的 Token 排行榜
+                  {dict.board.hero.title}
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   {`${formatShortDate(summary.startAt)} - ${formatShortDate(summary.endAt)} · Asia/Shanghai`}
@@ -764,21 +765,21 @@ export function TokenLeaderboardApp({
                 <div className="grid w-full gap-2 xl:w-[42rem]">
                   <div className="grid gap-2 sm:grid-cols-2">
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-slate-500">滚动窗口</p>
+                      <p className="text-xs font-semibold text-slate-500">{dict.board.hero.rollingWindow}</p>
                       <SegmentedControl
                         items={ROLLING_RANGES.map((item) => ({ key: item, label: item }))}
                         value={isCustomRange ? "" : range}
                         onChange={(value) => selectPresetRange(value as TokenBoardRange)}
-                        label="滚动窗口"
+                        label={dict.board.hero.rollingWindow}
                       />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-xs font-semibold text-slate-500">日历</p>
+                      <p className="text-xs font-semibold text-slate-500">{dict.board.hero.calendar}</p>
                       <SegmentedControl
-                        items={CALENDAR_RANGES.map((item) => ({ key: item, label: RANGE_LABELS[item] }))}
+                        items={CALENDAR_RANGES.map((item) => ({ key: item, label: dict.common.ranges[item] }))}
                         value={isCustomRange ? "" : range}
                         onChange={(value) => selectPresetRange(value as TokenBoardRange)}
-                        label="日历时间范围"
+                        label={dict.board.hero.calendarRange}
                       />
                     </div>
                   </div>
@@ -788,21 +789,21 @@ export function TokenLeaderboardApp({
                       value={customFrom}
                       onChange={(event) => setCustomFrom(event.target.value)}
                       className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"
-                      aria-label="自定义开始日期"
+                      aria-label={dict.board.hero.customStart}
                     />
                     <input
                       type="date"
                       value={customTo}
                       onChange={(event) => setCustomTo(event.target.value)}
                       className="min-h-11 rounded-lg border border-blue-600/20 bg-white px-3 font-mono text-sm text-slate-700 shadow-sm transition hover:border-blue-600/35"
-                      aria-label="自定义结束日期"
+                      aria-label={dict.board.hero.customEnd}
                     />
                     <button
                       type="button"
                       onClick={applyCustomRange}
                       className="otb-energy-bg inline-flex min-h-11 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                     >
-                      自定义
+                      {dict.board.hero.custom}
                     </button>
                   </div>
                 </div>
@@ -811,7 +812,7 @@ export function TokenLeaderboardApp({
                     items={metricItems}
                     value={metric}
                     onChange={(value) => setMetric(value as TokenBoardMetric)}
-                    label="排序指标"
+                    label={dict.board.hero.metric}
                   />
                 </div>
                 <div className="grid w-full gap-2 sm:grid-cols-2 xl:max-w-[32rem]">
@@ -821,7 +822,7 @@ export function TokenLeaderboardApp({
                     className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <Icon name="guide" />
-                    使用安装指南
+                    {dict.board.hero.installGuide}
                   </button>
                   {!viewer?.authenticated && normalizedApiBaseUrl ? (
                     <button
@@ -830,7 +831,7 @@ export function TokenLeaderboardApp({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm"
                     >
                       <Icon name="github" />
-                      GitHub 登录
+                      {dict.common.actions.githubLogin}
                     </button>
                   ) : (
                     <button
@@ -839,7 +840,7 @@ export function TokenLeaderboardApp({
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 hover:shadow-sm"
                     >
                       <Icon name="refresh" />
-                      刷新榜单
+                      {dict.board.hero.refreshBoard}
                     </button>
                   )}
                 </div>
@@ -848,17 +849,17 @@ export function TokenLeaderboardApp({
 
             <div className="grid gap-3 border-t border-slate-200 pt-4 sm:grid-cols-3">
               <HeroSignal
-                label="当前榜首"
+                label={dict.board.hero.currentLeader}
                 value={isDataLoading ? <Skeleton className="h-5 w-28" /> : leader?.displayName ?? "--"}
                 meta={isDataLoading ? <Skeleton className="h-3 w-16" /> : leaderMeta}
               />
               <HeroSignal
-                label="当前区间记录"
+                label={dict.board.hero.currentRecords}
                 value={isDataLoading ? <Skeleton className="h-5 w-20" /> : rangeRecordCountLabel}
                 meta={isDataLoading ? <Skeleton className="h-3 w-24" /> : activeRangeLabel}
               />
               <HeroSignal
-                label="高频组合"
+                label={dict.board.hero.topCombo}
                 value={isDataLoading ? <Skeleton className="h-5 w-24" /> : topModelLabel}
                 meta={isDataLoading ? <Skeleton className="h-3 w-16" /> : topToolLabel}
               />
@@ -885,23 +886,23 @@ export function TokenLeaderboardApp({
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <StatTile
                 active={metric === "tokens"}
-                label="总消耗 Token"
+                label={dict.board.stats.totalTokens}
                 value={isDataLoading ? <Skeleton className="h-8 w-28" /> : formatTokens(totalConsumptionTokens)}
-                meta={isDataLoading ? "" : "输入上下文 + 输出 Token"}
+                meta={isDataLoading ? "" : dict.board.stats.totalTokensMeta}
                 onClick={() => setMetric("tokens")}
                 tone="ink"
               />
               <StatTile
                 active={metric === "cost"}
-                label="估算费用"
+                label={dict.board.stats.estimatedCost}
                 value={isDataLoading ? <Skeleton className="h-8 w-24" /> : formatUsd(summary.totalCostUsd)}
-                meta={isDataLoading ? "" : "非实际账单"}
+                meta={isDataLoading ? "" : dict.board.stats.estimatedCostMeta}
                 onClick={() => setMetric("cost")}
                 tone="gold"
               />
               <StatTile
                 active={metric === "sessions"}
-                label="会话数"
+                label={dict.board.stats.sessions}
                 value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.totalSessions)}
                 meta={isDataLoading ? "" : "Sessions"}
                 onClick={() => setMetric("sessions")}
@@ -909,9 +910,9 @@ export function TokenLeaderboardApp({
               />
               <StatTile
                 active={metric === "users"}
-                label="活跃人数"
+                label={dict.board.stats.activeUsers}
                 value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.activeUsers)}
-                meta={isDataLoading ? "" : `${summary.activeUsers} 位参与`}
+                meta={isDataLoading ? "" : dict.board.stats.activeUsersMeta(formatNumber(summary.activeUsers))}
                 onClick={() => setMetric("users")}
                 tone="mint"
               />
@@ -936,9 +937,9 @@ export function TokenLeaderboardApp({
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.18fr)_minmax(18rem,0.82fr)]">
               <section className="otb-panel rounded-lg p-4">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold">{selectedMetricLabel}趋势</h2>
+                  <h2 className="text-base font-semibold">{dict.board.stats.trendTitle(selectedMetricLabel)}</h2>
                   <p className="font-mono text-xs text-stone-500">
-                    峰值 {isDataLoading ? <Skeleton className="h-3 w-12 align-middle" /> : formatMetricValue(trendPeakValue, metric)}
+                    {dict.board.stats.peak(isDataLoading ? "" : formatMetricValue(trendPeakValue, metric))}
                   </p>
                 </div>
                 <div className="mt-4">
@@ -953,16 +954,16 @@ export function TokenLeaderboardApp({
 
               <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
                 {sharePanel}
-                <BreakdownPanel title="模型消耗" loading={isDataLoading} items={summary.models.map((item) => ({
+                <BreakdownPanel title={dict.board.stats.modelUsage} loading={isDataLoading} items={summary.models.map((item) => ({
                   name: item.name,
                   value: item.tokens,
                   meta: formatUsd(item.costUsd),
                   share: item.share,
                 }))} />
-                <BreakdownPanel title="工具分布" loading={isDataLoading} items={summary.tools.map((item) => ({
+                <BreakdownPanel title={dict.board.stats.toolDistribution} loading={isDataLoading} items={summary.tools.map((item) => ({
                   name: item.name,
                   value: item.tokens,
-                  meta: `${formatNumber(item.sessions)} 会话`,
+                  meta: dict.board.stats.toolSessions(formatNumber(item.sessions)),
                   share: item.share,
                 }))} />
               </section>
@@ -973,25 +974,25 @@ export function TokenLeaderboardApp({
             {dataEntryPanel}
 
             <section className="otb-panel rounded-lg p-4">
-              <h2 className="text-base font-semibold">统计口径</h2>
+              <h2 className="text-base font-semibold">{dict.board.scope.title}</h2>
               <div className="mt-3 space-y-2 text-xs leading-5 text-stone-600">
                 <p>
-                  <strong className="text-stone-900">时间窗口</strong>：{activeRangeLabel}，展示时间按 Asia/Shanghai。
+                  <strong className="text-stone-900">{dict.board.scope.timeWindow}</strong>{dict.common.punctuation.colon}{dict.board.scope.timeWindowDescription(activeRangeLabel)}
                 </p>
                 <p>
-                  <strong className="text-stone-900">记录数</strong>：{isDataLoading ? <Skeleton className="h-3 w-48 align-middle" /> : `全库/可用记录 ${recordCountLabel} 条；当前区间参与排行 ${rangeRecordCountLabel} 条`}。
+                  <strong className="text-stone-900">{dict.board.scope.recordCount}</strong>{dict.common.punctuation.colon}{isDataLoading ? <Skeleton className="h-3 w-48 align-middle" /> : dict.board.scope.recordCountDescription(recordCountLabel, rangeRecordCountLabel)}
                 </p>
                 <p>
-                  <strong className="text-stone-900">数据截至</strong>：{latestReportedAt(summary) ? `${formatShortDate(latestReportedAt(summary))}（最后一条上报）` : "当前区间暂无上报数据"}。
+                  <strong className="text-stone-900">{dict.board.scope.dataAsOf}</strong>{dict.common.punctuation.colon}{latestReportedAt(summary) ? dict.board.scope.dataAsOfDescription(formatShortDate(latestReportedAt(summary))) : dict.board.scope.dataAsOfEmpty}
                 </p>
                 <p>
-                  <strong className="text-stone-900">费用是估算值</strong>：按 input、output、cache write、cache read 四分类公开单价计算，不等同于账号额度或实际账单。
+                  <strong className="text-stone-900">{dict.board.scope.costTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.costDescription}
                 </p>
                 <p>
-                  <strong className="text-stone-900">Token 主口径</strong>：总消耗 Token = 输入上下文（input）+ 输出 Token；cache read 和 cache write 都是输入上下文的子项，单独展示但不额外加总，推理 token 在个人视图单独展开。
+                  <strong className="text-stone-900">{dict.board.scope.tokenTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.tokenDescription}
                 </p>
                 <p>
-                  <strong className="text-stone-900">隐私边界</strong>：只展示 token、模型、工具、项目 basename 与会话短标题，不展示完整 prompt 文本。
+                  <strong className="text-stone-900">{dict.board.scope.privacyTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.privacyDescription}
                 </p>
               </div>
             </section>

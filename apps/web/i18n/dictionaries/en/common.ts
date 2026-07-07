@@ -59,6 +59,7 @@ export const common = {
     generating: "Generating...",
     backToBoard: "Back to board",
     githubLogin: "Sign in with GitHub",
+    logout: "Sign out",
   },
   units: {
     people: (count: string) => `${count} people`,

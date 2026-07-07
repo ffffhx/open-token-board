@@ -8,6 +8,8 @@ import {
   type TokenLeaderboardUser,
 } from "@open-token-board/core";
 
+import { useI18n } from "@/i18n";
+
 import type { ViewerState } from "./types";
 import { Avatar, Skeleton } from "./shared-ui";
 import { formatNumber, formatPercent, formatSignedPercent, formatTokens, formatUsd } from "./utils";
@@ -19,6 +21,7 @@ export function TeamBattlePanel({
   loading: boolean;
   summary: TokenLeaderboardSummary;
 }) {
+  const { dict } = useI18n();
   const teams = summary.teams ?? [];
 
   if (!loading && teams.length < 2) {
@@ -28,7 +31,7 @@ export function TeamBattlePanel({
   if (loading) {
     return (
       <section className="otb-panel rounded-lg p-4" data-testid="team-battle-section">
-        <DimensionHeader title="小队对抗" meta={<Skeleton className="h-3 w-20 align-middle" />} />
+        <DimensionHeader title={dict.board.dimensions.teamBattle} meta={<Skeleton className="h-3 w-20 align-middle" />} />
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           {Array.from({ length: 3 }, (_, index) => (
             <div key={index} className="rounded-lg border border-stone-950/10 bg-white p-4 shadow-sm">
@@ -44,7 +47,7 @@ export function TeamBattlePanel({
 
   return (
     <section className="otb-panel rounded-lg p-4" data-testid="team-battle-section">
-      <DimensionHeader title="小队对抗" meta={`${teams.length} 支小队 · 按总量排序`} />
+      <DimensionHeader title={dict.board.dimensions.teamBattle} meta={dict.board.dimensions.teamsMeta(formatNumber(teams.length))} />
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {teams.map((team) => {
           const champion = team.rank === 1;
@@ -74,15 +77,15 @@ export function TeamBattlePanel({
                     </h2>
                   </div>
                   <p className="mt-2 text-xs text-stone-500">
-                    {formatNumber(team.activeUsers)} 人 · {formatUsd(team.costUsd)}
+                    {dict.board.dimensions.membersCost(formatNumber(team.activeUsers), formatUsd(team.costUsd))}
                   </p>
                 </div>
                 <TeamDeltaBadge value={team.deltaTokens} />
               </div>
 
               <div className="mt-5 grid grid-cols-2 gap-3">
-                <MetricBlock label="总量" value={formatTokens(team.tokens)} />
-                <MetricBlock label="人均" value={formatTokens(team.tokensPerUser)} />
+                <MetricBlock label={dict.board.dimensions.total} value={formatTokens(team.tokens)} />
+                <MetricBlock label={dict.board.dimensions.perPerson} value={formatTokens(team.tokensPerUser)} />
               </div>
 
               <div className="mt-5 flex min-w-0 items-center justify-between gap-3">
@@ -115,6 +118,7 @@ export function ProjectConsumptionPanel({
   loading: boolean;
   summary: TokenLeaderboardSummary;
 }) {
+  const { dict } = useI18n();
   const projects = summary.projects ?? [];
   const maxTokens = Math.max(1, ...projects.map((project) => project.tokens));
 
@@ -125,8 +129,8 @@ export function ProjectConsumptionPanel({
   return (
     <section className="otb-panel rounded-lg p-4" data-testid="project-consumption-section">
       <DimensionHeader
-        title="项目消耗"
-        meta={loading ? <Skeleton className="h-3 w-16 align-middle" /> : `${projects.length} 个项目`}
+        title={dict.board.dimensions.projectUsage}
+        meta={loading ? <Skeleton className="h-3 w-16 align-middle" /> : dict.board.dimensions.projectsMeta(formatNumber(projects.length))}
       />
       <div className="mt-4 space-y-3">
         {loading
@@ -150,12 +154,12 @@ export function ProjectConsumptionPanel({
                       </p>
                       {project.other ? (
                         <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                          其他
+                          {dict.board.dimensions.other}
                         </span>
                       ) : null}
                     </div>
                     <p className="mt-1 truncate text-xs text-stone-500">
-                      {formatNumber(project.activeUsers)} 人参与 · 主力 {project.topModel}
+                      {dict.board.dimensions.projectMeta(formatNumber(project.activeUsers), project.topModel)}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
@@ -185,6 +189,7 @@ export function UsageDistributionPanel({
   summary: TokenLeaderboardSummary;
   viewer: ViewerState | null;
 }) {
+  const { dict } = useI18n();
   const distribution = summary.distribution;
   const buckets = distribution?.buckets ?? [];
   const viewerUser = findViewerUser(summary.users, viewer);
@@ -200,8 +205,8 @@ export function UsageDistributionPanel({
   return (
     <section className="otb-panel rounded-lg p-4" data-testid="usage-distribution-section">
       <DimensionHeader
-        title="团队分布"
-        meta={loading ? <Skeleton className="h-3 w-20 align-middle" /> : `${formatNumber(distribution?.totalUsers ?? 0)} 位活跃用户`}
+        title={dict.board.dimensions.distribution}
+        meta={loading ? <Skeleton className="h-3 w-20 align-middle" /> : dict.board.dimensions.distributionMeta(formatNumber(distribution?.totalUsers ?? 0))}
       />
       <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
         <div className="min-w-0 rounded-lg border border-stone-950/10 bg-white p-3">
@@ -223,12 +228,12 @@ export function UsageDistributionPanel({
             }`}
             data-testid="viewer-distribution-badge"
           >
-            <p className="text-xs font-semibold text-stone-500">我的位置</p>
+            <p className="text-xs font-semibold text-stone-500">{dict.board.dimensions.myPosition}</p>
             <p className="mt-2 font-mono text-xl font-black text-slate-950">
               {loading ? <Skeleton className="h-6 w-16" /> : viewerPercentile === null ? "--" : `P${viewerPercentile}`}
             </p>
             <p className="mt-1 truncate text-xs text-stone-500">
-              {viewerTokens === null ? "未匹配" : formatTokens(viewerTokens)}
+              {viewerTokens === null ? dict.common.states.notMatched : formatTokens(viewerTokens)}
             </p>
           </div>
         </div>
@@ -247,13 +252,14 @@ function DimensionHeader({ title, meta }: { title: string; meta: ReactNode }) {
 }
 
 function TeamDeltaBadge({ value }: { value: number | null }) {
+  const { dict } = useI18n();
   const tone =
     value === null || value === 0
       ? "border-slate-200 bg-slate-50 text-slate-600"
       : value > 0
         ? "border-emerald-600/20 bg-emerald-50 text-emerald-700"
         : "border-red-600/20 bg-red-50 text-red-700";
-  const label = value === null ? "新队" : value === 0 ? "持平" : `${value > 0 ? "↑" : "↓"} ${formatSignedPercent(value)}`;
+  const label = value === null ? dict.board.dimensions.newTeam : value === 0 ? dict.board.leaderboard.unchanged : `${value > 0 ? "↑" : "↓"} ${formatSignedPercent(value)}`;
 
   return (
     <span className={`shrink-0 rounded-full border px-2.5 py-1 font-mono text-[11px] font-semibold ${tone}`}>
@@ -293,6 +299,7 @@ function DistributionSvg({
   maxCount: number;
   viewerBucketKey: string;
 }) {
+  const { dict } = useI18n();
   const width = 420;
   const height = 190;
   const chartTop = 18;
@@ -302,7 +309,7 @@ function DistributionSvg({
 
   return (
     <svg
-      aria-label="团队用量分布直方图"
+      aria-label={dict.board.dimensions.distributionAria}
       className="block h-auto w-full"
       role="img"
       viewBox={`0 0 ${width} ${height}`}
@@ -377,7 +384,7 @@ function DistributionSvg({
                 x={x + barWidth / 2}
                 y={height - 6}
               >
-                你
+                {dict.board.dimensions.you}
               </text>
             ) : null}
           </g>

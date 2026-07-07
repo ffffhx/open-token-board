@@ -10,6 +10,8 @@ import {
   type TokenBoardRange,
 } from "@open-token-board/core";
 
+import { useI18n, type Dictionary } from "@/i18n";
+
 import type { AccountLoadState, ViewerState } from "./types";
 import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
@@ -47,6 +49,8 @@ export function AccountUsagePanel({
   range: TokenBoardRange;
   viewer: ViewerState | null;
 }) {
+  const { dict } = useI18n();
+  const account = dict.board.account;
   const user = profile?.user ?? null;
   const inputContextTokens = user ? getInputContextTokens(user) : 0;
   const accountConsumptionTokens = user ? getTokenConsumptionTokens(user) : 0;
@@ -63,11 +67,9 @@ export function AccountUsagePanel({
       <section className="rounded-lg border border-stone-950/10 bg-white px-5 py-4 shadow-sm sm:px-6">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem] lg:items-center">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase text-blue-600">GitHub Account</p>
-            <h2 className="mt-1 text-lg font-semibold text-stone-950">登录后展开我的 Token 消耗</h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-stone-600">
-              个人视图会按当前 GitHub 账号展示排名、项目、缓存命中率和活跃分布；公共排行榜不需要登录也能查看。
-            </p>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-600">{account.gateEyebrow}</p>
+            <h2 className="mt-1 text-lg font-semibold text-stone-950">{account.gateTitle}</h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-stone-600">{account.gateDescription}</p>
           </div>
           <button
             type="button"
@@ -75,7 +77,7 @@ export function AccountUsagePanel({
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600"
           >
             <Icon name="github" />
-            GitHub 登录
+            {dict.common.actions.githubLogin}
           </button>
         </div>
       </section>
@@ -87,8 +89,8 @@ export function AccountUsagePanel({
       <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase text-blue-600">GitHub Account</p>
-            <h2 className="mt-1 text-2xl font-semibold">我的 Token 消耗</h2>
+            <p className="font-mono text-xs font-semibold uppercase text-blue-600">{account.gateEyebrow}</p>
+            <h2 className="mt-1 text-2xl font-semibold">{account.title}</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-600">
@@ -132,19 +134,19 @@ export function AccountUsagePanel({
 
       {!apiEnabled ? (
         <AccountEmptyState
-          title="等待连接 Token Board 服务"
-          description="配置 NEXT_PUBLIC_TOKEN_BOARD_API_URL 后，这里会按当前 GitHub 登录账号展示个人消耗。"
+          title={account.serviceWaitingTitle}
+          description={account.serviceWaitingDescription}
         />
       ) : !viewer ? (
         <AccountLoadingState />
       ) : loadState === "loading" ? (
         <AccountLoadingState />
       ) : loadState === "error" ? (
-        <AccountEmptyState title="个人消耗加载失败" description={error || "请稍后刷新再试。"} />
+        <AccountEmptyState title={account.loadFailedTitle} description={error || account.refreshLater} />
       ) : !dashboardProfile || !user ? (
         <AccountEmptyState
-          title="还没有这个 GitHub 账号的上报数据"
-          description="在本机运行 token-board-agent login 并保持 agent 同步后，这里就会出现个人视图。"
+          title={account.noAccountDataTitle}
+          description={account.noAccountDataDescription}
         />
       ) : (
         <div className="space-y-5 px-5 py-5 sm:px-6">
@@ -160,7 +162,7 @@ export function AccountUsagePanel({
                 <Avatar name={user.displayName} index={user.rank || 0} />
               )}
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-500">我的排名（按总消耗，{range}）</p>
+                <p className="text-xs font-semibold text-slate-500">{account.rankTitle(dict.common.ranges[range])}</p>
                 <p className="mt-1 truncate font-mono text-3xl font-semibold">
                   #{dashboardProfile.rank ?? "--"}
                   <span className="ml-2 text-base text-slate-400">/ {formatNumber(dashboardProfile.totalUsers)}</span>
@@ -169,13 +171,13 @@ export function AccountUsagePanel({
             </div>
             <div className="grid grid-cols-2 gap-3 text-right">
               <div>
-                <p className="text-xs text-slate-500">超过</p>
+                <p className="text-xs text-slate-500">{account.exceeds}</p>
                 <p className="mt-1 font-mono text-xl font-semibold text-blue-700">
                   {dashboardProfile.percentile === null ? "--" : formatPercent(dashboardProfile.percentile)}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-slate-500">排名变化</p>
+                <p className="text-xs text-slate-500">{account.rankChange}</p>
                 <p className={`mt-1 font-mono text-xl font-semibold ${rankDeltaTone(dashboardProfile.rankDelta)}`}>
                   {formatRankDelta(dashboardProfile.rankDelta)}
                 </p>
@@ -187,124 +189,124 @@ export function AccountUsagePanel({
             href={`/card?user=${encodeURIComponent(user.displayName)}&range=${range}`}
             className="flex items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100"
           >
-            📊 生成我的战报卡 · 一键导出图片分享 →
+            {account.reportCardCta}
           </Link>
           <Link
             href={`/wrapped/?login=${encodeURIComponent(wrappedLogin)}`}
             className="flex items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
           >
-            查看我的 Wrapped →
+            {account.wrappedCta}
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
 
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <AccountStatCard
-              label="预估费用"
+              label={account.estimatedCost}
               value={formatUsd(user.costUsd)}
               meta="USD estimate"
               tone="gold"
               tooltip={{
-                title: "预估费用",
-                description: "按公开模型单价估算的美元成本，不等同于 Codex 账号额度或实际账单。",
-                formula: "Σ(input + cache write + cache read + output 四分类单价)",
-                detail: `当前区间估算 ${formatUsd(user.costUsd)}`,
+                title: account.estimatedCost,
+                description: account.statHelp.costDescription,
+                formula: account.statHelp.costFormula,
+                detail: account.estimatedCostDetail ? account.estimatedCostDetail(formatUsd(user.costUsd)) : `${account.estimatedCost} ${formatUsd(user.costUsd)}`,
               }}
             />
             <AccountStatCard
-              label="总消耗 Token"
+              label={account.totalTokens}
               value={formatTokens(accountConsumptionTokens)}
-              meta="输入上下文 + 输出 Token"
+              meta={dict.board.stats.totalTokensMeta}
               tone="green"
               tooltip={{
-                title: "总消耗 Token",
-                description: "排行榜主口径，按输入上下文加输出计算；cache read/write 都是输入上下文里的子项，不额外加总。",
+                title: account.totalTokens,
+                description: account.statHelp.tokenDescription,
                 formula: "Σ(input_tokens + output_tokens)",
-                detail: `${formatNumber(dashboardProfile.records)} 条记录，共 ${formatTokens(accountConsumptionTokens)}`,
+                detail: account.recordsTotal(formatNumber(dashboardProfile.records), formatTokens(accountConsumptionTokens)),
               }}
             />
             <AccountStatCard
-              label="输入上下文"
+              label={account.inputContext}
               value={formatTokens(inputContextTokens)}
-              meta={`读缓存 ${formatTokens(cacheReadTokens)} · 写缓存 ${formatTokens(cacheWriteTokens)}`}
+              meta={account.cacheReadWriteShort(formatTokens(cacheReadTokens), formatTokens(cacheWriteTokens))}
               tone="blue"
               tooltip={{
-                title: "输入上下文",
-                description: "模型阅读过的上下文吞吐量；cache read 和 cache write 单独展示并按不同单价估算。",
+                title: account.inputContext,
+                description: account.statHelp.inputDescription,
                 formula: "Σ(input_tokens)",
-                detail: `输入 ${formatTokens(user.inputTokens)}，读缓存 ${formatTokens(cacheReadTokens)}，写缓存 ${formatTokens(cacheWriteTokens)}`,
+                detail: account.inputReadWrite(formatTokens(user.inputTokens), formatTokens(cacheReadTokens), formatTokens(cacheWriteTokens)),
               }}
             />
             <AccountStatCard
-              label="输出 Token"
+              label={account.outputTokens}
               value={formatTokens(user.outputTokens)}
-              meta={`推理 ${formatTokens(user.reasoningOutputTokens)}`}
+              meta={account.reasoning(formatTokens(user.reasoningOutputTokens))}
               tone="rose"
               tooltip={{
-                title: "输出 Token",
-                description: "模型写出来的可见内容 token；推理 token 单独列在副指标里。",
-                formula: "主值 = Σ output_tokens；生成侧合计 = output + reasoning",
-                detail: `输出 ${formatTokens(user.outputTokens)}，推理 ${formatTokens(user.reasoningOutputTokens)}，合计 ${formatTokens(generatedTokens)}`,
+                title: account.outputTokens,
+                description: account.statHelp.outputDescription,
+                formula: account.statHelp.outputFormula,
+                detail: account.outputReasoningTotal(formatTokens(user.outputTokens), formatTokens(user.reasoningOutputTokens), formatTokens(generatedTokens)),
               }}
             />
             <AccountStatCard
-              label="缓存命中率"
+              label={account.cacheHitRate}
               value={formatPercent(cacheHitRate)}
               meta={user.topTool}
               tone="ink"
               tooltip={{
-                title: "缓存命中率",
-                description: "输入上下文里有多少来自 cache read。cache write 是写入成本，单独计价。",
+                title: account.cacheHitRate,
+                description: account.statHelp.cacheDescription,
                 formula: "Σ cached_input_tokens ÷ Σ input_tokens",
-                detail: `${formatTokens(cacheReadTokens)} ÷ ${formatTokens(inputContextTokens)} = ${formatPercent(cacheHitRate)}；写缓存 ${formatTokens(cacheWriteTokens)}`,
+                detail: account.cacheFormulaDetail(formatTokens(cacheReadTokens), formatTokens(inputContextTokens), formatPercent(cacheHitRate), formatTokens(cacheWriteTokens)),
               }}
             />
             <AccountStatCard
-              label="活跃天数"
+              label={account.activeDays}
               value={`${formatNumber(user.activeDays)}d`}
               meta={dashboardProfile.topWeekday}
               tone="green"
               tooltip={{
-                title: "活跃天数",
-                description: "当前时间范围内出现 token 记录的自然日数量。",
-                formula: "count(distinct date(timestamp))",
-                detail: `当前区间 ${formatNumber(user.activeDays)} 天有记录`,
+                title: account.activeDays,
+                description: account.statHelp.activeDaysDescription,
+                formula: account.statHelp.activeDaysFormula,
+                detail: account.activeDaysDetail(formatNumber(user.activeDays)),
               }}
             />
             <AccountStatCard
-              label="会话数"
+              label={account.sessions}
               value={formatNumber(user.sessions)}
               meta={`${formatTokens(accountTokensPerSession)} token/session`}
               tone="blue"
               tooltip={{
-                title: "会话数",
-                description: "按匿名 sessionId 聚合的会话数量；没有 sessionId 时用事件 ID 兜底。",
-                formula: "count(distinct session_id || event_id)",
-                detail: `${formatTokens(accountConsumptionTokens)} / ${formatNumber(user.sessions)} 个会话`,
+                title: account.sessions,
+                description: account.statHelp.sessionsDescription,
+                formula: account.statHelp.sessionsFormula,
+                detail: account.sessionsDetail(formatTokens(accountConsumptionTokens), formatNumber(user.sessions)),
               }}
             />
             <AccountStatCard
-              label="高峰时段"
+              label={account.peakHour}
               value={dashboardProfile.topHour}
               meta="Asia/Shanghai"
               tone="gold"
               tooltip={{
-                title: "高峰时段",
-                description: "按北京时间把记录归到 24 小时桶，取 token 累计最多的小时。",
-                formula: "argmax(hour(timestamp), Σ(input + output))",
-                detail: `当前高峰 ${dashboardProfile.topHour}`,
+                title: account.peakHour,
+                description: account.statHelp.peakHourDescription,
+                formula: account.statHelp.peakHourFormula,
+                detail: account.peakHourDetail(dashboardProfile.topHour),
               }}
             />
             <AccountStatCard
-              label="常用模型"
+              label={account.topModel}
               value={user.topModel}
               meta={`${dashboardProfile.models.length} models`}
               tone="rose"
               tooltip={{
-                title: "常用模型",
-                description: "当前区间内 token 累计最多的模型。",
-                formula: "argmax(model, Σ(input + output))",
-                detail: `${dashboardProfile.models.length} 个模型参与统计`,
+                title: account.topModel,
+                description: account.statHelp.topModelDescription,
+                formula: account.statHelp.topModelFormula,
+                detail: account.modelsDetail(formatNumber(dashboardProfile.models.length)),
               }}
             />
           </div>
@@ -318,8 +320,8 @@ export function AccountUsagePanel({
 
           <div className="grid gap-5 xl:grid-cols-3">
             <AccountBreakdownPanel
-              title="模型消耗"
-              meta={`${dashboardProfile.models.length} 个模型`}
+              title={dict.board.stats.modelUsage}
+              meta={dict.common.units.models(formatNumber(dashboardProfile.models.length))}
               items={dashboardProfile.models.map((item) => ({
                 name: item.name,
                 value: item.tokens,
@@ -329,12 +331,12 @@ export function AccountUsagePanel({
               barColor="#2563eb"
             />
             <AccountBreakdownPanel
-              title="工具分布"
-              meta={`${dashboardProfile.tools.length} 个工具`}
+              title={dict.board.stats.toolDistribution}
+              meta={dict.common.units.tools(formatNumber(dashboardProfile.tools.length))}
               items={dashboardProfile.tools.map((item) => ({
                 name: item.name,
                 value: item.tokens,
-                meta: `${formatNumber(item.sessions)} 会话`,
+                meta: dict.common.units.sessions(formatNumber(item.sessions)),
                 share: item.share,
               }))}
               barColor="#d97706"
@@ -361,10 +363,30 @@ function AccountHonorPanel({ profile }: { profile: TokenAccountUsageProfile }) {
   );
 }
 
+function translateLevel(level: TokenAccountUsageProfile["level"]["current"], dict: Dictionary) {
+  const translated = dict.board.achievements.levels[level.id as keyof typeof dict.board.achievements.levels];
+
+  return translated ? { ...level, name: translated.name, symbol: translated.symbol } : level;
+}
+
+function translateBadge(badge: TokenAccountUsageProfile["badges"][number], dict: Dictionary) {
+  const translated = dict.board.achievements.badges[badge.id as keyof typeof dict.board.achievements.badges];
+
+  return translated
+    ? {
+        ...badge,
+        condition: translated.condition,
+        description: translated.description,
+        name: translated.name,
+      }
+    : badge;
+}
+
 function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
+  const { dict } = useI18n();
   const { level } = profile;
-  const current = level.current;
-  const next = level.next;
+  const current = translateLevel(level.current, dict);
+  const next = level.next ? translateLevel(level.next, dict) : null;
   const progressPercent = Math.round(level.progress * 100);
 
   return (
@@ -382,7 +404,7 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
             {current.symbol}
           </span>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">当前等级</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{dict.board.account.currentLevel}</p>
             <h3 className="mt-1 truncate text-xl font-semibold text-slate-950 dark:text-slate-50">
               {current.name}
               <span className="ml-2 font-mono text-sm text-slate-400">{current.emoji}</span>
@@ -393,12 +415,12 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
           <p className="font-mono text-2xl font-semibold text-slate-950 dark:text-slate-50">
             {formatTokens(level.totalTokens)}
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">累计总 token</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{dict.board.account.totalLevelTokens}</p>
         </div>
       </div>
       <div className="mt-4">
         <div className="flex items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span>{next ? `距 ${next.name}` : "已到达最高等级"}</span>
+          <span>{next ? dict.board.account.nextLevel(next.name) : dict.board.account.maxLevel}</span>
           <span className="font-mono">{next ? `${progressPercent}%` : "MAX"}</span>
         </div>
         <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner dark:bg-slate-900">
@@ -412,8 +434,8 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
         </div>
         <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400">
           {next && level.tokensToNext !== null
-            ? `还差 ${formatTokens(level.tokensToNext)} token 升级`
-            : "超新星已点亮，继续刷新个人纪录"}
+            ? dict.board.account.upgradeRemaining(formatTokens(level.tokensToNext))
+            : dict.board.account.supernovaDone}
         </p>
       </div>
     </section>
@@ -421,15 +443,16 @@ function AccountLevelCard({ profile }: { profile: TokenAccountUsageProfile }) {
 }
 
 function AccountBadgeWall({ badges }: { badges: TokenAccountUsageProfile["badges"] }) {
+  const { dict } = useI18n();
   const achievedCount = badges.filter((badge) => badge.achieved).length;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">徽章墙</h3>
+          <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{dict.board.account.honorTitle}</h3>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {formatNumber(achievedCount)} / {formatNumber(badges.length)} 已达成
+            {dict.board.account.honorAchieved(formatNumber(achievedCount), formatNumber(badges.length))}
           </p>
         </div>
         <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-mono text-xs font-semibold text-blue-700 dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-300">
@@ -437,11 +460,14 @@ function AccountBadgeWall({ badges }: { badges: TokenAccountUsageProfile["badges
         </span>
       </div>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
-        {badges.map((badge) => (
+        {badges.map((badge) => {
+          const translated = translateBadge(badge, dict);
+
+          return (
           <div
-            key={badge.id}
+            key={translated.id}
             className={`rounded-lg border p-3 transition ${
-              badge.achieved
+              translated.achieved
                 ? "border-blue-200 bg-blue-50 text-blue-950 shadow-sm dark:border-blue-900/70 dark:bg-blue-950/40 dark:text-blue-100"
                 : "border-slate-200 bg-slate-50 text-slate-500 grayscale dark:border-slate-800 dark:bg-slate-900/70 dark:text-slate-400"
             }`}
@@ -449,27 +475,28 @@ function AccountBadgeWall({ badges }: { badges: TokenAccountUsageProfile["badges
             <div className="flex items-start gap-3">
               <span
                 className={`flex size-9 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-bold ${
-                  badge.achieved
+                  translated.achieved
                     ? "border-blue-200 bg-white text-blue-700 dark:border-blue-900/70 dark:bg-slate-950 dark:text-blue-300"
                     : "border-slate-200 bg-white text-slate-400 dark:border-slate-700 dark:bg-slate-950"
                 }`}
               >
-                {badge.icon}
+                {translated.icon}
               </span>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold" title={badge.name}>
-                  {badge.name}
+                <p className="truncate text-sm font-semibold" title={translated.name}>
+                  {translated.name}
                 </p>
-                <p className="mt-1 line-clamp-2 text-xs leading-5" title={badge.achieved ? badge.description : badge.condition}>
-                  {badge.achieved ? badge.description : badge.condition}
+                <p className="mt-1 line-clamp-2 text-xs leading-5" title={translated.achieved ? translated.description : translated.condition}>
+                  {translated.achieved ? translated.description : translated.condition}
                 </p>
               </div>
             </div>
             <p className="mt-2 truncate font-mono text-[11px]">
-              {badge.achieved ? `达成 ${formatAchievementDate(badge.achievedAt)}` : "未达成"}
+              {translated.achieved ? dict.board.account.achievedAt(formatAchievementDate(translated.achievedAt)) : dict.board.account.notAchieved}
             </p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
@@ -480,30 +507,32 @@ function AccountPersonalBestCards({
 }: {
   personalBests: TokenAccountUsageProfile["personalBests"];
 }) {
+  const { dict } = useI18n();
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">个人纪录</h3>
+        <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">{dict.board.account.personalBests}</h3>
         {personalBests.brokeDailyPbToday ? (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 font-mono text-xs font-semibold text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300">
-            今日破纪录
+            {dict.board.account.brokeToday}
           </span>
         ) : null}
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <PersonalBestCard
           highlighted={personalBests.brokeDailyPbToday}
-          label="单日最高"
+          label={dict.board.account.bestDay}
           meta={formatDayLabel(personalBests.singleDay.date)}
           value={formatTokens(personalBests.singleDay.tokens)}
         />
         <PersonalBestCard
-          label="7 天滚动最高"
+          label={dict.board.account.bestRolling7d}
           meta={formatDateRange(personalBests.rolling7Day.startDate, personalBests.rolling7Day.endDate)}
           value={formatTokens(personalBests.rolling7Day.tokens)}
         />
         <PersonalBestCard
-          label="最长连续活跃"
+          label={dict.board.account.longestStreak}
           meta={formatDateRange(personalBests.longestStreak.startDate, personalBests.longestStreak.endDate)}
           value={`${formatNumber(personalBests.longestStreak.days)}d`}
         />
@@ -575,6 +604,8 @@ function formatDayLabel(value: string | null) {
 }
 
 function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["config"] }) {
+  const { dict } = useI18n();
+  const account = dict.board.account;
   const codex = config?.codex;
   const configuredContextWindow = codex?.modelContextWindow;
   const modelContextWindow = codex?.modelCacheContextWindow;
@@ -585,25 +616,25 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
   const effectivePercent = codex?.effectiveContextWindowPercent;
   const items = [
     {
-      label: "默认模型",
+      label: account.configItems.model,
       value: codex?.model || "--",
       meta: codex?.modelReasoningEffort ? `reasoning ${codex.modelReasoningEffort}` : "config.toml",
     },
     {
-      label: "上下文窗口",
+      label: account.configItems.contextWindow,
       value: contextWindow > 0 ? formatTokens(contextWindow) : "--",
       meta:
         configuredContextWindow && modelContextWindow && configuredContextWindow !== modelContextWindow
-          ? `配置 ${formatTokens(configuredContextWindow)} · 标称 ${formatTokens(modelContextWindow)}`
+          ? account.configItems.configuredVsNominal(formatTokens(configuredContextWindow), formatTokens(modelContextWindow))
           : "model_context_window",
     },
     {
-      label: "自动压缩阈值",
+      label: account.configItems.compactLimit,
       value: compactLimit > 0 ? formatTokens(compactLimit) : "--",
       meta: compactRatio === null ? "model_auto_compact_token_limit" : `${formatPercent(compactRatio)} of window`,
     },
     {
-      label: "模型窗口上限",
+      label: account.configItems.maxWindow,
       value: maxContextWindow > 0 ? formatTokens(maxContextWindow) : "--",
       meta: effectivePercent === undefined ? "models_cache" : `effective ${formatPercent(effectivePercent / 100)}`,
     },
@@ -613,13 +644,11 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-base font-semibold">当前用户配置</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
-            只同步 Codex 配置白名单，不上传项目路径、hook、MCP 或通知命令。
-          </p>
+          <h3 className="text-base font-semibold">{account.configTitle}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{account.configDescription}</p>
         </div>
         <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
-          {config ? `配置同步 ${formatShortDate(config.updatedAt)}` : "等待 agent 同步"}
+          {config ? account.configSynced(formatShortDate(config.updatedAt)) : account.waitingAgentSync}
         </span>
       </div>
 
@@ -639,7 +668,7 @@ function AccountConfigPanel({ config }: { config: TokenAccountUsageProfile["conf
         </div>
       ) : (
         <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">
-          旧版本 agent 还没有同步配置；重新运行安装命令或等下一次新版 agent 上报后会显示。
+          {account.oldAgentNoConfig}
         </p>
       )}
 
@@ -664,8 +693,10 @@ function AccountEmptyState({ title, description }: { title: string; description:
 }
 
 function AccountLoadingState() {
+  const { dict } = useI18n();
+
   return (
-    <div className="space-y-5 px-5 py-5 sm:px-6" role="status" aria-label="正在加载个人消耗">
+    <div className="space-y-5 px-5 py-5 sm:px-6" role="status" aria-label={dict.board.account.loadingAria}>
       <div className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
         <div className="flex items-center gap-4">
           <Skeleton className="size-12 rounded-lg" />
@@ -751,13 +782,14 @@ function AccountStatCard({
 }
 
 function AccountDailyTrend({ daily }: { daily: TokenAccountUsageProfile["daily"] }) {
+  const { dict } = useI18n();
   const maxTokens = Math.max(1, ...daily.map((point) => point.tokens));
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">每日趋势</h3>
-        <span className="font-mono text-xs text-slate-500">峰值 {formatTokens(maxTokens)}</span>
+        <h3 className="text-base font-semibold">{dict.board.account.dailyTrend}</h3>
+        <span className="font-mono text-xs text-slate-500">{dict.board.trend.peak(formatTokens(maxTokens))}</span>
       </div>
       <div className="mt-4 grid h-64 grid-cols-[repeat(auto-fit,minmax(5px,1fr))] items-end gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 pb-3 pt-5">
         {daily.map((point, index) => (
@@ -847,15 +879,16 @@ function AccountDailyTrendBar({
 }
 
 function AccountHeatmap({ heatmap }: { heatmap: TokenAccountUsageProfile["heatmap"] }) {
+  const { dict } = useI18n();
   const maxTokens = Math.max(1, ...heatmap.map((cell) => cell.tokens));
   const cells = new Map(heatmap.map((cell) => [`${cell.weekday}:${cell.hour}`, cell]));
-  const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const weekdays = dict.board.account.weekdays;
 
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">分时活跃</h3>
-        <span className="font-mono text-xs text-slate-500">少 → 多</span>
+        <h3 className="text-base font-semibold">{dict.board.account.heatmap}</h3>
+        <span className="font-mono text-xs text-slate-500">{dict.board.account.lessMore}</span>
       </div>
       <div className="mt-4 overflow-x-auto">
         <div className="min-w-[38rem]">
@@ -905,6 +938,8 @@ function AccountBreakdownPanel({
   meta: string;
   title: string;
 }) {
+  const { dict } = useI18n();
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
@@ -931,7 +966,7 @@ function AccountBreakdownPanel({
             </div>
           ))
         ) : (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无数据</p>
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">{dict.common.states.noData}</p>
         )}
       </div>
     </section>
@@ -939,11 +974,13 @@ function AccountBreakdownPanel({
 }
 
 function AccountProjectList({ projects }: { projects: TokenAccountUsageProfile["projects"] }) {
+  const { dict } = useI18n();
+
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold">项目分布</h3>
-        <span className="font-mono text-xs text-slate-500">{projects.length} 个项目</span>
+        <h3 className="text-base font-semibold">{dict.board.account.projectDistribution}</h3>
+        <span className="font-mono text-xs text-slate-500">{dict.common.units.projects(formatNumber(projects.length))}</span>
       </div>
       <div className="mt-4 space-y-3">
         {projects.length ? (
@@ -974,7 +1011,7 @@ function AccountProjectList({ projects }: { projects: TokenAccountUsageProfile["
             </div>
           ))
         ) : (
-          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无数据</p>
+          <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">{dict.common.states.noData}</p>
         )}
       </div>
     </section>
@@ -982,6 +1019,7 @@ function AccountProjectList({ projects }: { projects: TokenAccountUsageProfile["
 }
 
 export function AccountSessionList({ sessions }: { sessions: TokenAccountUsageProfile["sessions"] }) {
+  const { dict } = useI18n();
   const [visibleSessionCount, setVisibleSessionCount] = useState(SESSION_INITIAL_VISIBLE_COUNT);
   const sortedSessions = useMemo(() => [...sessions].sort((a, b) => b.tokens - a.tokens), [sessions]);
   const visibleSessions = sortedSessions.slice(0, visibleSessionCount);
@@ -1000,11 +1038,11 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-base font-semibold">Session 明细</h3>
-          <p className="mt-1 text-xs leading-5 text-slate-500">按 session 聚合，优先展示本地提取的短标题，并标注项目归属</p>
+          <h3 className="text-base font-semibold">{dict.board.account.sessionDetails}</h3>
+          <p className="mt-1 text-xs leading-5 text-slate-500">{dict.board.account.sessionDescription}</p>
         </div>
         <span className="w-fit rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-500">
-          {formatNumber(visibleSessions.length)} / {formatNumber(sortedSessions.length)} sessions · 按 token 降序
+          {dict.board.account.sessionSummary(formatNumber(visibleSessions.length), formatNumber(sortedSessions.length))}
         </span>
       </div>
 
@@ -1016,13 +1054,13 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                 <tr>
                   <th className="w-[16rem] border-b border-slate-200 px-3 py-2 font-semibold">Session</th>
                   <th className="w-[10rem] border-b border-slate-200 px-3 py-2 text-right font-semibold" aria-sort="descending">
-                    总 token ↓
+                    {dict.board.account.totalTokenSorted}
                   </th>
-                  <th className="w-[12rem] border-b border-slate-200 px-3 py-2 font-semibold">模型</th>
-                  <th className="w-[10rem] border-b border-slate-200 px-3 py-2 font-semibold">工具</th>
-                  <th className="w-[11rem] border-b border-slate-200 px-3 py-2 font-semibold">项目</th>
-                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">开始时间</th>
-                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">结束时间</th>
+                  <th className="w-[12rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.model}</th>
+                  <th className="w-[10rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.tool}</th>
+                  <th className="w-[11rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.project}</th>
+                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.start}</th>
+                  <th className="w-[9rem] border-b border-slate-200 px-3 py-2 font-semibold">{dict.board.account.sessionColumns.end}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1041,7 +1079,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                           </p>
                           <span
                             className="max-w-[7rem] shrink-0 truncate rounded-md border border-blue-100 bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-700"
-                            title={`项目：${session.project || "unknown"}`}
+                            title={dict.board.account.projectTitle(session.project || dict.common.states.unknown)}
                           >
                             {session.project || "unknown"}
                           </span>
@@ -1068,7 +1106,7 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
                           className="mt-1 truncate text-xs text-slate-500"
                           title={`cache read ${formatTokens(session.cachedInputTokens)} · cache write ${formatTokens(session.cacheCreationInputTokens)}`}
                         >
-                          读 {formatTokens(session.cachedInputTokens)} · 写 {formatTokens(session.cacheCreationInputTokens)}
+                          {dict.board.account.cacheReadWriteShort(formatTokens(session.cachedInputTokens), formatTokens(session.cacheCreationInputTokens))}
                         </p>
                         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
                           <div
@@ -1101,20 +1139,20 @@ export function AccountSessionList({ sessions }: { sessions: TokenAccountUsagePr
           {hiddenSessionCount > 0 ? (
             <div className="mt-4 flex flex-col items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-3 sm:flex-row">
               <p className="text-xs text-slate-500">
-                已展示 {formatNumber(visibleSessions.length)} 条，还有 {formatNumber(hiddenSessionCount)} 条
+                {dict.board.account.shownMore(formatNumber(visibleSessions.length), formatNumber(hiddenSessionCount))}
               </p>
               <button
                 type="button"
                 onClick={showMoreSessions}
                 className="inline-flex min-h-10 w-full items-center justify-center rounded-lg bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-blue-600 sm:w-auto"
               >
-                查看更多
+                {dict.board.account.showMore}
               </button>
             </div>
           ) : null}
         </>
       ) : (
-        <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">暂无 session 数据</p>
+        <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-center text-sm text-slate-500">{dict.board.account.noSessionData}</p>
       )}
     </section>
   );

@@ -14,12 +14,11 @@ import {
   type TokenTrendSegment,
 } from "@open-token-board/core";
 
-import { METRICS, ROLLING_RANGE_LABELS } from "./constants";
 import { profileHrefForUser } from "@/components/profile/utils";
+import { useI18n, type Dictionary } from "@/i18n";
 import type { ViewerState } from "./types";
 import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
-  buildLeaderboardInsight,
   formatMetricValue,
   formatNumber,
   formatPercent,
@@ -36,11 +35,13 @@ import {
 } from "./utils";
 
 export function InsightStrip({ loading, text }: { loading: boolean; text: string }) {
+  const { dict } = useI18n();
+
   return (
     <section className="rounded-lg border border-stone-950/10 bg-white px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <span className="w-fit rounded-full bg-slate-950 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase text-white">
-          自动洞察
+          {dict.board.status.insightLoading}
         </span>
         <p className="min-w-0 flex-1 text-sm leading-6 text-stone-700">
           {loading ? <Skeleton className="h-4 w-full max-w-md align-middle" /> : text}
@@ -69,16 +70,17 @@ export function TrustEvidenceBar({
   sourceLabel: string;
   summary: TokenLeaderboardSummary;
 }) {
+  const { dict } = useI18n();
   const dataAsOf = latestReportedAt(summary);
   const evidence: string[] = error
-    ? [`读取失败：${error}`, "可重试或检查 agent 上报", "不展示伪数据"]
+    ? [dict.board.evidence.readFailed(error), dict.board.evidence.retryOrCheckAgent, dict.board.evidence.noFakeData]
     : [
-        dataAsOf ? `数据截至 ${formatShortDate(dataAsOf)}` : "区间内暂无上报数据",
-        `数据源 ${sourceLabel}`,
-        `全库/可用 ${formatNumber(recordCount)}`,
-        `当前${range} ${formatNumber(rangeRecordCount)}`,
-        `活跃用户 ${formatNumber(summary.activeUsers)}`,
-        `${ROLLING_RANGE_LABELS[range]} · Asia/Shanghai`,
+        dataAsOf ? dict.board.evidence.dataAsOf(formatShortDate(dataAsOf)) : dict.board.evidence.noReportsInRange,
+        dict.board.evidence.source(sourceLabel),
+        dict.board.evidence.allRecords(formatNumber(recordCount)),
+        dict.board.evidence.currentRange(range, formatNumber(rangeRecordCount)),
+        dict.board.evidence.activeUsers(formatNumber(summary.activeUsers)),
+        `${dict.common.ranges[range]} · Asia/Shanghai`,
       ];
 
   return (
@@ -95,8 +97,8 @@ export function TrustEvidenceBar({
             ))}
       </div>
       <p className="mt-2 hidden text-xs leading-5 text-slate-500 sm:block">
-        {apiBaseUrl ? "本页只读取自动上报服务。" : "Token Board API 未配置，页面不会回退到静态或本地数据。"}
-        只展示 token、模型、工具、项目 basename 与会话短标题；费用为公开模型单价估算，不代表实际账单。
+        {apiBaseUrl ? dict.board.evidence.apiOnly : dict.board.evidence.apiMissing}
+        {dict.board.evidence.privacy}
       </p>
     </div>
   );
@@ -115,11 +117,12 @@ export function EfficiencyStrip({
   loading: boolean;
   tokensPerSession: number;
 }) {
+  const { dict } = useI18n();
   const items = [
-    { label: "日均消耗", value: formatTokens(dailyAverageTokens), meta: "按当前区间摊平" },
-    { label: "消耗 / 会话", value: formatTokens(tokensPerSession), meta: "单次任务体量" },
-    { label: "费用 / 会话", value: formatUsd(costPerSession), meta: "估算单次成本" },
-    { label: "缓存命中率", value: formatPercent(cacheHitRate), meta: "上下文复用效率" },
+    { label: dict.board.efficiency.dailyAverage, value: formatTokens(dailyAverageTokens), meta: dict.board.efficiency.dailyAverageMeta },
+    { label: dict.board.efficiency.perSession, value: formatTokens(tokensPerSession), meta: dict.board.efficiency.perSessionMeta },
+    { label: dict.board.efficiency.costPerSession, value: formatUsd(costPerSession), meta: dict.board.efficiency.costPerSessionMeta },
+    { label: dict.board.efficiency.cacheHitRate, value: formatPercent(cacheHitRate), meta: dict.board.efficiency.cacheHitRateMeta },
   ];
 
   return (
@@ -264,6 +267,7 @@ export function DailyTokenTrendChart({
   metric: TokenBoardMetric;
   trend?: TokenTrendBreakdown;
 }) {
+  const { dict } = useI18n();
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -320,8 +324,8 @@ export function DailyTokenTrendChart({
         : hoveredPointIndex === chartPoints.length - 1
           ? "right-0 translate-x-0 text-right"
           : "left-1/2 -translate-x-1/2 text-center";
-  const metricLabel = metricTrendLabel(effectiveMetric);
-  const fallbackNotice = effectiveMetric !== metric ? "当前响应缺少该指标趋势，已降级展示 Token。" : "";
+  const metricLabel = metricTrendLabel(effectiveMetric, dict);
+  const fallbackNotice = effectiveMetric !== metric ? dict.board.trend.fallbackNotice : "";
 
   function cycleLegendSegment(segment: TokenTrendSegment) {
     if (hiddenKeySet.has(segment.key)) {
@@ -359,7 +363,7 @@ export function DailyTokenTrendChart({
                 type="button"
                 aria-pressed={isFocused}
                 onClick={() => cycleLegendSegment(segment)}
-                title={`${segment.label}：点击高亮，再次点击隐藏；隐藏后点击恢复`}
+                title={dict.board.trend.legendTitle(segment.label)}
                 className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
                   isHidden
                     ? "border-slate-200 bg-slate-50 text-slate-400 line-through"
@@ -381,7 +385,7 @@ export function DailyTokenTrendChart({
               onClick={resetLegend}
               className="inline-flex min-h-8 items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs font-semibold text-slate-500 transition hover:border-blue-600/25 hover:bg-blue-50 hover:text-blue-700"
             >
-              重置
+              {dict.board.trend.reset}
             </button>
           ) : null}
         </div>
@@ -392,7 +396,7 @@ export function DailyTokenTrendChart({
         onMouseLeave={() => setHoveredPointIndex(null)}
       >
         <svg
-          aria-label={`${metricLabel}日趋势`}
+          aria-label={dict.board.trend.dayTrendAria(metricLabel)}
           className="h-64 w-full overflow-visible"
           preserveAspectRatio="none"
           role="img"
@@ -461,7 +465,7 @@ export function DailyTokenTrendChart({
                     />
                   ) : null}
                   <rect
-                    aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)}`}
+                    aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)}`}
                     className="cursor-crosshair outline-none"
                     data-token-trend-point={point.date}
                     fill="transparent"
@@ -476,7 +480,7 @@ export function DailyTokenTrendChart({
                     x={Math.max(0, x - gap / 2)}
                     y={0}
                   >
-                    <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
+                    <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
                   </rect>
                 </g>
               );
@@ -508,7 +512,7 @@ export function DailyTokenTrendChart({
                   />
                 ) : null}
                 <rect
-                  aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)}`}
+                  aria-label={`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)}`}
                   className="cursor-crosshair outline-none"
                   data-token-trend-point={point.date}
                   fill="transparent"
@@ -523,7 +527,7 @@ export function DailyTokenTrendChart({
                   x={Math.max(0, x - gap / 2)}
                   y={0}
                 >
-                  <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
+                  <title>{`${point.date} ${formatTrendMetricValue(stackValue, effectiveMetric, dict)} ${formatUtcRange(point.startAt, point.endAt)}`}</title>
                 </rect>
               </g>
             );
@@ -539,7 +543,7 @@ export function DailyTokenTrendChart({
           >
             <span className="block font-mono text-[10px] font-semibold text-blue-600">{hoveredPoint.date}</span>
             <span className="mt-1 block truncate font-mono text-sm font-semibold leading-none">
-              {formatTrendMetricValue(valueForPoint(hoveredPoint), effectiveMetric)}
+              {formatTrendMetricValue(valueForPoint(hoveredPoint), effectiveMetric, dict)}
             </span>
             {hasTrendSegments(hoveredPoint) && canStack ? (
               <span className="mt-2 block space-y-1">
@@ -555,7 +559,7 @@ export function DailyTokenTrendChart({
                         <span className="truncate">{segment.label}</span>
                       </span>
                       <span className="shrink-0 font-mono text-stone-500">
-                        {formatTrendMetricValue(getTrendMetricValue(segment, effectiveMetric), effectiveMetric)}
+                        {formatTrendMetricValue(getTrendMetricValue(segment, effectiveMetric), effectiveMetric, dict)}
                       </span>
                     </span>
                   ))}
@@ -570,7 +574,7 @@ export function DailyTokenTrendChart({
 
       <div className="mt-2 flex justify-between gap-3 font-mono text-xs text-stone-500">
         <span>{chartPoints[0]?.date.slice(5) ?? "--"}</span>
-        <span className="truncate text-center">{fallbackNotice || `${metricLabel} · ${canStack ? "按模型堆叠" : "单指标趋势"}`}</span>
+        <span className="truncate text-center">{fallbackNotice || `${metricLabel} · ${canStack ? dict.board.trend.stacked : dict.board.trend.singleMetric}`}</span>
         <span>{chartPoints.at(-1)?.date.slice(5) ?? "--"}</span>
       </div>
 
@@ -603,13 +607,14 @@ function HourlyTrendDrilldown({
   selectedDate: string;
   trend?: TokenTrendBreakdown;
 }) {
+  const { dict } = useI18n();
   const [hoveredHourIndex, setHoveredHourIndex] = useState<number | null>(null);
   const day = trend?.hourly.find((item) => item.date === selectedDate);
 
   if (!trend || !day) {
     return (
       <div className="mt-3 rounded-lg border border-amber-600/20 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
-        仅最近 {trend?.hourlySupportedDays ?? 7} 天支持小时下钻，当前日期 {selectedDate} 暂不展开。
+        {dict.board.trend.hourlyUnsupported(formatNumber(trend?.hourlySupportedDays ?? 7), selectedDate)}
       </div>
     );
   }
@@ -639,20 +644,20 @@ function HourlyTrendDrilldown({
     <div className="mt-3 rounded-lg border border-stone-950/8 bg-slate-50 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-stone-950">{selectedDate} 小时分布</h3>
+          <h3 className="text-sm font-semibold text-stone-950">{dict.board.trend.hourlyTitle(selectedDate)}</h3>
           <p className="mt-0.5 font-mono text-[11px] text-stone-500">
             {hoveredPoint
-              ? `${String(hoveredPoint.hour).padStart(2, "0")}:00 · ${formatTrendMetricValue(valueForPoint(hoveredPoint), metric)}`
-              : `最近 ${trend.hourlySupportedDays} 天可下钻`}
+              ? `${String(hoveredPoint.hour).padStart(2, "0")}:00 · ${formatTrendMetricValue(valueForPoint(hoveredPoint), metric, dict)}`
+              : dict.board.trend.hourlyReady(formatNumber(trend.hourlySupportedDays))}
           </p>
         </div>
         <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 font-mono text-[11px] text-slate-500">
-          24 小时
+          {dict.board.trend.hours24}
         </span>
       </div>
       <div className="relative mt-2" onMouseLeave={() => setHoveredHourIndex(null)}>
         <svg
-          aria-label={`${selectedDate} 小时分布`}
+          aria-label={dict.board.trend.hourlyTitle(selectedDate)}
           className="h-32 w-full overflow-visible"
           preserveAspectRatio="none"
           role="img"
@@ -702,7 +707,7 @@ function HourlyTrendDrilldown({
                 <g key={point.hour}>
                   {rects}
                   <rect
-                    aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}
+                    aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric, dict)}`}
                     className="cursor-crosshair"
                     fill="transparent"
                     height={height}
@@ -713,7 +718,7 @@ function HourlyTrendDrilldown({
                     x={Math.max(0, x - gap / 2)}
                     y={0}
                   >
-                    <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}</title>
+                    <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric, dict)}`}</title>
                   </rect>
                 </g>
               );
@@ -730,7 +735,7 @@ function HourlyTrendDrilldown({
                   y={height - paddingBottom - Math.max(stackValue > 0 ? 2 : 0, barHeight)}
                 />
                 <rect
-                  aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}
+                  aria-label={`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric, dict)}`}
                   className="cursor-crosshair"
                   fill="transparent"
                   height={height}
@@ -741,7 +746,7 @@ function HourlyTrendDrilldown({
                   x={Math.max(0, x - gap / 2)}
                   y={0}
                 >
-                  <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric)}`}</title>
+                  <title>{`${String(point.hour).padStart(2, "0")}:00 ${formatTrendMetricValue(stackValue, metric, dict)}`}</title>
                 </rect>
               </g>
             );
@@ -813,41 +818,41 @@ function getTrendMetricValue(value: Partial<TokenTrendMetricValues> & { tokens: 
   return value.tokens;
 }
 
-function formatTrendMetricValue(value: number, metric: TokenBoardMetric) {
+function formatTrendMetricValue(value: number, metric: TokenBoardMetric, dict: Dictionary) {
   if (metric === "cost") {
     return formatUsd(value);
   }
 
   if (metric === "sessions") {
-    return `${formatNumber(value)} 会话`;
+    return dict.common.units.sessions(formatNumber(value));
   }
 
   if (metric === "messages") {
-    return `${formatNumber(value)} 条消息`;
+    return dict.common.units.messages(formatNumber(value));
   }
 
   if (metric === "users") {
-    return `${formatNumber(value)} 人`;
+    return dict.common.units.people(formatNumber(value));
   }
 
   return formatTokens(value);
 }
 
-function metricTrendLabel(metric: TokenBoardMetric) {
+function metricTrendLabel(metric: TokenBoardMetric, dict: Dictionary) {
   if (metric === "cost") {
-    return "估算费用";
+    return dict.common.metrics.estimatedCost;
   }
 
   if (metric === "sessions") {
-    return "会话";
+    return dict.common.metrics.sessions;
   }
 
   if (metric === "messages") {
-    return "消息";
+    return dict.common.metrics.messages;
   }
 
   if (metric === "users") {
-    return "活跃人数";
+    return dict.common.metrics.users;
   }
 
   return "Token";
@@ -876,6 +881,8 @@ export function SortableColumnHeader({
   align?: "left" | "right";
   children: string;
 }) {
+  const { dict } = useI18n();
+
   return (
     <th className={`px-4 py-3 ${align === "right" ? "text-right" : ""}`}>
       <span
@@ -884,7 +891,7 @@ export function SortableColumnHeader({
             ? "otb-energy-bg text-white shadow-sm"
             : "text-stone-500"
         }`}
-        title={active ? "当前按此列降序排列" : undefined}
+        title={active ? dict.board.leaderboard.activeSortTitle : undefined}
       >
         {children}
         {active ? <span aria-hidden="true">↓</span> : null}
@@ -940,11 +947,17 @@ export function LeaderboardMobileCard({
   showDailyTrend: boolean;
   user: TokenLeaderboardUser;
 }) {
-  const metricLabel = metric === "users" ? "活跃天数" : METRICS.find((item) => item.key === metric)?.label ?? "总消耗";
+  const { dict } = useI18n();
+  const metricLabel = metric === "users" ? dict.common.metrics.activeDays : dict.common.metrics[metric];
   const metricValue = formatMetricValue(getUserMetricValue(user, metric), metric);
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
-  const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
+  const cacheBreakdownTitle = dict.board.leaderboard.cacheBreakdown(
+    formatTokens(user.inputTokens),
+    formatTokens(user.cachedInputTokens),
+    formatTokens(user.cacheCreationInputTokens),
+    formatTokens(user.outputTokens)
+  );
   const rankStyle = rankVisual(user.rank);
 
   return (
@@ -953,7 +966,7 @@ export function LeaderboardMobileCard({
         <Link
           href={profileHrefForUser(user)}
           className="group/profile-link flex min-w-0 items-center gap-3 rounded-lg transition"
-          title={`查看 ${user.displayName} 的公开个人主页`}
+          title={dict.board.leaderboard.viewProfileTitle(user.displayName)}
         >
           <span className={`rounded-full border px-2.5 py-1 font-mono text-xs font-black ${rankStyle.badgeClass}`}>
             #{user.rank}
@@ -974,18 +987,18 @@ export function LeaderboardMobileCard({
         </div>
       </div>
       <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-stone-950/8 bg-slate-50 p-2 text-xs">
-        <MetricMini label="总消耗" value={formatTokens(consumptionTokens)} />
-        <MetricMini label="费用" value={formatUsd(user.costUsd)} />
-        <MetricMini label="会话" value={formatNumber(user.sessions)} />
+        <MetricMini label={dict.common.metrics.tokens} value={formatTokens(consumptionTokens)} />
+        <MetricMini label={dict.common.metrics.cost} value={formatUsd(user.costUsd)} />
+        <MetricMini label={dict.common.metrics.sessions} value={formatNumber(user.sessions)} />
       </div>
       <p className="mt-2 truncate text-xs text-stone-500" title={cacheBreakdownTitle}>
-        读缓存 {formatTokens(user.cachedInputTokens)} · 写缓存 {formatTokens(user.cacheCreationInputTokens)}
+        {dict.board.leaderboard.readWriteCache(formatTokens(user.cachedInputTokens), formatTokens(user.cacheCreationInputTokens))}
       </p>
       {showDailyTrend ? (
         <div className="mt-3 rounded-lg border border-stone-950/8 bg-white px-3 py-2">
           <DailyUsageSparkline
             daily={daily}
-            label={`${user.displayName} 用量趋势`}
+            label={dict.board.leaderboard.dailyUsageLabel(user.displayName)}
             metaClassName="text-stone-500"
             range={range}
           />
@@ -996,8 +1009,8 @@ export function LeaderboardMobileCard({
           {user.topModel}
         </span>
         <span>{formatNumber(user.records)} records</span>
-        {user.lastReportedAt ? <span>最近 {formatRelativeTime(user.lastReportedAt)}</span> : null}
-        {user.deltaTokens !== null ? <span>{formatSignedPercent(user.deltaTokens)} 较上一周期</span> : null}
+        {user.lastReportedAt ? <span>{dict.board.leaderboard.recent(formatRelativeTime(user.lastReportedAt, dict.common.states.justNow))}</span> : null}
+        {user.deltaTokens !== null ? <span>{dict.board.leaderboard.previousPeriod(formatSignedPercent(user.deltaTokens))}</span> : null}
       </div>
     </article>
   );
@@ -1025,10 +1038,11 @@ function DailyUsageSparkline({
   metaClassName?: string;
   range: TokenBoardRange;
 }) {
+  const { dict } = useI18n();
   const gradientId = sanitizeSvgId(useId());
   const [hoveredPointIndex, setHoveredPointIndex] = useState<number | null>(null);
   const normalizedDaily = normalizeDailyUsageSeries(daily);
-  const trend = buildSparklineTrend(normalizedDaily, range);
+  const trend = buildSparklineTrend(normalizedDaily, range, dict);
   const trendPoints = trend.points;
   const width = 160;
   const height = 46;
@@ -1057,11 +1071,11 @@ function DailyUsageSparkline({
   const firstDate = trendPoints[0]?.startDate.slice(5) ?? "--";
   const lastDate = trendPoints.at(-1)?.endDate.slice(5) ?? "--";
   const title = peak.date
-    ? `${label}：${firstDate} - ${lastDate}，${trend.unitLabel}峰值 ${peak.label} ${formatTokens(peak.tokens)}，合计 ${formatTokens(totalTokens)}`
-    : `${label}：暂无每日用量`;
+    ? dict.board.trend.sparklineTitle(label, firstDate, lastDate, trend.unitLabel, peak.label, formatTokens(peak.tokens), formatTokens(totalTokens))
+    : dict.board.trend.sparklineEmptyTitle(label);
   const activeSummary = activePoint
     ? `${activePoint.label} ${formatTokens(activePoint.tokens)}`
-    : `峰值 ${formatTokens(peak.tokens)}`;
+    : dict.board.trend.peak(formatTokens(peak.tokens));
   const exactActiveLabel = activePoint ? `${formatNumber(activePoint.tokens)} tokens` : "";
 
   return (
@@ -1088,7 +1102,7 @@ function DailyUsageSparkline({
             </p>
           </>
         ) : (
-          <span className="sr-only">悬停用量折线查看具体用量</span>
+          <span className="sr-only">{dict.board.trend.hoverSparkline}</span>
         )}
       </div>
       <div
@@ -1198,9 +1212,9 @@ type SparklineTrendPoint = {
   tokens: number;
 };
 
-function buildSparklineTrend(daily: TokenLeaderboardUser["daily"], range: TokenBoardRange) {
+function buildSparklineTrend(daily: TokenLeaderboardUser["daily"], range: TokenBoardRange, dict: Dictionary) {
   const bucketSize = range === "90D" ? 7 : range === "30D" ? 3 : 1;
-  const unitLabel = bucketSize === 7 ? "周汇总" : bucketSize === 3 ? "3日汇总" : "每日用量";
+  const unitLabel = bucketSize === 7 ? dict.board.trend.weekly : bucketSize === 3 ? dict.board.trend.threeDays : dict.board.trend.daily;
 
   if (bucketSize === 1) {
     return {
@@ -1241,9 +1255,15 @@ function formatSparklineBucketLabel(startDate: string, endDate: string) {
 }
 
 export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBoardRange; showDailyTrend: boolean; user: TokenLeaderboardUser }) {
+  const { dict } = useI18n();
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
-  const cacheBreakdownTitle = `input ${formatTokens(user.inputTokens)} · cache read ${formatTokens(user.cachedInputTokens)} · cache write ${formatTokens(user.cacheCreationInputTokens)} · output ${formatTokens(user.outputTokens)}`;
+  const cacheBreakdownTitle = dict.board.leaderboard.cacheBreakdown(
+    formatTokens(user.inputTokens),
+    formatTokens(user.cachedInputTokens),
+    formatTokens(user.cacheCreationInputTokens),
+    formatTokens(user.outputTokens)
+  );
   const rankStyle = rankVisual(user.rank);
 
   return (
@@ -1260,7 +1280,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
         <Link
           href={profileHrefForUser(user)}
           className="group/profile-link flex w-fit max-w-full items-center gap-3 rounded-lg transition"
-          title={`查看 ${user.displayName} 的公开个人主页`}
+          title={dict.board.leaderboard.viewProfileTitle(user.displayName)}
         >
           <Avatar name={user.displayName} index={user.rank} />
           <div className="min-w-0">
@@ -1274,7 +1294,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
       </td>
       {showDailyTrend ? (
         <td className="w-[18rem] min-w-[18rem] max-w-[18rem] px-4 py-3">
-          <DailyUsageSparkline fixedWidth daily={daily} label={`${user.displayName} 用量趋势`} range={range} />
+          <DailyUsageSparkline fixedWidth daily={daily} label={dict.board.leaderboard.dailyUsageLabel(user.displayName)} range={range} />
         </td>
       ) : null}
       <td className="otb-stat-number px-4 py-3 text-right font-mono text-base font-black text-stone-950" title={cacheBreakdownTitle}>
@@ -1291,13 +1311,13 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
           {user.deltaTokens !== null ? (
             <span
               className={`font-mono text-xs font-semibold ${user.deltaTokens >= 0 ? "text-blue-600" : "text-red-600"}`}
-              title="较上一周期 Token 变化"
+              title={dict.board.leaderboard.deltaTitle}
             >
               {formatSignedPercent(user.deltaTokens)}
             </span>
           ) : null}
           {user.lastReportedAt ? (
-            <span className="text-xs text-stone-400" title={`最近上报：${formatShortDate(user.lastReportedAt)}`}>
+            <span className="text-xs text-stone-400" title={dict.board.leaderboard.lastReportedTitle(formatShortDate(user.lastReportedAt))}>
               {formatNumber(user.records)} records
             </span>
           ) : null}
@@ -1308,7 +1328,11 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
 }
 
 function LevelSymbol({ level }: { level: TokenLeaderboardUser["level"] }) {
+  const { dict } = useI18n();
   const current = level.current;
+  const translated = dict.board.achievements.levels[current.id as keyof typeof dict.board.achievements.levels] ?? current;
+  const name = "name" in translated ? translated.name : current.name;
+  const symbol = "symbol" in translated ? translated.symbol : current.symbol;
 
   return (
     <span
@@ -1318,9 +1342,9 @@ function LevelSymbol({ level }: { level: TokenLeaderboardUser["level"] }) {
         borderColor: `${current.color}55`,
         color: current.color,
       }}
-      title={`${current.name} · 累计等级`}
+      title={dict.board.leaderboard.levelTitle(name)}
     >
-      {current.symbol}
+      {symbol}
     </span>
   );
 }
@@ -1332,10 +1356,12 @@ function RankDeltaBadge({
   previousRank: number | null;
   rankDelta: number | null;
 }) {
+  const { dict } = useI18n();
+
   if (previousRank === null) {
     return (
       <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500">
-        新上榜
+        {dict.board.leaderboard.newEntry}
       </span>
     );
   }
@@ -1343,7 +1369,7 @@ function RankDeltaBadge({
   if (!rankDelta) {
     return (
       <span className="inline-flex w-fit items-center rounded-full border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] font-semibold text-slate-500">
-        持平
+        {dict.board.leaderboard.unchanged}
       </span>
     );
   }
@@ -1357,7 +1383,7 @@ function RankDeltaBadge({
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
           : "border-red-200 bg-red-50 text-red-700"
       }`}
-      title={`上一周期 #${previousRank}`}
+      title={dict.board.leaderboard.previousRank(previousRank)}
     >
       {isUp ? "↑" : "↓"}
       {formatNumber(Math.abs(rankDelta))}
@@ -1366,6 +1392,8 @@ function RankDeltaBadge({
 }
 
 export function MobileLeaderboardLoading({ slow }: { slow: boolean }) {
+  const { dict } = useI18n();
+
   return (
     <>
       {Array.from({ length: 4 }, (_, index) => (
@@ -1386,13 +1414,15 @@ export function MobileLeaderboardLoading({ slow }: { slow: boolean }) {
         </div>
       ))}
       {slow ? (
-        <p className="text-center text-xs text-stone-500">数据加载较慢，可以点击刷新榜单，或确认本机 agent 是否已完成上报。</p>
+        <p className="text-center text-xs text-stone-500">{dict.board.leaderboard.slowMobile}</p>
       ) : null}
     </>
   );
 }
 
 export function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: number; slow: boolean }) {
+  const { dict } = useI18n();
+
   return (
     <>
       {Array.from({ length: 5 }, (_, index) => (
@@ -1414,7 +1444,7 @@ export function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: numb
       {slow ? (
         <tr>
           <td colSpan={columnCount} className="px-4 pb-3 pt-1 text-center text-xs text-stone-500">
-            数据加载较慢，可稍后重试、刷新榜单，或确认本机 agent 是否已完成上报。
+            {dict.board.leaderboard.slowRow}
           </td>
         </tr>
       ) : null}
@@ -1423,10 +1453,12 @@ export function LeaderboardLoadingRow({ columnCount, slow }: { columnCount: numb
 }
 
 export function LeaderboardErrorState({ error, onRetry }: { error: string; onRetry: () => void }) {
+  const { dict } = useI18n();
+
   return (
     <EmptyStatePanel
-      title="榜单信号暂时断线"
-      description={error || "真实用户数据读取失败，可以先刷新一次；如果还不行，看看 agent 有没有把战报送到后端。"}
+      title={dict.board.leaderboard.errorTitle}
+      description={error || dict.board.leaderboard.errorDescription}
       action={
         <button
           type="button"
@@ -1434,7 +1466,7 @@ export function LeaderboardErrorState({ error, onRetry }: { error: string; onRet
           className="otb-energy-bg inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
         >
           <Icon name="refresh" />
-          重试
+          {dict.common.actions.retry}
         </button>
       }
     />
@@ -1452,10 +1484,12 @@ export function LeaderboardErrorRow({ columnCount, error, onRetry }: { columnCou
 }
 
 export function LeaderboardEmptyState() {
+  const { dict } = useI18n();
+
   return (
     <EmptyStatePanel
-      title="这个时间窗还没人开火"
-      description="切换时间范围，或运行 agent 上报本机记录。等第一条 token 到场，这里就会开始排位。"
+      title={dict.board.leaderboard.emptyTitle}
+      description={dict.board.leaderboard.emptyDescription}
     />
   );
 }
@@ -1529,7 +1563,9 @@ function TrendLoadingBars() {
 }
 
 export function EmptyPanelMessage() {
-  return <p className="rounded-lg border border-stone-950/8 bg-white/60 px-3 py-4 text-center text-sm text-stone-500">暂无真实数据</p>;
+  const { dict } = useI18n();
+
+  return <p className="rounded-lg border border-stone-950/8 bg-white/60 px-3 py-4 text-center text-sm text-stone-500">{dict.board.leaderboard.noRealData}</p>;
 }
 
 export function BreakdownPanel({
@@ -1595,6 +1631,8 @@ export function GitHubAuthControl({
   viewer: ViewerState | null;
   onLogout: () => void;
 }) {
+  const { dict } = useI18n();
+
   if (!viewer) {
     return null;
   }
@@ -1610,10 +1648,10 @@ export function GitHubAuthControl({
           type="button"
           onClick={onLogout}
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100"
-          title="退出 GitHub 登录"
+          title={dict.board.status.logoutConfirm}
         >
           <Icon name="logout" />
-          退出
+          {dict.common.actions.logout}
         </button>
       </div>
     );

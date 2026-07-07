@@ -7,6 +7,9 @@ import {
   type TokenLeaderboardUser,
 } from "@open-token-board/core";
 
+import type { Dictionary } from "@/i18n";
+import { getActiveLocale } from "@/i18n/runtime-locale";
+
 import type { InstallGuidePlatform } from "./types";
 
 export function formatTokens(value: number) {
@@ -28,13 +31,13 @@ export function formatTokens(value: number) {
 }
 
 export function formatCompact(value: number) {
-  return new Intl.NumberFormat("zh-CN", {
+  return new Intl.NumberFormat(getActiveLocale(), {
     maximumFractionDigits: value >= 100 ? 0 : 1,
   }).format(value);
 }
 
 export function formatNumber(value: number) {
-  return new Intl.NumberFormat("zh-CN").format(Math.round(value));
+  return new Intl.NumberFormat(getActiveLocale()).format(Math.round(value));
 }
 
 export function formatUtcRange(startAt: string, endAt: string) {
@@ -63,7 +66,7 @@ export function latestReportedAt(summary: TokenLeaderboardSummary): string {
 }
 
 export function formatDecimal(value: number) {
-  return new Intl.NumberFormat("zh-CN", {
+  return new Intl.NumberFormat(getActiveLocale(), {
     maximumFractionDigits: 1,
   }).format(value);
 }
@@ -429,7 +432,12 @@ export function formatMetricValue(value: number, metric: TokenBoardMetric) {
   return formatTokens(value);
 }
 
-export function buildLeaderboardInsight(summary: TokenLeaderboardSummary, cacheHitRate: number) {
+export function buildLeaderboardInsight(
+  summary: TokenLeaderboardSummary,
+  cacheHitRate: number,
+  insight: Dictionary["board"]["insight"],
+  punctuation: Dictionary["common"]["punctuation"]
+) {
   const leader = summary.users[0];
   const runnerUp = summary.users[1];
   const peak = summary.daily.reduce(
@@ -439,28 +447,28 @@ export function buildLeaderboardInsight(summary: TokenLeaderboardSummary, cacheH
   const parts: string[] = [];
 
   if (leader && runnerUp) {
-    parts.push(`${leader.displayName} 领先 ${runnerUp.displayName} ${formatTokens(Math.max(0, leader.tokens - runnerUp.tokens))}`);
+    parts.push(insight.leaderGap(leader.displayName, runnerUp.displayName, formatTokens(Math.max(0, leader.tokens - runnerUp.tokens))));
   } else if (leader) {
-    parts.push(`${leader.displayName} 暂列榜首`);
+    parts.push(insight.leaderOnly(leader.displayName));
   } else {
-    parts.push("当前区间还没有可展示的用户");
+    parts.push(insight.empty);
   }
 
   if (peak.date) {
-    parts.push(`${peak.date.slice(5)} 峰值 ${formatTokens(peak.tokens)}`);
+    parts.push(insight.peak(peak.date.slice(5), formatTokens(peak.tokens)));
   }
 
-  parts.push(`缓存命中率 ${formatPercent(cacheHitRate)}`);
+  parts.push(insight.cacheHitRate(formatPercent(cacheHitRate)));
 
   if (summary.activeUsers) {
-    parts.push(`${formatNumber(summary.activeUsers)} 位参与`);
+    parts.push(insight.participants(formatNumber(summary.activeUsers)));
   }
 
-  return `${parts.join("；")}。`;
+  return `${parts.join(punctuation.semicolon)}${punctuation.period}`;
 }
 
 export function formatPercent(value: number) {
-  return new Intl.NumberFormat("zh-CN", {
+  return new Intl.NumberFormat(getActiveLocale(), {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(value);
@@ -515,7 +523,7 @@ export function heatColor(intensity: number) {
 }
 
 export function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
+  return new Intl.DateTimeFormat(getActiveLocale(), {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -530,7 +538,7 @@ export function formatSessionLabel(value: string) {
   return sessionId.length > 22 ? `${sessionId.slice(0, 10)}…${sessionId.slice(-8)}` : sessionId;
 }
 
-export function formatRelativeTime(value: string) {
+export function formatRelativeTime(value: string, justNow: string) {
   const timestamp = new Date(value).getTime();
   const diffMs = Date.now() - timestamp;
 
@@ -544,7 +552,7 @@ export function formatRelativeTime(value: string) {
     ["hour", 60 * 60 * 1000],
     ["minute", 60 * 1000],
   ];
-  const formatter = new Intl.RelativeTimeFormat("zh-CN", { numeric: "auto" });
+  const formatter = new Intl.RelativeTimeFormat(getActiveLocale(), { numeric: "auto" });
 
   for (const [unit, unitMs] of units) {
     if (absMs >= unitMs) {
@@ -552,7 +560,7 @@ export function formatRelativeTime(value: string) {
     }
   }
 
-  return "刚刚";
+  return justNow;
 }
 
 export function normalizeApiBaseUrl(value: string | undefined) {
