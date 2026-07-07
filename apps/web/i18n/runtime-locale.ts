@@ -40,9 +40,8 @@ export function detectBrowserLanguage(): Language {
       return stored;
     }
   } catch {
-    // Ignore storage failures; navigator.language still gives a session default.
+    // Ignore storage failures; fall back to the product default.
   }
 
-  const language = window.navigator.language || "";
-  return language.toLowerCase().startsWith("zh") ? "zh" : "en";
+  return DEFAULT_LANGUAGE;
 }
