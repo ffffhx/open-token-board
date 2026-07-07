@@ -44,7 +44,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.17";
+const VERSION = "0.4.22";
 // Reject any single event above this many tokens: no real API call approaches it, but
 // a cumulative usage counter mis-read as one call (e.g. Trae's stats file) can blow
 // past it. Mirrors the server-side cap in token-board-automation.ts.
@@ -71,12 +71,20 @@ const TOKEN_KEYS = new Set([
   "cached_input_tokens",
   "cachedInputTokens",
   "cache_creation_input_tokens",
+  "cache_creation_input_tokens_1h",
+  "cache_creation_input_tokens_5m",
   "cacheCreationInputTokens",
+  "cacheCreationInputTokens1h",
+  "cacheCreationInputTokens5m",
   "cache_read_input_tokens",
   "cacheReadInputTokens",
   "cachedTokens",
   "completion_tokens",
   "completionTokens",
+  "ephemeral_1h_input_tokens",
+  "ephemeral_5m_input_tokens",
+  "ephemeral1hInputTokens",
+  "ephemeral5mInputTokens",
   "input_tokens",
   "inputTokenCount",
   "inputTokens",
@@ -102,6 +110,10 @@ const SQLITE_USAGE_NEEDLES = [
   "cached_input_tokens",
   "cache_read_input_tokens",
   "cache_creation_input_tokens",
+  "cache_creation_input_tokens_1h",
+  "cache_creation_input_tokens_5m",
+  "ephemeral_1h_input_tokens",
+  "ephemeral_5m_input_tokens",
   "token_usage",
   "tokenusage",
 ];
@@ -833,6 +845,9 @@ async function sampleTraeCounters(minMtime) {
     const delta = {
       input_tokens: cur.input - toNumber(prev.input),
       cached_input_tokens: cur.cached - toNumber(prev.cached),
+      cache_creation_input_tokens:
+        cur.cacheCreation -
+        (Object.prototype.hasOwnProperty.call(prev, "cacheCreation") ? toNumber(prev.cacheCreation) : cur.cacheCreation),
       output_tokens: cur.output - toNumber(prev.output),
       reasoning_output_tokens: cur.reasoning - toNumber(prev.reasoning),
     };
@@ -873,16 +888,17 @@ function sumTraeCounters(value, context, filePath, readings, depth) {
   const model = textFromFields(value, ["model", "modelName", "model_name"]) || context.model;
 
   if (hasUsageShape(value)) {
-    const additiveCached =
-      numberFromFields(value, ["cache_read_input_tokens", "cacheReadInputTokens"]) +
-      numberFromFields(value, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+    const cacheReadTokens = cacheReadInputTokensFromRecord(value);
+    const cacheCreationInputTokens = cacheCreationInputTokensFromRecord(value);
     const key = `${filePath}\n${model || "unknown"}`;
-    const sums = readings.get(key) || { input: 0, cached: 0, output: 0, reasoning: 0 };
+    const sums = readings.get(key) || { input: 0, cached: 0, cacheCreation: 0, output: 0, reasoning: 0 };
     sums.input +=
       numberFromFields(value, ["inputTokens", "input_tokens", "inputTokenCount", "promptTokens", "prompt_tokens"]) +
-      additiveCached;
+      cacheReadTokens +
+      cacheCreationInputTokens;
     sums.cached +=
-      numberFromFields(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) + additiveCached;
+      numberFromFields(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) + cacheReadTokens;
+    sums.cacheCreation += cacheCreationInputTokens;
     sums.output += numberFromFields(value, [
       "outputTokens",
       "output_tokens",
@@ -1201,14 +1217,27 @@ function textFromMessageLike(value) {
 }
 
 function tokenUsageDelta(current, previous) {
-  const fields = ["input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens", "total_tokens"];
+  const fields = [
+    "input_tokens",
+    "cached_input_tokens",
+    "cache_creation_input_tokens",
+    "cache_read_input_tokens",
+    "output_tokens",
+    "reasoning_output_tokens",
+    "total_tokens",
+  ];
   return Object.fromEntries(
     fields.map((field) => [field, Math.max(0, toNumber(current?.[field]) - toNumber(previous?.[field]))])
   );
 }
 
 function tokenUsageTotal(usage) {
-  return toNumber(usage?.input_tokens) + toNumber(usage?.output_tokens);
+  return (
+    toNumber(usage?.input_tokens) +
+    cacheCreationInputTokensFromRecord(usage || {}) +
+    cacheReadInputTokensFromRecord(usage || {}) +
+    toNumber(usage?.output_tokens)
+  );
 }
 
 function maxUsageFileBytes(filePath, target) {
@@ -1260,13 +1289,12 @@ function visitJson(value, context, entries, state, depth) {
 
 function usageRecordToEvent(usage, context) {
   const baseInputTokens = numberFromFields(usage, ["inputTokens", "input_tokens", "inputTokenCount", "promptTokens", "prompt_tokens"]);
-  const additiveCachedInputTokens =
-    numberFromFields(usage, ["cache_read_input_tokens", "cacheReadInputTokens"]) +
-    numberFromFields(usage, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
-  const inputTokens = baseInputTokens + additiveCachedInputTokens;
+  const cacheReadTokens = cacheReadInputTokensFromRecord(usage);
+  const cacheCreationInputTokens = cacheCreationInputTokensFromRecord(usage);
+  const inputTokens = baseInputTokens + cacheReadTokens + cacheCreationInputTokens;
   const cachedInputTokens =
     numberFromFields(usage, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) +
-    additiveCachedInputTokens;
+    cacheReadTokens;
   const outputTokens = numberFromFields(usage, ["outputTokens", "output_tokens", "outputTokenCount", "completionTokens", "completion_tokens"]);
   const reasoningOutputTokens = numberFromFields(usage, [
     "reasoningOutputTokens",
@@ -1308,6 +1336,7 @@ function usageRecordToEvent(usage, context) {
     sessionId,
     context.sequence,
     inputTokens,
+    cacheCreationInputTokens,
     cachedInputTokens,
     outputTokens,
     reasoningOutputTokens,
@@ -1326,6 +1355,7 @@ function usageRecordToEvent(usage, context) {
     sessionId,
     timestamp,
     inputTokens,
+    cacheCreationInputTokens,
     cachedInputTokens,
     outputTokens,
     reasoningOutputTokens,
@@ -1529,6 +1559,37 @@ function numberFromFields(record, fields) {
   return fields.reduce((sum, field) => sum + toNumber(record[field]), 0);
 }
 
+function cacheReadInputTokensFromRecord(record) {
+  return numberFromFields(record, ["cache_read_input_tokens", "cacheReadInputTokens"]);
+}
+
+function cacheCreationInputTokensFromRecord(record) {
+  const total = numberFromFields(record, ["cache_creation_input_tokens", "cacheCreationInputTokens"]);
+  if (total > 0) {
+    return total;
+  }
+
+  const nested = isRecord(record.cache_creation) ? record.cache_creation : {};
+  return (
+    numberFromFields(record, [
+      "cache_creation_input_tokens_5m",
+      "cacheCreationInputTokens5m",
+      "cache_creation_input_tokens_1h",
+      "cacheCreationInputTokens1h",
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ]) +
+    numberFromFields(nested, [
+      "ephemeral_5m_input_tokens",
+      "ephemeral5mInputTokens",
+      "ephemeral_1h_input_tokens",
+      "ephemeral1hInputTokens",
+    ])
+  );
+}
+
 function textFromFields(record, fields) {
   for (const field of fields) {
     const value = record[field];
@@ -1538,6 +1599,10 @@ function textFromFields(record, fields) {
   }
 
   return "";
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function toNumber(value) {
