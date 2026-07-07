@@ -12,6 +12,7 @@ import {
   buildTokenLeaderboardTrends,
   normalizeTokenUsageEvent,
   parseTokenUsageImport,
+  resolveTokenLeaderboardWindow,
   type TokenBoardMetric,
   type TokenBoardRange,
   type TokenBoardUserConfig,
@@ -77,12 +78,8 @@ export type TokenUsageJsonImportResult = TokenUsageStoreInsertResult & {
 const POSTGRES_TABLE = "usage_events";
 const POSTGRES_USER_CONFIGS_TABLE = "user_configs";
 const INSERT_BATCH_SIZE = 400;
-const RANGE_DAYS: Record<TokenBoardRange, number> = {
-  "1D": 1,
-  "7D": 7,
-  "30D": 30,
-  "90D": 90,
-};
+const DAY_MS = 24 * 60 * 60 * 1000;
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 export async function createTokenUsageStore(options: TokenUsageStoreOptions): Promise<TokenUsageStore> {
   const databaseUrl = options.databaseUrl?.trim();
@@ -450,10 +447,9 @@ async function readPostgresLeaderboardSummary(
   { range, metric, now = new Date() }: TokenUsageLeaderboardOptions
 ): Promise<TokenUsageLeaderboardResult> {
   const end = Number.isFinite(now.getTime()) ? now : new Date();
-  const rangeMs = RANGE_DAYS[range] * 24 * 60 * 60 * 1000;
-  const start = new Date(end.getTime() - rangeMs);
-  const previousStart = new Date(start.getTime() - rangeMs);
-  const rangeParams = [start, end];
+  const rangeWindow = resolveTokenLeaderboardWindow(range, end);
+  const { start, previousStart, previousEnd } = rangeWindow;
+  const rangeParams = [start, rangeWindow.end];
   const userResult = await pool.query<PostgresLeaderboardUserRow>(
     `
       WITH current_events AS (
@@ -468,7 +464,7 @@ async function readPostgresLeaderboardSummary(
           SUM(total_tokens)::double precision AS previous_tokens
         FROM ${table}
         WHERE reported_at >= $3
-          AND reported_at < $1
+          AND reported_at <= $4
         GROUP BY user_id
       ),
       user_totals AS (
@@ -484,7 +480,7 @@ async function readPostgresLeaderboardSummary(
           SUM(messages)::double precision AS messages,
           COUNT(*)::integer AS records,
           COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
-          COUNT(DISTINCT (reported_at AT TIME ZONE 'UTC')::date)::integer AS active_days,
+          COUNT(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)::integer AS active_days,
           MAX(reported_at) AS last_reported_at
         FROM current_events
         GROUP BY user_id
@@ -555,13 +551,13 @@ async function readPostgresLeaderboardSummary(
       LEFT JOIN top_model ON top_model.user_id = user_totals.user_id
       LEFT JOIN top_tool ON top_tool.user_id = user_totals.user_id
     `,
-    [start, end, previousStart]
+    [start, rangeWindow.end, previousStart, previousEnd]
   );
 
   const dailyResult = await pool.query<PostgresDailyUsageRow>(
     `
       SELECT
-        to_char((reported_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+        to_char((reported_at AT TIME ZONE 'Asia/Shanghai')::date, 'YYYY-MM-DD') AS date,
         SUM(total_tokens)::double precision AS tokens
       FROM ${table}
       WHERE reported_at >= $1
@@ -575,7 +571,7 @@ async function readPostgresLeaderboardSummary(
     `
       SELECT
         user_id,
-        to_char((reported_at AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS date,
+        to_char((reported_at AT TIME ZONE 'Asia/Shanghai')::date, 'YYYY-MM-DD') AS date,
         SUM(total_tokens)::double precision AS tokens
       FROM ${table}
       WHERE reported_at >= $1
@@ -624,13 +620,13 @@ async function readPostgresLeaderboardSummary(
         COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd,
         SUM(messages)::double precision AS messages,
         COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
-        COUNT(DISTINCT (reported_at AT TIME ZONE 'UTC')::date)::integer AS active_days
+        COUNT(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)::integer AS active_days
       FROM ${table}
       WHERE reported_at >= $1
-        AND reported_at < $2
+        AND reported_at <= $2
       GROUP BY user_id
     `,
-    [previousStart, start]
+    [previousStart, previousEnd]
   );
   const emptyDailySeries = buildEmptyDailySeries(start, end);
   const dailyByUserValues = new Map<string, Map<string, number>>();
@@ -715,15 +711,15 @@ async function readPostgresLeaderboardSummary(
     };
   });
   const dailyValues = new Map(dailyResult.rows.map((row) => [row.date, toFiniteNumber(row.tokens)]));
-  const trendEvents = await readPostgresEventsInRange(pool, table, start, end);
-  const trends = buildTokenLeaderboardTrends(trendEvents, start, end);
+  const trendEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
+  const trends = buildTokenLeaderboardTrends(trendEvents, start, rangeWindow.end);
 
   return {
     records: usersWithShare.reduce((sum, user) => sum + user.records, 0),
     summary: {
-      range,
+      range: rangeWindow.range,
       startAt: start.toISOString(),
-      endAt: end.toISOString(),
+      endAt: rangeWindow.end.toISOString(),
       totalTokens,
       totalCostUsd,
       totalSessions,
@@ -841,15 +837,15 @@ async function readPostgresEventsInRange(pool: Pool, table: string, start: Date,
 
 function buildEmptyDailySeries(start: Date, end: Date): TokenDailyUsagePoint[] {
   const points: TokenDailyUsagePoint[] = [];
-  const startDay = startOfUtcDay(start);
-  const endDay = startOfUtcDay(end);
+  const startDay = startOfShanghaiDay(start);
+  const endDay = startOfShanghaiDay(end);
 
-  for (let time = startDay.getTime(); time <= endDay.getTime(); time += 24 * 60 * 60 * 1000) {
+  for (let time = startDay.getTime(); time <= endDay.getTime(); time += DAY_MS) {
     const bucketStart = new Date(Math.max(time, start.getTime()));
-    const bucketEnd = new Date(Math.min(time + 24 * 60 * 60 * 1000, end.getTime()));
+    const bucketEnd = new Date(Math.min(time + DAY_MS - 1, end.getTime()));
 
     points.push({
-      date: new Date(time).toISOString().slice(0, 10),
+      date: shanghaiDayKey(new Date(time)),
       startAt: bucketStart.toISOString(),
       endAt: bucketEnd.toISOString(),
       tokens: 0,
@@ -866,8 +862,29 @@ function fillDailySeries(emptyDailySeries: TokenDailyUsagePoint[], values = new 
   }));
 }
 
-function startOfUtcDay(value: Date) {
-  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+function startOfShanghaiDay(value: Date) {
+  return shanghaiDayStartUtc(shanghaiDayKey(value));
+}
+
+function shanghaiDayKey(value: Date | string) {
+  const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
+
+  return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+function shanghaiDayStartUtc(dayKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+
+  if (!match) {
+    return new Date(0);
+  }
+
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) - SHANGHAI_OFFSET_MS);
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
 }
 
 function toIsoString(value: Date | string) {
