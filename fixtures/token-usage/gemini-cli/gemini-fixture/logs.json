@@ -1,0 +1,17 @@
+{
+  "sessionId": "gemini-session-stats",
+  "timestamp": "2026-05-17T12:00:00.000Z",
+  "stats": {
+    "models": {
+      "gemini-2.5-pro": {
+        "tokens": {
+          "prompt": 200,
+          "candidates": 20,
+          "cached": 50,
+          "thoughts": 10,
+          "total": 280
+        }
+      }
+    }
+  }
+}

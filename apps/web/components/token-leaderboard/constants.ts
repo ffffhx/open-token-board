@@ -24,7 +24,7 @@ export const NPX_STATUS_COMMAND = "npx --yes token-board-agent status";
 export const NPX_UNINSTALL_COMMAND = "npx --yes token-board-agent uninstall";
 export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = {
   macos: {
-    description: "适合在 macOS 上使用 Codex 或 Claude Code 的朋友。",
+    description: "适合在 macOS 上使用 Codex、Claude Code、Gemini CLI 或 opencode 的朋友。",
     label: "macOS",
     uninstall: {
       command: NPX_UNINSTALL_COMMAND,
@@ -39,7 +39,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         description: "在你平时使用 AI 编码工具的 Mac 终端里运行安装命令，首次执行会引导 GitHub 授权。",
         command: NPX_INSTALL_COMMAND,
         commandLabel: "macOS 安装命令",
-        note: "安装成功后会注册 macOS LaunchAgent，终端关闭也会每 5 分钟同步 token 记录和 Codex 额度快照。",
+        note: "安装成功后会注册 macOS LaunchAgent，终端关闭也会每 5 分钟同步本机支持工具的 token 记录和 Codex 额度快照。",
       },
       {
         title: "检查运行状态",
@@ -58,7 +58,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
     ],
   },
   windows: {
-    description: "适合在 Windows PowerShell 里使用 Codex CLI 或 Claude Code 的朋友。",
+    description: "适合在 Windows PowerShell 里使用 Codex CLI、Claude Code、Gemini CLI 或 opencode 的朋友。",
     label: "Windows",
     uninstall: {
       command: NPX_UNINSTALL_COMMAND,
@@ -73,7 +73,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         description: "在 PowerShell 里运行安装命令，首次执行会引导 GitHub 授权，并注册 Windows 任务计划程序。",
         command: NPX_INSTALL_COMMAND,
         commandLabel: "Windows PowerShell 安装命令",
-        note: "安装成功后会创建名为 TokenBoardAgent 的隐藏 Task Scheduler 任务，每 5 分钟同步 token 记录和 Codex 额度快照。",
+        note: "安装成功后会创建名为 TokenBoardAgent 的隐藏 Task Scheduler 任务，每 5 分钟同步本机支持工具的 token 记录和 Codex 额度快照。",
       },
       {
         title: "检查任务状态",
@@ -87,7 +87,7 @@ export const INSTALL_GUIDES: Record<InstallGuidePlatform, InstallGuideConfig> = 
         title: "回到榜单刷新",
         eyebrow: "Step 3",
         description: "任务开始同步后，回到页面刷新榜单或打开额度面板，就能看到自己的 token 记录和 Codex 额度。",
-        note: "Windows 模式会读取用户目录下的 Codex / Claude Code 记录。",
+        note: "Windows 模式会读取用户目录下的 Codex / Claude Code / Gemini CLI / opencode 记录。",
       },
     ],
   },
