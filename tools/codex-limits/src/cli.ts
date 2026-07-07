@@ -80,13 +80,13 @@ function fmtTokens(value: number | null): string {
 
 function bar(percent: number, width = 28): string {
   const filled = Math.max(0, Math.min(width, Math.round((percent / 100) * width)));
-  const color = percent >= 85 ? c.red : percent >= 60 ? c.yellow : c.green;
+  const color = percent >= 90 ? c.red : percent >= 70 ? c.yellow : c.green;
   return `${color}${"█".repeat(filled)}${c.dim}${"░".repeat(width - filled)}${c.reset}`;
 }
 
 function renderWindow(w: CodexRateWindow): string {
   const lines: string[] = [];
-  const usedColor = w.usedPercent >= 85 ? c.red : w.usedPercent >= 60 ? c.yellow : c.green;
+  const usedColor = w.usedPercent >= 90 ? c.red : w.usedPercent >= 70 ? c.yellow : c.green;
   lines.push(`${c.bold}${w.label}窗口${c.reset}  ${c.dim}(${w.windowMinutes} 分钟)${c.reset}`);
   lines.push(
     `  ${bar(w.usedPercent)}  ${usedColor}${w.usedPercent.toFixed(0)}%${c.reset} 已用` +
@@ -197,7 +197,7 @@ function fmtDur(s){ if(s==null)return"—"; if(s<=0)return"已到期";
   const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60),x=Math.floor(s%60);
   if(d>0)return d+"天 "+h+"小时 "+m+"分"; if(h>0)return h+"小时 "+m+"分"; if(m>0)return m+"分 "+x+"秒"; return x+"秒"; }
 const until = iso => iso==null ? null : Math.round((Date.parse(iso)-Date.now())/1000);
-const tone = p => p>=85?{b:"#f43f5e",t:"rose"}:p>=60?{b:"#f59e0b",t:"amber"}:{b:"#10b981",t:"green"};
+const tone = p => p>=90?{b:"#f43f5e",t:"rose"}:p>=70?{b:"#f59e0b",t:"amber"}:{b:"#10b981",t:"green"};
 let last = null;
 function card(w){ const tn=tone(w.usedPercent);
   let eta = w.etaAt==null ? '<span class="green">当前速度下本周期不会耗尽</span>'
