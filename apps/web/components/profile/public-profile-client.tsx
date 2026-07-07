@@ -256,6 +256,12 @@ function ProfileDashboard({ profile }: { profile: PublicProfileResponse }) {
               <Icon name="download" />
               生成分享卡
             </button>
+            <Link
+              href={`/wrapped/?login=${encodeURIComponent(profile.user.login)}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition hover:border-amber-300 hover:bg-amber-100"
+            >
+              查看 Wrapped
+            </Link>
           </div>
         </div>
       </section>

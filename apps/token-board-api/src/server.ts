@@ -29,16 +29,23 @@ import {
   type TokenBoardUploadUser,
 } from "@open-token-board/core/automation";
 import {
+  buildTokenAchievementSummary,
   buildTokenAccountUsageProfile,
+  buildTokenLevelProgress,
   buildTokenLeaderboard,
   getTokenConsumptionTokens,
   getUnmatchedTokenPricingModels,
+  TOKEN_LEVELS,
   type TokenAccountUsageProfile,
   type TokenBoardMetric,
   type TokenBoardRange,
   type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
   type TokenLeaderboardUser,
+  type TokenWrappedLevelUp,
+  type TokenWrappedNamedUsage,
+  type TokenWrappedProjectUsage,
+  type TokenWrappedResponse,
   type TokenUsageEvent,
 } from "@open-token-board/core";
 import { analyzeCodexRateLimits } from "@open-token-board/core/codex-rate-limits";
@@ -456,6 +463,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
   if (request.method === "GET" && url.pathname === "/api/usage/user") {
     await handlePublicUsageUser(request, response, url);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/usage/wrapped") {
+    await handleUsageWrapped(request, response, url);
     return;
   }
 
@@ -970,11 +982,499 @@ async function handlePublicUsageUser(request: IncomingMessage, response: ServerR
   });
 }
 
+async function handleUsageWrapped(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const login = normalizePublicProfileLogin(url.searchParams.get("login"));
+
+  if (!login) {
+    sendJson(request, response, 400, { error: "Invalid github login" });
+    return;
+  }
+
+  const period = parseWrappedPeriod(url.searchParams.get("period"), parseNow(url.searchParams.get("now")));
+
+  if (!period) {
+    sendJson(request, response, 400, { error: "Invalid period. Use YYYY-MM or YYYY." });
+    return;
+  }
+
+  const store = usageStore();
+  const [events, uploadUsers] = await Promise.all([store.listEvents(), loadUploadUsers()]);
+  const match = findPublicProfileUserEvents(events, uploadUsers, login);
+
+  if (!match) {
+    sendJson(request, response, 404, { error: "User not found" });
+    return;
+  }
+
+  const summary = buildPublicProfileSummary(match.events);
+  const periodEvents = match.events.filter((event) => wrappedEventInPeriod(event, period));
+  const allPeriodEvents = events.filter((event) => wrappedEventInPeriod(event, period));
+  const daily = buildWrappedDailySeries(periodEvents, period);
+  const targetTeam = latestWrappedTeam(periodEvents, summary.team);
+  const achievements = buildWrappedAchievements(match.events, period);
+  const payload: TokenWrappedResponse = {
+    schemaVersion: 1,
+    source: "server",
+    records: periodEvents.length,
+    totalRecords: events.length,
+    generatedAt: new Date().toISOString(),
+    user: {
+      userId: match.userId,
+      login: match.login,
+      githubLogin: match.login,
+      displayName: summary.displayName,
+      team: targetTeam,
+      avatarUrl: `https://github.com/${match.login}.png`,
+    },
+    period: {
+      type: period.type,
+      value: period.value,
+      label: period.label,
+      startAt: period.startAt.toISOString(),
+      endAt: period.dataEndAt.toISOString(),
+      timezone: "Asia/Shanghai",
+      days: daily.length,
+    },
+    totals: buildWrappedTotals(periodEvents),
+    streak: buildWrappedStreak(daily),
+    topModels: buildWrappedModelUsage(periodEvents, 3),
+    topProjects: buildWrappedProjectUsage(periodEvents, 3),
+    peakDay: buildWrappedPeakDay(daily),
+    night: buildWrappedNightShare(periodEvents),
+    achievements,
+    daily,
+    ranking: buildWrappedTeamRanking(allPeriodEvents, match.userId, targetTeam),
+  };
+
+  sendJson(request, response, 200, payload);
+}
+
 type PublicProfileUserMatch = {
   events: TokenUsageEvent[];
   login: string;
   userId: string;
 };
+
+type WrappedPeriod = {
+  type: "month" | "year";
+  value: string;
+  label: string;
+  startAt: Date;
+  endAt: Date;
+  dataEndAt: Date;
+};
+
+const WRAPPED_SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+const WRAPPED_DAY_MS = 24 * 60 * 60 * 1000;
+
+function parseWrappedPeriod(value: string | null, now: Date): WrappedPeriod | null {
+  const text = normalizeOptionalText(value);
+  const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
+
+  if (!text) {
+    const parts = wrappedShanghaiDateParts(safeNow);
+    return createWrappedPeriod(parts.year, parts.month, safeNow);
+  }
+
+  const monthMatch = /^(\d{4})-(\d{2})$/.exec(text);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+
+    return createWrappedPeriod(year, month, safeNow);
+  }
+
+  const yearMatch = /^(\d{4})$/.exec(text);
+  if (yearMatch) {
+    return createWrappedPeriod(Number(yearMatch[1]), null, safeNow);
+  }
+
+  return null;
+}
+
+function createWrappedPeriod(year: number, month: number | null, now: Date): WrappedPeriod | null {
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+    return null;
+  }
+
+  if (month !== null && (!Number.isInteger(month) || month < 1 || month > 12)) {
+    return null;
+  }
+
+  const startAt = wrappedLocalStartUtc(year, month ?? 1, 1);
+  const endAt =
+    month === null
+      ? wrappedLocalStartUtc(year + 1, 1, 1)
+      : month === 12
+        ? wrappedLocalStartUtc(year + 1, 1, 1)
+        : wrappedLocalStartUtc(year, month + 1, 1);
+  const dataEndAt =
+    now.getTime() >= startAt.getTime() && now.getTime() < endAt.getTime() ? now : endAt;
+  const value = month === null ? String(year) : `${year}-${pad2(month)}`;
+
+  return {
+    type: month === null ? "year" : "month",
+    value,
+    label: month === null ? `${year} 年` : `${year} 年 ${month} 月`,
+    startAt,
+    endAt,
+    dataEndAt,
+  };
+}
+
+function wrappedEventInPeriod(event: TokenUsageEvent, period: WrappedPeriod) {
+  const timestamp = new Date(event.timestamp).getTime();
+  return (
+    Number.isFinite(timestamp) &&
+    timestamp >= period.startAt.getTime() &&
+    timestamp < period.dataEndAt.getTime()
+  );
+}
+
+function buildWrappedTotals(events: TokenUsageEvent[]): TokenWrappedResponse["totals"] {
+  const sessions = new Set<string>();
+  const activeDays = new Set<string>();
+  let tokens = 0;
+  let costUsd = 0;
+  let messages = 0;
+
+  for (const event of events) {
+    tokens += getTokenConsumptionTokens(event);
+    costUsd += event.costUsd ?? 0;
+    messages += event.messages ?? 0;
+    sessions.add(event.sessionId || event.id);
+    activeDays.add(wrappedDayKey(event.timestamp));
+  }
+
+  return {
+    tokens,
+    costUsd,
+    sessions: sessions.size,
+    messages,
+    records: events.length,
+    activeDays: activeDays.size,
+  };
+}
+
+function buildWrappedModelUsage(events: TokenUsageEvent[], limit: number): TokenWrappedNamedUsage[] {
+  const totalTokens = events.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+  const usage = new Map<string, { tokens: number; costUsd: number; sessions: Set<string> }>();
+
+  for (const event of events) {
+    const tokens = getTokenConsumptionTokens(event);
+    const current = usage.get(event.model) ?? { tokens: 0, costUsd: 0, sessions: new Set<string>() };
+    current.tokens += tokens;
+    current.costUsd += event.costUsd ?? 0;
+    current.sessions.add(event.sessionId || event.id);
+    usage.set(event.model, current);
+  }
+
+  return [...usage.entries()]
+    .map(([name, value]) => ({
+      name,
+      tokens: value.tokens,
+      costUsd: value.costUsd,
+      sessions: value.sessions.size,
+      share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+    }))
+    .sort((left, right) => right.tokens - left.tokens || left.name.localeCompare(right.name))
+    .slice(0, limit);
+}
+
+function buildWrappedProjectUsage(events: TokenUsageEvent[], limit: number): TokenWrappedProjectUsage[] {
+  const totalTokens = events.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+  const usage = new Map<
+    string,
+    {
+      tokens: number;
+      costUsd: number;
+      sessions: Set<string>;
+      activeDays: Set<string>;
+    }
+  >();
+
+  for (const event of events) {
+    const tokens = getTokenConsumptionTokens(event);
+    const name = event.project || "未标记项目";
+    const current =
+      usage.get(name) ?? { tokens: 0, costUsd: 0, sessions: new Set<string>(), activeDays: new Set<string>() };
+    current.tokens += tokens;
+    current.costUsd += event.costUsd ?? 0;
+    current.sessions.add(event.sessionId || event.id);
+    current.activeDays.add(wrappedDayKey(event.timestamp));
+    usage.set(name, current);
+  }
+
+  return [...usage.entries()]
+    .map(([name, value]) => ({
+      name,
+      tokens: value.tokens,
+      costUsd: value.costUsd,
+      sessions: value.sessions.size,
+      activeDays: value.activeDays.size,
+      share: totalTokens > 0 ? value.tokens / totalTokens : 0,
+    }))
+    .sort((left, right) => right.tokens - left.tokens || left.name.localeCompare(right.name))
+    .slice(0, limit);
+}
+
+function buildWrappedDailySeries(events: TokenUsageEvent[], period: WrappedPeriod): TokenDailyUsagePoint[] {
+  const seriesEndAt = period.dataEndAt.getTime() > period.startAt.getTime() ? period.dataEndAt : period.endAt;
+  const points = new Map<string, TokenDailyUsagePoint>();
+
+  for (let time = period.startAt.getTime(); time < seriesEndAt.getTime(); time += WRAPPED_DAY_MS) {
+    const bucketStart = new Date(time);
+    const bucketEnd = new Date(Math.min(time + WRAPPED_DAY_MS, seriesEndAt.getTime()));
+    const date = wrappedDayKey(bucketStart);
+    points.set(date, {
+      date,
+      startAt: bucketStart.toISOString(),
+      endAt: bucketEnd.toISOString(),
+      tokens: 0,
+    });
+  }
+
+  for (const event of events) {
+    const point = points.get(wrappedDayKey(event.timestamp));
+
+    if (point) {
+      point.tokens += getTokenConsumptionTokens(event);
+    }
+  }
+
+  return [...points.values()];
+}
+
+function buildWrappedPeakDay(daily: TokenDailyUsagePoint[]): TokenWrappedResponse["peakDay"] {
+  const peak = daily.reduce<TokenDailyUsagePoint | null>(
+    (best, point) => (!best || point.tokens > best.tokens ? point : best),
+    null
+  );
+
+  return peak && peak.tokens > 0 ? { date: peak.date, tokens: peak.tokens } : { date: null, tokens: 0 };
+}
+
+function buildWrappedStreak(daily: TokenDailyUsagePoint[]): TokenWrappedResponse["streak"] {
+  const activeDays = daily.filter((point) => point.tokens > 0).map((point) => point.date);
+
+  if (!activeDays.length) {
+    return { days: 0, startDate: null, endDate: null };
+  }
+
+  let bestStart = activeDays[0];
+  let bestEnd = activeDays[0];
+  let currentStart = activeDays[0];
+  let currentEnd = activeDays[0];
+
+  for (const day of activeDays.slice(1)) {
+    if (wrappedDayToTime(day) - wrappedDayToTime(currentEnd) === WRAPPED_DAY_MS) {
+      currentEnd = day;
+    } else {
+      if (wrappedStreakLength(currentStart, currentEnd) > wrappedStreakLength(bestStart, bestEnd)) {
+        bestStart = currentStart;
+        bestEnd = currentEnd;
+      }
+      currentStart = day;
+      currentEnd = day;
+    }
+  }
+
+  if (wrappedStreakLength(currentStart, currentEnd) > wrappedStreakLength(bestStart, bestEnd)) {
+    bestStart = currentStart;
+    bestEnd = currentEnd;
+  }
+
+  return {
+    days: wrappedStreakLength(bestStart, bestEnd),
+    startDate: bestStart,
+    endDate: bestEnd,
+  };
+}
+
+function buildWrappedNightShare(events: TokenUsageEvent[]): TokenWrappedResponse["night"] {
+  let tokens = 0;
+  let nightTokens = 0;
+
+  for (const event of events) {
+    const eventTokens = getTokenConsumptionTokens(event);
+    tokens += eventTokens;
+
+    if (wrappedShanghaiDateParts(event.timestamp).hour < 6) {
+      nightTokens += eventTokens;
+    }
+  }
+
+  return {
+    tokens: nightTokens,
+    ratio: tokens > 0 ? nightTokens / tokens : 0,
+  };
+}
+
+function buildWrappedAchievements(
+  events: TokenUsageEvent[],
+  period: WrappedPeriod
+): TokenWrappedResponse["achievements"] {
+  const sortedEvents = [...events].sort(
+    (left, right) => new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime()
+  );
+  const beforeEvents = sortedEvents.filter((event) => new Date(event.timestamp).getTime() < period.startAt.getTime());
+  const throughPeriodEvents = sortedEvents.filter((event) => new Date(event.timestamp).getTime() < period.dataEndAt.getTime());
+  const beforeTotalTokens = beforeEvents.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+  const throughTotalTokens = throughPeriodEvents.reduce((sum, event) => sum + getTokenConsumptionTokens(event), 0);
+  const beforeLevel = buildTokenLevelProgress(beforeTotalTokens).current;
+  const afterSummary = buildTokenAchievementSummary(throughPeriodEvents, { now: period.dataEndAt });
+  const newBadges = afterSummary.badges.filter(
+    (badge) => badge.achieved && wrappedAchievementAtInPeriod(badge.achievedAt, period)
+  );
+  const levelUps: TokenWrappedLevelUp[] = TOKEN_LEVELS.filter(
+    (level) => level.thresholdTokens > beforeTotalTokens && level.thresholdTokens <= throughTotalTokens
+  ).map((level) => ({
+    id: level.id,
+    name: level.name,
+    symbol: level.symbol,
+    color: level.color,
+    thresholdTokens: level.thresholdTokens,
+    reachedAt: firstWrappedCumulativeReachedAt(sortedEvents, level.thresholdTokens) ?? period.startAt.toISOString(),
+  }));
+
+  return {
+    newBadges,
+    levelUps,
+    levelBefore: beforeLevel,
+    levelAfter: afterSummary.level.current,
+  };
+}
+
+function buildWrappedTeamRanking(
+  events: TokenUsageEvent[],
+  targetUserId: string,
+  targetTeam: string
+): TokenWrappedResponse["ranking"] {
+  const users = new Map<
+    string,
+    {
+      userId: string;
+      displayName: string;
+      team: string;
+      tokens: number;
+      latestAt: string;
+    }
+  >();
+
+  for (const event of events) {
+    const current =
+      users.get(event.userId) ??
+      {
+        userId: event.userId,
+        displayName: event.displayName || event.userId,
+        team: event.team || "Friends",
+        tokens: 0,
+        latestAt: event.timestamp,
+      };
+    const timestamp = new Date(event.timestamp).getTime();
+    const latestTimestamp = new Date(current.latestAt).getTime();
+
+    current.tokens += getTokenConsumptionTokens(event);
+
+    if (Number.isFinite(timestamp) && (!Number.isFinite(latestTimestamp) || timestamp >= latestTimestamp)) {
+      current.displayName = event.displayName || current.displayName;
+      current.team = event.team || current.team;
+      current.latestAt = event.timestamp;
+    }
+
+    users.set(event.userId, current);
+  }
+
+  const teamUsers = [...users.values()]
+    .filter((user) => user.team === targetTeam && user.tokens > 0)
+    .sort((left, right) => right.tokens - left.tokens || left.displayName.localeCompare(right.displayName))
+    .map((user, index) => ({ ...user, rank: index + 1 }));
+  const rankedUser = teamUsers.find((user) => user.userId === targetUserId) ?? null;
+  const totalTokens = teamUsers.reduce((sum, user) => sum + user.tokens, 0);
+
+  return {
+    team: targetTeam,
+    rank: rankedUser?.rank ?? null,
+    totalUsers: teamUsers.length,
+    tokens: rankedUser?.tokens ?? 0,
+    share: rankedUser && totalTokens > 0 ? rankedUser.tokens / totalTokens : 0,
+    percentile: rankedUser && teamUsers.length > 0 ? (teamUsers.length - rankedUser.rank) / teamUsers.length : null,
+  };
+}
+
+function latestWrappedTeam(events: TokenUsageEvent[], fallbackTeam: string) {
+  const latest = latestPublicProfileEvent(events);
+  return latest?.team || fallbackTeam || "Friends";
+}
+
+function wrappedAchievementAtInPeriod(value: string | null, period: WrappedPeriod) {
+  if (!value) {
+    return false;
+  }
+
+  const time = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? wrappedLocalDayStartUtc(value).getTime()
+    : new Date(value).getTime();
+
+  return (
+    Number.isFinite(time) &&
+    time >= period.startAt.getTime() &&
+    time < period.dataEndAt.getTime()
+  );
+}
+
+function firstWrappedCumulativeReachedAt(events: TokenUsageEvent[], threshold: number) {
+  let total = 0;
+
+  for (const event of events) {
+    total += getTokenConsumptionTokens(event);
+
+    if (total >= threshold) {
+      return event.timestamp;
+    }
+  }
+
+  return null;
+}
+
+function wrappedShanghaiDateParts(value: string | Date) {
+  const time = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + WRAPPED_SHANGHAI_OFFSET_MS);
+
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+  };
+}
+
+function wrappedDayKey(value: string | Date) {
+  const parts = wrappedShanghaiDateParts(value);
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
+}
+
+function wrappedLocalStartUtc(year: number, month: number, day: number) {
+  return new Date(Date.UTC(year, month - 1, day) - WRAPPED_SHANGHAI_OFFSET_MS);
+}
+
+function wrappedLocalDayStartUtc(dayKey: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dayKey);
+
+  if (!match) {
+    return new Date(0);
+  }
+
+  return wrappedLocalStartUtc(Number(match[1]), Number(match[2]), Number(match[3]));
+}
+
+function wrappedDayToTime(day: string) {
+  return new Date(`${day}T00:00:00.000Z`).getTime();
+}
+
+function wrappedStreakLength(startDate: string, endDate: string) {
+  return Math.floor((wrappedDayToTime(endDate) - wrappedDayToTime(startDate)) / WRAPPED_DAY_MS) + 1;
+}
 
 function findPublicProfileUserEvents(
   events: TokenUsageEvent[],
