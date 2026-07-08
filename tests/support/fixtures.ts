@@ -57,6 +57,7 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       errorCount: 2,
       interruptedCount: 0,
       toolCallCount: 60,
+      linesWritten: 128,
     }),
     usageEvent("alice-recent-evening", identities.alice, {
       timestamp: clock.daysAgo(1, 21),
@@ -141,6 +142,7 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
       messages: 12,
       sessionId: "alice-prev-a",
       sessionTitle: "Wrapped fixture",
+      linesWritten: 55,
     }),
     usageEvent("bob-previous-month", identities.bob, {
       timestamp: previousMonthDay20,
@@ -230,6 +232,7 @@ function usageEvent(
     errorCount?: number;
     interruptedCount?: number;
     toolCallCount?: number;
+    linesWritten?: number | null;
   }
 ): TokenUsageEvent {
   return {
@@ -254,6 +257,7 @@ function usageEvent(
     ...(value.errorCount === undefined ? {} : { errorCount: value.errorCount }),
     ...(value.interruptedCount === undefined ? {} : { interruptedCount: value.interruptedCount }),
     ...(value.toolCallCount === undefined ? {} : { toolCallCount: value.toolCallCount }),
+    ...(value.linesWritten === undefined ? {} : { linesWritten: value.linesWritten }),
   };
 }
 
