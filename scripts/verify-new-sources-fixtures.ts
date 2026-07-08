@@ -162,7 +162,6 @@ function runAgentCollect(homeDir: string) {
       TOKEN_BOARD_INCLUDE_SESSION_TITLE: "false",
       TOKEN_BOARD_SINCE_HOURS: "87600",
       TOKEN_BOARD_MAX_FILES: "200",
-      TOKEN_BOARD_TRAE_SAMPLER: "false",
     },
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,

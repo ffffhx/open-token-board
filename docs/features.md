@@ -99,9 +99,9 @@ npx --yes token-board-agent statusline
 
 ## Agent 采集源
 
-agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor，并用 Trae sampled 对 Trae 累计计数做差分采样。它会按文件 mtime 限制扫描窗口，按 inode 去重 Codex 多个 home 的硬链接，并维护上传 checkpoint 防止重复上报。
+agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。它会按文件 mtime 限制扫描窗口，按 inode 去重 Codex 多个 home 的硬链接，并维护上传 checkpoint 防止重复上报。
 
-使用方法：运行 `npx --yes token-board-agent status` 查看各采集源发现了多少近期文件。用 `TOKEN_BOARD_USAGE_PATHS=/path/a,/path/b` 追加自定义目录；用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫自定义目录；用 `TOKEN_BOARD_TRAE_SAMPLER=false` 关闭 Trae sampled。
+使用方法：运行 `npx --yes token-board-agent status` 查看各采集源发现了多少近期文件。用 `TOKEN_BOARD_USAGE_PATHS=/path/a,/path/b` 追加自定义目录；用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫自定义目录。
 
 ## API 一览
 

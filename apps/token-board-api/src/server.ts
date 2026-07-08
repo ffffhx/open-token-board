@@ -3499,9 +3499,9 @@ function ingestPrivacyOptions() {
     includeSessionTitle: process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE !== "false",
     maxEventAgeDays: positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120),
     maxEventTotalTokens: MAX_EVENT_TOTAL_TOKENS,
-    // Comma-separated source blocklist; defaults to "trae" (cumulative counters,
-    // no per-call data — old agents keep re-uploading them as fresh calls).
-    blockedSources: (process.env.TOKEN_BOARD_BLOCKED_SOURCES ?? "trae")
+    // Comma-separated source blocklist; Trae is no longer supported, so both its
+    // legacy raw source and the sampled variant are rejected by default.
+    blockedSources: (process.env.TOKEN_BOARD_BLOCKED_SOURCES ?? "trae,trae-sampled")
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean),

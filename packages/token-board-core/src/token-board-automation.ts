@@ -30,14 +30,11 @@ export type TokenBoardPrivacyOptions = {
   // Upper bound on a single event's totalTokens. A real API call cannot exceed a
   // model's context window plus cache reads (observed real max is ~250K); anything
   // orders of magnitude larger is a collector bug feeding a *cumulative* counter as
-  // one call (e.g. Trae's stats file). Reject those so one bad source can't poison
-  // the board. Override per-deploy if a future model legitimately approaches it.
+  // one call. Reject those so one bad source can't poison the board. Override
+  // per-deploy if a future model legitimately approaches it.
   maxEventTotalTokens?: number;
-  // Sources rejected wholesale at ingest. Trae has no per-call transcript — its
-  // globalStorage only holds cumulative counters, which old agents re-upload as
-  // fresh "calls" on every scan (the 50M single-event cap can't catch these: each
-  // slice is small, the poison is the endless re-ingestion). Server-side blocking
-  // is the only guard that reaches agents that predate the client-side removal.
+  // Sources rejected wholesale at ingest. Server-side blocking is the only guard
+  // that reaches old agents in the wild that still collect an unsupported source.
   blockedSources?: string[];
 };
 
@@ -62,7 +59,9 @@ const DEFAULT_MAX_EVENT_AGE_DAYS = 120;
 // 50M is ~200x the largest real single-call record ever observed on the board, yet
 // still catches billion-token cumulative counters mis-reported as one event.
 const DEFAULT_MAX_EVENT_TOTAL_TOKENS = 50_000_000;
-const DEFAULT_BLOCKED_SOURCES = ["trae"];
+// Trae support was removed entirely (no reliable per-call usage data); block both
+// the legacy raw source and the sampled variant so stale agents can't re-add it.
+const DEFAULT_BLOCKED_SOURCES = ["trae", "trae-sampled"];
 
 export function hashUploadToken(token: string) {
   return `sha256:${sha256(token)}`;

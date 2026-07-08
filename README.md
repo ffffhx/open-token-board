@@ -36,7 +36,7 @@ Open Token Board 是一套可以自己部署的 AI 编码用量榜单。
 
 ## ✨ 功能特性
 
-- 🔌 **多工具采集**：一个 agent 默认识别 Codex CLI、Claude Code、Gemini CLI、opencode，并 best-effort 检查 Cursor 与 Trae sampled。
+- 🔌 **多工具采集**：一个 agent 默认识别 Codex CLI、Claude Code、Gemini CLI、opencode，并 best-effort 检查 Cursor。
 - 🏅 **荣誉系统**：10 级能量主题等级、等级进度条、行为徽章、个人 PB 和榜单排名变化箭头。
 - 🏆 **实时公共榜单**：支持 1D / 7D / 30D / 90D、周/月日历区间和自定义 from/to，网页按总消耗、费用、会话、活跃人数切换，API 另支持消息排序。
 - 📊 **榜单图表升级**：模型堆叠日趋势默认取 Top5+其他，图例可高亮/隐藏；点击最近 7 天日期可下钻 24 小时分布。
@@ -156,7 +156,6 @@ GitHub 登录和 Device Flow 需要 API 服务配置 `GITHUB_CLIENT_ID`，网页
 | Gemini CLI | `gemini-cli` | `${GEMINI_DATA_DIR}`、`${GEMINI_CLI_HOME}/tmp`、`~/.gemini/tmp` |
 | opencode | `opencode` | `${OPENCODE_DATA_DIR}`、`~/.local/share/opencode`，识别 `opencode*.db` 和 legacy `storage/message/**/*.json` |
 | Cursor | `cursor` | 各平台 Cursor `globalStorage` 与 `logs` 目录 |
-| Trae sampled | `trae-sampled` | 对 Trae 累计计数做本地差分采样，默认可用 `TOKEN_BOARD_TRAE_SAMPLER=false` 关闭 |
 
 可用 `TOKEN_BOARD_USAGE_PATHS` 追加自定义路径；可用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫描自定义路径。agent 只读取这些工具已经落盘的日志，不修改它们的原始文件。
 
@@ -208,7 +207,7 @@ TOKEN_BOARD_INCLUDE_SOURCE=true
 TOKEN_BOARD_HASH_SESSION_ID=true
 TOKEN_BOARD_INCLUDE_SESSION_TITLE=true
 TOKEN_BOARD_MAX_EVENT_AGE_DAYS=120
-TOKEN_BOARD_BLOCKED_SOURCES=trae
+TOKEN_BOARD_BLOCKED_SOURCES=trae,trae-sampled
 ```
 
 费用是公开单价估算，不代表实际账单。四分类计价会先把输入拆成普通输入、缓存写入、缓存读取，再加输出 token；未匹配模型会出现在 `GET /api/usage/health` 的 `pricing.unmatchedModels` 中。

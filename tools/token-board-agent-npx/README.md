@@ -133,7 +133,6 @@ agent 会扫描最近一段时间内存在的本地日志目录：
 | Gemini CLI | `gemini-cli` | `${GEMINI_DATA_DIR}`、`${GEMINI_CLI_HOME}/tmp`、`~/.gemini/tmp` |
 | opencode | `opencode` | `${OPENCODE_DATA_DIR}`、`~/.local/share/opencode`，识别 `opencode*.db` 和 legacy `storage/message/**/*.json` |
 | Cursor | `cursor` | 各平台 Cursor `globalStorage` 与 `logs` |
-| Trae sampled | `trae-sampled` | 各平台 Trae 可能的累计计数目录，按本地状态文件做差分采样 |
 
 查看当前机器发现了哪些文件：
 
@@ -146,7 +145,6 @@ npx --yes token-board-agent status
 ```bash
 TOKEN_BOARD_USAGE_PATHS=/path/to/logs npx --yes token-board-agent upload
 TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false TOKEN_BOARD_USAGE_PATHS=/path/to/logs npx --yes token-board-agent upload
-TOKEN_BOARD_TRAE_SAMPLER=false npx --yes token-board-agent upload
 ```
 
 ## 上报内容
@@ -215,7 +213,6 @@ GEMINI_CLI_HOME=/path/to/gemini-home
 OPENCODE_DATA_DIR=/path/to/opencode
 TOKEN_BOARD_USAGE_PATHS=/path/a,/path/b
 TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false
-TOKEN_BOARD_TRAE_SAMPLER=false
 ```
 
 Claude Code 额度捕获：

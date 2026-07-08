@@ -44,10 +44,10 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.24";
+const VERSION = "0.4.25";
 // Reject any single event above this many tokens: no real API call approaches it, but
-// a cumulative usage counter mis-read as one call (e.g. Trae's stats file) can blow
-// past it. Mirrors the server-side cap in token-board-automation.ts.
+// a cumulative usage counter mis-read as one call can blow past it. Mirrors the
+// server-side cap in token-board-automation.ts.
 const MAX_EVENT_TOTAL_TOKENS = 50_000_000;
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
@@ -182,33 +182,7 @@ const DEFAULT_SOURCE_TARGETS = [
       appDataPath("Cursor", "logs"),
     ],
   },
-  // Trae removed in 0.4.17: its globalStorage holds a *cumulative* usage stats file
-  // whose running counters (billions of tokens) the generic JSON scanner mis-read as
-  // single API calls, poisoning the leaderboard. There is no reliable per-call Trae
-  // transcript to parse, so the source is dropped rather than mis-counted.
-  // 0.4.19 reintroduces Trae as "trae-sampled": a STATEFUL sampler that diffs the
-  // cumulative counters between scans (like Codex's total_token_usage delta) instead
-  // of reporting the counters themselves. See sampleTraeCounters().
 ];
-
-// Trae counter sampler: where the cumulative usage counters may live. Only plain
-// JSON/JSONL files are sampled (the observed stats file is JSON in a "stats" dir).
-const TRAE_SAMPLER_PATHS = [
-  appSupportPath("Trae", "User", "globalStorage"),
-  appSupportPath("Trae CN", "User", "globalStorage"),
-  appSupportPath("Trae", "ModularData", "ai-agent"),
-  appSupportPath("Trae CN", "ModularData", "ai-agent"),
-  configPath("Trae", "User", "globalStorage"),
-  configPath("Trae CN", "User", "globalStorage"),
-  appDataPath("Trae", "User", "globalStorage"),
-  appDataPath("Trae CN", "User", "globalStorage"),
-  homePath(".trae"),
-  homePath(".trae-cn"),
-  homePath(".trae-aicc-internal"),
-];
-const TRAE_SAMPLER_TARGET = { source: "trae-sampled", tool: "Trae", paths: TRAE_SAMPLER_PATHS };
-const TRAE_STATE_FILE = homePath(".token-board-agent", "trae-counter-state.json");
-const TRAE_LEDGER_FILE = homePath(".token-board-agent", "trae-usage-ledger.jsonl");
 let invalidUsageWarningCount = 0;
 
 main().catch((error) => {
@@ -781,194 +755,7 @@ async function collectLocalUsageEvents(config) {
     events.push(...(await parseUsageFile(file.path, file.target, configWithTitles)));
   }
 
-  if (process.env.TOKEN_BOARD_TRAE_SAMPLER !== "false" && config.includeDefaultSources !== false) {
-    events.push(...(await collectTraeSampledEvents(config, minMtime)));
-  }
-
   return dedupe(events);
-}
-
-// ---------------------------------------------------------------------------
-// Trae counter sampler.
-//
-// Trae keeps no per-call transcript — only cumulative usage counters that grow
-// over the app's lifetime. Reporting those directly is how the board got
-// poisoned twice, so instead we treat them exactly like Codex's cumulative
-// total_token_usage: sample on every collection cycle, diff against the last
-// sample, and record only the GROWTH as spend. Deltas are appended to a local
-// append-only ledger (one JSONL line per grown counter), and events are then
-// derived from ledger lines — so event ids are deterministic across runs, the
-// uploadedIds mechanism dedups them like any transcript, and a failed upload
-// never loses a delta. First sighting of a counter only baselines it (lifetime
-// totals must not be dumped onto one day); a counter that shrinks (reinstall,
-// cleared storage) re-baselines silently.
-// ---------------------------------------------------------------------------
-
-async function collectTraeSampledEvents(config, minMtime) {
-  try {
-    await sampleTraeCounters(minMtime);
-  } catch (error) {
-    console.warn(`Trae counter sampling failed: ${error instanceof Error ? error.message : String(error)}`);
-  }
-
-  const raw = await fs.readFile(TRAE_LEDGER_FILE, "utf8").catch(() => "");
-  if (!raw) {
-    return [];
-  }
-
-  const events = [];
-  const lines = raw.split(/\r?\n/);
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index].trim();
-    if (!line) {
-      continue;
-    }
-    const entry = safeJson(line);
-    if (!entry || typeof entry !== "object" || !entry.timestamp) {
-      continue;
-    }
-    const at = Date.parse(entry.timestamp);
-    if (!Number.isFinite(at) || at < minMtime) {
-      continue;
-    }
-    const event = tryUsageRecordToEvent(entry, {
-      config,
-      source: TRAE_SAMPLER_TARGET.source,
-      tool: TRAE_SAMPLER_TARGET.tool,
-      filePath: TRAE_LEDGER_FILE,
-      model: typeof entry.model === "string" ? entry.model : "unknown",
-      project: "trae",
-      sessionId: `trae-counter:${entry.file || ""}`,
-      // Ledger is append-only, so the 1-based line number is a stable sequence
-      // and the derived event id never changes across runs.
-      sequence: index + 1,
-      timestamp: entry.timestamp,
-    });
-    if (event) {
-      events.push(event);
-    }
-  }
-
-  return events;
-}
-
-async function sampleTraeCounters(minMtime) {
-  const paths = readListEnv("TOKEN_BOARD_TRAE_PATHS") || TRAE_SAMPLER_PATHS;
-  const files = [];
-  for (const samplePath of paths) {
-    await collectFiles(expandHome(samplePath), TRAE_SAMPLER_TARGET, files, minMtime, 0);
-  }
-
-  const readings = new Map(); // `${file}\n${model}` -> summed counter fields
-  for (const file of files) {
-    const ext = path.extname(file.path).toLowerCase();
-    if (ext !== ".json" && ext !== ".jsonl" && ext !== ".log") {
-      continue;
-    }
-    const text = await fs.readFile(file.path, "utf8").catch(() => "");
-    if (!text) {
-      continue;
-    }
-    const documents =
-      ext === ".json"
-        ? [safeJson(text)]
-        : text.split(/\r?\n/).map((line) => (line.trim() ? safeJson(line.trim()) : undefined));
-    for (const doc of documents) {
-      if (doc !== undefined) {
-        sumTraeCounters(doc, { model: "" }, file.path, readings, 0);
-      }
-    }
-  }
-
-  if (!readings.size) {
-    return;
-  }
-
-  const state = safeJson(await fs.readFile(TRAE_STATE_FILE, "utf8").catch(() => "")) || {};
-  const now = new Date().toISOString();
-  const ledgerLines = [];
-
-  for (const [key, cur] of readings) {
-    const prev = state[key];
-    state[key] = { ...cur, sampledAt: now };
-    if (!prev) {
-      continue; // first sighting: baseline only, never dump lifetime totals
-    }
-    const delta = {
-      input_tokens: cur.input - toNumber(prev.input),
-      cached_input_tokens: cur.cached - toNumber(prev.cached),
-      cache_creation_input_tokens:
-        cur.cacheCreation -
-        (Object.prototype.hasOwnProperty.call(prev, "cacheCreation") ? toNumber(prev.cacheCreation) : cur.cacheCreation),
-      output_tokens: cur.output - toNumber(prev.output),
-      reasoning_output_tokens: cur.reasoning - toNumber(prev.reasoning),
-    };
-    if (Object.values(delta).some((value) => value < 0)) {
-      continue; // counter went backwards (reinstall / cleared storage): re-baseline
-    }
-    if (delta.input_tokens + delta.output_tokens <= 0) {
-      continue;
-    }
-    const [file, model] = key.split("\n");
-    ledgerLines.push(JSON.stringify({ timestamp: now, file, model, ...delta }));
-  }
-
-  await fs.mkdir(path.dirname(TRAE_STATE_FILE), { recursive: true });
-  if (ledgerLines.length) {
-    await fs.appendFile(TRAE_LEDGER_FILE, `${ledgerLines.join("\n")}\n`);
-  }
-  await fs.writeFile(TRAE_STATE_FILE, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
-}
-
-// Walk arbitrary JSON, summing every usage-shaped record's counters per
-// (file, model). Sums of monotone counters stay monotone, so diffing the sums
-// is reset-aware regardless of how Trae shards its counters internally.
-function sumTraeCounters(value, context, filePath, readings, depth) {
-  if (depth > 14 || value === null || value === undefined) {
-    return;
-  }
-
-  if (Array.isArray(value)) {
-    value.forEach((item) => sumTraeCounters(item, context, filePath, readings, depth + 1));
-    return;
-  }
-
-  if (typeof value !== "object") {
-    return;
-  }
-
-  const model = textFromFields(value, ["model", "modelName", "model_name"]) || context.model;
-
-  if (hasUsageShape(value)) {
-    const cacheReadTokens = cacheReadInputTokensFromRecord(value);
-    const cacheCreationInputTokens = cacheCreationInputTokensFromRecord(value);
-    const key = `${filePath}\n${model || "unknown"}`;
-    const sums = readings.get(key) || { input: 0, cached: 0, cacheCreation: 0, output: 0, reasoning: 0 };
-    sums.input +=
-      numberFromFields(value, ["inputTokens", "input_tokens", "inputTokenCount", "promptTokens", "prompt_tokens"]) +
-      cacheReadTokens +
-      cacheCreationInputTokens;
-    sums.cached +=
-      numberFromFields(value, ["cachedInputTokens", "cached_input_tokens", "cachedTokens"]) + cacheReadTokens;
-    sums.cacheCreation += cacheCreationInputTokens;
-    sums.output += numberFromFields(value, [
-      "outputTokens",
-      "output_tokens",
-      "outputTokenCount",
-      "completionTokens",
-      "completion_tokens",
-    ]);
-    sums.reasoning += numberFromFields(value, ["reasoningOutputTokens", "reasoning_output_tokens", "reasoningTokens"]);
-    readings.set(key, sums);
-    return;
-  }
-
-  for (const [key, child] of Object.entries(value)) {
-    if (isSensitiveTextKey(key) && (typeof child === "string" || Array.isArray(child))) {
-      continue;
-    }
-    sumTraeCounters(child, { model }, filePath, readings, depth + 1);
-  }
 }
 
 async function readCodexTitleIndex(targets) {
