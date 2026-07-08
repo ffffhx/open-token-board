@@ -18,6 +18,7 @@ import { useI18n, type Dictionary } from "@/i18n";
 import type { AccountLoadState, ViewerState } from "./types";
 import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
+  formatLines,
   formatNumber,
   formatPercent,
   formatRankDelta,
@@ -69,6 +70,7 @@ export function AccountUsagePanel({
   const inputContextTokens = user ? getInputContextTokens(user) : 0;
   const accountConsumptionTokens = user ? getTokenConsumptionTokens(user) : 0;
   const generatedTokens = user ? user.outputTokens + user.reasoningOutputTokens : 0;
+  const linesWritten = user?.linesWritten ?? null;
   const cacheReadTokens = user?.cachedInputTokens ?? 0;
   const cacheWriteTokens = user?.cacheCreationInputTokens ?? 0;
   const cacheHitRate = inputContextTokens > 0 ? cacheReadTokens / inputContextTokens : 0;
@@ -218,7 +220,7 @@ export function AccountUsagePanel({
           </Link>
 
           <AccountHonorPanel profile={dashboardProfile} />
-          <AccountEfficiencyPanel efficiency={dashboardProfile.efficiency} />
+          <AccountEfficiencyPanel efficiency={dashboardProfile.efficiency} linesWritten={linesWritten} />
           <AccountGoalsPanel
             apiBaseUrl={apiBaseUrl}
             goals={goalEvaluations}
@@ -272,6 +274,18 @@ export function AccountUsagePanel({
                 description: account.statHelp.outputDescription,
                 formula: account.statHelp.outputFormula,
                 detail: account.outputReasoningTotal(formatTokens(user.outputTokens), formatTokens(user.reasoningOutputTokens), formatTokens(generatedTokens)),
+              }}
+            />
+            <AccountStatCard
+              label={account.linesWritten}
+              value={formatLines(linesWritten)}
+              meta={account.linesWrittenDetail(formatLines(linesWritten))}
+              tone="green"
+              tooltip={{
+                title: account.linesWritten,
+                description: account.statHelp.linesDescription,
+                formula: account.statHelp.linesFormula,
+                detail: account.linesWrittenDetail(formatLines(linesWritten)),
               }}
             />
             <AccountStatCard
@@ -388,7 +402,13 @@ function AccountHonorPanel({ profile }: { profile: TokenAccountUsageProfile }) {
   );
 }
 
-function AccountEfficiencyPanel({ efficiency }: { efficiency: TokenAccountUsageProfile["efficiency"] }) {
+function AccountEfficiencyPanel({
+  efficiency,
+  linesWritten,
+}: {
+  efficiency: TokenAccountUsageProfile["efficiency"];
+  linesWritten: number | null;
+}) {
   const { dict } = useI18n();
   const copy = dict.board.account.efficiency;
   const titleId = useId();
@@ -451,7 +471,7 @@ function AccountEfficiencyPanel({ efficiency }: { efficiency: TokenAccountUsageP
           {copy.privacy}
         </span>
       </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-3" role="list">
+      <div className="mt-4 grid gap-3 lg:grid-cols-4" role="list">
         {items.map((item) => {
           const medianText = item.medianValue ? copy.teamMedian(item.medianValue) : copy.unavailableMedian;
           const comparisonText = item.metric.comparison ? copy.comparison[item.metric.comparison] : "";
@@ -497,6 +517,29 @@ function AccountEfficiencyPanel({ efficiency }: { efficiency: TokenAccountUsageP
             </div>
           );
         })}
+        <div
+          aria-label={[copy.linesWritten, formatLines(linesWritten), copy.linesWrittenDetail(formatLines(linesWritten))].join(". ")}
+          className="rounded-lg border border-slate-200 bg-slate-50 p-3 outline-none transition focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100 dark:border-slate-800 dark:bg-slate-900/70 dark:focus-visible:border-blue-500 dark:focus-visible:ring-blue-900/50"
+          role="listitem"
+          tabIndex={0}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.linesWritten}</p>
+              <p className="mt-2 truncate font-mono text-2xl font-semibold text-slate-950 dark:text-slate-50" title={formatLines(linesWritten)}>
+                {formatLines(linesWritten)}
+              </p>
+            </div>
+            <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" />
+          </div>
+          <p className="mt-2 truncate text-xs text-slate-500 dark:text-slate-400" title={copy.linesWrittenDetail(formatLines(linesWritten))}>
+            {copy.linesWrittenDetail(formatLines(linesWritten))}
+          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.linesWrittenMeta}</p>
+          <div className="mt-3 border-t border-slate-200 pt-3 text-xs leading-5 text-slate-600 dark:border-slate-800 dark:text-slate-300">
+            <p>{copy.privacy}</p>
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -111,6 +111,10 @@ export function sanitizeSvgId(value: string) {
 }
 
 export function getUserMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
+  if (metric === "lines") {
+    return user.linesWritten ?? 0;
+  }
+
   if (metric === "cost") {
     return user.costUsd;
   }
@@ -140,14 +144,17 @@ export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric:
         tokens: getTokenConsumptionTokens(normalizedUser),
       };
     })
-    .sort((left, right) => getUserMetricValue(right, metric) - getUserMetricValue(left, metric) || left.displayName.localeCompare(right.displayName))
+    .sort((left, right) => compareUsersByMetric(left, right, metric))
     .map((user, index) => ({ ...user, rank: index + 1 }));
   const totalTokens = users.reduce((sum, user) => sum + user.tokens, 0);
+  const lineValues = users.flatMap((user) => (user.linesWritten === null ? [] : [user.linesWritten]));
+  const totalLinesWritten = lineValues.length ? lineValues.reduce((sum, value) => sum + value, 0) : null;
 
   return {
     ...summary,
     daily: normalizeDailyUsageSeries(summary.daily),
     totalTokens,
+    totalLinesWritten,
     teams: normalizeRemoteTeams(summary.teams),
     projects: normalizeRemoteProjects(summary.projects),
     distribution: normalizeRemoteDistribution(summary.distribution),
@@ -157,6 +164,18 @@ export function normalizeRemoteSummary(summary: TokenLeaderboardSummary, metric:
       share: totalTokens > 0 ? user.tokens / totalTokens : 0,
     })),
   };
+}
+
+function compareUsersByMetric(left: TokenLeaderboardUser, right: TokenLeaderboardUser, metric: TokenBoardMetric) {
+  if (metric === "lines") {
+    const leftHasLines = left.linesWritten !== null;
+    const rightHasLines = right.linesWritten !== null;
+    if (leftHasLines !== rightHasLines) {
+      return rightHasLines ? 1 : -1;
+    }
+  }
+
+  return getUserMetricValue(right, metric) - getUserMetricValue(left, metric) || left.displayName.localeCompare(right.displayName);
 }
 
 function normalizeRemoteTeams(value: unknown): TokenLeaderboardSummary["teams"] {
@@ -392,6 +411,7 @@ function normalizeRemoteLeaderboardUser(user: TokenLeaderboardUser): TokenLeader
     messages: finiteNumberOrZero(user.messages),
     records: finiteNumberOrZero(user.records),
     activeDays: finiteNumberOrZero(user.activeDays),
+    linesWritten: finiteNumberOrNull(user.linesWritten),
     efficiency: normalizeRemoteEfficiencyProfile(user.efficiency),
   };
 }
@@ -548,11 +568,15 @@ export function formatMetricValue(value: number, metric: TokenBoardMetric) {
     return formatUsd(value);
   }
 
-  if (metric === "sessions" || metric === "messages" || metric === "users") {
+  if (metric === "sessions" || metric === "messages" || metric === "users" || metric === "lines") {
     return formatNumber(value);
   }
 
   return formatTokens(value);
+}
+
+export function formatLines(value: number | null | undefined) {
+  return value === null || value === undefined ? "–" : formatNumber(value);
 }
 
 export function buildLeaderboardInsight(

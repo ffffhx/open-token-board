@@ -100,6 +100,7 @@ export const common = {
     cost: "Cost",
     sessions: "Sessions",
     messages: "Messages",
+    lines: "Code lines",
     users: "Active users",
     activeDays: "Active days",
     estimatedCost: "Estimated cost",
