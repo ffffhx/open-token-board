@@ -48,7 +48,13 @@ type ExtractionContext = {
 type SessionQualityCounts = {
   errorCount: number;
   interruptedCount: number;
+  linesWritten: number | null;
   toolCallCount: number;
+};
+
+type PendingCodeOutputTool = {
+  linesWritten: number;
+  name: string;
 };
 
 const DEFAULT_SINCE_HOURS = 24 * 30;
@@ -119,6 +125,8 @@ const USAGE_SHAPE_KEYS = new Set([
   "reasoning_output_tokens",
   "reasoningOutputTokens",
 ]);
+const CLAUDE_CODE_OUTPUT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
+const CODEX_STRUCTURED_PATCH_TOOLS = new Set(["apply_patch", "patch"]);
 
 export async function collectLocalTokenUsage(config: TokenUsageCollectorConfig = {}) {
   const targets = buildSourceTargets(config);
@@ -533,6 +541,7 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
   let sequence = 0;
   let previousTotalUsage: Record<string, unknown> = {};
   const quality = createSessionQualityCounts();
+  const pendingCodeTools = new Map<string, PendingCodeOutputTool>();
 
   for (const rawLine of text.split(/\r?\n/)) {
     const line = rawLine.trim();
@@ -541,6 +550,10 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
       !line.includes('"token_count"') &&
       !line.includes('"mcp_tool_call_end"') &&
       !line.includes('"turn_aborted"') &&
+      !line.includes('"function_call"') &&
+      !line.includes('"function_call_output"') &&
+      !line.includes('"apply_patch"') &&
+      !line.includes('"patch"') &&
       !line.includes('"model"') &&
       !line.includes('"cwd"') &&
       !line.includes('"user_message"') &&
@@ -558,6 +571,7 @@ function parseCodexSessionJsonl(text: string, context: ExtractionContext) {
     const payload = isRecord(parsed.payload) ? parsed.payload : {};
     const type = typeof parsed.type === "string" ? parsed.type : "";
     addCodexQualityCounts(payload, quality);
+    addCodexCodeOutputCounts(payload, quality, pendingCodeTools);
 
     const extractedTitle = extractSessionTitle(parsed);
     if (extractedTitle && (!sessionTitle || hasExplicitSessionTitle(parsed))) {
@@ -633,10 +647,12 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
   let lastPrompt = "";
   let firstUserMessage = "";
   const quality = createSessionQualityCounts();
+  const pendingCodeTools = new Map<string, PendingCodeOutputTool>();
   for (const line of lines) {
     const wantFirstUser = !firstUserMessage && line.includes('"type":"user"');
     const wantQuality = line.includes('"tool_result"') || line.includes("[Request interrupted by user]");
-    if (!wantFirstUser && !wantQuality && !line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
+    const wantCodeOutput = line.includes('"tool_use"') || line.includes('"tool_result"');
+    if (!wantFirstUser && !wantQuality && !wantCodeOutput && !line.includes('"ai-title"') && !line.includes('"last-prompt"')) {
       continue;
     }
 
@@ -646,6 +662,7 @@ function parseClaudeCodeSessionJsonl(text: string, context: ExtractionContext) {
     }
 
     addClaudeQualityCounts(parsed, quality);
+    addClaudeCodeOutputCounts(parsed, quality, pendingCodeTools);
 
     if (parsed.type === "ai-title") {
       const title = normalizeTextField(parsed.aiTitle);
@@ -684,6 +701,7 @@ function createSessionQualityCounts(): SessionQualityCounts {
   return {
     errorCount: 0,
     interruptedCount: 0,
+    linesWritten: null,
     toolCallCount: 0,
   };
 }
@@ -709,6 +727,52 @@ function addClaudeQualityCounts(record: Record<string, unknown>, quality: Sessio
   }
 }
 
+function addClaudeCodeOutputCounts(
+  record: Record<string, unknown>,
+  quality: SessionQualityCounts,
+  pending: Map<string, PendingCodeOutputTool>
+) {
+  const message = isRecord(record.message) ? record.message : {};
+  const content = message.content ?? record.content;
+  const items = Array.isArray(content) ? content : isRecord(content) ? [content] : [];
+
+  for (const item of items) {
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    if (item.type === "tool_use") {
+      const id = normalizeTextField(item.id);
+      const name = normalizeTextField(item.name);
+      const input = isRecord(item.input) ? item.input : {};
+      if (id && CLAUDE_CODE_OUTPUT_TOOLS.has(name)) {
+        pending.set(id, {
+          name,
+          linesWritten: extractClaudeCodeOutputLines(name, input),
+        });
+      }
+      continue;
+    }
+
+    if (item.type !== "tool_result") {
+      continue;
+    }
+
+    const toolUseId = normalizeTextField(item.tool_use_id);
+    const pendingTool = toolUseId ? pending.get(toolUseId) : undefined;
+    if (!pendingTool) {
+      continue;
+    }
+
+    pending.delete(toolUseId);
+    if (item.is_error === true) {
+      continue;
+    }
+
+    quality.linesWritten = (quality.linesWritten ?? 0) + pendingTool.linesWritten;
+  }
+}
+
 function addCodexQualityCounts(payload: Record<string, unknown>, quality: SessionQualityCounts) {
   if (payload.type === "turn_aborted") {
     quality.interruptedCount = 1;
@@ -730,11 +794,131 @@ function addCodexQualityCounts(payload: Record<string, unknown>, quality: Sessio
   }
 }
 
+function addCodexCodeOutputCounts(
+  payload: Record<string, unknown>,
+  quality: SessionQualityCounts,
+  pending: Map<string, PendingCodeOutputTool>
+) {
+  if (payload.type === "function_call") {
+    const name = normalizeTextField(payload.name);
+    const callId = textFromFields(payload, ["call_id", "callId", "id"]);
+    const linesWritten = extractCodexStructuredLines(name, payload.arguments ?? payload.args ?? payload.input);
+    if (callId && linesWritten !== null) {
+      pending.set(callId, { name, linesWritten });
+    }
+    return;
+  }
+
+  if (payload.type !== "function_call_output") {
+    return;
+  }
+
+  const callId = textFromFields(payload, ["call_id", "callId", "id"]);
+  const pendingTool = callId ? pending.get(callId) : undefined;
+  if (!pendingTool) {
+    return;
+  }
+
+  pending.delete(callId);
+  if (codexFunctionOutputFailed(payload)) {
+    return;
+  }
+
+  quality.linesWritten = (quality.linesWritten ?? 0) + pendingTool.linesWritten;
+}
+
 function codexMcpToolIsError(payload: Record<string, unknown>) {
   const result = isRecord(payload.result) ? payload.result : {};
   const ok = isRecord(result.Ok) ? result.Ok : isRecord(result.ok) ? result.ok : {};
 
   return typeof ok.isError === "boolean" ? ok.isError : null;
+}
+
+function codexFunctionOutputFailed(payload: Record<string, unknown>) {
+  if (payload.success === false || payload.ok === false || payload.is_error === true || payload.isError === true) {
+    return true;
+  }
+
+  const output = payload.output;
+  if (isRecord(output)) {
+    return output.success === false || output.ok === false || output.is_error === true || output.isError === true;
+  }
+
+  return typeof output === "string" && /\b(error|failed|exception)\b/i.test(output.slice(0, 200));
+}
+
+function extractClaudeCodeOutputLines(name: string, input: Record<string, unknown>) {
+  if (name === "Write") {
+    return countEffectiveLines(textFromFields(input, ["content"]));
+  }
+
+  if (name === "MultiEdit") {
+    const edits = Array.isArray(input.edits) ? input.edits : [];
+    return edits.reduce((sum, edit) => {
+      if (!isRecord(edit)) {
+        return sum;
+      }
+      return sum + countEffectiveLines(textFromFields(edit, ["new_string", "newString"]));
+    }, 0);
+  }
+
+  return countEffectiveLines(textFromFields(input, ["new_string", "newString", "content", "source", "cell_source"]));
+}
+
+function extractCodexStructuredLines(name: string, value: unknown): number | null {
+  const args = parseMaybeJsonRecord(value);
+  if (CODEX_STRUCTURED_PATCH_TOOLS.has(name)) {
+    if (typeof value === "string" && !isRecord(args)) {
+      return countAddedPatchLines(value);
+    }
+    const patch = isRecord(args) ? textFromFields(args, ["patch", "content", "input"]) : "";
+    return patch ? countAddedPatchLines(patch) : null;
+  }
+
+  return null;
+}
+
+function parseMaybeJsonRecord(value: unknown): unknown {
+  if (isRecord(value)) {
+    return value;
+  }
+
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+    return value;
+  }
+
+  return safeJsonParse(trimmed) ?? value;
+}
+
+function countAddedPatchLines(value: string) {
+  let count = 0;
+  for (const rawLine of value.split(/\r?\n/)) {
+    if (!rawLine.startsWith("+") || rawLine.startsWith("+++")) {
+      continue;
+    }
+    if (isEffectiveCodeLine(rawLine.slice(1))) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function countEffectiveLines(value: string) {
+  if (!value) {
+    return 0;
+  }
+
+  return value.split(/\r?\n/).filter(isEffectiveCodeLine).length;
+}
+
+function isEffectiveCodeLine(value: string) {
+  const normalized = value.trim();
+  return normalized.length > 3 && !/^[{}()[\];,]+$/.test(normalized);
 }
 
 function attachSessionQualityCounts(entries: TokenUsageEvent[], quality: SessionQualityCounts) {
@@ -759,6 +943,7 @@ function attachSessionQualityCounts(entries: TokenUsageEvent[], quality: Session
           errorCount: quality.errorCount,
           interruptedCount: quality.interruptedCount > 0 ? 1 : 0,
           toolCallCount: quality.toolCallCount,
+          ...(quality.linesWritten !== null ? { linesWritten: quality.linesWritten } : {}),
         })
       : entry
   );
@@ -1626,6 +1811,7 @@ function recordToUsageEvent(record: Record<string, unknown>, context: Extraction
       "aborted_count",
     ]),
     toolCallCount: optionalNumberFromFields(record, ["toolCallCount", "tool_call_count"]),
+    linesWritten: optionalNumberFromFields(record, ["linesWritten", "lines_written", "writtenLines", "written_lines"]),
   });
 }
 

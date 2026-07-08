@@ -70,6 +70,7 @@ import type {
 import {
   buildLeaderboardInsight,
   detectInstallGuidePlatform,
+  formatLines,
   formatMetricValue,
   formatNumber,
   formatShortDate,
@@ -116,6 +117,10 @@ function getTeamTrendMetricValue(
 
   if (metric === "messages") {
     return point.messages ?? 0;
+  }
+
+  if (metric === "lines") {
+    return point.linesWritten ?? 0;
   }
 
   if (metric === "users") {
@@ -400,7 +405,13 @@ export function TokenLeaderboardApp({
   const recordCount = remoteRecordCount ?? 0;
   const isDataLoading = dataLoadState === "loading" && !remoteSummary;
   const isDataError = dataLoadState === "error" && !remoteSummary;
-  const metricItems = METRIC_KEYS.map((item) => ({ key: item, label: dict.common.metrics[item] }));
+  const hasLineSignal = summary.users.some((user) => user.linesWritten !== null);
+  const metricItems = METRIC_KEYS.map((item) => ({
+    key: item,
+    label: dict.common.metrics[item],
+    disabled: item === "lines" && !isDataLoading && !hasLineSignal,
+    disabledReason: item === "lines" ? dict.board.hero.metricNoLines : undefined,
+  }));
   const sourceLabel = isDataLoading ? dict.board.hero.sourceLoading : isDataError ? dict.board.hero.sourceError : dict.board.hero.sourceServer;
   const statusMessage = isDataLoading
     ? isLoadSlow
@@ -417,7 +428,7 @@ export function TokenLeaderboardApp({
     ? `${appliedCustomRange.from} - ${appliedCustomRange.to}`
     : dict.common.ranges[range];
   const showDailyLeaderboardTrend = summary.daily.length > 1;
-  const leaderboardColumnCount = showDailyLeaderboardTrend ? 8 : 7;
+  const leaderboardColumnCount = showDailyLeaderboardTrend ? 9 : 8;
   const trendPointsForPeak = summary.trends?.model.daily?.length ? summary.trends.model.daily : summary.daily;
   const trendPeakValue = Math.max(0, ...trendPointsForPeak.map((point) => getTeamTrendMetricValue(point, metric)));
   const selectedMetricLabel = dict.common.metrics[metric];
@@ -430,7 +441,7 @@ export function TokenLeaderboardApp({
   const costPerSession = summary.totalSessions > 0 ? summary.totalCostUsd / summary.totalSessions : 0;
   const daysInRange = Math.max(1, summary.daily.length);
   const dailyAverageTokens = totalConsumptionTokens / daysInRange;
-  const leaderMeta = leader ? formatMetricValue(getUserMetricValue(leader, metric), metric) : "--";
+  const leaderMeta = leader ? (metric === "lines" ? formatLines(leader.linesWritten) : formatMetricValue(getUserMetricValue(leader, metric), metric)) : "--";
   const topModelLabel = summary.topModel === "unknown" ? "--" : summary.topModel;
   const topToolLabel = summary.topTool === "unknown" ? "--" : summary.topTool;
   const recordCountLabel = formatNumber(recordCount);
@@ -439,6 +450,12 @@ export function TokenLeaderboardApp({
   const insightText = isDataLoading
     ? dict.board.status.insightLoading
     : buildLeaderboardInsight(summary, cacheHitRate, dict.board.insight, dict.common.punctuation);
+
+  useEffect(() => {
+    if (metric === "lines" && dataLoadState === "ready" && !isDataLoading && !hasLineSignal) {
+      setMetric("tokens");
+    }
+  }, [dataLoadState, hasLineSignal, isDataLoading, metric]);
 
   useEffect(() => {
     if (!toast) {
@@ -615,7 +632,7 @@ export function TokenLeaderboardApp({
         )}
       </div>
       <div className="hidden overflow-x-auto sm:block">
-        <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1040px]" : "min-w-[800px]"}`}>
+        <table className={`w-full border-collapse text-left text-sm ${showDailyLeaderboardTrend ? "min-w-[1120px]" : "min-w-[900px]"}`}>
           <caption className="sr-only">{dict.board.leaderboard.tableCaption}</caption>
           <thead className="bg-slate-50 text-xs font-semibold uppercase text-stone-500">
             <tr>
@@ -625,6 +642,7 @@ export function TokenLeaderboardApp({
               <SortableColumnHeader active={metric === "tokens"} align="right">{dict.board.leaderboard.columns.totalTokens}</SortableColumnHeader>
               <SortableColumnHeader active={metric === "cost"} align="right">{dict.board.leaderboard.columns.cost}</SortableColumnHeader>
               <SortableColumnHeader active={metric === "sessions"} align="right">{dict.board.leaderboard.columns.sessions}</SortableColumnHeader>
+              <SortableColumnHeader active={metric === "lines"} align="right">{dict.board.leaderboard.columns.lines}</SortableColumnHeader>
               <SortableColumnHeader active={metric === "users"} align="right">{dict.board.leaderboard.columns.activeDays}</SortableColumnHeader>
               <th className="px-4 py-3">{dict.board.leaderboard.columns.model}</th>
             </tr>
@@ -888,7 +906,7 @@ export function TokenLeaderboardApp({
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_21rem]">
           <div className="min-w-0 space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <StatTile
                 active={metric === "tokens"}
                 label={dict.board.stats.totalTokens}
@@ -914,12 +932,20 @@ export function TokenLeaderboardApp({
                 tone="blue"
               />
               <StatTile
+                active={metric === "lines"}
+                label={dict.board.stats.totalLines}
+                value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatLines(summary.totalLinesWritten)}
+                meta={isDataLoading ? "" : dict.board.stats.totalLinesMeta}
+                onClick={hasLineSignal ? () => setMetric("lines") : undefined}
+                tone="mint"
+              />
+              <StatTile
                 active={metric === "users"}
                 label={dict.board.stats.activeUsers}
                 value={isDataLoading ? <Skeleton className="h-8 w-20" /> : formatNumber(summary.activeUsers)}
                 meta={isDataLoading ? "" : dict.board.stats.activeUsersMeta(formatNumber(summary.activeUsers))}
                 onClick={() => setMetric("users")}
-                tone="mint"
+                tone="ink"
               />
             </div>
 
@@ -995,6 +1021,9 @@ export function TokenLeaderboardApp({
                 </p>
                 <p>
                   <strong className="text-stone-900">{dict.board.scope.tokenTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.tokenDescription}
+                </p>
+                <p>
+                  <strong className="text-stone-900">{dict.board.scope.linesTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.linesDescription}
                 </p>
                 <p>
                   <strong className="text-stone-900">{dict.board.scope.privacyTitle}</strong>{dict.common.punctuation.colon}{dict.board.scope.privacyDescription}

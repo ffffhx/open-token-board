@@ -20,6 +20,7 @@ import type { ViewerState } from "./types";
 import { Avatar, EmptyStatePanel, Icon, Skeleton } from "./shared-ui";
 import {
   formatMetricValue,
+  formatLines,
   formatNumber,
   formatPercent,
   formatRelativeTime,
@@ -838,6 +839,10 @@ function getTrendMetricValue(value: Partial<TokenTrendMetricValues> & { tokens: 
     return value.messages ?? 0;
   }
 
+  if (metric === "lines") {
+    return value.linesWritten ?? 0;
+  }
+
   if (metric === "users") {
     return value.activeUsers ?? 0;
   }
@@ -858,6 +863,10 @@ function formatTrendMetricValue(value: number, metric: TokenBoardMetric, dict: D
     return dict.common.units.messages(formatNumber(value));
   }
 
+  if (metric === "lines") {
+    return formatNumber(value);
+  }
+
   if (metric === "users") {
     return dict.common.units.people(formatNumber(value));
   }
@@ -876,6 +885,10 @@ function metricTrendLabel(metric: TokenBoardMetric, dict: Dictionary) {
 
   if (metric === "messages") {
     return dict.common.metrics.messages;
+  }
+
+  if (metric === "lines") {
+    return dict.common.metrics.lines;
   }
 
   if (metric === "users") {
@@ -976,7 +989,7 @@ export function LeaderboardMobileCard({
 }) {
   const { dict } = useI18n();
   const metricLabel = metric === "users" ? dict.common.metrics.activeDays : dict.common.metrics[metric];
-  const metricValue = formatMetricValue(getUserMetricValue(user, metric), metric);
+  const metricValue = metric === "lines" ? formatLines(user.linesWritten) : formatMetricValue(getUserMetricValue(user, metric), metric);
   const consumptionTokens = getTokenConsumptionTokens(user);
   const daily = normalizeDailyUsageSeries(user.daily);
   const cacheBreakdownTitle = dict.board.leaderboard.cacheBreakdown(
@@ -1016,7 +1029,7 @@ export function LeaderboardMobileCard({
       <div className="mt-3 grid grid-cols-3 gap-2 rounded-lg border border-stone-950/8 bg-slate-50 p-2 text-xs">
         <MetricMini label={dict.common.metrics.tokens} value={formatTokens(consumptionTokens)} />
         <MetricMini label={dict.common.metrics.cost} value={formatUsd(user.costUsd)} />
-        <MetricMini label={dict.common.metrics.sessions} value={formatNumber(user.sessions)} />
+        <MetricMini label={dict.common.metrics.lines} value={formatLines(user.linesWritten)} />
       </div>
       <p className="mt-2 truncate text-xs text-stone-500" title={cacheBreakdownTitle}>
         {dict.board.leaderboard.readWriteCache(formatTokens(user.cachedInputTokens), formatTokens(user.cacheCreationInputTokens))}
@@ -1334,6 +1347,7 @@ export function LeaderboardRow({ range, showDailyTrend, user }: { range: TokenBo
       </td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatUsd(user.costUsd)}</td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.sessions)}</td>
+      <td className="px-4 py-3 text-right font-mono text-stone-600">{formatLines(user.linesWritten)}</td>
       <td className="px-4 py-3 text-right font-mono text-stone-600">{formatNumber(user.activeDays)}</td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -1542,6 +1556,7 @@ export function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; to
   const share = total > 0 ? value / total : 0;
   const sharePercent = Math.round(share * 100);
   const shareLabel = formatPercent(share);
+  const valueLabel = metric === "lines" ? formatLines(user.linesWritten) : formatMetricValue(value, metric);
 
   return (
     <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_5rem] items-center gap-3">
@@ -1565,7 +1580,7 @@ export function ShareRow({ metric, total, user }: { metric: TokenBoardMetric; to
           />
         </div>
       </div>
-      <p className="text-right font-mono text-sm font-semibold">{formatMetricValue(value, metric)}</p>
+      <p className="text-right font-mono text-sm font-semibold">{valueLabel}</p>
     </div>
   );
 }

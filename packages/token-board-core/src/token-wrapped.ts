@@ -55,6 +55,7 @@ export type TokenWrappedResponse = {
     costUsd: number;
     sessions: number;
     messages: number;
+    linesWritten: number | null;
     records: number;
     activeDays: number;
   };

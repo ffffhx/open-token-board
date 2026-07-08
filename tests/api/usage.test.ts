@@ -45,6 +45,16 @@ describe("usage stats", () => {
     assert.equal(typeof leader.efficiency.errorRate.status, "string");
   });
 
+  it("sorts by lines metric and keeps users without a line signal last", async () => {
+    const payload = await getJson(`/api/usage/stats?range=7D&metric=lines&now=${nowParam()}`);
+
+    assert.equal(payload.summary.totalLinesWritten, 128);
+    assert.equal(payload.summary.users[0].userId, harness.fixture.identities.alice.userId);
+    assert.equal(payload.summary.users[0].linesWritten, 128);
+    assert.ok(payload.summary.users.slice(1).every((user: { linesWritten: number | null }) => user.linesWritten === null));
+    assert.ok(payload.summary.trends.model.daily.some((point: { linesWritten: number | null }) => point.linesWritten === 128));
+  });
+
   it("covers calendar month range", async () => {
     const payload = await getJson(`/api/usage/stats?range=month&metric=sessions&now=${nowParam()}`);
 
@@ -79,6 +89,7 @@ describe("account, public profile, and wrapped", () => {
     assert.ok(payload.profile.records > 0);
     assert.ok(payload.profile.config.rateLimits.available);
     assert.ok(Array.isArray(payload.profile.goals));
+    assert.equal(payload.profile.user.linesWritten, 128);
     assert.equal(typeof payload.profile.efficiency.errorRate.status, "string");
     assert.equal(typeof payload.profile.user.efficiency.tokensPerSession.status, "string");
   });
@@ -155,12 +166,14 @@ describe("account, public profile, and wrapped", () => {
     );
     assert.equal(month.period.type, "month");
     assert.ok(month.totals.tokens > 0);
+    assert.equal(month.totals.linesWritten, 128);
 
     const year = await getJson(
       `/api/usage/wrapped?login=${harness.fixture.primaryLogin}&period=${harness.fixture.currentYearPeriod}&now=${nowParam()}`
     );
     assert.equal(year.period.type, "year");
     assert.ok(year.totals.tokens >= month.totals.tokens);
+    assert.ok(year.totals.linesWritten >= month.totals.linesWritten);
 
     const missing = await request(`/api/usage/wrapped?login=missing-token-user&period=${harness.fixture.currentMonthPeriod}`);
     assert.equal(missing.status, 404);
@@ -203,6 +216,18 @@ describe("goal evaluation", () => {
 });
 
 describe("efficiency metrics", () => {
+  it("keeps legacy line output fields as null instead of zero", () => {
+    const now = new Date("2026-07-08T04:00:00.000Z");
+    const summary = buildTokenLeaderboard([usage("legacy-lines", now.toISOString(), 1_000)], {
+      range: "7D",
+      metric: "lines",
+      now,
+    });
+
+    assert.equal(summary.totalLinesWritten, null);
+    assert.equal(summary.users[0].linesWritten, null);
+  });
+
   it("aggregates ready, insufficient, and legacy quality signals", () => {
     const now = new Date("2026-07-08T04:00:00.000Z");
     const events = [
@@ -249,6 +274,32 @@ describe("efficiency metrics", () => {
           timestamp: "2026-07-08T01:01:00.000Z",
           message: { role: "user", content: "[Request interrupted by user]" },
         },
+        {
+          type: "assistant",
+          timestamp: "2026-07-08T01:02:00.000Z",
+          message: {
+            role: "assistant",
+            content: [
+              {
+                type: "tool_use",
+                id: "edit-1",
+                name: "Edit",
+                input: {
+                  file_path: "/tmp/private.ts",
+                  new_string: "const alpha = 1;\n}\n  alpha += 1;\n",
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: "user",
+          timestamp: "2026-07-08T01:03:00.000Z",
+          message: {
+            role: "user",
+            content: [{ type: "tool_result", tool_use_id: "edit-1", content: "ok" }],
+          },
+        },
       ]);
 
       const codexPath = path.join(dir, "codex.jsonl");
@@ -267,6 +318,21 @@ describe("efficiency metrics", () => {
           type: "event_msg",
           timestamp: "2026-07-08T02:02:00.000Z",
           payload: { type: "turn_aborted" },
+        },
+        {
+          type: "event_msg",
+          timestamp: "2026-07-08T02:02:20.000Z",
+          payload: {
+            type: "function_call",
+            name: "apply_patch",
+            call_id: "patch-1",
+            arguments: JSON.stringify({ patch: "*** Begin Patch\n*** Update File: private.ts\n@@\n+const beta = 1;\n+}\n*** End Patch\n" }),
+          },
+        },
+        {
+          type: "event_msg",
+          timestamp: "2026-07-08T02:02:30.000Z",
+          payload: { type: "function_call_output", call_id: "patch-1", output: "ok" },
         },
         {
           type: "event_msg",
@@ -299,9 +365,11 @@ describe("efficiency metrics", () => {
       assert.equal(claude.errorCount, 1);
       assert.equal(claude.toolCallCount, 1);
       assert.equal(claude.interruptedCount, 1);
+      assert.equal(claude.linesWritten, 2);
       assert.equal(codex.errorCount, 1);
       assert.equal(codex.toolCallCount, 1);
       assert.equal(codex.interruptedCount, 1);
+      assert.equal(codex.linesWritten, 1);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -425,6 +493,8 @@ describe("ingest validation", () => {
   it("rejects invalid quality counters", async () => {
     await assertIngestRejected([ingestEvent({ errorCount: 3, toolCallCount: 2 })]);
     await assertIngestRejected([ingestEvent({ interruptedCount: 2 })]);
+    await assertIngestRejected([ingestEvent({ linesWritten: -1 })]);
+    await assertIngestRejected([ingestEvent({ linesWritten: 1.5 })]);
   });
 });
 

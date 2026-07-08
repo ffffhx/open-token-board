@@ -164,6 +164,8 @@ function WrappedStory({
   const copy = dict.wrapped;
   const topModel = wrapped.topModels[0];
   const topProject = wrapped.topProjects[0];
+  const linesWritten = wrapped.totals.linesWritten;
+  const lineProject = topProject?.name ?? "Open Token Board";
   const periodLabel = formatWrappedPeriodLabel(wrapped.period.value, locale);
 
   return (
@@ -179,10 +181,13 @@ function WrappedStory({
           <p className="mt-6 break-words font-mono text-6xl font-black leading-none text-[#e03a6f] sm:text-8xl lg:text-9xl dark:text-[#ff7aa7]">
             {formatTokens(wrapped.totals.tokens)}
           </p>
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SignalStat label={copy.story.rank} value={wrapped.ranking.rank ? `#${wrapped.ranking.rank}` : "--"} meta={`${wrapped.ranking.team} · ${dict.common.units.people(formatNumber(wrapped.ranking.totalUsers))}`} />
             <SignalStat label={copy.story.estimatedCost} value={formatUsd(wrapped.totals.costUsd)} meta={copy.story.notActualBill} />
             <SignalStat label={copy.story.sessions} value={formatNumber(wrapped.totals.sessions)} meta={copy.story.activeDaysMeta(formatNumber(wrapped.totals.activeDays))} />
+            {linesWritten !== null ? (
+              <SignalStat label={copy.story.linesWritten} value={formatNumber(linesWritten)} meta={copy.story.lineMetaphor(formatNumber(linesWritten), lineProject)} />
+            ) : null}
           </div>
         </div>
       </StorySection>
@@ -557,6 +562,7 @@ function WrappedShareCard({
   const copy = dict.wrapped.share;
   const topModel = wrapped.topModels[0]?.name ?? "--";
   const topProject = wrapped.topProjects[0]?.name ?? "--";
+  const linesWritten = wrapped.totals.linesWritten;
   const periodLabel = formatWrappedPeriodLabel(wrapped.period.value, locale);
   const columns = Math.max(2, Math.ceil(wrapped.daily.length / 7));
 
@@ -584,10 +590,11 @@ function WrappedShareCard({
         </p>
       </div>
 
-      <div className="mt-6 grid grid-cols-3 gap-2">
+      <div className={`mt-6 grid gap-2 ${linesWritten === null ? "grid-cols-3" : "grid-cols-2"}`}>
         <ShareMetric label={copy.topModel} value={topModel} />
         <ShareMetric label={copy.topProject} value={topProject} />
         <ShareMetric label={copy.nightShare} value={formatPercent(wrapped.night.ratio)} />
+        {linesWritten !== null ? <ShareMetric label={copy.codeLines} value={formatNumber(linesWritten)} /> : null}
       </div>
 
       <div className="mt-5 rounded-lg border border-white/10 bg-white/[0.06] p-3">

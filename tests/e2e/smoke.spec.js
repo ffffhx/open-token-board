@@ -124,6 +124,27 @@ test("/board updates range, metric chart, and hourly drilldown", async ({ page }
   expect(cleanConsoleErrors(errors)).toEqual([]);
 });
 
+test("/board can switch to code-line metric and shows personal line cards", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, "/board/", "light");
+
+  const linesResponse = page.waitForResponse((response) => {
+    const url = response.url();
+    return url.includes("/api/usage/stats") && url.includes("metric=lines") && response.ok();
+  });
+  await page.getByRole("radio", { name: "代码行" }).click();
+  const linesPayload = await (await linesResponse).json();
+
+  expect(linesPayload.summary.totalLinesWritten).toBe(128);
+  await expect(page.getByRole("radio", { name: "代码行" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByText("团队代码行")).toBeVisible();
+  await expect(page.locator("#token-leaderboard-rankings")).toContainText("代码行");
+  await expect(page.locator("#token-leaderboard-rankings")).toContainText("128");
+  await expect(page.getByText("写入行数").first()).toBeVisible();
+  await expect(page.getByText("当前区间成功写入 128 行").first()).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
 test("/u renders heatmap and badge copy action", async ({ page }) => {
   const errors = trackConsoleErrors(page);
   await gotoApp(page, `/u/?login=${state.primaryLogin}`, "light");
@@ -221,6 +242,33 @@ test("wrapped renders the period 3D thumbnail and share-card option", async ({ p
   await expect(page.getByRole("img", { name: /周期每日 token 3D 等距贡献图/ })).toBeVisible();
   expect(cleanConsoleErrors(errors)).toEqual([]);
 });
+
+for (const languageCase of [
+  {
+    code: "zh",
+    storyLabel: "AI 写的代码",
+    storyText: /今年 AI 帮你写了\s*128\s*行/,
+    shareLabel: "代码行",
+  },
+  {
+    code: "en",
+    storyLabel: "AI-written code",
+    storyText: /AI wrote\s*128\s*lines/,
+    shareLabel: "Code lines",
+  },
+]) {
+  for (const theme of ["light", "dark"]) {
+    test(`wrapped shows code-line copy in ${languageCase.code}/${theme}`, async ({ page }) => {
+      const errors = trackConsoleErrors(page);
+      await gotoApp(page, `/wrapped/?login=${state.primaryLogin}&period=${state.currentMonthPeriod}`, theme, languageCase.code);
+
+      await expect(page.getByText(languageCase.storyLabel).first()).toBeVisible();
+      await expect(page.getByText(languageCase.storyText).first()).toBeVisible();
+      await expect(page.getByText(languageCase.shareLabel).first()).toBeVisible();
+      expect(cleanConsoleErrors(errors)).toEqual([]);
+    });
+  }
+}
 
 for (const target of [
   { name: "/board/", path: () => "/board/" },

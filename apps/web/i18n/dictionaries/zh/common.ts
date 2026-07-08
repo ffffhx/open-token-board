@@ -98,6 +98,7 @@ export const common = {
     cost: "费用",
     sessions: "会话",
     messages: "消息",
+    lines: "代码行",
     users: "活跃人数",
     activeDays: "活跃天数",
     estimatedCost: "估算费用",

@@ -318,6 +318,7 @@ function createPostgresTokenUsageStore({
           error_count BIGINT,
           interrupted_count BIGINT,
           tool_call_count BIGINT,
+          lines_written BIGINT,
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
       `);
@@ -326,6 +327,7 @@ function createPostgresTokenUsageStore({
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS error_count BIGINT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS interrupted_count BIGINT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS tool_call_count BIGINT`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS lines_written BIGINT`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_reported_at_idx ON ${table} (reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_user_reported_at_idx ON ${table} (user_id, reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_model_idx ON ${table} (model)`);
@@ -482,7 +484,8 @@ function hasTokenEventMetadataUpdate(prior: TokenUsageEvent, next: TokenUsageEve
     Boolean(next.sessionTitle && next.sessionTitle !== prior.sessionTitle) ||
     hasQualityCountUpdate(prior.errorCount, next.errorCount) ||
     hasQualityCountUpdate(prior.interruptedCount, next.interruptedCount) ||
-    hasQualityCountUpdate(prior.toolCallCount, next.toolCallCount)
+    hasQualityCountUpdate(prior.toolCallCount, next.toolCallCount) ||
+    hasQualityCountUpdate(prior.linesWritten, next.linesWritten)
   );
 }
 
@@ -505,6 +508,7 @@ type PostgresLeaderboardUserRow = {
   records: string | number;
   sessions: string | number;
   active_days: string | number;
+  lines_written: string | number | null;
   last_reported_at: Date | string | null;
   previous_tokens: string | number | null;
   top_model: string | null;
@@ -532,6 +536,7 @@ type PostgresPreviousRankRow = {
   cost_usd: string | number;
   messages: string | number;
   sessions: string | number;
+  lines_written: string | number | null;
 };
 
 async function readPostgresLeaderboardSummary(
@@ -574,6 +579,10 @@ async function readPostgresLeaderboardSummary(
           COUNT(*)::integer AS records,
           COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
           COUNT(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)::integer AS active_days,
+          CASE
+            WHEN COUNT(lines_written) > 0 THEN SUM(lines_written)::double precision
+            ELSE NULL
+          END AS lines_written,
           MAX(reported_at) AS last_reported_at
         FROM current_events
         GROUP BY user_id
@@ -634,6 +643,7 @@ async function readPostgresLeaderboardSummary(
         user_totals.records,
         user_totals.sessions,
         user_totals.active_days,
+        user_totals.lines_written,
         user_totals.last_reported_at,
         COALESCE(previous_by_user.previous_tokens, 0)::double precision AS previous_tokens,
         COALESCE(top_model.top_model, 'unknown') AS top_model,
@@ -713,7 +723,11 @@ async function readPostgresLeaderboardSummary(
         COALESCE(SUM(cost_usd), 0)::double precision AS cost_usd,
         SUM(messages)::double precision AS messages,
         COUNT(DISTINCT COALESCE(NULLIF(session_id, ''), id))::integer AS sessions,
-        COUNT(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)::integer AS active_days
+        COUNT(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)::integer AS active_days,
+        CASE
+          WHEN COUNT(lines_written) > 0 THEN SUM(lines_written)::double precision
+          ELSE NULL
+        END AS lines_written
       FROM ${table}
       WHERE reported_at >= $1
         AND reported_at <= $2
@@ -767,6 +781,7 @@ async function readPostgresLeaderboardSummary(
         messages: toFiniteNumber(row.messages),
         records: toFiniteInteger(row.records),
         activeDays: toFiniteInteger(row.active_days),
+        linesWritten: optionalRowNumber(row.lines_written) ?? null,
         efficiency: efficiencySummary.users.get(row.user_id) ?? emptyTokenEfficiencyProfile(efficiencySummary.team),
         lastReportedAt: row.last_reported_at ? toIsoString(row.last_reported_at) : undefined,
         topModel: row.top_model || "unknown",
@@ -782,6 +797,8 @@ async function readPostgresLeaderboardSummary(
   const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
   const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
   const totalMessages = users.reduce((sum, user) => sum + user.messages, 0);
+  const lineValues = users.flatMap((user) => (user.linesWritten === null ? [] : [user.linesWritten]));
+  const totalLinesWritten = lineValues.length ? lineValues.reduce((sum, value) => sum + value, 0) : null;
   const usersWithShare = users.map((user) => ({
     ...user,
     share: totalTokens > 0 ? user.tokens / totalTokens : 0,
@@ -823,6 +840,7 @@ async function readPostgresLeaderboardSummary(
       totalCostUsd,
       totalSessions,
       totalMessages,
+      totalLinesWritten,
       activeUsers: usersWithShare.length,
       topModel: models[0]?.name ?? "unknown",
       topTool: tools[0]?.name ?? "unknown",
@@ -853,8 +871,9 @@ function applyLeaderboardRankDelta(users: TokenLeaderboardUser[]) {
 }
 
 function rankPostgresPreviousUsers(rows: PostgresPreviousRankRow[], metric: TokenBoardMetric) {
+  const rankableRows = metric === "lines" ? rows.filter((row) => row.lines_written !== null) : rows;
   return new Map(
-    [...rows]
+    [...rankableRows]
       .sort((left, right) => {
         const diff = previousPostgresMetricValue(right, metric) - previousPostgresMetricValue(left, metric);
         return diff || (left.display_name || left.user_id).localeCompare(right.display_name || right.user_id);
@@ -864,6 +883,10 @@ function rankPostgresPreviousUsers(rows: PostgresPreviousRankRow[], metric: Toke
 }
 
 function previousPostgresMetricValue(row: PostgresPreviousRankRow, metric: TokenBoardMetric) {
+  if (metric === "lines") {
+    return row.lines_written === null ? -1 : toFiniteNumber(row.lines_written);
+  }
+
   if (metric === "cost") {
     return toFiniteNumber(row.cost_usd);
   }
@@ -884,6 +907,10 @@ function previousPostgresMetricValue(row: PostgresPreviousRankRow, metric: Token
 }
 
 function leaderboardMetricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
+  if (metric === "lines") {
+    return user.linesWritten ?? -1;
+  }
+
   if (metric === "cost") {
     return user.costUsd;
   }
@@ -1311,6 +1338,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     "error_count",
     "interrupted_count",
     "tool_call_count",
+    "lines_written",
   ];
   const values: Array<string | number | null> = [];
   const rows = events.map((event, eventIndex) => {
@@ -1337,7 +1365,8 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       event.sessionTitle || null,
       event.errorCount ?? null,
       event.interruptedCount ?? null,
-      event.toolCallCount ?? null
+      event.toolCallCount ?? null,
+      event.linesWritten ?? null
     );
 
     return `(${columns.map((_, columnIndex) => `$${base + columnIndex + 1}`).join(", ")})`;
@@ -1351,7 +1380,8 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       SET "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title"),
           "error_count" = COALESCE(EXCLUDED."error_count", ${table}."error_count"),
           "interrupted_count" = COALESCE(EXCLUDED."interrupted_count", ${table}."interrupted_count"),
-          "tool_call_count" = COALESCE(EXCLUDED."tool_call_count", ${table}."tool_call_count")
+          "tool_call_count" = COALESCE(EXCLUDED."tool_call_count", ${table}."tool_call_count"),
+          "lines_written" = COALESCE(EXCLUDED."lines_written", ${table}."lines_written")
       WHERE (
           NULLIF(EXCLUDED."session_title", '') IS NOT NULL
           AND COALESCE(${table}."session_title", '') <> EXCLUDED."session_title"
@@ -1359,6 +1389,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
         OR (EXCLUDED."error_count" IS NOT NULL AND ${table}."error_count" IS DISTINCT FROM EXCLUDED."error_count")
         OR (EXCLUDED."interrupted_count" IS NOT NULL AND ${table}."interrupted_count" IS DISTINCT FROM EXCLUDED."interrupted_count")
         OR (EXCLUDED."tool_call_count" IS NOT NULL AND ${table}."tool_call_count" IS DISTINCT FROM EXCLUDED."tool_call_count")
+        OR (EXCLUDED."lines_written" IS NOT NULL AND ${table}."lines_written" IS DISTINCT FROM EXCLUDED."lines_written")
       RETURNING (xmax = 0) AS inserted
     `,
     values,
@@ -1401,6 +1432,7 @@ function rowToTokenUsageEvent(row: TokenUsageEventRow): TokenUsageEvent | undefi
     errorCount: optionalRowNumber(row.error_count),
     interruptedCount: optionalRowNumber(row.interrupted_count),
     toolCallCount: optionalRowNumber(row.tool_call_count),
+    linesWritten: optionalRowNumber(row.lines_written),
   });
 }
 
@@ -1471,4 +1503,5 @@ type TokenUsageEventRow = {
   error_count: string | number | null;
   interrupted_count: string | number | null;
   tool_call_count: string | number | null;
+  lines_written: string | number | null;
 };

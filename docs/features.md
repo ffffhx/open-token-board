@@ -4,7 +4,7 @@
 
 ## 榜单与个人看板
 
-榜单页 `/board` 读取 `GET /api/usage/stats`，支持 `1D`、`7D`、`30D`、`90D` 滚动窗口，`week`、`month`、`lastweek`、`lastmonth` 日历区间，以及 `from=YYYY-MM-DD&to=YYYY-MM-DD` 自定义区间。网页指标卡包括 `tokens`、`cost`、`sessions`、`users`，服务端 API 还支持 `messages`。页面会展示总量、活跃人数、主力模型/工具、排行榜、趋势、效率指标和登录用户的个人消耗看板。
+榜单页 `/board` 读取 `GET /api/usage/stats`，支持 `1D`、`7D`、`30D`、`90D` 滚动窗口，`week`、`month`、`lastweek`、`lastmonth` 日历区间，以及 `from=YYYY-MM-DD&to=YYYY-MM-DD` 自定义区间。网页指标卡包括 `tokens`、`cost`、`sessions`、`users`、`lines`，服务端 API 还支持 `messages`。页面会展示总量、活跃人数、主力模型/工具、排行榜、趋势、效率指标和登录用户的个人消耗看板。
 
 使用方法：部署 API 后设置前端环境变量 `NEXT_PUBLIC_TOKEN_BOARD_API_URL=https://your-api`，打开 `/board`。点击时间范围和指标切换榜单；登录 GitHub 后，页面会额外读取 `/api/usage/me` 展示自己的排名、百分位、等级、徽章、PB、项目/会话/活跃热力图。
 
@@ -45,6 +45,20 @@ Open Token Board 的费用估算按四类 token 计算：普通输入、缓存�
 数据不足时不会显示误导性的 `0%`：工具错误率要求至少 50 次明确工具结果，中断率要求至少 10 个有中断信号口径的会话，低于阈值显示“数据不足”；旧 agent 或旧数据缺少新增字段时按“暂无数据”处理，并在团队中位数计算中跳过。
 
 隐私边界：agent 只上报 `errorCount`、`interruptedCount`、`toolCallCount` 这类计数字段，不上传错误内容、工具输出正文、用户指令文本或完整 transcript。服务端 JSON 存储和 PostgreSQL 存储都把这些字段作为可选字段保存，缺省为无质量信号。
+
+## 代码产出
+
+代码产出维度用可选字段 `linesWritten` 表示 agent 在本机日志里能可靠确认的 AI 写入代码行数。`GET /api/usage/stats`、`GET /api/usage/me`、`GET /api/usage/wrapped` 和榜单导出都会保留该字段；排行榜新增 `metric=lines`。如果窗口内某个用户没有任何可靠信号，返回 `null`，网页显示 `–`，排序时排在有数据用户之后；旧 agent 或旧数据缺字段不会被当成 0。
+
+当前口径参考 Claude Code Analytics 的“accepted/written lines”叙事，但它不是 git diff 或 PR 合入语义：
+
+- 有效行：按行 trim 后长度大于 3，且不是纯括号、分号、逗号等结构行；空行和纯括号行不计。
+- Claude Code：扫描 `~/.claude/projects` JSONL 中成功配对的 `Edit`、`Write`、`MultiEdit`、`NotebookEdit` 工具调用。`tool_result.is_error === true` 视为失败，其余配对结果按成功处理。`Edit` / `NotebookEdit` 统计 `new_string`，`MultiEdit` 汇总每个 edit 的 `new_string`，`Write` 统计 `content` 全文。
+- Codex：只统计未来/新版日志中直接结构化暴露的 `apply_patch` / `patch` 函数调用，并只数 patch 里新增的有效行。当前本机 Codex JSONL 主要是 shell、exec、write_stdin 等事件，无法可靠区分真实写文件、路径和命令副作用，因此默认不纳入。
+
+局限：`linesWritten` 是“AI 写入行”或“写入尝试成功行”，不是最终仓库净增行、人工接受行、PR 合入行，也不做 GitHub/PR 归因。一次 `Write` 写入完整文件时会按全文有效行计数，这适合衡量 agent 产出量，但会高于 git diff 的净新增行。
+
+隐私边界：agent 只上报整数计数，不上传代码内容、文件路径、patch 正文或 transcript 明细。服务端 JSON 存储和 PostgreSQL 存储把该字段作为 nullable 字段保存。
 
 ## 上报校验
 
@@ -94,7 +108,7 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor，�
 通用参数：
 
 - `range`：`1D`、`7D`、`30D`、`90D`、`week`、`month`、`lastweek`、`lastmonth`，未传默认 `7D`。`GET /api/usage/stats` 还支持 `from`/`to` 自定义区间，最长 366 天。
-- `metric`：`tokens`、`cost`、`sessions`、`messages`、`users`，未传默认 `tokens`。MCP 的 `get_leaderboard` 只开放 `tokens/cost/sessions/messages`。
+- `metric`：`tokens`、`cost`、`sessions`、`messages`、`users`、`lines`，未传默认 `tokens`。MCP 的 `get_leaderboard` 只开放 `tokens/cost/sessions/messages/lines`。
 - `now`：可选 ISO 时间，用于调试或回放；传入后多数榜单接口走 live 计算而不是快照缓存。
 - Web 登录：GitHub OAuth 成功后写入 `token_board_session` HttpOnly cookie。
 - Agent 鉴权：`Authorization: Bearer <agent token>`，或 legacy `X-Token-Board-Token`。
