@@ -170,7 +170,7 @@ let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
 const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D", "week", "month", "lastweek", "lastmonth"];
-const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages", "users"];
+const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages", "users", "lines"];
 const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
 const PUBLIC_PROFILE_DAILY_DAYS = 365;
 const PUBLIC_PROFILE_TOP_LIMIT = 8;
@@ -1103,6 +1103,7 @@ const LEADERBOARD_EXPORT_COLUMNS = [
   "costUsd",
   "sessions",
   "messages",
+  "linesWritten",
   "records",
   "activeDays",
   "share",
@@ -1147,6 +1148,7 @@ const ACCOUNT_EXPORT_COLUMNS = [
   "costUsd",
   "sessions",
   "messages",
+  "linesWritten",
   "records",
   "activeDays",
   "share",
@@ -1207,6 +1209,7 @@ function leaderboardExportRow(
     costUsd: user.costUsd,
     sessions: user.sessions,
     messages: user.messages,
+    linesWritten: user.linesWritten,
     records: user.records,
     activeDays: user.activeDays,
     share: user.share,
@@ -1258,6 +1261,7 @@ function accountExportCsv(payload: UsageMeExportPayload) {
       costUsd: user?.costUsd ?? 0,
       sessions: user?.sessions ?? 0,
       messages: user?.messages ?? 0,
+      linesWritten: user?.linesWritten ?? null,
       records: profile.records,
       activeDays: user?.activeDays ?? 0,
       share: user?.share ?? null,
@@ -1619,11 +1623,17 @@ function buildWrappedTotals(events: TokenUsageEvent[]): TokenWrappedResponse["to
   let tokens = 0;
   let costUsd = 0;
   let messages = 0;
+  let linesWritten = 0;
+  let hasLinesWritten = false;
 
   for (const event of events) {
     tokens += getTokenConsumptionTokens(event);
     costUsd += event.costUsd ?? 0;
     messages += event.messages ?? 0;
+    if (event.linesWritten !== undefined && event.linesWritten !== null) {
+      linesWritten += Math.max(0, Math.trunc(event.linesWritten));
+      hasLinesWritten = true;
+    }
     sessions.add(event.sessionId || event.id);
     activeDays.add(wrappedDayKey(event.timestamp));
   }
@@ -1633,6 +1643,7 @@ function buildWrappedTotals(events: TokenUsageEvent[]): TokenWrappedResponse["to
     costUsd,
     sessions: sessions.size,
     messages,
+    linesWritten: hasLinesWritten ? linesWritten : null,
     records: events.length,
     activeDays: activeDays.size,
   };
@@ -2533,6 +2544,8 @@ const TOKEN_NUMBER_FIELDS = [
   "interrupted_count",
   "toolCallCount",
   "tool_call_count",
+  "linesWritten",
+  "lines_written",
 ] as const;
 
 function validateRawIngestEvents(events: unknown[]) {
@@ -2569,6 +2582,7 @@ function validateRawIngestEvents(events: unknown[]) {
     const errorCount = readRawOptionalNumber(record, ["errorCount", "error_count"]);
     const interruptedCount = readRawOptionalNumber(record, ["interruptedCount", "interrupted_count"]);
     const toolCallCount = readRawOptionalNumber(record, ["toolCallCount", "tool_call_count"]);
+    const linesWritten = readRawOptionalNumber(record, ["linesWritten", "lines_written"]);
     const computedTotalTokens = inputTokens + outputTokens;
 
     if (totalTokens > 0 && Math.abs(totalTokens - computedTotalTokens) > 1) {
@@ -2595,6 +2609,10 @@ function validateRawIngestEvents(events: unknown[]) {
 
     if (interruptedCount !== null && interruptedCount > 1) {
       errors.push(`第 ${index + 1} 条记录 interruptedCount 只能是 0 或 1`);
+    }
+
+    if (linesWritten !== null && !Number.isInteger(linesWritten)) {
+      errors.push(`第 ${index + 1} 条记录 linesWritten 必须是非负整数`);
     }
 
     if (MAX_EVENT_TOTAL_TOKENS > 0 && computedTotalTokens > MAX_EVENT_TOTAL_TOKENS) {
@@ -2627,6 +2645,7 @@ async function validateNormalizedIngestEvents(
       errorCount: event.errorCount,
       interruptedCount: event.interruptedCount,
       toolCallCount: event.toolCallCount,
+      linesWritten: event.linesWritten,
     };
 
     for (const [field, value] of Object.entries(fields)) {

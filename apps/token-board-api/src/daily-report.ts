@@ -166,8 +166,9 @@ export function buildDailyReportCard(
           const head = `${medal} ${levelMark} **${escapeMd(user.displayName)}** ${rankMove} · ${formatCompact(user.tokens)} tokens (${pct(user.share)})`;
           const model = user.topModel ? escapeMd(user.topModel) : "—";
           const tool = user.topTool ? ` / ${escapeMd(user.topTool)}` : "";
+          const lines = user.linesWritten === null ? "" : ` · ${formatCompact(user.linesWritten)} 行代码`;
           // Per-user detail line: cost · sessions · top model/tool.
-          const sub = `　└ 四类估算 ${formatUsd(user.costUsd)} · ${formatCompact(user.sessions)} 会话 · ${model}${tool}`;
+          const sub = `　└ 四类估算 ${formatUsd(user.costUsd)} · ${formatCompact(user.sessions)} 会话${lines} · ${model}${tool}`;
           return `${head}\n${sub}`;
         })
         .join("\n")

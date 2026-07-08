@@ -396,7 +396,14 @@ export function isTokenBoardRange(value: string): value is TokenBoardRange {
 }
 
 export function isTokenBoardMetric(value: string): value is TokenBoardMetric {
-  return value === "tokens" || value === "cost" || value === "sessions" || value === "messages" || value === "users";
+  return (
+    value === "tokens" ||
+    value === "cost" ||
+    value === "sessions" ||
+    value === "messages" ||
+    value === "users" ||
+    value === "lines"
+  );
 }
 
 function stableTokenEventId(event: TokenUsageEvent) {

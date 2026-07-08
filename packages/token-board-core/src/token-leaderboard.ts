@@ -18,7 +18,7 @@ import {
 export type TokenBoardRange = "1D" | "7D" | "30D" | "90D" | "week" | "month" | "lastweek" | "lastmonth";
 export type TokenLeaderboardSummaryRange = TokenBoardRange | "custom";
 
-export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages" | "users";
+export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages" | "users" | "lines";
 
 export type TokenDailyUsagePoint = {
   date: string;
@@ -33,6 +33,7 @@ export type TokenTrendMetricValues = {
   sessions: number;
   messages: number;
   activeUsers: number;
+  linesWritten: number;
 };
 
 export type TokenTrendSegment = TokenTrendMetricValues & {
@@ -93,6 +94,7 @@ export type TokenUsageEvent = {
   errorCount?: number | null;
   interruptedCount?: number | null;
   toolCallCount?: number | null;
+  linesWritten?: number | null;
 };
 
 export type TokenLeaderboardUser = {
@@ -116,6 +118,7 @@ export type TokenLeaderboardUser = {
   messages: number;
   records: number;
   activeDays: number;
+  linesWritten: number | null;
   efficiency: TokenEfficiencyProfile;
   lastReportedAt?: string;
   topModel: string;
@@ -184,6 +187,7 @@ export type TokenLeaderboardSummary = {
   totalCostUsd: number;
   totalSessions: number;
   totalMessages: number;
+  totalLinesWritten: number | null;
   activeUsers: number;
   topModel: string;
   topTool: string;
@@ -438,6 +442,8 @@ export function buildTokenLeaderboard(
   const totalCostUsd = users.reduce((sum, user) => sum + user.costUsd, 0);
   const totalSessions = users.reduce((sum, user) => sum + user.sessions, 0);
   const totalMessages = users.reduce((sum, user) => sum + user.messages, 0);
+  const lineValues = users.flatMap((user) => (user.linesWritten === null ? [] : [user.linesWritten]));
+  const totalLinesWritten = lineValues.length ? lineValues.reduce((sum, value) => sum + value, 0) : null;
   const models = aggregateNamedUsage(currentEntries, "model");
   const tools = aggregateNamedUsage(currentEntries, "tool");
   const trends = buildTokenLeaderboardTrends(currentEntries, start, rangeWindow.end);
@@ -453,6 +459,7 @@ export function buildTokenLeaderboard(
     totalCostUsd,
     totalSessions,
     totalMessages,
+    totalLinesWritten,
     activeUsers: users.length,
     topModel: models[0]?.name ?? "unknown",
     topTool: tools[0]?.name ?? "unknown",
@@ -665,6 +672,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
     "aborted_count",
   ]);
   const toolCallCount = optionalImportFieldInteger(record, ["toolCallCount", "tool_call_count"]);
+  const linesWritten = optionalImportFieldInteger(record, ["linesWritten", "lines_written", "writtenLines", "written_lines"]);
   const totalTokens = inputTokens + outputTokens;
 
   if (totalTokens <= 0) {
@@ -721,6 +729,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
     ...(errorCount !== undefined ? { errorCount } : {}),
     ...(interruptedCount !== undefined ? { interruptedCount } : {}),
     ...(toolCallCount !== undefined ? { toolCallCount } : {}),
+    ...(linesWritten !== undefined ? { linesWritten } : {}),
   };
 }
 
@@ -914,6 +923,7 @@ function recordsToEvents(records: unknown[]) {
           "aborted_count",
         ]),
         toolCallCount: optionalImportFieldInteger(value, ["toolCallCount", "tool_call_count"]),
+        linesWritten: optionalImportFieldInteger(value, ["linesWritten", "lines_written", "writtenLines", "written_lines"]),
       }),
     ];
   });
@@ -948,6 +958,7 @@ function aggregateUsers(
       modelTokens: Map<string, number>;
       toolTokens: Map<string, number>;
       days: Set<string>;
+      hasLinesWritten: boolean;
       sessionIds: Set<string>;
       lastReportedAt: string;
     }
@@ -972,6 +983,8 @@ function aggregateUsers(
         messages: 0,
         records: 0,
         activeDays: 0,
+        linesWritten: 0,
+        hasLinesWritten: false,
         modelTokens: new Map<string, number>(),
         toolTokens: new Map<string, number>(),
         days: new Set<string>(),
@@ -990,6 +1003,10 @@ function aggregateUsers(
     user.costUsd += entry.costUsd ?? 0;
     user.messages += entry.messages ?? 0;
     user.records += 1;
+    if (entry.linesWritten !== undefined && entry.linesWritten !== null) {
+      user.linesWritten = (user.linesWritten ?? 0) + Math.max(0, Math.trunc(entry.linesWritten));
+      user.hasLinesWritten = true;
+    }
     user.days.add(toDateKey(entry.timestamp));
     user.sessionIds.add(entry.sessionId || entry.id);
     if (new Date(entry.timestamp).getTime() > new Date(user.lastReportedAt).getTime()) {
@@ -1025,6 +1042,7 @@ function aggregateUsers(
       messages: user.messages,
       records: user.records,
       activeDays: user.days.size,
+      linesWritten: user.hasLinesWritten ? user.linesWritten : null,
       efficiency: emptyTokenEfficiencyProfile(),
       lastReportedAt: user.lastReportedAt,
       topModel: topMapEntry(user.modelTokens),
@@ -1056,6 +1074,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
       costUsd: number;
       days: Set<string>;
       displayName: string;
+      linesWritten: number | null;
       messages: number;
       sessions: Set<string>;
       tokens: number;
@@ -1069,6 +1088,7 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
         costUsd: 0,
         days: new Set<string>(),
         displayName: entry.displayName || entry.userId,
+        linesWritten: null,
         messages: 0,
         sessions: new Set<string>(),
         tokens: 0,
@@ -1077,13 +1097,20 @@ function rankEntriesByUser(entries: TokenUsageEvent[], metric: TokenBoardMetric)
     current.costUsd += entry.costUsd ?? 0;
     current.days.add(toDateKey(entry.timestamp));
     current.displayName = entry.displayName || current.displayName;
+    if (entry.linesWritten !== undefined && entry.linesWritten !== null) {
+      current.linesWritten = (current.linesWritten ?? 0) + Math.max(0, Math.trunc(entry.linesWritten));
+    }
     current.messages += entry.messages ?? 0;
     current.sessions.add(entry.sessionId || entry.id);
     current.tokens += getTokenConsumptionTokens(entry);
     values.set(entry.userId, current);
   }
 
-  const ranked = [...values.entries()]
+  const rankableEntries =
+    metric === "lines"
+      ? [...values.entries()].filter(([, value]) => value.linesWritten !== null)
+      : [...values.entries()];
+  const ranked = rankableEntries
     .sort(([, left], [, right]) => {
       const diff = previousMetricValue(right, metric) - previousMetricValue(left, metric);
       return diff || left.displayName.localeCompare(right.displayName);
@@ -1097,12 +1124,17 @@ function previousMetricValue(
   value: {
     costUsd: number;
     days: Set<string>;
+    linesWritten: number | null;
     messages: number;
     sessions: Set<string>;
     tokens: number;
   },
   metric: TokenBoardMetric
 ) {
+  if (metric === "lines") {
+    return value.linesWritten ?? -1;
+  }
+
   if (metric === "cost") {
     return value.costUsd;
   }
@@ -1123,6 +1155,10 @@ function previousMetricValue(
 }
 
 function metricValue(user: TokenLeaderboardUser, metric: TokenBoardMetric) {
+  if (metric === "lines") {
+    return user.linesWritten ?? -1;
+  }
+
   if (metric === "cost") {
     return user.costUsd;
   }
@@ -1363,6 +1399,7 @@ type MutableTrendValue = {
   costUsd: number;
   key: string;
   label: string;
+  linesWritten: number;
   messages: number;
   other?: boolean;
   sessions: Set<string>;
@@ -1475,6 +1512,7 @@ function buildTrendBreakdown(
         sessions: total.sessions.size,
         messages: total.messages,
         activeUsers: total.activeUsers.size,
+        linesWritten: total.linesWritten,
         segments: orderedKeys.map((key) =>
           trendValueToSegment(
             values.get(key) ??
@@ -1530,6 +1568,7 @@ function buildHourlyTrendPoints(
       sessions: total.sessions.size,
       messages: total.messages,
       activeUsers: total.activeUsers.size,
+      linesWritten: total.linesWritten,
       segments: orderedKeys.map((key) =>
         trendValueToSegment(
           values.get(key) ??
@@ -1556,6 +1595,7 @@ function createMutableTrendValue(key: string, label: string, other = false): Mut
     costUsd: 0,
     key,
     label,
+    linesWritten: 0,
     messages: 0,
     other,
     sessions: new Set<string>(),
@@ -1578,6 +1618,9 @@ function addEntryToTrendValue(value: MutableTrendValue, entry: TokenUsageEvent) 
   value.tokens += getTokenConsumptionTokens(entry);
   value.costUsd += entry.costUsd ?? 0;
   value.messages += entry.messages ?? 0;
+  if (entry.linesWritten !== undefined && entry.linesWritten !== null) {
+    value.linesWritten += Math.max(0, Math.trunc(entry.linesWritten));
+  }
   value.sessions.add(entry.sessionId || entry.id);
   value.activeUsers.add(entry.userId);
 }
@@ -1593,6 +1636,7 @@ function trendValueToSegment(value: MutableTrendValue, rank: number, totalTokens
     sessions: value.sessions.size,
     messages: value.messages,
     activeUsers: value.activeUsers.size,
+    linesWritten: value.linesWritten,
     share: totalTokens > 0 ? value.tokens / totalTokens : 0,
   };
 }

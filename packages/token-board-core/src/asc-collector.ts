@@ -104,17 +104,69 @@ export async function collectLocalTokenUsageViaAsc(
     const session = parseSessionFile(toParse);
     if (!session) continue;
 
+    const linesWritten = summarizeAscLinesWritten(session);
     const ascEvents = toTokenEvents(session, ctx);
-    for (const ev of ascEvents) {
-      out.push(mapEvent(ev));
-    }
+    const linesAnchorIndex = linesWritten === null ? -1 : latestAscTokenEventIndex(ascEvents);
+    ascEvents.forEach((ev, index) => {
+      out.push(mapEvent(ev, index === linesAnchorIndex ? linesWritten : null));
+    });
   }
 
   return out;
 }
 
+type AscCodeOutputTool = {
+  linesWritten: number;
+};
+
+const CLAUDE_CODE_OUTPUT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
+const CODEX_STRUCTURED_PATCH_TOOLS = new Set(["apply_patch", "patch"]);
+
+function summarizeAscLinesWritten(session: unknown) {
+  const events = isRecord(session) && Array.isArray(session.events) ? session.events : [];
+  const pending = new Map<string, AscCodeOutputTool>();
+  let linesWritten: number | null = null;
+
+  for (const event of events) {
+    if (!isRecord(event)) {
+      continue;
+    }
+
+    const type = textFromFields(event, ["type", "kind"]);
+    if (type === "tool_call") {
+      const callId = textFromFields(event, ["callId", "call_id", "id", "toolUseId", "tool_use_id"]);
+      const name = textFromFields(event, ["name", "toolName", "tool_name", "tool"]);
+      const args = event.args ?? event.input ?? event.arguments;
+      const toolLines = extractAscCodeOutputLines(name, args);
+      if (callId && toolLines !== null) {
+        pending.set(callId, { linesWritten: toolLines });
+      }
+      continue;
+    }
+
+    if (type !== "tool_result") {
+      continue;
+    }
+
+    const callId = textFromFields(event, ["callId", "call_id", "id", "toolUseId", "tool_use_id"]);
+    const pendingTool = callId ? pending.get(callId) : undefined;
+    if (!pendingTool) {
+      continue;
+    }
+
+    pending.delete(callId);
+    if (event.ok === false || event.success === false || event.is_error === true || event.isError === true) {
+      continue;
+    }
+
+    linesWritten = (linesWritten ?? 0) + pendingTool.linesWritten;
+  }
+
+  return linesWritten;
+}
+
 /** Map an ASC TokenUsageEvent onto the downstream TokenUsageEvent shape. */
-function mapEvent(ev: AscTokenUsageEvent): TokenUsageEvent {
+function mapEvent(ev: AscTokenUsageEvent, linesWritten: number | null = null): TokenUsageEvent {
   return {
     id: ev.id,
     userId: ev.userId,
@@ -134,5 +186,107 @@ function mapEvent(ev: AscTokenUsageEvent): TokenUsageEvent {
     costUsd: ev.costUsd,
     sessionId: ev.sessionId,
     sessionTitle: ev.sessionTitle,
+    ...(linesWritten !== null ? { linesWritten } : {}),
   };
+}
+
+function latestAscTokenEventIndex(events: AscTokenUsageEvent[]) {
+  let index = events.length ? 0 : -1;
+  let latest = Number.NEGATIVE_INFINITY;
+  events.forEach((event, currentIndex) => {
+    const time = new Date(event.timestamp).getTime();
+    if (Number.isFinite(time) && time > latest) {
+      latest = time;
+      index = currentIndex;
+    }
+  });
+  return index;
+}
+
+function extractAscCodeOutputLines(name: string, rawArgs: unknown): number | null {
+  const args = parseMaybeJson(rawArgs);
+
+  if (CLAUDE_CODE_OUTPUT_TOOLS.has(name)) {
+    const record = isRecord(args) ? args : {};
+    if (name === "Write") {
+      return countEffectiveLines(textFromFields(record, ["content"]));
+    }
+    if (name === "MultiEdit") {
+      const edits = Array.isArray(record.edits) ? record.edits : [];
+      return edits.reduce((sum, edit) => {
+        if (!isRecord(edit)) {
+          return sum;
+        }
+        return sum + countEffectiveLines(textFromFields(edit, ["new_string", "newString"]));
+      }, 0);
+    }
+    return countEffectiveLines(textFromFields(record, ["new_string", "newString", "content", "source", "cell_source"]));
+  }
+
+  if (CODEX_STRUCTURED_PATCH_TOOLS.has(name)) {
+    if (typeof rawArgs === "string" && !isRecord(args)) {
+      return countAddedPatchLines(rawArgs);
+    }
+    const patch = isRecord(args) ? textFromFields(args, ["patch", "content", "input"]) : "";
+    return patch ? countAddedPatchLines(patch) : null;
+  }
+
+  return null;
+}
+
+function parseMaybeJson(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
+    return value;
+  }
+
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return value;
+  }
+}
+
+function countAddedPatchLines(value: string) {
+  let count = 0;
+  for (const rawLine of value.split(/\r?\n/)) {
+    if (!rawLine.startsWith("+") || rawLine.startsWith("+++")) {
+      continue;
+    }
+    if (isEffectiveCodeLine(rawLine.slice(1))) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function countEffectiveLines(value: string) {
+  if (!value) {
+    return 0;
+  }
+
+  return value.split(/\r?\n/).filter(isEffectiveCodeLine).length;
+}
+
+function isEffectiveCodeLine(value: string) {
+  const normalized = value.trim();
+  return normalized.length > 3 && !/^[{}()[\];,]+$/.test(normalized);
+}
+
+function textFromFields(record: Record<string, unknown>, fields: string[]) {
+  for (const field of fields) {
+    const value = record[field];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
