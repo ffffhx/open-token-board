@@ -100,7 +100,6 @@ const USERS_FILE = process.env.TOKEN_BOARD_USERS_FILE || path.join(process.cwd()
 const MAX_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_BODY_BYTES, 4 * 1024 * 1024);
 const MAX_EVENTS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENTS, 100_000);
 const MAX_EVENT_TOTAL_TOKENS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS, 50_000_000);
-const MAX_USER_DAILY_TOTAL_TOKENS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_USER_DAILY_TOTAL_TOKENS, 500_000_000);
 const LEADERBOARD_SNAPSHOT_FILE =
   process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_FILE || path.join(path.dirname(DATA_FILE), "leaderboard-snapshots.json");
 const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_REFRESH_MS, 60_000);
@@ -2372,7 +2371,7 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
 
   const store = usageStore();
   const batchValidationErrors = sanitized.entries.length
-    ? await validateNormalizedIngestEvents(store, sanitized.entries, "ingest")
+    ? validateNormalizedIngestEvents(sanitized.entries)
     : [];
   if (batchValidationErrors.length) {
     sendJson(request, response, 400, {
@@ -2451,7 +2450,7 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
 
   const store = usageStore();
   const batchValidationErrors = sanitized.entries.length
-    ? await validateNormalizedIngestEvents(store, sanitized.entries, "replace")
+    ? validateNormalizedIngestEvents(sanitized.entries)
     : [];
   if (batchValidationErrors.length) {
     sendJson(request, response, 400, {
@@ -2515,8 +2514,6 @@ async function mergeUserConfigForIngest(
 
   return existingGoals.length ? { ...nextConfig, goals: existingGoals } : nextConfig;
 }
-
-type IngestWriteMode = "ingest" | "replace";
 
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const TOKEN_NUMBER_FIELDS = [
@@ -2625,11 +2622,7 @@ function validateRawIngestEvents(events: unknown[]) {
   return errors;
 }
 
-async function validateNormalizedIngestEvents(
-  store: TokenUsageStore,
-  entries: TokenUsageEvent[],
-  mode: IngestWriteMode
-) {
+function validateNormalizedIngestEvents(entries: TokenUsageEvent[]) {
   const errors: string[] = [];
 
   entries.forEach((event, index) => {
@@ -2694,51 +2687,7 @@ async function validateNormalizedIngestEvents(
     }
   });
 
-  if (!errors.length) {
-    errors.push(...(await validateUserDailyTokenCap(store, entries, mode)));
-  }
-
   return errors;
-}
-
-async function validateUserDailyTokenCap(store: TokenUsageStore, entries: TokenUsageEvent[], mode: IngestWriteMode) {
-  if (!entries.length || MAX_USER_DAILY_TOTAL_TOKENS <= 0) {
-    return [];
-  }
-
-  const totalsByUserDay = new Map<string, number>();
-  const incomingIds = new Set(entries.map((entry) => entry.id));
-
-  if (mode === "ingest") {
-    const users = new Set(entries.map((entry) => entry.userId));
-    for (const userId of users) {
-      const existing = await store.listEventsForUser(userId);
-      for (const event of existing) {
-        if (incomingIds.has(event.id)) {
-          continue;
-        }
-        addDailyTokenTotal(totalsByUserDay, event);
-      }
-    }
-  }
-
-  entries.forEach((event) => addDailyTokenTotal(totalsByUserDay, event));
-
-  return [...totalsByUserDay.entries()].flatMap(([key, tokens]) => {
-    if (tokens <= MAX_USER_DAILY_TOTAL_TOKENS) {
-      return [];
-    }
-
-    const [userId, day] = key.split("\n");
-    return [
-      `用户 ${userId} 在 ${day} 的单日 token 累计 ${Math.round(tokens)} 超出上限 ${MAX_USER_DAILY_TOTAL_TOKENS}`,
-    ];
-  });
-}
-
-function addDailyTokenTotal(totals: Map<string, number>, event: TokenUsageEvent) {
-  const key = `${event.userId}\n${shanghaiDateKey(event.timestamp)}`;
-  totals.set(key, (totals.get(key) ?? 0) + getTokenConsumptionTokens(event));
 }
 
 function validateRawTokenNumbers(record: Record<string, unknown>, index: number) {
@@ -2869,15 +2818,6 @@ function parseRawDateMs(value: unknown) {
 function shanghaiStartOfDayAfterTomorrowMs(now = new Date()) {
   const shifted = new Date(now.getTime() + SHANGHAI_OFFSET_MS);
   return Date.UTC(shifted.getUTCFullYear(), shifted.getUTCMonth(), shifted.getUTCDate() + 2) - SHANGHAI_OFFSET_MS;
-}
-
-function shanghaiDateKey(value: string) {
-  const time = new Date(value).getTime();
-  const shifted = new Date((Number.isFinite(time) ? time : Date.now()) + SHANGHAI_OFFSET_MS);
-  const year = shifted.getUTCFullYear();
-  const month = String(shifted.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(shifted.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 async function handleSnapshotSharePublish(request: IncomingMessage, response: ServerResponse) {
