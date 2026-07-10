@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 import { I18nProvider } from "@/i18n";
 import { zh } from "@/i18n/dictionaries/zh";
@@ -6,6 +6,17 @@ import { zh } from "@/i18n/dictionaries/zh";
 import "./globals.css";
 
 const SITE_URL = "https://ffffhx.github.io/open-token-board/";
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#edf2f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+  ],
+};
 
 export const metadata: Metadata = {
   title: zh.common.metadata.homeTitle,
@@ -24,6 +35,14 @@ export const metadata: Metadata = {
     card: "summary",
     title: zh.common.metadata.homeTitle,
     description: zh.common.metadata.homeTwitterDescription,
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Token 榜",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: `${BASE_PATH}/icons/apple-touch-icon.png`,
   },
 };
 
