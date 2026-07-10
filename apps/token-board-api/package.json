@@ -16,7 +16,7 @@
     "@open-token-board/core": "workspace:*",
     "pg": "^8.20.0",
     "sanitize-html": "^2.17.5",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.0",
     "typescript": "^5.8.3"
   },
   "devDependencies": {
