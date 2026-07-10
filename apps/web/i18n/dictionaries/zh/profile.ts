@@ -65,6 +65,7 @@ export const profile = {
     loadingAria: "正在加载公开个人主页",
   },
   ranges: {
+    today: "今天",
     "1D": "24 小时",
     "7D": "7 天",
     "30D": "30 天",

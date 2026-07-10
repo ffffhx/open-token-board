@@ -67,6 +67,7 @@ export const profile = {
     loadingAria: "Loading public profile",
   },
   ranges: {
+    today: "Today",
     "1D": "24 hours",
     "7D": "7 days",
     "30D": "30 days",

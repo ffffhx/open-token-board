@@ -15,7 +15,7 @@ import {
   type TokenEfficiencyTeamSummary,
 } from "./token-efficiency";
 
-export type TokenBoardRange = "1D" | "7D" | "30D" | "90D" | "week" | "month" | "lastweek" | "lastmonth";
+export type TokenBoardRange = "today" | "1D" | "7D" | "30D" | "90D" | "week" | "month" | "lastweek" | "lastmonth";
 export type TokenLeaderboardSummaryRange = TokenBoardRange | "custom";
 
 export type TokenBoardMetric = "tokens" | "cost" | "sessions" | "messages" | "users" | "lines";
@@ -73,6 +73,8 @@ export type TokenTrendBreakdown = {
 
 export type TokenUsageEvent = {
   id: string;
+  /** Stable collector-native key; unlike `id`, it is independent of mutable usage metadata. */
+  upstreamEventId?: string;
   userId: string;
   displayName: string;
   team?: string;
@@ -481,6 +483,18 @@ export function buildTokenLeaderboard(
 export function resolveTokenLeaderboardWindow(range: TokenBoardRange, now = new Date()): TokenLeaderboardWindow {
   const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
 
+  if (range === "today") {
+    const start = startOfShanghaiDay(safeNow);
+
+    return {
+      range,
+      start,
+      end: safeNow,
+      previousStart: new Date(start.getTime() - DAY_MS),
+      previousEnd: new Date(start.getTime() - 1),
+    };
+  }
+
   if (range in ROLLING_RANGE_DAYS) {
     const days = ROLLING_RANGE_DAYS[range as keyof typeof ROLLING_RANGE_DAYS];
     const start = new Date(safeNow.getTime() - days * DAY_MS);
@@ -685,6 +699,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
   const source = normalizeText(value.source) || "manual";
   const sessionId = normalizeText(value.sessionId);
   const sessionTitle = normalizeText(value.sessionTitle).slice(0, 120);
+  const upstreamEventId = normalizeText(value.upstreamEventId).slice(0, 160);
   const id =
     normalizeText(value.id) ||
     [
@@ -699,6 +714,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
 
   return {
     id,
+    ...(upstreamEventId ? { upstreamEventId } : {}),
     userId,
     displayName: normalizeText(value.displayName) || userId,
     team: normalizeText(value.team) || "Friends",
@@ -895,6 +911,7 @@ function recordsToEvents(records: unknown[]) {
     return [
       normalizeTokenUsageEvent({
         id: normalizeText(readField(value, ["id", "eventId"])),
+        upstreamEventId: normalizeText(readField(value, ["upstreamEventId", "upstream_event_id"])),
         userId,
         displayName: normalizeText(readField(value, ["displayName", "name", "username", "user"])) || userId,
         team: normalizeText(readField(value, ["team", "department", "group"])),

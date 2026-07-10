@@ -30,6 +30,7 @@ export type DailyReportConfig = {
 };
 
 const RANGE_LABEL: Record<string, string> = {
+  today: "今天（上海自然日）",
   "1D": "近 24 小时",
   "7D": "近 7 天",
   "30D": "近 30 天",

@@ -10,7 +10,7 @@ import { EmptyStatePanel, Skeleton } from "@/components/token-leaderboard/shared
 import { normalizeApiBaseUrl } from "@/components/token-leaderboard/utils";
 import { useI18n } from "@/i18n";
 
-const VALID_RANGES = new Set(["1D", "7D", "30D", "90D", "WEEK", "MONTH", "LASTWEEK", "LASTMONTH"]);
+const VALID_RANGES = new Set(["TODAY", "1D", "7D", "30D", "90D", "WEEK", "MONTH", "LASTWEEK", "LASTMONTH"]);
 
 type LoadState = "loading" | "ready" | "empty" | "error";
 
@@ -165,7 +165,7 @@ export function WeeklyReportClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 }
 
 function normalizeRangeParam(value: string) {
-  return value === "WEEK" || value === "MONTH" || value === "LASTWEEK" || value === "LASTMONTH"
+  return value === "TODAY" || value === "WEEK" || value === "MONTH" || value === "LASTWEEK" || value === "LASTMONTH"
     ? value.toLowerCase()
     : value;
 }

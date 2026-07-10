@@ -27,12 +27,6 @@ export type TokenBoardPrivacyOptions = {
   hashSessionId?: boolean;
   includeSessionTitle?: boolean;
   maxEventAgeDays?: number;
-  // Upper bound on a single event's totalTokens. A real API call cannot exceed a
-  // model's context window plus cache reads (observed real max is ~250K); anything
-  // orders of magnitude larger is a collector bug feeding a *cumulative* counter as
-  // one call. Reject those so one bad source can't poison the board. Override
-  // per-deploy if a future model legitimately approaches it.
-  maxEventTotalTokens?: number;
   // Sources rejected wholesale at ingest. Server-side blocking is the only guard
   // that reaches old agents in the wild that still collect an unsupported source.
   blockedSources?: string[];
@@ -43,6 +37,7 @@ export type TokenBoardIngestPayload = {
   client?: {
     name?: string;
     version?: string;
+    collectorSchemaVersion?: number;
     hostId?: string;
     platform?: string;
   };
@@ -56,9 +51,6 @@ export type TokenBoardIngestResult = {
 };
 
 const DEFAULT_MAX_EVENT_AGE_DAYS = 120;
-// 50M is ~200x the largest real single-call record ever observed on the board, yet
-// still catches billion-token cumulative counters mis-reported as one event.
-const DEFAULT_MAX_EVENT_TOTAL_TOKENS = 50_000_000;
 // Trae support was removed entirely (no reliable per-call usage data); block both
 // the legacy raw source and the sampled variant so stale agents can't re-add it.
 const DEFAULT_BLOCKED_SOURCES = ["trae", "trae-sampled"];
@@ -126,7 +118,6 @@ export function sanitizeIngestEvents(
   const now = Date.now();
   const maxAgeDays = options.maxEventAgeDays ?? DEFAULT_MAX_EVENT_AGE_DAYS;
   const minTime = now - maxAgeDays * 24 * 60 * 60 * 1000;
-  const maxTotalTokens = options.maxEventTotalTokens ?? DEFAULT_MAX_EVENT_TOTAL_TOKENS;
   const blockedSources = new Set(
     (options.blockedSources ?? DEFAULT_BLOCKED_SOURCES).map((item) => item.trim().toLowerCase()).filter(Boolean)
   );
@@ -146,13 +137,6 @@ export function sanitizeIngestEvents(
         return [];
       }
 
-      if (maxTotalTokens > 0 && normalized.totalTokens > maxTotalTokens) {
-        errors.push(
-          `第 ${index + 1} 条记录 token 用量 ${normalized.totalTokens} 超出单条上限 ${maxTotalTokens}（疑似累计计数被误报为单次调用）`
-        );
-        return [];
-      }
-
       const rawSource = sanitizeLabel(normalized.source, 60).toLowerCase();
       if (blockedSources.has(rawSource)) {
         errors.push(`第 ${index + 1} 条记录来源 ${rawSource} 已被屏蔽（该来源没有可靠的逐调用用量数据）`);
@@ -160,11 +144,12 @@ export function sanitizeIngestEvents(
       }
 
       const project = sanitizeProjectName(normalized.project, options.projectMode ?? "basename");
+      const upstreamEventId = sanitizeUpstreamEventId(normalized.upstreamEventId);
       const sessionId =
         options.hashSessionId === false
           ? sanitizeLabel(normalized.sessionId, 120)
           : normalized.sessionId
-            ? `session:${sha256(normalized.sessionId).slice(0, 16)}`
+            ? sanitizeSessionId(normalized.sessionId)
             : "";
       const source = options.includeSource === false ? "local-agent" : sanitizeLabel(normalized.source, 60) || "local-agent";
       const model = options.includeModel === false ? "hidden" : sanitizeLabel(normalized.model, 80) || "unknown";
@@ -180,12 +165,14 @@ export function sanitizeIngestEvents(
         sessionTitle,
         source,
         model,
+        upstreamEventId,
       });
 
       return [
         normalizeTokenUsageEvent({
           ...normalized,
           id: stableId,
+          upstreamEventId,
           userId: user.userId,
           displayName: user.displayName,
           team: user.team || "Friends",
@@ -210,11 +197,12 @@ export function sanitizeIngestEvents(
   return { entries: dedupeTokenEvents(entries), errors };
 }
 
-export function mergeTokenEvents(existing: TokenUsageEvent[], incoming: TokenUsageEvent[], maxEvents = 100_000) {
+export function mergeTokenEvents(existing: TokenUsageEvent[], incoming: TokenUsageEvent[], maxEvents = 0) {
   // Incoming events are listed last so that on an id collision the fresher event
   // wins in dedupeTokenEvents (later set() overwrites). This lets a re-ingested
   // event carry an updated session title instead of being shadowed by the old one.
-  return dedupeTokenEvents([...existing, ...incoming]).slice(0, maxEvents);
+  const merged = dedupeTokenEvents([...existing, ...incoming]);
+  return maxEvents > 0 ? merged.slice(0, maxEvents) : merged;
 }
 
 export function sanitizeTokenBoardUserConfig(
@@ -383,6 +371,7 @@ export function createIngestPayload(
 
 export function isTokenBoardRange(value: string): value is TokenBoardRange {
   return (
+    value === "today" ||
     value === "1D" ||
     value === "7D" ||
     value === "30D" ||
@@ -406,7 +395,12 @@ export function isTokenBoardMetric(value: string): value is TokenBoardMetric {
 }
 
 function stableTokenEventId(event: TokenUsageEvent) {
-  return `usage:${sha256(
+  if (event.upstreamEventId) {
+    return `usage:v2:${sha256([event.userId, event.source, event.upstreamEventId].join("\n")).slice(0, 32)}`;
+  }
+
+  // Compatibility fallback for old/custom collectors without an immutable key.
+  return `usage:v1:${sha256(
     [
       event.userId,
       event.timestamp,
@@ -422,6 +416,19 @@ function stableTokenEventId(event: TokenUsageEvent) {
       event.totalTokens,
     ].join("\n")
   ).slice(0, 32)}`;
+}
+
+function sanitizeUpstreamEventId(value: unknown) {
+  const text = sanitizeLabel(value, 160);
+  if (!text) {
+    return "";
+  }
+  return text.startsWith("upstream:") ? text : `upstream:${sha256(text).slice(0, 32)}`;
+}
+
+function sanitizeSessionId(value: string) {
+  const text = sanitizeLabel(value, 120);
+  return /^session:[a-f0-9]{16}$/i.test(text) ? text.toLowerCase() : `session:${sha256(text).slice(0, 16)}`;
 }
 
 function timingSafeTokenEqual(left: string, right: string) {

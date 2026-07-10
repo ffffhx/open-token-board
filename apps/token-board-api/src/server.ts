@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -98,8 +98,7 @@ const HOST = process.env.TOKEN_BOARD_HOST || "127.0.0.1";
 const DATA_FILE = process.env.TOKEN_BOARD_DATA_FILE || path.join(process.cwd(), ".token-board", "usage-events.json");
 const USERS_FILE = process.env.TOKEN_BOARD_USERS_FILE || path.join(process.cwd(), ".token-board", "users.json");
 const MAX_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_BODY_BYTES, 4 * 1024 * 1024);
-const MAX_EVENTS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENTS, 100_000);
-const MAX_EVENT_TOTAL_TOKENS = positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS, 50_000_000);
+const FILE_RETENTION_EVENTS = nonNegativeNumberEnv(process.env.TOKEN_BOARD_FILE_RETENTION_EVENTS, 0);
 const LEADERBOARD_SNAPSHOT_FILE =
   process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_FILE || path.join(path.dirname(DATA_FILE), "leaderboard-snapshots.json");
 const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_REFRESH_MS, 60_000);
@@ -117,6 +116,10 @@ const DEV_AUTH_SECRET_PLACEHOLDER = "dev-only-token-board-auth-secret";
 function positiveNumberEnv(value: string | undefined, fallback: number) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+function nonNegativeNumberEnv(value: string | undefined, fallback: number) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? Math.trunc(parsed) : fallback;
 }
 function percentageEnv(value: string | undefined, fallback: number) {
   const trimmed = value?.trim();
@@ -165,12 +168,21 @@ const WEEKLY_REPORT_ENABLED = booleanEnv(
 const QUOTA_ALERT_THRESHOLD_PERCENT = percentageEnv(process.env.TOKEN_BOARD_QUOTA_ALERT_THRESHOLD, 25);
 const QUOTA_ALERT_STALE_MS = 24 * 60 * 60 * 1000;
 let tokenUsageStore: TokenUsageStore | undefined;
+type UsageReplaceStage = {
+  createdAt: number;
+  expectedEvents: number;
+  digest: string;
+  events: Map<string, TokenUsageEvent>;
+  userConfig: TokenBoardUserConfig | null;
+};
+const USAGE_REPLACE_STAGE_TTL_MS = 30 * 60 * 1000;
+const usageReplaceStages = new Map<string, UsageReplaceStage>();
 let snapshotShareStore: SnapshotShareStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
-const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D", "week", "month", "lastweek", "lastmonth"];
+const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["today", "1D", "7D", "30D", "90D", "week", "month", "lastweek", "lastmonth"];
 const LEADERBOARD_SNAPSHOT_METRICS: TokenBoardMetric[] = ["tokens", "cost", "sessions", "messages", "users", "lines"];
-const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["1D", "7D", "30D", "90D"];
+const PUBLIC_PROFILE_RANGES: TokenBoardRange[] = ["today", "1D", "7D", "30D", "90D"];
 const PUBLIC_PROFILE_DAILY_DAYS = 365;
 const PUBLIC_PROFILE_TOP_LIMIT = 8;
 const RATE_LIMIT_TEAM_STALE_SECONDS = 2 * 60 * 60;
@@ -2417,13 +2429,118 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
     sendJson(request, response, 400, { error: "Body must be a JSON object" });
     return;
   }
-  const userConfig = extractUserConfigFromIngestBody(body);
+  cleanupExpiredUsageReplaceStages();
+  const replace = (body as { replace?: unknown }).replace;
+  if (!replace || typeof replace !== "object" || Array.isArray(replace)) {
+    sendJson(request, response, 409, {
+      error: "Unsafe one-shot replacement is disabled. Upgrade token-board-agent and retry.",
+    });
+    return;
+  }
+
+  const command = replace as Record<string, unknown>;
+  const phase = normalizeOptionalText(typeof command.phase === "string" ? command.phase : undefined);
+  const replaceId = normalizeOptionalText(typeof command.replaceId === "string" ? command.replaceId : undefined);
+  if (!replaceId || !/^[a-zA-Z0-9-]{8,80}$/.test(replaceId)) {
+    sendJson(request, response, 400, { error: "replace.replaceId is invalid" });
+    return;
+  }
+  const stageKey = `${identity.userId}:${replaceId}`;
+  const store = usageStore();
+
+  if (phase === "abort") {
+    const aborted = usageReplaceStages.delete(stageKey);
+    sendJson(request, response, 200, { ok: true, aborted });
+    return;
+  }
+
+  if (phase === "start") {
+    const expectedEvents = Number(command.expectedEvents);
+    const digest = normalizeOptionalText(typeof command.digest === "string" ? command.digest : undefined);
+    if (!Number.isSafeInteger(expectedEvents) || expectedEvents <= 0) {
+      sendJson(request, response, 400, { error: "replace.expectedEvents must be a positive safe integer" });
+      return;
+    }
+    if (command.complete !== true) {
+      sendJson(request, response, 400, { error: "Incomplete collections cannot replace server history" });
+      return;
+    }
+    if (!digest || !/^sha256:[a-f0-9]{64}$/.test(digest)) {
+      sendJson(request, response, 400, { error: "replace.digest is invalid" });
+      return;
+    }
+
+    usageReplaceStages.set(stageKey, {
+      createdAt: Date.now(),
+      expectedEvents,
+      digest,
+      events: new Map(),
+      userConfig: extractUserConfigFromIngestBody(body),
+    });
+    sendJson(request, response, 200, { ok: true, staged: 0, expectedEvents });
+    return;
+  }
+
+  const stage = usageReplaceStages.get(stageKey);
+  if (!stage) {
+    sendJson(request, response, 409, { error: "Replacement stage is missing or expired; restart replace" });
+    return;
+  }
+
+  if (phase === "commit") {
+    const requestDigest = normalizeOptionalText(typeof command.digest === "string" ? command.digest : undefined);
+    const stagedEvents = [...stage.events.values()];
+    const actualDigest = tokenEventManifestDigest(stagedEvents);
+    if (
+      stagedEvents.length !== stage.expectedEvents ||
+      actualDigest !== stage.digest ||
+      (requestDigest && requestDigest !== stage.digest)
+    ) {
+      sendJson(request, response, 409, {
+        error: "Replacement manifest mismatch; old history was left untouched",
+        expectedEvents: stage.expectedEvents,
+        stagedEvents: stagedEvents.length,
+        expectedDigest: stage.digest,
+        actualDigest,
+      });
+      return;
+    }
+
+    const result = await store.replaceEventsForUser(identity.userId, stagedEvents);
+    if (stage.userConfig) {
+      await store.upsertUserConfig(
+        identity.userId,
+        await mergeUserConfigForIngest(store, identity.userId, stage.userConfig)
+      );
+    }
+    usageReplaceStages.delete(stageKey);
+    if (result.deleted > 0 || result.accepted > 0) {
+      queueLeaderboardSnapshotRefresh();
+    }
+    sendJson(request, response, 200, {
+      ok: true,
+      replaced: true,
+      ...result,
+      configUpdated: Boolean(stage.userConfig),
+      user: {
+        userId: identity.userId,
+        displayName: identity.displayName,
+        team: identity.team || "GitHub",
+      },
+    });
+    return;
+  }
+
+  if (phase !== "append") {
+    sendJson(request, response, 400, { error: "replace.phase must be start, append, commit, or abort" });
+    return;
+  }
+
   const rawEvents = Array.isArray((body as { events?: unknown }).events)
     ? ((body as { events: Parameters<typeof sanitizeIngestEvents>[0] }).events)
     : [];
-
-  if (!rawEvents.length && !userConfig) {
-    sendJson(request, response, 400, { error: "Body must include events[] or userConfig" });
+  if (!rawEvents.length) {
+    sendJson(request, response, 400, { error: "Append phase must include events[]" });
     return;
   }
 
@@ -2448,7 +2565,6 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
-  const store = usageStore();
   const batchValidationErrors = sanitized.entries.length
     ? validateNormalizedIngestEvents(sanitized.entries)
     : [];
@@ -2460,30 +2576,42 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
     return;
   }
 
-  if (userConfig) {
-    await store.upsertUserConfig(identity.userId, await mergeUserConfigForIngest(store, identity.userId, userConfig));
+  for (const event of sanitized.entries) {
+    stage.events.set(event.id, event);
   }
-  const deleted = sanitized.entries.length ? await store.deleteEventsForUser(identity.userId) : { deleted: 0, records: await store.countEvents() };
-  const inserted = await store.insertEvents(sanitized.entries);
-  if (deleted.deleted > 0 || inserted.accepted > 0) {
-    queueLeaderboardSnapshotRefresh();
+  stage.createdAt = Date.now();
+  if (stage.events.size > stage.expectedEvents) {
+    usageReplaceStages.delete(stageKey);
+    sendJson(request, response, 409, {
+      error: "Replacement contains more events than its manifest; old history was left untouched",
+    });
+    return;
   }
 
   sendJson(request, response, 200, {
     ok: true,
-    replaced: true,
-    deleted: deleted.deleted,
-    accepted: inserted.accepted,
-    duplicates: inserted.duplicates,
+    staged: stage.events.size,
+    expectedEvents: stage.expectedEvents,
+    accepted: sanitized.entries.length,
+    duplicates: rawEvents.length - sanitized.entries.length,
     errors: sanitized.errors,
-    configUpdated: Boolean(userConfig),
-    records: inserted.records,
-    user: {
-      userId: identity.userId,
-      displayName: identity.displayName,
-      team: identity.team || "GitHub",
-    },
   });
+}
+
+function cleanupExpiredUsageReplaceStages(now = Date.now()) {
+  for (const [key, stage] of usageReplaceStages) {
+    if (now - stage.createdAt > USAGE_REPLACE_STAGE_TTL_MS) {
+      usageReplaceStages.delete(key);
+    }
+  }
+}
+
+function tokenEventManifestDigest(events: TokenUsageEvent[]) {
+  const keys = events
+    .map((event) => event.upstreamEventId || event.id)
+    .sort()
+    .join("\n");
+  return `sha256:${createHash("sha256").update(keys).digest("hex")}`;
 }
 
 function extractUserConfigFromIngestBody(body: unknown) {
@@ -2611,12 +2739,6 @@ function validateRawIngestEvents(events: unknown[]) {
     if (linesWritten !== null && !Number.isInteger(linesWritten)) {
       errors.push(`第 ${index + 1} 条记录 linesWritten 必须是非负整数`);
     }
-
-    if (MAX_EVENT_TOTAL_TOKENS > 0 && computedTotalTokens > MAX_EVENT_TOTAL_TOKENS) {
-      errors.push(
-        `第 ${index + 1} 条记录 token 用量 ${computedTotalTokens} 超出单条上限 ${MAX_EVENT_TOTAL_TOKENS}`
-      );
-    }
   });
 
   return errors;
@@ -2680,10 +2802,6 @@ function validateNormalizedIngestEvents(entries: TokenUsageEvent[]) {
 
     if (event.interruptedCount !== undefined && event.interruptedCount !== null && event.interruptedCount > 1) {
       errors.push(`第 ${index + 1} 条记录 interruptedCount 只能是 0 或 1`);
-    }
-
-    if (MAX_EVENT_TOTAL_TOKENS > 0 && event.totalTokens > MAX_EVENT_TOTAL_TOKENS) {
-      errors.push(`第 ${index + 1} 条记录 token 用量 ${event.totalTokens} 超出单条上限 ${MAX_EVENT_TOTAL_TOKENS}`);
     }
   });
 
@@ -3438,7 +3556,6 @@ function ingestPrivacyOptions() {
     hashSessionId: process.env.TOKEN_BOARD_HASH_SESSION_ID !== "false",
     includeSessionTitle: process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE !== "false",
     maxEventAgeDays: positiveNumberEnv(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120),
-    maxEventTotalTokens: MAX_EVENT_TOTAL_TOKENS,
     // Comma-separated source blocklist; Trae is no longer supported, so both its
     // legacy raw source and the sampled variant are rejected by default.
     blockedSources: (process.env.TOKEN_BOARD_BLOCKED_SOURCES ?? "trae,trae-sampled")
@@ -3568,7 +3685,7 @@ function enforceAuthRateLimit(request: IncomingMessage, response: ServerResponse
 async function openTokenUsageStore() {
   return createTokenUsageStore({
     dataFile: DATA_FILE,
-    maxEvents: MAX_EVENTS,
+    fileRetentionEvents: FILE_RETENTION_EVENTS,
     databaseUrl: normalizeOptionalText(process.env.TOKEN_BOARD_DATABASE_URL) || normalizeOptionalText(process.env.DATABASE_URL),
     postgresSchema: normalizeOptionalText(process.env.TOKEN_BOARD_POSTGRES_SCHEMA) || "token_board",
     postgresSsl: process.env.TOKEN_BOARD_DATABASE_SSL === "true" ? { rejectUnauthorized: process.env.TOKEN_BOARD_DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" } : undefined,

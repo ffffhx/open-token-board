@@ -81,6 +81,7 @@ export const common = {
     tokenPerSession: "token/session",
   },
   ranges: {
+    today: "Today (Shanghai)",
     "1D": "Rolling 24 hours",
     "7D": "Rolling 7x24 hours",
     "30D": "Rolling 30x24 hours",

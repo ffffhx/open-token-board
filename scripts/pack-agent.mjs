@@ -10,14 +10,19 @@ const outputFile = path.join(publicDir, "token-board-agent.tgz");
 await fs.mkdir(publicDir, { recursive: true });
 await fs.rm(outputFile, { force: true });
 
-const result = spawnSync("npm", ["pack", "--pack-destination", publicDir], {
+const packageManagerScript = process.env.npm_execpath;
+const command = packageManagerScript ? process.execPath : "npm";
+const commandArgs = packageManagerScript
+  ? [packageManagerScript, "pack", "--pack-destination", publicDir]
+  : ["pack", "--pack-destination", publicDir];
+const result = spawnSync(command, commandArgs, {
   cwd: packageDir,
   encoding: "utf8",
   stdio: "pipe",
 });
 
 if (result.status !== 0) {
-  process.stderr.write(result.stderr || result.stdout);
+  process.stderr.write(result.stderr || result.stdout || result.error?.message || "package manager failed without output\n");
   process.exit(result.status ?? 1);
 }
 
@@ -27,5 +32,5 @@ if (!packedName) {
   throw new Error("npm pack did not report an output tarball");
 }
 
-await fs.rename(path.join(publicDir, packedName), outputFile);
+await fs.rename(path.isAbsolute(packedName) ? packedName : path.join(publicDir, packedName), outputFile);
 console.log(`Packed token-board-agent to ${path.relative(rootDir, outputFile)}`);

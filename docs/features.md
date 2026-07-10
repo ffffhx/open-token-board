@@ -4,7 +4,7 @@
 
 ## 榜单与个人看板
 
-榜单页 `/board` 读取 `GET /api/usage/stats`，支持 `1D`、`7D`、`30D`、`90D` 滚动窗口，`week`、`month`、`lastweek`、`lastmonth` 日历区间，以及 `from=YYYY-MM-DD&to=YYYY-MM-DD` 自定义区间。网页指标卡包括 `tokens`、`cost`、`sessions`、`users`、`lines`，服务端 API 还支持 `messages`。页面会展示总量、活跃人数、主力模型/工具、排行榜、趋势、效率指标和登录用户的个人消耗看板。
+榜单页 `/board` 读取 `GET /api/usage/stats`，支持 `today`（上海自然日），`1D`、`7D`、`30D`、`90D` 滚动窗口，`week`、`month`、`lastweek`、`lastmonth` 日历区间，以及 `from=YYYY-MM-DD&to=YYYY-MM-DD` 自定义区间。网页指标卡包括 `tokens`、`cost`、`sessions`、`users`、`lines`，服务端 API 还支持 `messages`。页面会展示总量、活跃人数、主力模型/工具、排行榜、趋势、效率指标和登录用户的个人消耗看板。
 
 使用方法：部署 API 后设置前端环境变量 `NEXT_PUBLIC_TOKEN_BOARD_API_URL=https://your-api`，打开 `/board`。点击时间范围和指标切换榜单；登录 GitHub 后，页面会额外读取 `/api/usage/me` 展示自己的排名、百分位、等级、徽章、PB、项目/会话/活跃热力图。
 
@@ -16,7 +16,7 @@
 
 ## 公开个人主页
 
-公开主页 `/u?login=xxx` 读取 `GET /api/usage/user?login=xxx`，不要求登录。服务端按 GitHub login 匹配用户事件，返回 365 天日序列、总量、模型/工具 Top8 和 `1D/7D/30D/90D` 排名。前端展示 GitHub 风格年度热力图、近 30 天趋势、模型/工具分布、用户分享卡和 Markdown 徽章复制入口。
+公开主页 `/u?login=xxx` 读取 `GET /api/usage/user?login=xxx`，不要求登录。服务端按 GitHub login 匹配用户事件，返回 365 天日序列、总量、模型/工具 Top8 和 `today/1D/7D/30D/90D` 排名。前端展示 GitHub 风格年度热力图、近 30 天趋势、模型/工具分布、用户分享卡和 Markdown 徽章复制入口。
 
 使用方法：从榜单用户名进入，或直接访问 `/u?login=github_login`。点击“生成分享卡”后可以保存 PNG 或复制图片；点击“复制徽章 Markdown”可得到 `[![Open Token Board](https://your-api/api/badge?login=github_login&style=weekly)](...)`。若 API 返回 404，说明当前后端还没有这个 login 的上报数据；徽章接口会返回 unknown SVG。
 
@@ -62,9 +62,9 @@ Open Token Board 的费用估算按四类 token 计算：普通输入、缓存�
 
 ## 上报校验
 
-服务端在 `/api/usage/ingest` 和 `/api/usage/replace` 入口做反作弊与误报保护：token 数必须是非负数，`totalTokens` 要与 `inputTokens + outputTokens` 自洽，缓存读写合计不能超过输入，`reasoningOutputTokens` 不能超过输出，时间不能超出允许范围，单事件默认上限 50,000,000 token，单用户单日默认上限 500,000,000 token。
+服务端在 `/api/usage/ingest` 和 `/api/usage/replace` 入口做误报保护：token 数必须是非负数，`totalTokens` 要与 `inputTokens + outputTokens` 自洽，缓存读写合计不能超过输入，`reasoningOutputTokens` 不能超过输出，质量计数必须是合法整数，时间不能超出允许范围。所有用户上报来源默认可信，不设置单事件或单用户单日的 token 总量上限。
 
-使用方法：正常使用 agent 不需要手动处理。自托管可通过 `TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS`、`TOKEN_BOARD_MAX_USER_DAILY_TOTAL_TOKENS`、`TOKEN_BOARD_MAX_EVENT_AGE_DAYS` 调整边界。若批次被拒，响应会返回 `errors[]` 指明第几条记录失败。
+使用方法：正常使用 agent 不需要手动处理。自托管可通过 `TOKEN_BOARD_MAX_EVENT_AGE_DAYS` 调整时间边界。若批次被拒，响应会返回 `errors[]` 指明第几条记录失败。
 
 ## 榜单图表
 
@@ -99,15 +99,15 @@ npx --yes token-board-agent statusline
 
 ## Agent 采集源
 
-agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。它会按文件 mtime 限制扫描窗口，按 inode 去重 Codex 多个 home 的硬链接，并维护上传 checkpoint 防止重复上报。
+agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。它会按文件 mtime 限制扫描窗口，按 inode 去重 Codex 多个 home 的硬链接，并维护上传 checkpoint 防止重复上报。Codex/Claude 不设文件数量上限；全量重同步只会在解析完整且事件数、摘要一致时原子替换旧历史。
 
-使用方法：运行 `npx --yes token-board-agent status` 查看各采集源发现了多少近期文件。用 `TOKEN_BOARD_USAGE_PATHS=/path/a,/path/b` 追加自定义目录；用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫自定义目录。
+使用方法：运行 `npx --yes token-board-agent status` 查看各采集源发现了多少近期文件。用 `TOKEN_BOARD_USAGE_PATHS=/path/a,/path/b` 追加自定义目录；用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫自定义目录。固定窗口对账可运行 `pnpm reconcile:usage -- --since YYYY-MM-DD --until YYYY-MM-DD`；传 `--kaboo export.json` 可加入 Kaboo 导出数据。窗口包含当天时，本地活跃日志仍会变化，应把差值视为快照漂移而非立即判错。
 
 ## API 一览
 
 通用参数：
 
-- `range`：`1D`、`7D`、`30D`、`90D`、`week`、`month`、`lastweek`、`lastmonth`，未传默认 `7D`。`GET /api/usage/stats` 还支持 `from`/`to` 自定义区间，最长 366 天。
+- `range`：`today`、`1D`、`7D`、`30D`、`90D`、`week`、`month`、`lastweek`、`lastmonth`，未传默认 `7D`。`today` 是上海自然日，`1D` 是滚动 24 小时。`GET /api/usage/stats` 还支持 `from`/`to` 自定义区间，最长 366 天。
 - `metric`：`tokens`、`cost`、`sessions`、`messages`、`users`、`lines`，未传默认 `tokens`。MCP 的 `get_leaderboard` 只开放 `tokens/cost/sessions/messages/lines`。
 - `now`：可选 ISO 时间，用于调试或回放；传入后多数榜单接口走 live 计算而不是快照缓存。
 - Web 登录：GitHub OAuth 成功后写入 `token_board_session` HttpOnly cookie。
@@ -144,7 +144,7 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。�
 | `GET` | `/api/usage/leaderboard` | Query `range`、`metric`、`limit`、`now` | 无 | 榜单 Top N，`limit` 范围 1 到 100，默认 50。 |
 | `GET` | `/api/usage/export` | Query `format=csv|json`、`scope=leaderboard|me`、`range`、`metric`、`now` | `leaderboard` 无；`me` 需要网页登录或 agent Bearer | 导出榜单或个人数据。 |
 | `POST` | `/api/usage/ingest` | JSON `{ events: [], userConfig }` | Agent Bearer 或 legacy token | 增量写入事件和用户配置。 |
-| `POST` | `/api/usage/replace` | JSON `{ events: [], userConfig }` | Agent Bearer 或 legacy token | 删除当前用户旧事件后写入本批事件；空事件只更新配置。 |
+| `POST` | `/api/usage/replace` | JSON `{ action, replacementId, ... }` | Agent Bearer 或 legacy token | 分阶段 `start/append/commit/abort` 全量同步；commit 校验数量与 SHA-256 后事务替换。旧版单请求替换返回 409，避免失败时清空历史。 |
 
 ## 常用环境变量
 
@@ -167,5 +167,4 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。�
 | `TOKEN_BOARD_PROJECT_MODE` | `basename` | 服务端项目名脱敏，支持 `basename/hash/none`。 |
 | `TOKEN_BOARD_INCLUDE_MODEL` / `TOKEN_BOARD_INCLUDE_SOURCE` / `TOKEN_BOARD_INCLUDE_SESSION_TITLE` | `true` | 服务端 ingest 隐私开关。 |
 | `TOKEN_BOARD_HASH_SESSION_ID` | `true` | 服务端默认 hash 会话 ID。 |
-| `TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS` | `50000000` | 单事件 token 上限。 |
-| `TOKEN_BOARD_MAX_USER_DAILY_TOTAL_TOKENS` | `500000000` | 单用户单日 token 上限。 |
+| `TOKEN_BOARD_FILE_RETENTION_EVENTS` | `0` | JSON 文件存储保留事件数；`0` 表示不截断。 |

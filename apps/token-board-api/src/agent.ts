@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 
@@ -9,11 +10,10 @@ import {
   type TokenBoardUploadUser,
 } from "@open-token-board/core/automation";
 import {
-  collectLocalTokenUsage,
   collectTokenBoardUserConfig,
   type TokenUsageCollectorConfig,
 } from "@open-token-board/core/collector";
-import { collectLocalTokenUsageViaAsc } from "@open-token-board/core/asc-collector";
+import { collectLocalTokenUsageViaAscWithReport } from "@open-token-board/core/asc-collector";
 import type { TokenBoardUserConfig } from "@open-token-board/core";
 
 type AgentConfig = TokenUsageCollectorConfig & {
@@ -34,7 +34,8 @@ type AgentState = {
 
 const DEFAULT_CONFIG_FILE = path.join(os.homedir(), ".token-board-agent.json");
 const DEFAULT_STATE_FILE = path.join(os.homedir(), ".token-board-agent-state.json");
-const AGENT_VERSION = "0.1.0";
+const AGENT_VERSION = "0.2.0";
+const COLLECTOR_SCHEMA_VERSION = 2;
 const INGEST_BATCH_SIZE = 1000;
 const FETCH_TIMEOUT_MS = readNumberEnv("TOKEN_BOARD_FETCH_TIMEOUT_MS", 30_000);
 const FETCH_MAX_RETRIES = readNonNegativeIntegerEnv(
@@ -108,35 +109,39 @@ async function main() {
   process.exitCode = 1;
 }
 
-// Full-history rewrite: POST the first batch to /api/usage/replace (the server
-// DELETES every event of this user, then inserts the batch), then stream the
-// remaining batches through the normal idempotent /api/usage/ingest. Use with a
-// collection window wide enough to cover everything worth keeping
-// (TOKEN_BOARD_SINCE_HOURS / TOKEN_BOARD_MAX_FILES / TOKEN_BOARD_MAX_FILE_BYTES) —
-// server-side history outside the freshly collected set is gone afterwards.
+// Safe full-window rewrite: stage every batch on the server, verify the manifest,
+// then atomically swap this user's history. No delete happens before commit.
 async function replaceAll(config: AgentConfig) {
-  const collected = await collectAndSanitize(config);
+  const report = await collectAndSanitizeWithReport(config, { fullHistory: true });
+  const collected = report.events;
   if (!collected.length) {
     throw new Error("Refusing to replace server history with an EMPTY collection; check collector config.");
+  }
+  if (!report.complete) {
+    throw new Error(
+      `Refusing to replace from an incomplete scan: ${report.parseFailures.length} files failed to parse.`
+    );
   }
 
   const userConfig = await collectCurrentUserConfig();
   const batches = chunkEvents(collected, INGEST_BATCH_SIZE);
-  logInfo(`Replacing server history with ${collected.length} freshly collected events (${batches.length} batches).`);
+  const replaceId = randomUUID();
+  const digest = eventIdDigest(collected);
+  logInfo(`Staging ${collected.length} events for atomic replacement (${batches.length} batches).`);
 
-  const first = await postReplace(config, batches[0], userConfig);
-  logInfo(`Replace batch 1/${batches.length}: deleted=${first.deleted ?? "?"} accepted=${first.accepted}`);
-
-  const result = { accepted: first.accepted ?? 0, duplicates: first.duplicates ?? 0, records: first.records ?? 0 };
-  for (let index = 1; index < batches.length; index += 1) {
-    const batchResult = await postIngest(config, batches[index], null);
-    result.accepted += batchResult.accepted;
-    result.duplicates += batchResult.duplicates;
-    result.records = batchResult.records;
+  await postReplacePhase(config, "start", replaceId, [], {
+    expectedEvents: collected.length,
+    digest,
+    complete: true,
+    userConfig,
+  });
+  for (let index = 0; index < batches.length; index += 1) {
+    await postReplacePhase(config, "append", replaceId, batches[index]);
     if (index % 10 === 0 || index === batches.length - 1) {
-      logInfo(`Ingest batch ${index + 1}/${batches.length}: accepted so far=${result.accepted}`);
+      logInfo(`Staged replace batch ${index + 1}/${batches.length}.`);
     }
   }
+  const result = await postReplacePhase(config, "commit", replaceId, [], { digest });
 
   await writeState(config.stateFile, {
     apiUrl: config.apiUrl,
@@ -151,10 +156,17 @@ async function replaceAll(config: AgentConfig) {
   return result;
 }
 
-async function postReplace(
+async function postReplacePhase(
   config: AgentConfig,
+  phase: "start" | "append" | "commit" | "abort",
+  replaceId: string,
   events: Awaited<ReturnType<typeof collectAndSanitize>>,
-  userConfig?: TokenBoardUserConfig | null
+  options: {
+    expectedEvents?: number;
+    digest?: string;
+    complete?: boolean;
+    userConfig?: TokenBoardUserConfig | null;
+  } = {}
 ) {
   const bearerToken = config.agentToken || config.uploadToken;
 
@@ -168,7 +180,16 @@ async function postReplace(
       Authorization: `Bearer ${bearerToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(createIngestPayload(events, clientInfo(), userConfig)),
+    body: JSON.stringify({
+      ...createIngestPayload(events, clientInfo(), options.userConfig),
+      replace: {
+        phase,
+        replaceId,
+        ...(options.expectedEvents !== undefined ? { expectedEvents: options.expectedEvents } : {}),
+        ...(options.digest ? { digest: options.digest } : {}),
+        ...(options.complete !== undefined ? { complete: options.complete } : {}),
+      },
+    }),
   }, "Replace") as Promise<{ accepted: number; duplicates: number; records: number; deleted?: number }>;
 }
 
@@ -225,13 +246,19 @@ function uploadStateMatchesConfig(state: AgentState, config: AgentConfig) {
 }
 
 export async function collectAndSanitize(config: AgentConfig) {
-  // Default to the agent-session-core collector: it dedups duplicate content-block
-  // rows the legacy collector double-counts (~2.2x on Claude) and keeps >5MB sessions
-  // the legacy collector silently drops. Set TOKEN_BOARD_COLLECTOR=legacy to roll back.
-  const useLegacy = process.env.TOKEN_BOARD_COLLECTOR === "legacy";
-  const rawEvents = useLegacy
-    ? await collectLocalTokenUsage(config)
-    : await collectLocalTokenUsageViaAsc(config);
+  return (await collectAndSanitizeWithReport(config)).events;
+}
+
+async function collectAndSanitizeWithReport(config: AgentConfig, options: { fullHistory?: boolean } = {}) {
+  const maxEventAgeDays = config.privacy.maxEventAgeDays ?? 120;
+  const collectionConfig = options.fullHistory
+    ? { ...config, sinceHours: maxEventAgeDays * 24 + 1, maxFiles: undefined, maxFileBytes: undefined }
+    : config;
+  const report = await collectLocalTokenUsageViaAscWithReport(collectionConfig);
+  const minTimestamp = Date.now() - maxEventAgeDays * 24 * 60 * 60 * 1000;
+  const rawEvents = options.fullHistory
+    ? report.events.filter((event) => new Date(event.timestamp).getTime() >= minTimestamp)
+    : report.events;
   const user: TokenBoardUploadUser = {
     userId: config.userId || "local",
     displayName: config.displayName || config.userId || os.userInfo().username || "Local User",
@@ -244,7 +271,11 @@ export async function collectAndSanitize(config: AgentConfig) {
     console.warn(`Skipped ${sanitized.errors.length} events: ${sanitized.errors.slice(0, 3).join("; ")}`);
   }
 
-  return sanitized.entries;
+  return {
+    ...report,
+    events: sanitized.entries,
+    complete: report.complete && sanitized.errors.length === 0,
+  };
 }
 
 export async function loadAgentConfig(): Promise<AgentConfig> {
@@ -269,8 +300,10 @@ export async function loadAgentConfig(): Promise<AgentConfig> {
     usagePaths,
     includeDefaultSources: readBooleanEnv("TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES", readBoolean(fileConfig.includeDefaultSources, true)),
     sinceHours: readNumberEnv("TOKEN_BOARD_SINCE_HOURS", readNumber(fileConfig.sinceHours, 24 * 30)),
-    maxFiles: readNumberEnv("TOKEN_BOARD_MAX_FILES", readNumber(fileConfig.maxFiles, 800)),
-    maxFileBytes: readNumberEnv("TOKEN_BOARD_MAX_FILE_BYTES", readNumber(fileConfig.maxFileBytes, 5 * 1024 * 1024)),
+    // Kept in the config shape for backwards compatibility, but ASC deliberately
+    // does not use file-count/size limits as semantic scan limits.
+    maxFiles: undefined,
+    maxFileBytes: undefined,
     intervalMs: readNumberEnv("TOKEN_BOARD_INTERVAL_MS", readNumber(fileConfig.intervalMs, 5 * 60 * 1000)),
     stateFile: readStringEnv("TOKEN_BOARD_AGENT_STATE_FILE") || readString(fileConfig.stateFile) || DEFAULT_STATE_FILE,
     privacy: {
@@ -685,9 +718,15 @@ function clientInfo() {
   return {
     name: "token-usage-agent",
     version: AGENT_VERSION,
+    collectorSchemaVersion: COLLECTOR_SCHEMA_VERSION,
     hostId: os.hostname(),
     platform: os.platform(),
   };
+}
+
+function eventIdDigest(events: Array<{ id: string; upstreamEventId?: string }>) {
+  const keys = events.map((event) => event.upstreamEventId || event.id).sort().join("\n");
+  return `sha256:${createHash("sha256").update(keys).digest("hex")}`;
 }
 
 function collectCurrentUserConfig() {

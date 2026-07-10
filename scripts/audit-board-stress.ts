@@ -181,8 +181,6 @@ async function startStressApi({ allowedOrigins }: { allowedOrigins: string[] }):
       SNAPSHOT_SHARE_DATA_FILE: sharesFile,
       TOKEN_BOARD_ALLOWED_ORIGINS: allowedOrigins.join(","),
       TOKEN_BOARD_USERS_JSON: usersJson,
-      TOKEN_BOARD_MAX_EVENT_TOTAL_TOKENS: "1000000",
-      TOKEN_BOARD_MAX_USER_DAILY_TOTAL_TOKENS: "10000000",
       TOKEN_BOARD_MAX_EVENT_AGE_DAYS: "400",
       TOKEN_BOARD_DAILY_REPORT_ENABLED: "false",
       TOKEN_BOARD_WEEKLY_REPORT_ENABLED: "false",
