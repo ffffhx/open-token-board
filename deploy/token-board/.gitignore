@@ -1,0 +1,8 @@
+# Runtime data volume (mounted at /data in the container). Holds usage events,
+# leaderboard snapshots, snapshot shares, and private-blog HTML. NONE of this is
+# source — and private-blog/*.html are hidden posts that must never be committed
+# to this public repo. Keep the whole data dir out of git.
+data/
+
+node_modules/
+.env

@@ -105,6 +105,13 @@ const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOAR
 const LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS, 5_000);
 const SNAPSHOT_SHARE_DATA_FILE =
   process.env.SNAPSHOT_SHARE_DATA_FILE || path.join(process.cwd(), ".token-board", "snapshot-shares.json");
+// Directory holding pre-rendered private-blog HTML files (one per slug). These
+// are hidden posts exported from the garden-lab site and served here behind a
+// GitHub-login gate, since the public GitHub Pages build can't do server-side
+// auth. Files live under the mounted data volume — never committed to this
+// public repo.
+const PRIVATE_BLOG_DIR =
+  process.env.TOKEN_BOARD_PRIVATE_BLOG_DIR || path.join(path.dirname(DATA_FILE), "private-blog");
 const MAX_SNAPSHOT_SHARE_BODY_BYTES = positiveNumberEnv(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES, 24 * 1024 * 1024);
 const MAX_SELECTION_EXPLAIN_BODY_BYTES = positiveNumberEnv(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES, 16 * 1024);
 const MAX_ARTICLE_CHAT_BODY_BYTES = positiveNumberEnv(process.env.ARTICLE_CHAT_MAX_BODY_BYTES, 128 * 1024);
@@ -135,6 +142,7 @@ function booleanEnv(value: string | undefined, fallback: "true" | "false") {
 }
 const DEFAULT_SELECTION_EXPLAIN_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const DEFAULT_BENCHMARK_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
+const DEFAULT_PRIVATE_BLOG_ALLOWED_GITHUB_LOGINS = ["ffffhx"];
 const SESSION_COOKIE_NAME = "token_board_session";
 const WEB_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_WEB_SESSION_TTL_SECONDS || 30 * 24 * 60 * 60);
 const AGENT_SESSION_TTL_SECONDS = Number(process.env.TOKEN_BOARD_AGENT_SESSION_TTL_SECONDS || 180 * 24 * 60 * 60);
@@ -462,6 +470,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
           }
         : null,
     });
+    return;
+  }
+
+  if (request.method === "GET" && privateBlogSlugFromPath(url.pathname)) {
+    await handlePrivateBlog(request, response, privateBlogSlugFromPath(url.pathname));
     return;
   }
 
@@ -3073,6 +3086,60 @@ async function handleGithubStart(request: IncomingMessage, response: ServerRespo
   redirect(response, `https://github.com/login/oauth/authorize?${params.toString()}`);
 }
 
+// The public path prefix the reverse proxy mounts this server under, e.g.
+// "/token-board" (from TOKEN_BOARD_PUBLIC_URL). The proxy strips it before the
+// request reaches us (we only ever see "/api/..."), so any self-referential
+// URL we hand back to the browser must re-add it. Empty when served at root.
+function publicPathPrefix(request: IncomingMessage) {
+  try {
+    const pathname = new URL(publicBaseUrl(request)).pathname.replace(/\/+$/, "");
+    return pathname === "/" ? "" : pathname;
+  } catch {
+    return "";
+  }
+}
+
+async function handlePrivateBlog(request: IncomingMessage, response: ServerResponse, slug: string) {
+  const identity = readWebIdentity(request);
+
+  // Not logged in → bounce through GitHub OAuth, returning to this same page.
+  // returnTo must be a same-site RELATIVE path (sanitizeReturnTo rejects
+  // non-allowlisted absolute origins); we re-add the proxy prefix so the
+  // browser resolves it back to .../token-board/api/blog/<slug>.
+  if (!identity) {
+    const returnTo = `${publicPathPrefix(request)}/api/blog/${slug}`;
+    redirect(
+      response,
+      `${publicBaseUrl(request)}/api/auth/github/start?returnTo=${encodeURIComponent(returnTo)}`
+    );
+    return;
+  }
+
+  // Logged in but not the owner → 403, no content leaked.
+  if (!isGithubIdentityAllowed(identity, privateBlogAllowedGithubLogins())) {
+    sendHtml(
+      request,
+      response,
+      403,
+      `<!DOCTYPE html><meta charset="utf-8"><title>仅作者可见</title><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:20vh auto;text-align:center;color:#333"><h1 style="font-size:1.4rem">仅作者可见</h1><p>这篇文章只对作者本人开放。</p></body>`
+    );
+    return;
+  }
+
+  const file = path.join(PRIVATE_BLOG_DIR, `${slug}.html`);
+  try {
+    const html = await fs.readFile(file, "utf8");
+    sendHtml(request, response, 200, html);
+  } catch {
+    sendHtml(
+      request,
+      response,
+      404,
+      `<!DOCTYPE html><meta charset="utf-8"><title>未找到</title><body style="font-family:system-ui,sans-serif;max-width:32rem;margin:20vh auto;text-align:center;color:#333"><h1 style="font-size:1.4rem">未找到这篇文章</h1></body>`
+    );
+  }
+}
+
 async function handleGithubCallback(request: IncomingMessage, response: ServerResponse, url: URL) {
   const code = url.searchParams.get("code");
   const state = verifyOAuthState(url.searchParams.get("state") || "", authSecret());
@@ -3237,6 +3304,14 @@ async function readJsonBody(request: IncomingMessage, maxBytes = MAX_BODY_BYTES)
 function snapshotShareIdFromPath(pathname: string) {
   const match = pathname.match(/^\/api\/snapshots\/([^/]+)$/);
   return match?.[1] ? decodeURIComponent(match[1]) : "";
+}
+
+// Slug of a gated private-blog request, e.g. /api/blog/resume-interview-handbook.
+// The character class ([a-z0-9-]) intentionally excludes "/" and ".", so path
+// traversal (../, absolute paths) can never reach the file read below.
+function privateBlogSlugFromPath(pathname: string) {
+  const match = pathname.match(/^\/api\/blog\/([a-z0-9-]+)$/);
+  return match?.[1] || "";
 }
 
 function createSnapshotShareId() {
@@ -3596,6 +3671,19 @@ function benchmarkAllowedGithubLogins() {
     .filter(Boolean);
 
   return logins.length ? logins : DEFAULT_BENCHMARK_ALLOWED_GITHUB_LOGINS;
+}
+
+function privateBlogAllowedGithubLogins() {
+  const logins = (
+    process.env.TOKEN_BOARD_PRIVATE_BLOG_ALLOWED_GITHUB_LOGINS ||
+    process.env.TOKEN_BOARD_ALLOWED_GITHUB_LOGINS ||
+    ""
+  )
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return logins.length ? logins : DEFAULT_PRIVATE_BLOG_ALLOWED_GITHUB_LOGINS;
 }
 
 function allowedReturnOrigins(request: IncomingMessage) {
@@ -4535,6 +4623,15 @@ function sendCsv(request: IncomingMessage, response: ServerResponse, status: num
     "Cache-Control": "no-store",
   });
   response.end(csv);
+}
+
+function sendHtml(request: IncomingMessage, response: ServerResponse, status: number, html: string) {
+  applyCors(request, response);
+  response.writeHead(status, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  response.end(html);
 }
 
 function sendSvg(request: IncomingMessage, response: ServerResponse, status: number, svg: string) {
