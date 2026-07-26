@@ -1,9 +1,27 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 
 import { I18nProvider } from "@/i18n";
 import { zh } from "@/i18n/dictionaries/zh";
 
 import "./globals.css";
+
+// Latin-only subsets: CJK text intentionally falls back to the system stack.
+const spaceGrotesk = localFont({
+  src: "./fonts/space-grotesk-latin-var.woff2",
+  weight: "300 700",
+  display: "swap",
+  variable: "--font-space-grotesk",
+});
+
+const spaceMono = localFont({
+  src: [
+    { path: "./fonts/space-mono-latin-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/space-mono-latin-700.woff2", weight: "700", style: "normal" },
+  ],
+  display: "swap",
+  variable: "--font-space-mono",
+});
 
 const SITE_URL = "https://ffffhx.github.io/open-token-board/";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -13,8 +31,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#edf2f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b1220" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f1ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#171412" },
   ],
 };
 
@@ -51,7 +69,7 @@ const themeScript = `(function(){try{var s=localStorage.getItem('theme');var d=s
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>

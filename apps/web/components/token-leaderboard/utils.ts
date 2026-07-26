@@ -647,26 +647,26 @@ export function rankDeltaTone(value: number | null) {
 
 export function heatColor(intensity: number) {
   if (intensity <= 0) {
-    return "#f1f5f9";
+    return "#f2efe9";
   }
 
   if (intensity < 0.18) {
-    return "#dbeafe";
+    return "#fbe3cf";
   }
 
   if (intensity < 0.38) {
-    return "#bfdbfe";
+    return "#f7c096";
   }
 
   if (intensity < 0.62) {
-    return "#93c5fd";
+    return "#ee9258";
   }
 
   if (intensity < 0.82) {
-    return "#60a5fa";
+    return "#dd6524";
   }
 
-  return "#2563eb";
+  return "#b6410f";
 }
 
 export function formatShortDate(value: string) {

@@ -79,7 +79,7 @@ export const common = {
     tokenPerSession: "token/session",
   },
   ranges: {
-    today: "今天（上海自然日）",
+    today: "今天",
     "1D": "滚动 24 小时",
     "7D": "滚动 7x24 小时",
     "30D": "滚动 30x24 小时",
