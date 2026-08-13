@@ -5,6 +5,7 @@ const { expect, test } = require("@playwright/test");
 
 const SESSION_COOKIE_NAME = "token_board_session";
 const e2eStatePath = path.resolve(__dirname, "..", ".tmp", "e2e-state.json");
+const testAvatarPath = path.resolve(__dirname, "../../apps/web/public/icons/icon-192.png");
 
 let state;
 
@@ -13,6 +14,12 @@ test.beforeAll(async () => {
 });
 
 test.beforeEach(async ({ context }) => {
+  await context.route(/^https:\/\/github\.com\/[^/?#]+\.png(?:\?.*)?$/, (route) =>
+    route.fulfill({
+      path: testAvatarPath,
+      contentType: "image/png",
+    })
+  );
   await context.addCookies([
     {
       name: SESSION_COOKIE_NAME,
