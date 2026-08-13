@@ -65,6 +65,7 @@ export async function startTokenBoardHarness(options: { allowedOrigins?: string[
       TOKEN_BOARD_LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS: "50",
       SNAPSHOT_SHARE_DATA_FILE: sharesFile,
       TOKEN_BOARD_ALLOWED_ORIGINS: options.allowedOrigins?.join(",") || "*",
+      TOKEN_BOARD_BENCHMARK_ALLOWED_GITHUB_LOGINS: fixture.primaryLogin,
       TOKEN_BOARD_USERS_JSON: fixture.usersJson,
       TOKEN_BOARD_MAX_EVENT_AGE_DAYS: "400",
       TOKEN_BOARD_DAILY_REPORT_ENABLED: "false",

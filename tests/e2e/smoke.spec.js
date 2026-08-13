@@ -64,6 +64,14 @@ const smokePages = [
     },
   },
   {
+    name: "legacy claude limits",
+    path: () => "/claude-limits/",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("heading", { name: "Claude Code 额度面板" })).toBeVisible();
+      await expect(page.getByRole("tab", { name: "Claude Code" })).toHaveAttribute("aria-selected", "true");
+    },
+  },
+  {
     name: "wrapped",
     path: (state) => `/wrapped/?login=${state.primaryLogin}&period=${state.currentMonthPeriod}`,
     assertVisible: async (page, state) => {
@@ -77,6 +85,31 @@ const smokePages = [
     assertVisible: async (page) => {
       await expect(page.getByRole("button", { name: /保存为图片/ })).toBeVisible();
       await expect(page.getByRole("link", { name: /查看完整榜单/ })).toBeVisible();
+    },
+  },
+  {
+    name: "benchmark comparison",
+    path: () => "/bench/",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("link", { name: "对比总览" })).toHaveAttribute("aria-current", "page");
+      await expect(page.getByRole("heading", { name: "逐题对比" })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "UI 还原对比" })).toBeVisible();
+    },
+  },
+  {
+    name: "codex benchmark",
+    path: () => "/bench/codex/",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("heading", { name: "Codex 智商与速度评测" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Codex 评测" })).toHaveAttribute("aria-current", "page");
+    },
+  },
+  {
+    name: "claude benchmark",
+    path: () => "/bench/claude/",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("heading", { name: "Claude Code 智商与速度评测" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Claude Code 评测" })).toHaveAttribute("aria-current", "page");
     },
   },
 ];
@@ -142,6 +175,47 @@ test("/board can switch to code-line metric and shows personal line cards", asyn
   await expect(page.locator("#token-leaderboard-rankings")).toContainText("128");
   await expect(page.getByText("写入行数").first()).toBeVisible();
   await expect(page.getByText("当前区间成功写入 128 行").first()).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+test("/limits switches between Codex, Claude Code, and team snapshots", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, "/limits/", "light");
+
+  await expect(page.getByRole("tab", { name: "Codex" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Codex 额度面板" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Claude Code" }).click();
+  await expect(page.getByRole("tab", { name: "Claude Code" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "Claude Code 额度面板" })).toBeVisible();
+
+  const teamResponse = page.waitForResponse((response) =>
+    response.url().includes("/api/usage/rate-limits/team") && response.ok()
+  );
+  await page.getByRole("tab", { name: "团队" }).click();
+  await teamResponse;
+  await expect(page.getByRole("tab", { name: "团队" })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("heading", { name: "团队额度墙" })).toBeVisible();
+  await expect(page.getByText(state.primaryLogin).first()).toBeVisible();
+  await expect(page.getByText("bob-cache").first()).toBeVisible();
+  expect(cleanConsoleErrors(errors)).toEqual([]);
+});
+
+test("language and theme persist across app navigation", async ({ page }) => {
+  const errors = trackConsoleErrors(page);
+  await gotoApp(page, "/board/", "light");
+
+  await page.getByRole("button", { name: "切换语言: English" }).click();
+  await expect(page.getByRole("navigation", { name: "Page navigation" })).toBeVisible();
+  await page.getByRole("switch", { name: "Switch to dark mode" }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+
+  await page.getByRole("link", { name: "Report", exact: true }).click();
+  await expect(page).toHaveURL(/\/card\/?$/);
+  await expect(page.getByRole("button", { name: "Save image" })).toBeVisible();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("open-token-board:language"))).toBe("en");
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("theme"))).toBe("dark");
   expect(cleanConsoleErrors(errors)).toEqual([]);
 });
 
