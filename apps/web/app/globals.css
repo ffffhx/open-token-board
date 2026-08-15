@@ -1,6 +1,14 @@
 @import "tailwindcss";
 
 @theme {
+  /* Display face for headlines & hero numerals; CJK falls back to system. */
+  --font-display: var(--font-space-grotesk), "Space Grotesk", ui-sans-serif, system-ui,
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  /* All `font-mono` badges, numbers and meta lines use the meter-print face. */
+  --font-mono: var(--font-space-mono), "Space Mono", ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
   --color-otb-page: var(--page);
   --color-otb-surface: var(--surface);
   --color-otb-surface-muted: var(--surface-muted);
@@ -15,30 +23,66 @@
   --shadow-otb-lift: var(--otb-shadow-lift);
 }
 
+/*
+ * Light theme — "Ember scoreboard".
+ *
+ * Tokens are fuel: the accent system runs on a heat ramp (rose -> ember ->
+ * amber) instead of the old blue/violet/cyan, and the neutral chrome is a warm
+ * porcelain/ink pairing. Like `.dark` below, the light theme re-points the
+ * Tailwind palette ramps that carry semantic roles across the app:
+ * `slate-*` (chrome neutrals) becomes a warm gray scale, and `blue-*` (the
+ * accent role: hovers, rings, live badges) becomes the ember ramp. Cool ramps
+ * used purely as data colors (sky, emerald) are left untouched as counterpoints.
+ */
 :root {
   color-scheme: light;
-  --surface: #ffffff;
-  --surface-muted: #f5f7fb;
-  --page: #edf2f8;
-  --ink: #0b1220;
-  --muted: #4b5870;
-  --accent: #2f5bff;
-  --otb-energy: #2f5bff;
-  --otb-energy-strong: #8a3ffc;
-  --otb-energy-cyan: #00b8d9;
-  --otb-energy-soft: #e7edff;
-  --otb-energy-gradient: linear-gradient(135deg, #2f5bff 0%, #8a3ffc 52%, #00b8d9 100%);
-  --otb-energy-gradient-subtle: linear-gradient(135deg, rgba(47, 91, 255, 0.12), rgba(138, 63, 252, 0.1) 52%, rgba(0, 184, 217, 0.12));
+
+  --color-slate-50: oklch(97.6% 0.003 80);
+  --color-slate-100: oklch(95.2% 0.004 80);
+  --color-slate-200: oklch(90.5% 0.006 78);
+  --color-slate-300: oklch(84% 0.008 74);
+  --color-slate-400: oklch(66.5% 0.012 70);
+  --color-slate-500: oklch(52.5% 0.014 64);
+  --color-slate-600: oklch(43.5% 0.014 60);
+  --color-slate-700: oklch(36.5% 0.013 56);
+  --color-slate-800: oklch(27.5% 0.012 52);
+  --color-slate-900: oklch(21.5% 0.011 48);
+  --color-slate-950: oklch(14.5% 0.01 46);
+
+  --color-blue-50: oklch(96.8% 0.018 55);
+  --color-blue-100: oklch(93.5% 0.035 52);
+  --color-blue-200: oklch(87.5% 0.065 48);
+  --color-blue-300: oklch(79.5% 0.105 45);
+  --color-blue-400: oklch(70% 0.155 41);
+  --color-blue-500: oklch(62.5% 0.185 38);
+  --color-blue-600: oklch(55.5% 0.19 35);
+  --color-blue-700: oklch(48.5% 0.165 33);
+  --color-blue-800: oklch(41.5% 0.135 32);
+  --color-blue-900: oklch(36% 0.105 32);
+  --color-blue-950: oklch(25.5% 0.075 31);
+
+  --surface: oklch(99.2% 0.003 85);
+  --surface-muted: oklch(96.6% 0.005 80);
+  --page: oklch(95.6% 0.007 78);
+  --ink: oklch(21% 0.012 50);
+  --muted: oklch(45% 0.015 58);
+  --accent: oklch(55.5% 0.19 35);
+  --otb-energy: oklch(55.5% 0.19 35);
+  --otb-energy-strong: oklch(54% 0.2 18);
+  --otb-energy-cyan: oklch(66% 0.15 68);
+  --otb-energy-soft: oklch(94.5% 0.03 50);
+  --otb-energy-gradient: linear-gradient(135deg, oklch(56% 0.21 20) 0%, oklch(60% 0.19 40) 52%, oklch(70% 0.15 68) 100%);
+  --otb-energy-gradient-subtle: linear-gradient(135deg, oklch(56% 0.21 20 / 0.1), oklch(60% 0.19 40 / 0.09) 52%, oklch(70% 0.15 68 / 0.12));
   --otb-gold: #b86b00;
   --otb-gold-soft: #fff4cc;
-  --otb-silver: #607086;
-  --otb-silver-soft: #eef3f8;
+  --otb-silver: #6d7382;
+  --otb-silver-soft: #f0f1f3;
   --otb-bronze: #a4571c;
   --otb-bronze-soft: #fff0e4;
-  --otb-border: rgba(11, 18, 32, 0.1);
-  --otb-border-strong: rgba(11, 18, 32, 0.16);
-  --otb-shadow-card: 0 18px 45px rgba(15, 23, 42, 0.08);
-  --otb-shadow-lift: 0 22px 55px rgba(47, 91, 255, 0.16);
+  --otb-border: oklch(25% 0.02 50 / 0.1);
+  --otb-border-strong: oklch(25% 0.02 50 / 0.17);
+  --otb-shadow-card: 0 18px 45px oklch(30% 0.04 50 / 0.08);
+  --otb-shadow-lift: 0 22px 55px oklch(55.5% 0.19 35 / 0.16);
   --otb-radius-card: 0.5rem;
   --otb-radius-control: 0.625rem;
   --otb-transition-duration: 180ms;
@@ -63,21 +107,21 @@
 .dark {
   color-scheme: dark;
 
-  /* Surfaces & ink (hand-tuned so cards read above the page). */
-  --color-white: oklch(17.8% 0.012 256);
-  --color-black: oklch(98.4% 0.003 247.858);
+  /* Surfaces & ink (hand-tuned so cards read above the page); warm charcoal. */
+  --color-white: oklch(18.2% 0.006 55);
+  --color-black: oklch(98.4% 0.002 80);
 
-  --color-slate-50: oklch(12.9% 0.042 264.695);
-  --color-slate-100: oklch(20.8% 0.042 265.755);
-  --color-slate-200: oklch(27.9% 0.041 260.031);
-  --color-slate-300: oklch(37.2% 0.044 257.287);
-  --color-slate-400: oklch(44.6% 0.043 257.281);
-  --color-slate-500: oklch(55.4% 0.046 257.417);
-  --color-slate-600: oklch(70.4% 0.04 256.788);
-  --color-slate-700: oklch(86.9% 0.022 252.894);
-  --color-slate-800: oklch(92.9% 0.013 255.508);
-  --color-slate-900: oklch(96.8% 0.007 247.896);
-  --color-slate-950: oklch(98.4% 0.003 247.858);
+  --color-slate-50: oklch(13.2% 0.006 55);
+  --color-slate-100: oklch(20.8% 0.008 56);
+  --color-slate-200: oklch(28% 0.009 57);
+  --color-slate-300: oklch(37.2% 0.01 58);
+  --color-slate-400: oklch(44.6% 0.011 60);
+  --color-slate-500: oklch(55.4% 0.012 62);
+  --color-slate-600: oklch(70.4% 0.012 66);
+  --color-slate-700: oklch(86.9% 0.008 72);
+  --color-slate-800: oklch(92.9% 0.005 76);
+  --color-slate-900: oklch(96.8% 0.003 80);
+  --color-slate-950: oklch(98.4% 0.002 84);
   --color-stone-50: oklch(14.7% 0.004 49.25);
   --color-stone-100: oklch(21.6% 0.006 56.043);
   --color-stone-200: oklch(26.8% 0.007 34.298);
@@ -89,17 +133,17 @@
   --color-stone-800: oklch(92.3% 0.003 48.717);
   --color-stone-900: oklch(97% 0.001 106.424);
   --color-stone-950: oklch(98.5% 0.001 106.423);
-  --color-blue-50: oklch(28.2% 0.091 267.935);
-  --color-blue-100: oklch(37.9% 0.146 265.522);
-  --color-blue-200: oklch(42.4% 0.199 265.638);
-  --color-blue-300: oklch(48.8% 0.243 264.376);
-  --color-blue-400: oklch(54.6% 0.245 262.881);
-  --color-blue-500: oklch(62.3% 0.214 259.815);
-  --color-blue-600: oklch(70.7% 0.165 254.624);
-  --color-blue-700: oklch(80.9% 0.105 251.813);
-  --color-blue-800: oklch(88.2% 0.059 254.128);
-  --color-blue-900: oklch(93.2% 0.032 255.585);
-  --color-blue-950: oklch(97% 0.014 254.604);
+  --color-blue-50: oklch(27% 0.055 40);
+  --color-blue-100: oklch(37% 0.09 40);
+  --color-blue-200: oklch(42.5% 0.115 40);
+  --color-blue-300: oklch(49% 0.145 40);
+  --color-blue-400: oklch(55% 0.17 40);
+  --color-blue-500: oklch(62.5% 0.185 40);
+  --color-blue-600: oklch(70.5% 0.155 45);
+  --color-blue-700: oklch(80.5% 0.105 52);
+  --color-blue-800: oklch(88% 0.06 58);
+  --color-blue-900: oklch(93.5% 0.032 62);
+  --color-blue-950: oklch(97% 0.014 68);
   --color-amber-50: oklch(27.9% 0.077 45.635);
   --color-amber-100: oklch(41.4% 0.112 45.904);
   --color-amber-200: oklch(47.3% 0.137 46.201);
@@ -168,28 +212,28 @@
   --color-violet-950: oklch(96.9% 0.016 293.756);
 
   /* Semantic tokens consumed directly in this file. */
-  --surface: oklch(17.8% 0.012 256);
-  --surface-muted: oklch(13.5% 0.02 256);
-  --page: oklch(11% 0.015 256);
-  --ink: oklch(96% 0.005 247);
-  --muted: oklch(73% 0.034 257);
-  --accent: oklch(72% 0.18 266);
-  --otb-energy: oklch(72% 0.18 266);
-  --otb-energy-strong: oklch(73% 0.2 302);
-  --otb-energy-cyan: oklch(78% 0.16 205);
-  --otb-energy-soft: oklch(24% 0.08 268);
-  --otb-energy-gradient: linear-gradient(135deg, oklch(72% 0.18 266) 0%, oklch(73% 0.2 302) 52%, oklch(78% 0.16 205) 100%);
-  --otb-energy-gradient-subtle: linear-gradient(135deg, oklch(72% 0.18 266 / 0.18), oklch(73% 0.2 302 / 0.14) 52%, oklch(78% 0.16 205 / 0.16));
+  --surface: oklch(18.2% 0.006 55);
+  --surface-muted: oklch(13.8% 0.008 55);
+  --page: oklch(11.2% 0.008 55);
+  --ink: oklch(96% 0.003 80);
+  --muted: oklch(73% 0.012 65);
+  --accent: oklch(70.5% 0.155 45);
+  --otb-energy: oklch(70.5% 0.155 45);
+  --otb-energy-strong: oklch(68% 0.17 20);
+  --otb-energy-cyan: oklch(80% 0.13 75);
+  --otb-energy-soft: oklch(25% 0.05 45);
+  --otb-energy-gradient: linear-gradient(135deg, oklch(66% 0.19 22) 0%, oklch(71% 0.16 45) 52%, oklch(80% 0.13 75) 100%);
+  --otb-energy-gradient-subtle: linear-gradient(135deg, oklch(66% 0.19 22 / 0.16), oklch(71% 0.16 45 / 0.13) 52%, oklch(80% 0.13 75 / 0.15));
   --otb-gold: oklch(84% 0.16 82);
   --otb-gold-soft: oklch(25% 0.075 70);
-  --otb-silver: oklch(75% 0.035 250);
-  --otb-silver-soft: oklch(24% 0.025 255);
+  --otb-silver: oklch(76% 0.012 70);
+  --otb-silver-soft: oklch(24% 0.01 60);
   --otb-bronze: oklch(76% 0.13 55);
   --otb-bronze-soft: oklch(24% 0.055 50);
-  --otb-border: oklch(98% 0.004 247 / 0.12);
-  --otb-border-strong: oklch(98% 0.004 247 / 0.2);
+  --otb-border: oklch(98% 0.003 80 / 0.12);
+  --otb-border-strong: oklch(98% 0.003 80 / 0.2);
   --otb-shadow-card: 0 18px 45px rgba(0, 0, 0, 0.26);
-  --otb-shadow-lift: 0 22px 55px oklch(72% 0.18 266 / 0.16);
+  --otb-shadow-lift: 0 22px 55px oklch(70.5% 0.155 45 / 0.16);
 }
 
 html {
@@ -200,10 +244,12 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
+  /* Faint ember glow bleeding in from the top-right, over a warm porcelain page. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.65) 20rem, transparent 34rem),
+    radial-gradient(52rem 26rem at 88% -8rem, oklch(62% 0.19 38 / 0.07), transparent 70%),
+    linear-gradient(180deg, oklch(99.2% 0.003 85 / 0.92) 0%, oklch(98% 0.004 82 / 0.6) 20rem, transparent 34rem),
     var(--page);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
     "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -212,13 +258,17 @@ body {
 
 .dark body {
   background:
-    linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, rgba(148, 163, 184, 0.03) 20rem, transparent 34rem),
+    radial-gradient(52rem 26rem at 88% -8rem, oklch(70% 0.16 45 / 0.08), transparent 70%),
+    linear-gradient(180deg, oklch(93% 0.006 72 / 0.06) 0%, oklch(93% 0.006 72 / 0.02) 20rem, transparent 34rem),
     var(--page);
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In `base` so color utilities (e.g. `text-white`) on links still win. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 button:not(:disabled),
@@ -263,7 +313,7 @@ svg [role="button"]:focus-visible {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.18);
+  background: oklch(62% 0.19 38 / 0.22);
 }
 
 :where(.font-mono, .otb-number, [data-number]) {
@@ -279,6 +329,36 @@ svg [role="button"]:focus-visible {
   border: 1px solid var(--otb-border);
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--otb-shadow-card);
+}
+
+/*
+ * Hero signature — the "burn line": a heat-gradient keyline across the top of
+ * the hero panel, with a faint meter-tick ruler fading out beneath it, so the
+ * header reads as the face of a fuel gauge.
+ */
+.otb-hero {
+  position: relative;
+}
+
+.otb-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: var(--otb-energy-gradient);
+  z-index: 1;
+}
+
+.otb-hero::after {
+  content: "";
+  position: absolute;
+  inset: 3px 0 auto 0;
+  height: 2.5rem;
+  background: repeating-linear-gradient(90deg, currentColor 0 1px, transparent 1px 9px);
+  opacity: 0.06;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 100%);
+  pointer-events: none;
 }
 
 .otb-panel-muted {
@@ -316,70 +396,71 @@ svg [role="button"]:focus-visible {
   box-shadow: 0 0 16px color-mix(in srgb, var(--otb-energy) 35%, transparent);
 }
 
+/* Heat semantics: the harder a day burns, the hotter the block. */
 .otb-iso-graph {
-  --iso-floor: rgba(241, 245, 249, 0.72);
-  --iso-grid-line: rgba(100, 116, 139, 0.14);
-  --iso-grid-line-a: rgba(47, 91, 255, 0.22);
-  --iso-grid-line-b: rgba(0, 184, 217, 0.18);
-  --iso-empty-left: #d9e2ef;
-  --iso-empty-right: #cbd5e1;
-  --iso-empty-top: #f1f5f9;
-  --iso-low-left: #8fd7c3;
-  --iso-low-right: #54b89c;
-  --iso-low-top: #bff3df;
-  --iso-mid-left: #44b8d0;
-  --iso-mid-right: #168ba6;
-  --iso-mid-top: #7de0ef;
-  --iso-high-left: #5969f3;
-  --iso-high-right: #3344c8;
-  --iso-high-top: #8ca0ff;
-  --iso-peak-left: #d6862f;
-  --iso-peak-right: #aa5d12;
-  --iso-peak-top: #ffd166;
+  --iso-floor: rgba(244, 241, 236, 0.72);
+  --iso-grid-line: rgba(120, 110, 95, 0.14);
+  --iso-grid-line-a: oklch(60% 0.19 38 / 0.22);
+  --iso-grid-line-b: oklch(70% 0.15 68 / 0.2);
+  --iso-empty-left: #e6e1d7;
+  --iso-empty-right: #d5cfc2;
+  --iso-empty-top: #f2eee6;
+  --iso-low-left: #f0c86e;
+  --iso-low-right: #d4a437;
+  --iso-low-top: #fadf9b;
+  --iso-mid-left: #ee9d4e;
+  --iso-mid-right: #cf7a1f;
+  --iso-mid-top: #ffc27e;
+  --iso-high-left: #e2653a;
+  --iso-high-right: #b8431a;
+  --iso-high-top: #ff9a6b;
+  --iso-peak-left: #c93a52;
+  --iso-peak-right: #9c2340;
+  --iso-peak-top: #ff7d94;
 }
 
 .dark .otb-iso-graph {
-  --iso-floor: rgba(15, 23, 42, 0.58);
-  --iso-grid-line: rgba(226, 232, 240, 0.14);
-  --iso-grid-line-a: rgba(140, 160, 255, 0.28);
-  --iso-grid-line-b: rgba(125, 224, 239, 0.22);
-  --iso-empty-left: #293447;
-  --iso-empty-right: #1d2738;
-  --iso-empty-top: #3a4860;
-  --iso-low-left: #208568;
-  --iso-low-right: #17664f;
-  --iso-low-top: #65d7b2;
-  --iso-mid-left: #158399;
-  --iso-mid-right: #0f6176;
-  --iso-mid-top: #58d9ec;
-  --iso-high-left: #4657df;
-  --iso-high-right: #303aa8;
-  --iso-high-top: #94a3ff;
-  --iso-peak-left: #c87522;
-  --iso-peak-right: #8d4a0c;
-  --iso-peak-top: #ffd166;
+  --iso-floor: rgba(20, 17, 14, 0.58);
+  --iso-grid-line: rgba(232, 226, 216, 0.14);
+  --iso-grid-line-a: oklch(71% 0.16 45 / 0.28);
+  --iso-grid-line-b: oklch(80% 0.13 75 / 0.22);
+  --iso-empty-left: #35302a;
+  --iso-empty-right: #262119;
+  --iso-empty-top: #463f35;
+  --iso-low-left: #9c7c22;
+  --iso-low-right: #755c14;
+  --iso-low-top: #e0b84e;
+  --iso-mid-left: #b06a1c;
+  --iso-mid-right: #8a4e10;
+  --iso-mid-top: #f09a4a;
+  --iso-high-left: #c14e24;
+  --iso-high-right: #933714;
+  --iso-high-top: #ff8a5c;
+  --iso-peak-left: #b03048;
+  --iso-peak-right: #832036;
+  --iso-peak-top: #ff7d94;
 }
 
 .otb-iso-graph-share {
   --iso-floor: rgba(255, 255, 255, 0.07);
   --iso-grid-line: rgba(255, 255, 255, 0.11);
-  --iso-grid-line-a: rgba(255, 122, 167, 0.32);
-  --iso-grid-line-b: rgba(111, 247, 238, 0.24);
-  --iso-empty-left: #2a202b;
-  --iso-empty-right: #211922;
-  --iso-empty-top: #3a2b3b;
-  --iso-low-left: #256d60;
-  --iso-low-right: #174b43;
-  --iso-low-top: #63d9ba;
-  --iso-mid-left: #158399;
-  --iso-mid-right: #0e5f70;
-  --iso-mid-top: #6ff7ee;
-  --iso-high-left: #8b5cf6;
-  --iso-high-right: #5b3abc;
-  --iso-high-top: #b7a4ff;
-  --iso-peak-left: #d88d2f;
-  --iso-peak-right: #a55f12;
-  --iso-peak-top: #ffd45a;
+  --iso-grid-line-a: rgba(255, 138, 92, 0.32);
+  --iso-grid-line-b: rgba(255, 212, 90, 0.24);
+  --iso-empty-left: #2b2420;
+  --iso-empty-right: #221c18;
+  --iso-empty-top: #3b322b;
+  --iso-low-left: #9c7c22;
+  --iso-low-right: #6d5512;
+  --iso-low-top: #e0b84e;
+  --iso-mid-left: #b06a1c;
+  --iso-mid-right: #82490e;
+  --iso-mid-top: #f09a4a;
+  --iso-high-left: #c14e24;
+  --iso-high-right: #8a3312;
+  --iso-high-top: #ff8a5c;
+  --iso-peak-left: #b03048;
+  --iso-peak-right: #7c1e33;
+  --iso-peak-top: #ff7d94;
 }
 
 .otb-stat-number {
@@ -423,10 +504,10 @@ svg [role="button"]:focus-visible {
   --color-slate-400: #94a3b8;
   --color-slate-500: #64748b;
   --color-slate-600: #475569;
-  --color-blue-200: #bfdbfe;
-  --color-blue-300: #93c5fd;
-  --color-blue-500: #3b82f6;
-  --color-blue-900: #1e3a8a;
+  --color-blue-200: #ffd0b5;
+  --color-blue-300: #ffb289;
+  --color-blue-500: #f4692e;
+  --color-blue-900: #823012;
   --color-violet-600: #7c3aed;
   --color-amber-200: #fde68a;
   --color-amber-300: #fcd34d;

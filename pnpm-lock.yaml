@@ -148,7 +148,11 @@ importers:
 
   tools/eval-runner: {}
 
-  tools/token-board-agent-npx: {}
+  tools/token-board-agent-npx:
+    dependencies:
+      agent-session-core:
+        specifier: ^0.1.1
+        version: 0.1.1
 
 packages:
 

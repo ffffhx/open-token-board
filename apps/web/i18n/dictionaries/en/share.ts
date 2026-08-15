@@ -3,6 +3,7 @@ import type { share as zhShare } from "../zh/share";
 export const share = {
   report: {
     ranges: {
+      today: "Today",
       "1D": "Last 24 hours",
       "7D": "Last 7 days",
       "30D": "Last 30 days",

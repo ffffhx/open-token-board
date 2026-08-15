@@ -29,7 +29,7 @@ Open Token Board 是一套可以自己部署的 AI 编码用量榜单。
 
 适合这些场景：
 
-- 看 1D / 7D / 30D / 90D 滚动窗口里谁烧的 token 多、费用高、会话多。
+- 分开看“今天（上海自然日）”与 1D / 7D / 30D / 90D 滚动窗口里谁烧的 token 多、费用高、会话多。
 - 对比模型、工具、项目、缓存命中和活跃节奏。
 - 给群里自动推送日报/周报，记录 PB、升级、新徽章和排名变化。
 - 把个人主页或周期 Wrapped 导出成 PNG 分享卡。
@@ -38,12 +38,12 @@ Open Token Board 是一套可以自己部署的 AI 编码用量榜单。
 
 - 🔌 **多工具采集**：一个 agent 默认识别 Codex CLI、Claude Code、Gemini CLI、opencode，并 best-effort 检查 Cursor。
 - 🏅 **荣誉系统**：10 级能量主题等级、等级进度条、行为徽章、个人 PB 和榜单排名变化箭头。
-- 🏆 **实时公共榜单**：支持 1D / 7D / 30D / 90D、周/月日历区间和自定义 from/to，网页按总消耗、费用、会话、活跃人数切换，API 另支持消息排序。
+- 🏆 **实时公共榜单**：支持今天（上海自然日）、1D / 7D / 30D / 90D、周/月日历区间和自定义 from/to，网页按总消耗、费用、会话、活跃人数切换，API 另支持消息排序。
 - 📊 **榜单图表升级**：模型堆叠日趋势默认取 Top5+其他，图例可高亮/隐藏；点击最近 7 天日期可下钻 24 小时分布。
 - 👤 **公开个人主页**：`/u?login=xxx` 展示 365 天贡献热力图、近 30 天趋势、模型/工具分布和 PNG 分享卡。
 - 🎬 **Wrapped 战报**：`/wrapped?login=&period=YYYY-MM|YYYY` 生成五屏周期叙事和分享卡。
 - 🧾 **四分类计价**：输入、缓存写入、缓存读取、输出分别计价，支持 `TOKEN_BOARD_PRICING_FILE` 自定义价格表。
-- 🛡️ **上报校验**：服务端拒绝负数、加总不自洽、未来日期、单事件超大值和单用户单日超上限。
+- 🛡️ **上报校验**：服务端拒绝负数、加总不自洽、非法质量计数和超出允许范围的时间。
 - 📨 **飞书日报/周报**：日报包含今日事件，周一周报包含周冠军、7 天趋势、荣誉高光和 Top5。
 - 📟 **额度面板**：Codex 与 Claude Code 支持红黄绿状态、burn rate、预计耗尽；`/limits` 提供团队额度墙。
 - 🧰 **MCP / 导出 / statusline**：agent 内置 stdio MCP server、CSV/JSON 导出和 Claude Code statusLine 短状态。
@@ -159,6 +159,17 @@ GitHub 登录和 Device Flow 需要 API 服务配置 `GITHUB_CLIENT_ID`，网页
 
 可用 `TOKEN_BOARD_USAGE_PATHS` 追加自定义路径；可用 `TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false` 只扫描自定义路径。agent 只读取这些工具已经落盘的日志，不修改它们的原始文件。
 
+Codex/Claude 的扫描没有文件数量上限；请求 30 天就完整发现这 30 天内的候选文件，并按 inode 去重多 home 的硬链接。全量重同步采用 `start → append → commit` 协议，只有文件解析完整、事件数和摘要都一致时才原子替换旧历史；中途失败会保留旧数据。
+
+要和独立工具对账，建议选择已经结束的上海自然日窗口（当天仍在写入时，各扫描器读到的快照会漂移）：
+
+```bash
+pnpm reconcile:usage -- --since 2026-07-01 --until 2026-07-07
+pnpm reconcile:usage -- --since 2026-07-01 --until 2026-07-07 --kaboo ./kaboo-export.json
+```
+
+脚本分别调用 ccusage 的 Codex/Claude 报告、Tokscale，并可读取 Kaboo 导出的 JSON/CSV。它只报告同窗差值，不把“数值更高”直接判定为某个平台出错。
+
 ## 📟 额度面板
 
 Codex CLI 会把限额状态写进 `~/.codex` 会话日志，包含 `used_percent`、`window_minutes` 和 `resets_at`。Open Token Board 会解析 5 小时与每周两个窗口，并展示：
@@ -208,7 +219,10 @@ TOKEN_BOARD_HASH_SESSION_ID=true
 TOKEN_BOARD_INCLUDE_SESSION_TITLE=true
 TOKEN_BOARD_MAX_EVENT_AGE_DAYS=120
 TOKEN_BOARD_BLOCKED_SOURCES=trae,trae-sampled
+TOKEN_BOARD_FILE_RETENTION_EVENTS=0                # JSON 存储保留数；0 表示不截断
 ```
+
+所有用户上报来源默认可信，不设置单事件或单用户单日 token 上限。服务端只校验字段格式、加总关系和时间范围；已明确无可靠逐调用数据的来源仍可通过 `TOKEN_BOARD_BLOCKED_SOURCES` 整体禁用。
 
 费用是公开单价估算，不代表实际账单。四分类计价会先把输入拆成普通输入、缓存写入、缓存读取，再加输出 token；未匹配模型会出现在 `GET /api/usage/health` 的 `pricing.unmatchedModels` 中。
 

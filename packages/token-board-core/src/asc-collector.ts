@@ -14,29 +14,28 @@
 // content-based engine detection, but any file ASC cannot classify as
 // codex/claude is silently skipped (it would need the old collector).
 
-import {
-  discoverSessionFiles,
-  defaultRoots,
-  parseSessionFile,
-  toTokenEvents,
-  type DiscoverOptions,
-  type DiscoveredFile,
-  type TokenUsageEvent as AscTokenUsageEvent,
+import type {
+  DiscoverOptions,
+  DiscoveredFile,
+  TokenUsageEvent as AscTokenUsageEvent,
 } from "agent-session-core";
 
 import type { TokenUsageEvent } from "./token-leaderboard";
 import type { TokenUsageCollectorConfig } from "./token-usage-collector";
 
-// Mirror the old collector's defaults so a config-less call behaves the same.
+// The time window is semantic. A file-count or small admission limit must never
+// silently turn a requested 30-day scan into a partial scan.
 const DEFAULT_SINCE_HOURS = 24 * 30;
-const DEFAULT_MAX_FILES = 800;
 
 // Sentinel engine key for user-supplied custom paths: ASC tags every discovered
 // file with the root's key as `engine`, so we route custom paths through this
 // placeholder and then clear it before parsing to force content detection.
 const CUSTOM_ENGINE = "__custom__";
 
-function buildDiscoverOptions(config: TokenUsageCollectorConfig): DiscoverOptions {
+function buildDiscoverOptions(
+  config: TokenUsageCollectorConfig,
+  defaultRoots: () => Record<string, string[]>
+): DiscoverOptions {
   const roots: Record<string, string[]> = {};
 
   if (config.includeDefaultSources !== false) {
@@ -56,21 +55,12 @@ function buildDiscoverOptions(config: TokenUsageCollectorConfig): DiscoverOption
   const opts: DiscoverOptions = {
     roots,
     sinceMs: sinceHours > 0 ? sinceHours * 60 * 60 * 1000 : null,
-    maxFiles: config.maxFiles ?? DEFAULT_MAX_FILES,
+    maxFiles: Number.POSITIVE_INFINITY,
     // token-board counts real spend, including per-subagent/workflow transcripts
     // that ASC excludes by default. The old collector counted these too, so this
     // keeps the session/token set aligned (leaving only the dedup correction).
     includeSubagentTranscripts: true,
   };
-
-  // ASC's maxBytes is an admission filter; beyond it the parser truncates a
-  // prefix (session.truncated) rather than slurping. The old collector instead
-  // *drops* files past maxFileBytes. We only set maxBytes when the caller asked
-  // for one; otherwise we keep ASC's large default so nothing is dropped (the
-  // drop-vs-truncate difference is a known, documented delta).
-  if (typeof config.maxFileBytes === "number" && config.maxFileBytes > 0) {
-    opts.maxBytes = config.maxFileBytes;
-  }
 
   return opts;
 }
@@ -83,7 +73,25 @@ function buildDiscoverOptions(config: TokenUsageCollectorConfig): DiscoverOption
 export async function collectLocalTokenUsageViaAsc(
   config: TokenUsageCollectorConfig = {}
 ): Promise<TokenUsageEvent[]> {
-  const opts = buildDiscoverOptions(config);
+  return (await collectLocalTokenUsageViaAscWithReport(config)).events;
+}
+
+export type AscCollectionReport = {
+  events: TokenUsageEvent[];
+  filesDiscovered: number;
+  filesParsed: number;
+  parseFailures: string[];
+  complete: boolean;
+};
+
+/** Full collection plus a completeness manifest used by safe history replacement. */
+export async function collectLocalTokenUsageViaAscWithReport(
+  config: TokenUsageCollectorConfig = {}
+): Promise<AscCollectionReport> {
+  // ASC is ESM-only. Keep this as a native dynamic import so the core package
+  // also works when a TS runner/test harness loads token-board through CJS.
+  const { discoverSessionFiles, defaultRoots, parseSessionFile, toTokenEvents } = await import("agent-session-core");
+  const opts = buildDiscoverOptions(config, defaultRoots);
   const ctx = {
     userId: config.userId || "local",
     displayName: config.displayName,
@@ -92,6 +100,9 @@ export async function collectLocalTokenUsageViaAsc(
 
   const files = discoverSessionFiles(opts);
   const out: TokenUsageEvent[] = [];
+  const seenLogicalSessions = new Set<string>();
+  const parseFailures: string[] = [];
+  let filesParsed = 0;
 
   for (const file of files) {
     // Custom paths carry the sentinel engine: clear it so parseSessionFile
@@ -102,7 +113,21 @@ export async function collectLocalTokenUsageViaAsc(
         : file;
 
     const session = parseSessionFile(toParse);
-    if (!session) continue;
+    if (!session) {
+      parseFailures.push(file.path);
+      continue;
+    }
+    filesParsed += 1;
+
+    // A mirrored session that later diverges is no longer inode-identical. Do
+    // not merge its two tails event-by-event: sequence ids can collide after
+    // the fork. Discovery is newest-first, so the newest whole session is the
+    // canonical copy.
+    const logicalSessionId = `${session.engine}:${session.id}`;
+    if (seenLogicalSessions.has(logicalSessionId)) {
+      continue;
+    }
+    seenLogicalSessions.add(logicalSessionId);
 
     const linesWritten = summarizeAscLinesWritten(session);
     const ascEvents = toTokenEvents(session, ctx);
@@ -112,7 +137,13 @@ export async function collectLocalTokenUsageViaAsc(
     });
   }
 
-  return out;
+  return {
+    events: out,
+    filesDiscovered: files.length,
+    filesParsed,
+    parseFailures,
+    complete: parseFailures.length === 0,
+  };
 }
 
 type AscCodeOutputTool = {
@@ -169,6 +200,7 @@ function summarizeAscLinesWritten(session: unknown) {
 function mapEvent(ev: AscTokenUsageEvent, linesWritten: number | null = null): TokenUsageEvent {
   return {
     id: ev.id,
+    upstreamEventId: ev.id,
     userId: ev.userId,
     displayName: ev.displayName,
     team: ev.team,

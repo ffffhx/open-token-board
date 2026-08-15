@@ -50,7 +50,7 @@ export function InsightStrip({ loading, text }: { loading: boolean; text: string
   return (
     <section className="rounded-lg border border-stone-950/10 bg-white px-4 py-3 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <span className="w-fit rounded-full bg-slate-950 px-2.5 py-1 font-mono text-[11px] font-semibold uppercase text-white">
+        <span className="otb-energy-bg w-fit rounded-full px-2.5 py-1 font-mono text-[11px] font-semibold uppercase text-white">
           {dict.board.status.insightLoading}
         </span>
         <p className="min-w-0 flex-1 text-sm leading-6 text-stone-700">
@@ -163,7 +163,7 @@ export function SegmentedControl({
   onChange: (value: string) => void;
   label: string;
 }) {
-  const activeIndex = Math.max(0, items.findIndex((item) => item.key === value));
+  const activeIndex = items.findIndex((item) => item.key === value);
 
   return (
     <div
@@ -172,15 +172,17 @@ export function SegmentedControl({
       aria-label={label}
       style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
     >
-      <span
-        aria-hidden="true"
-        className="absolute bottom-1 top-1 z-0 rounded-lg bg-white shadow-sm transition-transform"
-        style={{
-          left: "0.25rem",
-          width: `calc((100% - 0.5rem) / ${items.length})`,
-          transform: `translateX(${activeIndex * 100}%)`,
-        }}
-      />
+      {activeIndex >= 0 ? (
+        <span
+          aria-hidden="true"
+          className="absolute bottom-1 top-1 z-0 rounded-lg bg-slate-950 shadow-sm transition-transform"
+          style={{
+            left: "0.25rem",
+            width: `calc((100% - 0.5rem) / ${items.length})`,
+            transform: `translateX(${activeIndex * 100}%)`,
+          }}
+        />
+      ) : null}
       {items.map((item) => (
         <button
           key={item.key}
@@ -193,7 +195,7 @@ export function SegmentedControl({
           onClick={() => onChange(item.key)}
           className={`relative z-10 min-h-11 rounded-lg px-2 text-sm font-semibold transition ${
             value === item.key
-              ? "text-slate-950"
+              ? "text-white"
               : item.disabled
                 ? "cursor-not-allowed text-slate-400"
                 : "text-slate-600 hover:text-slate-950"
@@ -260,7 +262,7 @@ export function HeroSignal({ label, value, meta }: { label: string; value: React
   return (
     <div className="otb-panel-muted min-w-0 rounded-lg px-3 py-3">
       <p className="truncate text-[11px] font-semibold uppercase text-slate-500 sm:text-xs">{label}</p>
-      <p className="otb-stat-number mt-2 truncate text-base font-black text-slate-950 sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
+      <p className="otb-stat-number font-display mt-2 truncate text-base font-bold tracking-tight text-slate-950 sm:text-xl" title={typeof value === "string" ? value : undefined}>{value}</p>
       <p className="mt-1 truncate font-mono text-[11px] text-blue-600 sm:text-xs" title={typeof meta === "string" ? meta : undefined}>{meta}</p>
     </div>
   );
@@ -793,15 +795,15 @@ function HourlyTrendDrilldown({
 }
 
 const TREND_SEGMENT_COLORS = [
-  { dark: "#7aa2ff", light: "#2f5bff" },
-  { dark: "#b28cff", light: "#8a3ffc" },
-  { dark: "#58e0ef", light: "#00b8d9" },
-  { dark: "#ffd76b", light: "#b86b00" },
+  { dark: "#ff9a62", light: "#d9480f" },
   { dark: "#fb7185", light: "#be123c" },
+  { dark: "#fbbf24", light: "#b45309" },
+  { dark: "#2dd4bf", light: "#0f766e" },
+  { dark: "#c4b5fd", light: "#7c3aed" },
   { dark: "#34d399", light: "#047857" },
-  { dark: "#f59e0b", light: "#d97706" },
+  { dark: "#7dd3fc", light: "#0369a1" },
 ];
-const OTHER_TREND_COLOR = { dark: "#94a3b8", light: "#607086" };
+const OTHER_TREND_COLOR = { dark: "#a8a29e", light: "#78716c" };
 
 function trendSegmentColorStyle(segment: TokenTrendSegment) {
   const color = segment.other ? OTHER_TREND_COLOR : TREND_SEGMENT_COLORS[hashTrendKey(segment.key) % TREND_SEGMENT_COLORS.length];

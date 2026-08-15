@@ -1,7 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { Pool, type PoolConfig } from "pg";
+import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { mergeTokenEvents } from "./token-board-automation";
 import {
@@ -40,6 +40,10 @@ export type TokenUsageStoreInsertResult = {
 export type TokenUsageStoreDeleteResult = {
   deleted: number;
   records: number;
+};
+
+export type TokenUsageStoreReplaceResult = TokenUsageStoreInsertResult & {
+  deleted: number;
 };
 
 export type TokenUsageStoreBackupStatus = {
@@ -83,6 +87,7 @@ export type TokenUsageStore = {
   getLeaderboardSummary?: (options: TokenUsageLeaderboardOptions) => Promise<TokenUsageLeaderboardResult>;
   countEvents: () => Promise<number>;
   insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
+  replaceEventsForUser: (userId: string, events: TokenUsageEvent[]) => Promise<TokenUsageStoreReplaceResult>;
   deleteEventsForUser: (userId: string) => Promise<TokenUsageStoreDeleteResult>;
   getHealth?: () => Promise<TokenUsageStoreHealth>;
   getUserConfig: (userId: string) => Promise<TokenBoardUserConfig | null>;
@@ -93,7 +98,10 @@ export type TokenUsageStore = {
 
 export type TokenUsageStoreOptions = {
   dataFile: string;
-  maxEvents: number;
+  /** Optional file-store retention cap. Zero/undefined means no semantic truncation. */
+  fileRetentionEvents?: number;
+  /** @deprecated Use fileRetentionEvents. Kept for callers that explicitly want file retention. */
+  maxEvents?: number;
   databaseUrl?: string;
   postgresSchema?: string;
   postgresSsl?: boolean | PoolConfig["ssl"];
@@ -118,7 +126,6 @@ export async function createTokenUsageStore(options: TokenUsageStoreOptions): Pr
   if (databaseUrl) {
     const store = createPostgresTokenUsageStore({
       connectionString: databaseUrl,
-      maxEvents: options.maxEvents,
       schema: options.postgresSchema || "token_board",
       ssl: options.postgresSsl,
     });
@@ -128,7 +135,7 @@ export async function createTokenUsageStore(options: TokenUsageStoreOptions): Pr
 
   return createFileTokenUsageStore({
     dataFile: options.dataFile,
-    maxEvents: options.maxEvents,
+    retentionEvents: options.fileRetentionEvents ?? options.maxEvents ?? 0,
   });
 }
 
@@ -168,10 +175,10 @@ export async function readTokenUsageEventsFromFile(filePath: string) {
 
 async function createFileTokenUsageStore({
   dataFile,
-  maxEvents,
+  retentionEvents,
 }: {
   dataFile: string;
-  maxEvents: number;
+  retentionEvents: number;
 }): Promise<TokenUsageStore> {
   let storageQueue: Promise<unknown> = Promise.resolve();
   const userConfigsFile = path.join(path.dirname(dataFile), "user-configs.json");
@@ -190,9 +197,7 @@ async function createFileTokenUsageStore({
     label: dataFile,
     listEvents: () => readTokenUsageEventsFromFile(dataFile).then((result) => result.entries),
     listEventsForUser: (userId) =>
-      readTokenUsageEventsFromFile(dataFile).then((result) =>
-        result.entries.filter((event) => event.userId === userId)
-      ),
+      readTokenUsageEventsFromFile(dataFile).then((result) => result.entries.filter((event) => event.userId === userId)),
     countEvents: async () => (await readTokenUsageEventsFromFile(dataFile)).entries.length,
     insertEvents: (events) =>
       enqueueStorageOperation(async () => {
@@ -206,7 +211,7 @@ async function createFileTokenUsageStore({
           const prior = existingById.get(event.id);
           return Boolean(prior && hasTokenEventMetadataUpdate(prior, event));
         });
-        const merged = mergeTokenEvents(existing, events, maxEvents);
+        const merged = mergeTokenEvents(existing, events, retentionEvents);
 
         if (incomingNew.length || hasMetadataUpdate) {
           await writeTokenUsageEventsToFile(dataFile, merged, fileState);
@@ -215,6 +220,23 @@ async function createFileTokenUsageStore({
         return {
           accepted: incomingNew.length,
           duplicates: events.length - incomingNew.length,
+          records: merged.length,
+        };
+      }),
+    replaceEventsForUser: (userId, events) =>
+      enqueueStorageOperation(async () => {
+        const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
+        const kept = existing.filter((event) => event.userId !== userId);
+        const deleted = existing.length - kept.length;
+        const replacement = mergeTokenEvents([], events, 0);
+        const merged = mergeTokenEvents(kept, replacement, retentionEvents);
+
+        await writeTokenUsageEventsToFile(dataFile, merged, fileState);
+
+        return {
+          accepted: replacement.length,
+          duplicates: events.length - replacement.length,
+          deleted,
           records: merged.length,
         };
       }),
@@ -262,12 +284,10 @@ async function createFileTokenUsageStore({
 
 function createPostgresTokenUsageStore({
   connectionString,
-  maxEvents,
   schema,
   ssl,
 }: {
   connectionString: string;
-  maxEvents: number;
   schema: string;
   ssl?: PoolConfig["ssl"];
 }) {
@@ -297,6 +317,7 @@ function createPostgresTokenUsageStore({
       await pool.query(`
         CREATE TABLE IF NOT EXISTS ${table} (
           id TEXT PRIMARY KEY,
+          upstream_event_id TEXT,
           user_id TEXT NOT NULL,
           display_name TEXT NOT NULL,
           team TEXT,
@@ -323,6 +344,7 @@ function createPostgresTokenUsageStore({
         )
       `);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS session_title TEXT`);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS upstream_event_id TEXT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS cache_creation_input_tokens BIGINT NOT NULL DEFAULT 0`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS error_count BIGINT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS interrupted_count BIGINT`);
@@ -346,9 +368,7 @@ function createPostgresTokenUsageStore({
           SELECT *
           FROM ${table}
           ORDER BY reported_at DESC, created_at DESC
-          LIMIT $1
-        `,
-        [maxEvents]
+        `
       );
 
       return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
@@ -360,9 +380,8 @@ function createPostgresTokenUsageStore({
           FROM ${table}
           WHERE user_id = $1
           ORDER BY reported_at DESC, created_at DESC
-          LIMIT $2
         `,
-        [userId, maxEvents]
+        [userId]
       );
 
       return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
@@ -397,6 +416,28 @@ function createPostgresTokenUsageStore({
         duplicates: events.length - accepted,
         records: await countPostgresRows(pool, table),
       };
+    },
+    replaceEventsForUser: async (userId: string, events: TokenUsageEvent[]) => {
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        const deletedResult = await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+        const replacement = mergeTokenEvents([], events, 0);
+        await insertPostgresEvents(client, table, replacement);
+        await client.query("COMMIT");
+
+        return {
+          accepted: replacement.length,
+          duplicates: events.length - replacement.length,
+          deleted: deletedResult.rowCount || 0,
+          records: await countPostgresRows(pool, table),
+        };
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
+      }
     },
     deleteEventsForUser: async (userId: string) => {
       const result = await pool.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
@@ -481,7 +522,23 @@ function createPostgresTokenUsageStore({
 
 function hasTokenEventMetadataUpdate(prior: TokenUsageEvent, next: TokenUsageEvent) {
   return (
+    next.timestamp !== prior.timestamp ||
+    next.displayName !== prior.displayName ||
+    next.team !== prior.team ||
+    next.model !== prior.model ||
+    next.project !== prior.project ||
+    next.tool !== prior.tool ||
+    next.inputTokens !== prior.inputTokens ||
+    next.cacheCreationInputTokens !== prior.cacheCreationInputTokens ||
+    next.cachedInputTokens !== prior.cachedInputTokens ||
+    next.outputTokens !== prior.outputTokens ||
+    next.reasoningOutputTokens !== prior.reasoningOutputTokens ||
+    next.totalTokens !== prior.totalTokens ||
+    next.costUsd !== prior.costUsd ||
+    next.messages !== prior.messages ||
+    next.sessionId !== prior.sessionId ||
     Boolean(next.sessionTitle && next.sessionTitle !== prior.sessionTitle) ||
+    Boolean(next.upstreamEventId && next.upstreamEventId !== prior.upstreamEventId) ||
     hasQualityCountUpdate(prior.errorCount, next.errorCount) ||
     hasQualityCountUpdate(prior.interruptedCount, next.interruptedCount) ||
     hasQualityCountUpdate(prior.toolCallCount, next.toolCallCount) ||
@@ -1317,6 +1374,7 @@ async function fsyncDirectory(dir: string) {
 function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
   const columns = [
     "id",
+    "upstream_event_id",
     "user_id",
     "display_name",
     "team",
@@ -1345,6 +1403,7 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     const base = eventIndex * columns.length;
     values.push(
       event.id,
+      event.upstreamEventId || null,
       event.userId,
       event.displayName,
       event.team || null,
@@ -1377,23 +1436,39 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
       INSERT INTO ${table} (${columns.map(sqlIdentifier).join(", ")})
       VALUES ${rows.join(", ")}
       ON CONFLICT (id) DO UPDATE
-      SET "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title"),
+      SET "upstream_event_id" = COALESCE(NULLIF(EXCLUDED."upstream_event_id", ''), ${table}."upstream_event_id"),
+          "display_name" = EXCLUDED."display_name",
+          "team" = EXCLUDED."team",
+          "model" = EXCLUDED."model",
+          "project" = EXCLUDED."project",
+          "tool" = EXCLUDED."tool",
+          "reported_at" = EXCLUDED."reported_at",
+          "input_tokens" = EXCLUDED."input_tokens",
+          "cache_creation_input_tokens" = EXCLUDED."cache_creation_input_tokens",
+          "cached_input_tokens" = EXCLUDED."cached_input_tokens",
+          "output_tokens" = EXCLUDED."output_tokens",
+          "reasoning_output_tokens" = EXCLUDED."reasoning_output_tokens",
+          "total_tokens" = EXCLUDED."total_tokens",
+          "cost_usd" = EXCLUDED."cost_usd",
+          "messages" = EXCLUDED."messages",
+          "session_id" = EXCLUDED."session_id",
+          "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title"),
           "error_count" = COALESCE(EXCLUDED."error_count", ${table}."error_count"),
           "interrupted_count" = COALESCE(EXCLUDED."interrupted_count", ${table}."interrupted_count"),
           "tool_call_count" = COALESCE(EXCLUDED."tool_call_count", ${table}."tool_call_count"),
           "lines_written" = COALESCE(EXCLUDED."lines_written", ${table}."lines_written")
-      WHERE (
-          NULLIF(EXCLUDED."session_title", '') IS NOT NULL
-          AND COALESCE(${table}."session_title", '') <> EXCLUDED."session_title"
-        )
-        OR (EXCLUDED."error_count" IS NOT NULL AND ${table}."error_count" IS DISTINCT FROM EXCLUDED."error_count")
-        OR (EXCLUDED."interrupted_count" IS NOT NULL AND ${table}."interrupted_count" IS DISTINCT FROM EXCLUDED."interrupted_count")
-        OR (EXCLUDED."tool_call_count" IS NOT NULL AND ${table}."tool_call_count" IS DISTINCT FROM EXCLUDED."tool_call_count")
-        OR (EXCLUDED."lines_written" IS NOT NULL AND ${table}."lines_written" IS DISTINCT FROM EXCLUDED."lines_written")
       RETURNING (xmax = 0) AS inserted
     `,
     values,
   };
+}
+
+async function insertPostgresEvents(client: PoolClient, table: string, events: TokenUsageEvent[]) {
+  for (let index = 0; index < events.length; index += INSERT_BATCH_SIZE) {
+    const batch = events.slice(index, index + INSERT_BATCH_SIZE).map(normalizeTokenUsageEvent);
+    const query = buildInsertQuery(table, batch);
+    await client.query(query.text, query.values);
+  }
 }
 
 async function countPostgresRows(pool: Pool, table: string) {
@@ -1411,6 +1486,7 @@ function rowToTokenUsageEvent(row: TokenUsageEventRow): TokenUsageEvent | undefi
 
   return normalizeTokenUsageEvent({
     id: row.id,
+    upstreamEventId: row.upstream_event_id || undefined,
     userId: row.user_id,
     displayName: row.display_name,
     team: row.team || undefined,
@@ -1482,6 +1558,7 @@ function optionalRowNumber(value: string | number | null | undefined) {
 
 type TokenUsageEventRow = {
   id: string;
+  upstream_event_id: string | null;
   user_id: string;
   display_name: string;
   team: string | null;

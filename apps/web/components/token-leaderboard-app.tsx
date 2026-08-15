@@ -749,10 +749,10 @@ export function TokenLeaderboardApp({
   return (
     <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 font-sans text-slate-950 sm:px-6 lg:px-8">
       <div className="space-y-4">
-        <header className="otb-panel overflow-hidden rounded-lg px-5 py-5 sm:px-6 lg:px-7">
+        <header className="otb-panel otb-hero overflow-hidden rounded-lg px-5 py-5 sm:px-6 lg:px-7">
           <div className="space-y-5">
             <div className="flex flex-col gap-3 border-b border-slate-200 pb-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="inline-flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-950">
+              <div className="font-display inline-flex min-w-0 items-center gap-2 text-sm font-semibold tracking-tight text-slate-950">
                 <TokenBoardLogoMark className="size-7 shrink-0" decorative />
                 <span className="truncate">Open Token Board</span>
               </div>
@@ -772,7 +772,7 @@ export function TokenLeaderboardApp({
                     {activeRangeLabel}
                   </span>
                 </div>
-                <h1 className="mt-3 text-2xl font-semibold leading-tight text-slate-950 sm:text-3xl">
+                <h1 className="font-display mt-3 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-4xl">
                   {dict.board.hero.title}
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-slate-500">

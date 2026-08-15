@@ -1,6 +1,7 @@
 export const share = {
   report: {
     ranges: {
+      today: "今天",
       "1D": "近 24 小时",
       "7D": "近 7 天",
       "30D": "近 30 天",

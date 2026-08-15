@@ -41,7 +41,9 @@ export function createTokenBoardTestFixture(now = new Date()): TokenBoardTestFix
 
   const events = [
     usageEvent("alice-recent-morning", identities.alice, {
-      timestamp: clock.daysAgo(1, 10),
+      // Keep the line-writing fixture inside the board's rolling 24-hour default
+      // regardless of what time of day the test suite starts.
+      timestamp: new Date(now.getTime() - 2 * HOUR_MS),
       model: "claude-sonnet-4.5",
       source: "claude-code",
       tool: "Claude Code",

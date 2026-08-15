@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -61,6 +62,19 @@ describe("usage stats", () => {
     assert.equal(payload.summary.range, "month");
     assert.ok(payload.summary.users.length >= 3);
     assert.ok(payload.summary.daily.length >= 1);
+  });
+
+  it("covers the current Asia/Shanghai calendar day separately from rolling 24 hours", async () => {
+    const payload = await getJson(`/api/usage/stats?range=today&metric=tokens&now=${nowParam()}`);
+    const expectedStart = new Date(
+      Math.floor((harness.fixture.now.getTime() + 8 * 60 * 60 * 1000) / (24 * 60 * 60 * 1000)) *
+        24 * 60 * 60 * 1000 -
+        8 * 60 * 60 * 1000
+    );
+
+    assert.equal(payload.summary.range, "today");
+    assert.equal(payload.summary.startAt, expectedStart.toISOString());
+    assert.equal(payload.summary.endAt, harness.fixture.now.toISOString());
   });
 
   it("covers explicit from/to range", async () => {
@@ -467,8 +481,13 @@ describe("ingest validation", () => {
     await assertIngestRejected([ingestEvent({ timestamp: new Date(harness.fixture.now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString() })]);
   });
 
-  it("rejects single events over the configured cap", async () => {
-    await assertIngestRejected([ingestEvent({ inputTokens: 1_000_001, outputTokens: 1, totalTokens: 1_000_002 })]);
+  it("accepts single events over the former 50M cap", async () => {
+    const payload = await postIngest([
+      ingestEvent({ inputTokens: 50_000_001, outputTokens: 1, totalTokens: 50_000_002 }),
+    ]);
+
+    assert.equal(payload.ok, true);
+    assert.equal(payload.accepted, 1);
   });
 
   it("accepts legacy events without cache split fields", async () => {
@@ -495,6 +514,72 @@ describe("ingest validation", () => {
     await assertIngestRejected([ingestEvent({ interruptedCount: 2 })]);
     await assertIngestRejected([ingestEvent({ linesWritten: -1 })]);
     await assertIngestRejected([ingestEvent({ linesWritten: 1.5 })]);
+  });
+
+  it("treats every user source as trusted and counts oversized custom events", async () => {
+    const before = await getJson(`/api/usage/stats?range=7D&metric=tokens&now=${nowParam()}`);
+    const payload = await postIngest([
+      ingestEvent({
+        source: "custom-import",
+        inputTokens: 60_000_000,
+        outputTokens: 1,
+        totalTokens: 60_000_001,
+        upstreamEventId: "custom-oversized-1",
+      }),
+    ]);
+    const after = await getJson(`/api/usage/stats?range=7D&metric=tokens&now=${nowParam()}`);
+
+    assert.equal(payload.accepted, 1);
+    assert.equal(after.summary.totalTokens, before.summary.totalTokens + 60_000_001);
+  });
+
+  it("keeps one stable record when mutable usage fields are corrected", async () => {
+    const upstreamEventId = "asc:codex:stable-session:1";
+    const first = await postIngest([ingestEvent({ upstreamEventId, inputTokens: 100, cacheCreationInputTokens: 0, cachedInputTokens: 0, outputTokens: 20, totalTokens: 120 })]);
+    const second = await postIngest([ingestEvent({ upstreamEventId, inputTokens: 200, cacheCreationInputTokens: 0, cachedInputTokens: 0, outputTokens: 30, totalTokens: 230 })]);
+    const stored = JSON.parse(await readFile(harness.dataFile, "utf8"));
+    const matches = stored.entries.filter(
+      (event: TokenUsageEvent) => event.upstreamEventId === hashedUpstream(upstreamEventId)
+    );
+
+    assert.equal(first.accepted, 1);
+    assert.equal(second.accepted, 0);
+    assert.equal(matches.length, 1);
+    assert.equal(matches[0].totalTokens, 230);
+  });
+
+  it("leaves old history untouched until an atomic replacement manifest commits", async () => {
+    const oldStore = JSON.parse(await readFile(harness.dataFile, "utf8"));
+    const oldUserEvents = oldStore.entries.filter(
+      (event: TokenUsageEvent) => event.userId === harness.identities.alice.userId
+    );
+    const replaceId = "replace-test-atomic-1";
+    const replacement = [
+      ingestEvent({ upstreamEventId: hashedUpstream("replace-event-1"), inputTokens: 111, cacheCreationInputTokens: 0, cachedInputTokens: 0, outputTokens: 11, totalTokens: 122 }),
+      ingestEvent({ upstreamEventId: hashedUpstream("replace-event-2"), inputTokens: 222, cacheCreationInputTokens: 0, cachedInputTokens: 0, outputTokens: 22, totalTokens: 244 }),
+    ];
+    const digest = manifestDigest(replacement);
+
+    await postReplace({ phase: "start", replaceId, expectedEvents: 2, digest, complete: true }, []);
+    await postReplace({ phase: "append", replaceId }, replacement.slice(0, 1));
+    const rejected = await request("/api/usage/replace", replaceRequest({ phase: "commit", replaceId, digest }, []));
+    assert.equal(rejected.status, 409);
+    const afterRejected = JSON.parse(await readFile(harness.dataFile, "utf8"));
+    assert.equal(
+      afterRejected.entries.filter((event: TokenUsageEvent) => event.userId === harness.identities.alice.userId).length,
+      oldUserEvents.length
+    );
+
+    await postReplace({ phase: "append", replaceId }, replacement.slice(1));
+    const committed = await postReplace({ phase: "commit", replaceId, digest }, []);
+    const finalStore = JSON.parse(await readFile(harness.dataFile, "utf8"));
+    const finalUserEvents = finalStore.entries.filter(
+      (event: TokenUsageEvent) => event.userId === harness.identities.alice.userId
+    );
+
+    assert.equal(committed.replaced, true);
+    assert.equal(committed.accepted, 2);
+    assert.equal(finalUserEvents.length, 2);
   });
 });
 
@@ -528,6 +613,38 @@ async function postIngest(events: unknown[]) {
 
   assert.equal(response.status, 200, JSON.stringify(payload));
   return payload;
+}
+
+async function postReplace(replace: Record<string, unknown>, events: unknown[]) {
+  const response = await request("/api/usage/replace", replaceRequest(replace, events));
+  const payload = await response.json();
+  assert.equal(response.status, 200, JSON.stringify(payload));
+  return payload;
+}
+
+function replaceRequest(replace: Record<string, unknown>, events: unknown[]): RequestInit {
+  return {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${harness.agentToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ events, replace }),
+  };
+}
+
+function hashedUpstream(value: string) {
+  return value.startsWith("upstream:")
+    ? value
+    : `upstream:${createHash("sha256").update(value).digest("hex").slice(0, 32)}`;
+}
+
+function manifestDigest(events: Array<Record<string, unknown>>) {
+  const keys = events
+    .map((event) => String(event.upstreamEventId || event.id || ""))
+    .sort()
+    .join("\n");
+  return `sha256:${createHash("sha256").update(keys).digest("hex")}`;
 }
 
 function ingestEvent(overrides: Record<string, unknown> = {}) {

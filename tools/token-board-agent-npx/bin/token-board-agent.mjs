@@ -1,12 +1,19 @@
 #!/usr/bin/env node
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFile, spawn } from "node:child_process";
 import { createReadStream } from "node:fs";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import {
+  defaultRoots as ascDefaultRoots,
+  discoverSessionFiles as discoverAscSessionFiles,
+  parseSessionFile as parseAscSessionFile,
+  toTokenEvents as ascToTokenEvents,
+} from "agent-session-core";
 
 const API_URL = (process.env.TOKEN_BOARD_API_URL || "https://124-221-36-36.anyip.dev:8443/token-board").replace(/\/+$/, "");
 const LEADERBOARD_URL = process.env.TOKEN_BOARD_LEADERBOARD_URL || "https://ffffhx.github.io/open-token-board/board/";
@@ -14,9 +21,8 @@ const CONFIG_FILE = process.env.TOKEN_BOARD_AGENT_CONFIG || path.join(os.homedir
 const STATE_FILE = process.env.TOKEN_BOARD_AGENT_STATE_FILE || path.join(os.homedir(), ".token-board-agent-state.json");
 const INTERVAL_MS = readPositiveNumber(process.env.TOKEN_BOARD_INTERVAL_MS, 5 * 60 * 1000);
 const SINCE_MS = readPositiveNumber(process.env.TOKEN_BOARD_SINCE_HOURS, 24 * 30) * 60 * 60 * 1000;
-const MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILES, 800);
-const MAX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILE_BYTES, 5 * 1024 * 1024);
-const MAX_CODEX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_CODEX_FILE_BYTES, 256 * 1024 * 1024);
+const MAX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_FILE_BYTES, 512 * 1024 * 1024);
+const MAX_CODEX_FILE_BYTES = readPositiveNumber(process.env.TOKEN_BOARD_MAX_CODEX_FILE_BYTES, 512 * 1024 * 1024);
 const FETCH_TIMEOUT_MS = readPositiveNumber(process.env.TOKEN_BOARD_FETCH_TIMEOUT_MS, 30_000);
 const FETCH_MAX_RETRIES = readNonNegativeInteger(
   process.env.TOKEN_BOARD_FETCH_MAX_RETRIES ?? process.env.TOKEN_BOARD_FETCH_RETRIES,
@@ -44,17 +50,17 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.4.25";
-// Reject any single event above this many tokens: no real API call approaches it, but
-// a cumulative usage counter mis-read as one call can blow past it. Mirrors the
-// server-side cap in token-board-automation.ts.
-const MAX_EVENT_TOTAL_TOKENS = 50_000_000;
+const VERSION = "0.5.0";
+const COLLECTOR_SCHEMA_VERSION = 2;
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
 const SESSION_TITLE_MAX_LENGTH = 80;
 const MAX_INVALID_USAGE_WARNINGS = 5;
+const CLAUDE_CODE_OUTPUT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
+const CODEX_STRUCTURED_PATCH_TOOLS = new Set(["apply_patch", "patch"]);
 const INSTALL_DIR = path.join(os.homedir(), ".token-board-agent");
 const INSTALLED_AGENT_FILE = path.join(INSTALL_DIR, "token-board-agent.mjs");
+const INSTALLED_ASC_DIR = path.join(INSTALL_DIR, "node_modules", "agent-session-core");
 const CLAUDE_STATUSLINE_SHIM_FILE = path.join(INSTALL_DIR, "claude-statusline-capture.sh");
 const CLAUDE_SETTINGS_FILE =
   process.env.CLAUDE_CONFIG_DIR
@@ -361,6 +367,7 @@ async function uninstallLaunchAgent() {
 
   await fs.rm(LAUNCH_AGENT_PLIST, { force: true });
   await fs.rm(INSTALLED_AGENT_FILE, { force: true });
+  await fs.rm(INSTALLED_ASC_DIR, { recursive: true, force: true });
   console.log("Token board background sync uninstalled.");
   console.log(`Kept auth config: ${CONFIG_FILE}`);
   console.log(`Kept upload state: ${STATE_FILE}`);
@@ -373,6 +380,7 @@ async function uninstallWindowsTask() {
   await fs.rm(WINDOWS_LAUNCHER_FILE, { force: true });
   await fs.rm(WINDOWS_WRAPPER_FILE, { force: true });
   await fs.rm(INSTALLED_AGENT_FILE, { force: true });
+  await fs.rm(INSTALLED_ASC_DIR, { recursive: true, force: true });
   console.log("Token board background sync uninstalled.");
   console.log(`Removed Windows Task Scheduler task: ${WINDOWS_TASK_NAME}`);
   console.log(`Kept auth config: ${CONFIG_FILE}`);
@@ -465,10 +473,63 @@ async function sourceDiscoveryStatus(config) {
 async function installAgentScript() {
   await fs.mkdir(INSTALL_DIR, { recursive: true });
   await fs.copyFile(fileURLToPath(import.meta.url), INSTALLED_AGENT_FILE);
+  await installRuntimeDependency("agent-session-core", INSTALLED_ASC_DIR);
   await fs.chmod(INSTALLED_AGENT_FILE, 0o755).catch(() => {});
   if (process.platform !== "win32") {
     await installClaudeStatuslineShim();
   }
+}
+
+async function installRuntimeDependency(packageName, targetDir) {
+  let entryPath = "";
+  if (typeof import.meta.resolve === "function") {
+    try {
+      entryPath = fileURLToPath(await import.meta.resolve(packageName));
+    } catch {
+      // Fall through to the CommonJS/filesystem compatibility paths below.
+    }
+  }
+  if (!entryPath) {
+    try {
+      entryPath = createRequire(import.meta.url).resolve(packageName);
+    } catch {
+      entryPath = await findInstalledPackageEntry(packageName);
+    }
+  }
+
+  let current = path.dirname(entryPath);
+  for (let depth = 0; depth < 8; depth += 1) {
+    const manifest = await readJson(path.join(current, "package.json"));
+    if (manifest.name === packageName) {
+      await fs.rm(targetDir, { recursive: true, force: true });
+      await fs.mkdir(path.dirname(targetDir), { recursive: true });
+      await fs.cp(current, targetDir, { recursive: true });
+      return;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+    current = parent;
+  }
+  throw new Error(`Could not locate runtime dependency ${packageName}`);
+}
+
+async function findInstalledPackageEntry(packageName) {
+  for (const start of [path.dirname(fileURLToPath(import.meta.url)), process.cwd()]) {
+    let current = start;
+    for (let depth = 0; depth < 12; depth += 1) {
+      const candidate = path.join(current, "node_modules", packageName);
+      const manifest = await readJson(path.join(candidate, "package.json"));
+      if (manifest.name === packageName) {
+        return path.join(candidate, manifest.main || "src/index.mjs");
+      }
+      const parent = path.dirname(current);
+      if (parent === current) break;
+      current = parent;
+    }
+  }
+  throw new Error(`Could not resolve runtime dependency ${packageName}`);
 }
 
 /**
@@ -670,7 +731,8 @@ async function uploadOnce(config, options = {}) {
 }
 
 async function replaceRemoteUsage(config) {
-  const collectedEvents = await collectLocalUsageEvents(config);
+  const report = await collectLocalUsageEventsWithReport(config, { fullHistory: true });
+  const collectedEvents = report.events;
   const userConfig = await collectUserConfig();
 
   if (!collectedEvents.length) {
@@ -679,18 +741,25 @@ async function replaceRemoteUsage(config) {
     }
     throw new Error("No token usage events collected; remote records were not changed.");
   }
-
-  const result = { deleted: 0, accepted: 0, duplicates: 0, records: 0 };
-  let firstBatch = true;
-
-  for (const batch of chunk(collectedEvents, BATCH_SIZE)) {
-    const batchResult = firstBatch ? await postReplace(config, batch, userConfig) : await postIngest(config, batch, userConfig);
-    firstBatch = false;
-    result.deleted += Number(batchResult.deleted || 0);
-    result.accepted += Number(batchResult.accepted || 0);
-    result.duplicates += Number(batchResult.duplicates || 0);
-    result.records = Number(batchResult.records || result.records || 0);
+  if (!report.complete) {
+    throw new Error(
+      `Collection was incomplete (${report.parseFailures.length} session files failed to parse); remote records were not changed.`
+    );
   }
+
+  const replaceId = randomUUID();
+  const digest = tokenEventManifestDigest(collectedEvents);
+  const batches = chunk(collectedEvents, BATCH_SIZE);
+  await postReplacePhase(config, "start", replaceId, [], {
+    expectedEvents: collectedEvents.length,
+    digest,
+    complete: true,
+    userConfig,
+  });
+  for (const batch of batches) {
+    await postReplacePhase(config, "append", replaceId, batch);
+  }
+  const result = await postReplacePhase(config, "commit", replaceId, [], { digest });
 
   await writeJson(STATE_FILE, {
     apiUrl: API_URL,
@@ -715,10 +784,18 @@ function uploadStateMatchesConfig(state, config) {
   return (!stateApiUrl || stateApiUrl === API_URL) && (!stateUserId || stateUserId === config.userId);
 }
 
-async function collectLocalUsageEvents(config) {
-  const targets = sourceTargets(config);
+async function collectLocalUsageEvents(config, options = {}) {
+  const report = await collectLocalUsageEventsWithReport(config, options);
+  return report.events;
+}
+
+async function collectLocalUsageEventsWithReport(config, options = {}) {
+  const maxEventAgeDays = readPositiveNumber(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120);
+  const sinceMs = options.fullHistory ? (maxEventAgeDays * 24 + 1) * 60 * 60 * 1000 : SINCE_MS;
+  const ascReport = collectAscUsageEvents(config, sinceMs);
+  const targets = sourceTargets(config).filter((target) => !["codex", "claude-code"].includes(target.source));
   const codexTitleIndex = await readCodexTitleIndex(targets);
-  const minMtime = Date.now() - SINCE_MS;
+  const minMtime = Date.now() - sinceMs;
   const files = [];
 
   for (const target of targets) {
@@ -751,11 +828,173 @@ async function collectLocalUsageEvents(config) {
 
   const events = [];
   const configWithTitles = { ...config, codexTitleIndex };
-  for (const file of files.slice(0, MAX_FILES * Math.max(1, targets.length))) {
+  for (const file of files) {
+    if (ascReport.parsedPaths.has(path.resolve(file.path))) {
+      continue;
+    }
     events.push(...(await parseUsageFile(file.path, file.target, configWithTitles)));
   }
 
-  return dedupe(events);
+  const minTimestamp = Date.now() - maxEventAgeDays * 24 * 60 * 60 * 1000;
+  const combined = dedupe([...ascReport.events, ...events]);
+  const filtered = options.fullHistory
+    ? combined.filter((event) => new Date(event.timestamp).getTime() >= minTimestamp)
+    : combined;
+  return {
+    events: filtered,
+    filesDiscovered: ascReport.filesDiscovered + files.length,
+    filesParsed: ascReport.filesParsed + files.length,
+    parseFailures: ascReport.parseFailures,
+    complete: ascReport.parseFailures.length === 0,
+  };
+}
+
+function collectAscUsageEvents(config, sinceMs) {
+  const roots = {};
+  const usagePaths = readListEnv("TOKEN_BOARD_USAGE_PATHS") || readStringArray(config.usagePaths) || [];
+  const includeDefaultSources =
+    process.env.TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES === "false" ? false : config.includeDefaultSources !== false;
+  if (includeDefaultSources) {
+    const defaults = ascDefaultRoots();
+    roots.codex = [...(defaults.codex || []), homePath(".codex", "projects")];
+    roots.claude = [...(defaults.claude || [])];
+  }
+  if (usagePaths.length) {
+    roots.__custom__ = usagePaths;
+  }
+
+  const files = discoverAscSessionFiles({
+    roots,
+    sinceMs,
+    maxFiles: Number.POSITIVE_INFINITY,
+    includeSubagentTranscripts: true,
+  });
+  const events = [];
+  const parsedPaths = new Set();
+  const seenLogicalSessions = new Set();
+  const parseFailures = [];
+  let filesParsed = 0;
+  for (const file of files) {
+    const detectedFile = file.engine === "__custom__" ? { ...file, engine: undefined } : file;
+    const session = parseAscSessionFile(detectedFile);
+    if (!session) {
+      if (file.engine !== "__custom__") {
+        parseFailures.push(file.path);
+      }
+      continue;
+    }
+    filesParsed += 1;
+    parsedPaths.add(path.resolve(file.path));
+    const logicalSessionId = `${session.engine}:${session.id}`;
+    if (seenLogicalSessions.has(logicalSessionId)) {
+      continue;
+    }
+    seenLogicalSessions.add(logicalSessionId);
+    const ascEvents = ascToTokenEvents(session, {
+      userId: config.userId,
+      displayName: config.displayName,
+      team: config.team || "GitHub",
+    });
+    const linesWritten = summarizeAscLinesWritten(session);
+    const linesAnchor = linesWritten === null ? -1 : latestAscTokenEventIndex(ascEvents);
+    ascEvents.forEach((event, index) => {
+      const upstreamEventId = sanitizeUpstreamEventId(event.id);
+      events.push({
+        ...event,
+        id: upstreamEventId,
+        upstreamEventId,
+        project: projectBasename(event.project),
+        sessionId: event.sessionId ? `session:${sha256(event.sessionId).slice(0, 16)}` : "",
+        sessionTitle: config.includeSessionTitle === false ? "" : cleanSessionTitle(event.sessionTitle),
+        ...(index === linesAnchor ? { linesWritten } : {}),
+      });
+    });
+  }
+
+  return { events, parsedPaths, parseFailures, filesDiscovered: files.length, filesParsed };
+}
+
+function summarizeAscLinesWritten(session) {
+  const sessionEvents = isRecord(session) && Array.isArray(session.events) ? session.events : [];
+  const pending = new Map();
+  let linesWritten = null;
+  for (const event of sessionEvents) {
+    if (!isRecord(event)) continue;
+    const type = textFromFields(event, ["type", "kind"]);
+    if (type === "tool_call") {
+      const callId = textFromFields(event, ["callId", "call_id", "id", "toolUseId", "tool_use_id"]);
+      const name = textFromFields(event, ["name", "toolName", "tool_name", "tool"]);
+      const lines = extractAscCodeOutputLines(name, event.args ?? event.input ?? event.arguments);
+      if (callId && lines !== null) pending.set(callId, lines);
+      continue;
+    }
+    if (type !== "tool_result") continue;
+    const callId = textFromFields(event, ["callId", "call_id", "id", "toolUseId", "tool_use_id"]);
+    const lines = callId ? pending.get(callId) : undefined;
+    if (lines === undefined) continue;
+    pending.delete(callId);
+    if (event.ok === false || event.success === false || event.is_error === true || event.isError === true) continue;
+    linesWritten = (linesWritten ?? 0) + lines;
+  }
+  return linesWritten;
+}
+
+function latestAscTokenEventIndex(events) {
+  let index = events.length ? 0 : -1;
+  let latest = Number.NEGATIVE_INFINITY;
+  events.forEach((event, currentIndex) => {
+    const time = new Date(event.timestamp).getTime();
+    if (Number.isFinite(time) && time > latest) {
+      latest = time;
+      index = currentIndex;
+    }
+  });
+  return index;
+}
+
+function extractAscCodeOutputLines(name, rawArgs) {
+  const args = parseMaybeJson(rawArgs);
+  if (CLAUDE_CODE_OUTPUT_TOOLS.has(name)) {
+    const record = isRecord(args) ? args : {};
+    if (name === "Write") return countEffectiveLines(textFromFields(record, ["content"]));
+    if (name === "MultiEdit") {
+      return (Array.isArray(record.edits) ? record.edits : []).reduce(
+        (sum, edit) => sum + (isRecord(edit) ? countEffectiveLines(textFromFields(edit, ["new_string", "newString"])) : 0),
+        0
+      );
+    }
+    return countEffectiveLines(textFromFields(record, ["new_string", "newString", "content", "source", "cell_source"]));
+  }
+  if (CODEX_STRUCTURED_PATCH_TOOLS.has(name)) {
+    if (typeof rawArgs === "string" && !isRecord(args)) return countAddedPatchLines(rawArgs);
+    const patch = isRecord(args) ? textFromFields(args, ["patch", "content", "input"]) : "";
+    return patch ? countAddedPatchLines(patch) : null;
+  }
+  return null;
+}
+
+function parseMaybeJson(value) {
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function countAddedPatchLines(value) {
+  return value.split(/\r?\n/).filter((line) => line.startsWith("+") && !line.startsWith("+++") && isEffectiveCodeLine(line.slice(1))).length;
+}
+
+function countEffectiveLines(value) {
+  return value ? value.split(/\r?\n/).filter(isEffectiveCodeLine).length : 0;
+}
+
+function isEffectiveCodeLine(value) {
+  const normalized = value.trim();
+  return normalized.length > 3 && !/^[{}()[\];,]+$/.test(normalized);
 }
 
 async function readCodexTitleIndex(targets) {
@@ -836,7 +1075,7 @@ function sourceTargets(config) {
 }
 
 async function collectFiles(inputPath, target, files, minMtime, depth) {
-  if (files.length >= MAX_FILES || depth > 8) {
+  if (depth > 8) {
     return;
   }
 
@@ -865,9 +1104,6 @@ async function collectFiles(inputPath, target, files, minMtime, depth) {
   }
 
   for (const entry of entries) {
-    if (files.length >= MAX_FILES) {
-      return;
-    }
     await collectFiles(path.join(inputPath, entry.name), target, files, minMtime, depth + 1);
   }
 }
@@ -1680,13 +1916,6 @@ function usageRecordToEvent(usage, context) {
     throw new Error("missing input/output token fields; total_tokens fallback is disabled");
   }
 
-  // Defense-in-depth against cumulative counters mis-read as a single call (the same
-  // check the server enforces): a real API call cannot exceed a model's context window
-  // plus cache. 50M is ~200x the largest real single-call record ever observed.
-  if (totalTokens > MAX_EVENT_TOTAL_TOKENS) {
-    throw new Error(`single-event token count ${totalTokens} exceeds ${MAX_EVENT_TOTAL_TOKENS}; likely a cumulative counter, not one call`);
-  }
-
   const timestamp = normalizeTimestamp(context.timestamp || textFromFields(usage, ["timestamp", "createdAt", "created_at", "date", "time"]));
   const model = cleanLabel(context.model || textFromFields(usage, ["model", "modelName", "model_name"]), 80) || "unknown";
   const rawProject = context.project || textFromFields(usage, ["project", "repo", "workspace", "cwd", "root", "directory"]);
@@ -1718,6 +1947,9 @@ function usageRecordToEvent(usage, context) {
 
   return {
     id: `usage:${sha256(base).slice(0, 32)}`,
+    upstreamEventId: sanitizeUpstreamEventId(
+      `legacy:${context.source}:${sha256(`${rawSessionId}\n${context.sequence}`).slice(0, 32)}`
+    ),
     userId: context.config.userId,
     displayName: context.config.displayName,
     team: context.config.team || "GitHub",
@@ -1759,14 +1991,23 @@ async function postIngest(config, events, userConfig) {
   }, "Upload");
 }
 
-async function postReplace(config, events, userConfig) {
+async function postReplacePhase(config, phase, replaceId, events, options = {}) {
   return requestJsonWithRetry(`${API_URL}/api/usage/replace`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.agentToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(createIngestPayload(events, userConfig)),
+    body: JSON.stringify({
+      ...createIngestPayload(events, options.userConfig),
+      replace: {
+        phase,
+        replaceId,
+        ...(options.expectedEvents !== undefined ? { expectedEvents: options.expectedEvents } : {}),
+        ...(options.digest ? { digest: options.digest } : {}),
+        ...(options.complete !== undefined ? { complete: options.complete } : {}),
+      },
+    }),
   }, "Replace");
 }
 
@@ -2242,7 +2483,13 @@ function createIngestPayload(events, userConfig) {
 }
 
 function clientInfo() {
-  return { name: "token-board-agent", version: VERSION, hostId: os.hostname(), platform: os.platform() };
+  return {
+    name: "token-board-agent",
+    version: VERSION,
+    collectorSchemaVersion: COLLECTOR_SCHEMA_VERSION,
+    hostId: os.hostname(),
+    platform: os.platform(),
+  };
 }
 
 async function collectUserConfig() {
@@ -3470,6 +3717,11 @@ function dedupe(events) {
   });
 }
 
+function tokenEventManifestDigest(events) {
+  const keys = events.map((event) => event.upstreamEventId || event.id).sort().join("\n");
+  return `sha256:${createHash("sha256").update(keys).digest("hex")}`;
+}
+
 function chunk(items, size) {
   const chunks = [];
   for (let index = 0; index < items.length; index += size) {
@@ -3498,6 +3750,11 @@ function pruneUploadedIds(previousIds, collectedIds, newlyUploadedEvents) {
 
 function sha256(value) {
   return createHash("sha256").update(String(value)).digest("hex");
+}
+
+function sanitizeUpstreamEventId(value) {
+  const text = cleanLabel(value, 160);
+  return text.startsWith("upstream:") ? text : `upstream:${sha256(text).slice(0, 32)}`;
 }
 
 async function requestJsonWithRetry(url, options, label) {
@@ -3748,7 +4005,6 @@ function windowsTaskWrapper() {
     `set "TOKEN_BOARD_AGENT_CONFIG=${escapeCmdValue(CONFIG_FILE)}"`,
     `set "TOKEN_BOARD_AGENT_STATE_FILE=${escapeCmdValue(STATE_FILE)}"`,
     `set "TOKEN_BOARD_INTERVAL_MS=${escapeCmdValue(String(INTERVAL_MS))}"`,
-    `set "TOKEN_BOARD_MAX_FILES=${escapeCmdValue(String(MAX_FILES))}"`,
     `set "TOKEN_BOARD_MAX_FILE_BYTES=${escapeCmdValue(String(MAX_FILE_BYTES))}"`,
     `set "TOKEN_BOARD_MAX_CODEX_FILE_BYTES=${escapeCmdValue(String(MAX_CODEX_FILE_BYTES))}"`,
     `"${escapeCmdPath(process.execPath)}" "${escapeCmdPath(INSTALLED_AGENT_FILE)}" upload >> "${escapeCmdPath(LOG_FILE)}" 2>> "${escapeCmdPath(ERROR_LOG_FILE)}"`,
