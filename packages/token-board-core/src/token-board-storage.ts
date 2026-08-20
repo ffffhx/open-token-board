@@ -1371,6 +1371,51 @@ async function fsyncDirectory(dir: string) {
   }
 }
 
+// Columns the ON CONFLICT path may rewrite, each paired with the expression that
+// produces its new value. Both the SET list and the "did anything actually change?"
+// guard are derived from this single list so the two can never drift apart — a guard
+// that disagreed with the SET would either skip real corrections or defeat itself.
+// `id`, `user_id` and `source` are intentionally absent: they are never updated, so
+// comparing them would force a rewrite that changes nothing.
+function conflictUpdates(table: string): Array<[column: string, value: string]> {
+  const current = (column: string) => `${table}.${sqlIdentifier(column)}`;
+  const incoming = (column: string) => `EXCLUDED.${sqlIdentifier(column)}`;
+  const plain = (column: string): [string, string] => [column, incoming(column)];
+  // Keep a previously-stored value when the incoming one is blank/absent.
+  const keepIfBlank = (column: string): [string, string] => [
+    column,
+    `COALESCE(NULLIF(${incoming(column)}, ''), ${current(column)})`,
+  ];
+  const keepIfNull = (column: string): [string, string] => [
+    column,
+    `COALESCE(${incoming(column)}, ${current(column)})`,
+  ];
+
+  return [
+    keepIfBlank("upstream_event_id"),
+    plain("display_name"),
+    plain("team"),
+    plain("model"),
+    plain("project"),
+    plain("tool"),
+    plain("reported_at"),
+    plain("input_tokens"),
+    plain("cache_creation_input_tokens"),
+    plain("cached_input_tokens"),
+    plain("output_tokens"),
+    plain("reasoning_output_tokens"),
+    plain("total_tokens"),
+    plain("cost_usd"),
+    plain("messages"),
+    plain("session_id"),
+    keepIfBlank("session_title"),
+    keepIfNull("error_count"),
+    keepIfNull("interrupted_count"),
+    keepIfNull("tool_call_count"),
+    keepIfNull("lines_written"),
+  ];
+}
+
 function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
   const columns = [
     "id",
@@ -1431,32 +1476,28 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     return `(${columns.map((_, columnIndex) => `$${base + columnIndex + 1}`).join(", ")})`;
   });
 
+  // The agent re-uploads its whole retention window every cycle, so the vast
+  // majority of these rows are byte-identical to what is already stored. An
+  // unguarded DO UPDATE would rewrite every one of them, and under MVCC each
+  // rewrite means a new row version, four index updates, WAL, and later vacuum
+  // work — for no change at all. The guard below keeps the self-healing property
+  // (a genuinely corrected row still gets written) while skipping the no-ops.
+  //
+  // Rows skipped by the guard return nothing, so they never reach `accepted`,
+  // and the caller derives `duplicates` by subtraction — which is exactly where
+  // an unchanged row belongs.
+  const updates = conflictUpdates(table);
+  const setClause = updates.map(([column, value]) => `${sqlIdentifier(column)} = ${value}`).join(",\n          ");
+  const storedRow = updates.map(([column]) => `${table}.${sqlIdentifier(column)}`).join(", ");
+  const incomingRow = updates.map(([, value]) => value).join(", ");
+
   return {
     text: `
       INSERT INTO ${table} (${columns.map(sqlIdentifier).join(", ")})
       VALUES ${rows.join(", ")}
       ON CONFLICT (id) DO UPDATE
-      SET "upstream_event_id" = COALESCE(NULLIF(EXCLUDED."upstream_event_id", ''), ${table}."upstream_event_id"),
-          "display_name" = EXCLUDED."display_name",
-          "team" = EXCLUDED."team",
-          "model" = EXCLUDED."model",
-          "project" = EXCLUDED."project",
-          "tool" = EXCLUDED."tool",
-          "reported_at" = EXCLUDED."reported_at",
-          "input_tokens" = EXCLUDED."input_tokens",
-          "cache_creation_input_tokens" = EXCLUDED."cache_creation_input_tokens",
-          "cached_input_tokens" = EXCLUDED."cached_input_tokens",
-          "output_tokens" = EXCLUDED."output_tokens",
-          "reasoning_output_tokens" = EXCLUDED."reasoning_output_tokens",
-          "total_tokens" = EXCLUDED."total_tokens",
-          "cost_usd" = EXCLUDED."cost_usd",
-          "messages" = EXCLUDED."messages",
-          "session_id" = EXCLUDED."session_id",
-          "session_title" = COALESCE(NULLIF(EXCLUDED."session_title", ''), ${table}."session_title"),
-          "error_count" = COALESCE(EXCLUDED."error_count", ${table}."error_count"),
-          "interrupted_count" = COALESCE(EXCLUDED."interrupted_count", ${table}."interrupted_count"),
-          "tool_call_count" = COALESCE(EXCLUDED."tool_call_count", ${table}."tool_call_count"),
-          "lines_written" = COALESCE(EXCLUDED."lines_written", ${table}."lines_written")
+      SET ${setClause}
+      WHERE (${storedRow}) IS DISTINCT FROM (${incomingRow})
       RETURNING (xmax = 0) AS inserted
     `,
     values,
