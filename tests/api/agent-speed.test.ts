@@ -10,6 +10,8 @@ import {
   analyzeAgentSpeedSamples,
   buildAgentSpeedDailySnapshots,
   extractAgentSpeedSamples,
+  extractGrokSpeedSamplesFromText,
+  extractKimiSpeedSamplesFromText,
   sanitizeAgentSpeedDailySnapshots,
   type AgentSpeedRequestSample,
 } from "../../packages/token-board-core/src/agent-speed";
@@ -18,6 +20,8 @@ import {
   buildAgentSpeedDailySnapshots as buildStandaloneAgentSpeedDailySnapshots,
   createAgentSpeedAnalyzer,
   extractAgentSpeedSamples as extractStandaloneAgentSpeedSamples,
+  extractGrokSpeedSamplesFromText as extractStandaloneGrokSpeedSamplesFromText,
+  extractKimiSpeedSamplesFromText as extractStandaloneKimiSpeedSamplesFromText,
 } from "../../tools/token-board-agent-npx/bin/agent-speed.mjs";
 import { startTokenBoardHarness } from "../support/harness";
 
@@ -49,6 +53,85 @@ test("Huber regression recovers decode speed and fixed overhead despite outliers
   assert.ok(Math.abs(summary.fixedOverheadSeconds - 3) < 0.4, String(summary.fixedOverheadSeconds));
   assert.ok((summary.jitterP99 ?? 0) > (summary.jitterP90 ?? 0));
   assert.deepEqual(standaloneSummary, summary);
+});
+
+test("aggregate request counts preserve per-call fixed overhead", () => {
+  const samples: AgentSpeedRequestSample[] = Array.from({ length: 120 }, (_, index) => {
+    const requestCount = 1 + (index % 7);
+    const outputTokens = 30 + ((index * 277) % 2_970);
+    return {
+      engine: "grok",
+      model: "grok-test",
+      latencyMs: (requestCount * 2 + outputTokens / 50) * 1_000,
+      outputTokens,
+      missTokens: 0,
+      followedByTool: false,
+      requestCount,
+    };
+  });
+
+  const summary = analyzeAgentSpeedSamples(samples, []).modelSpeed[0];
+  const standaloneSummary = analyzeStandaloneAgentSpeedSamples(samples, []).modelSpeed[0];
+  assert.equal(summary.available, true);
+  assert.ok(Math.abs((summary.decodeTokensPerSecond ?? 0) - 50) < 0.1);
+  assert.ok(Math.abs((summary.fixedOverheadSeconds ?? 0) - 2) < 0.01);
+  assert.deepEqual(standaloneSummary, summary);
+});
+
+test("Kimi and Grok native logs produce private request-speed samples", () => {
+  const kimiText = [
+    { type: "llm.request", time: 1_780_000_000_000, model: "k3", modelAlias: "kimi-code/k3" },
+    {
+      type: "usage.record",
+      time: 1_780_000_012_000,
+      model: "kimi-code/k3",
+      usage: { inputOther: 800, inputCacheRead: 10_000, output: 500 },
+    },
+  ].map((row) => JSON.stringify(row)).join("\n");
+  const kimi = extractKimiSpeedSamplesFromText(kimiText);
+  assert.deepEqual(extractStandaloneKimiSpeedSamplesFromText(kimiText), kimi);
+  assert.deepEqual(kimi, [{
+    engine: "kimi",
+    model: "kimi-code/k3",
+    latencyMs: 12_000,
+    outputTokens: 500,
+    missTokens: 800,
+    followedByTool: false,
+    requestCount: 1,
+    observedAt: "2026-05-28T20:26:52.000Z",
+  }]);
+
+  const grokText = JSON.stringify({
+    timestamp: 1_780_000_020,
+    params: {
+      _meta: { agentTimestampMs: 1_780_000_020_000 },
+      update: {
+        usage: {
+          modelUsage: {
+            "grok-4.6-build": {
+              inputTokens: 40_000,
+              cachedReadTokens: 30_000,
+              outputTokens: 1_200,
+              modelCalls: 4,
+              apiDurationMs: 28_000,
+            },
+          },
+        },
+      },
+    },
+  });
+  const grok = extractGrokSpeedSamplesFromText(grokText);
+  assert.deepEqual(extractStandaloneGrokSpeedSamplesFromText(grokText), grok);
+  assert.deepEqual(grok, [{
+    engine: "grok",
+    model: "grok-4.6-build",
+    latencyMs: 28_000,
+    outputTokens: 1_200,
+    missTokens: 10_000,
+    followedByTool: false,
+    requestCount: 4,
+    observedAt: "2026-05-28T20:27:00.000Z",
+  }]);
 });
 
 test("model summaries reject too few or too narrowly distributed samples", () => {

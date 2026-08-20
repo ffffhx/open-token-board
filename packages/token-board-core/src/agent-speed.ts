@@ -4,13 +4,17 @@ const MIN_LATENCY_MS = 300;
 const MIN_MODEL_SAMPLES = 30;
 const MIN_OUTPUT_SPREAD_RATIO = 3;
 
+export type AgentSpeedEngine = Engine | "grok" | "kimi";
+
 export type AgentSpeedRequestSample = {
-  engine: Engine;
+  engine: AgentSpeedEngine;
   model: string;
   latencyMs: number;
   outputTokens: number;
   missTokens: number;
   followedByTool: boolean;
+  /** Number of API calls represented by an aggregate observation. */
+  requestCount?: number;
   observedAt?: string;
 };
 
@@ -23,7 +27,7 @@ export type AgentSpeedTurnSample = {
 };
 
 export type AgentModelSpeedSummary = {
-  engine: Engine;
+  engine: AgentSpeedEngine;
   model: string;
   sampleCount: number;
   outputSpreadRatio: number;
@@ -185,6 +189,113 @@ export function extractAgentSpeedSamples(session: NormalizedSession): {
     requests: extractRequestSamples(session, events),
     turns: extractTurnSamples(session, events),
   };
+}
+
+/** Parse Kimi Code's content-free request/usage records from agent wire logs. */
+export function extractKimiSpeedSamplesFromText(text: string): AgentSpeedRequestSample[] {
+  const samples: AgentSpeedRequestSample[] = [];
+  let pending: { timeMs: number; model: string } | undefined;
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const record = parseJsonRecord(rawLine);
+    if (!record) continue;
+
+    if (record.type === "llm.request") {
+      const timeMs = epochMilliseconds(record.time);
+      if (!Number.isFinite(timeMs)) {
+        pending = undefined;
+        continue;
+      }
+      pending = {
+        timeMs,
+        model: sanitizeText(record.modelAlias, 160) || sanitizeText(record.model, 160) || "unknown",
+      };
+      continue;
+    }
+
+    if (record.type !== "usage.record" || !pending || !isRecord(record.usage)) continue;
+    const endMs = epochMilliseconds(record.time);
+    const latencyMs = endMs - pending.timeMs;
+    const outputTokens = finiteNonNegative(Number(record.usage.output));
+    if (!Number.isFinite(latencyMs) || latencyMs <= MIN_LATENCY_MS || outputTokens <= 0) {
+      pending = undefined;
+      continue;
+    }
+
+    samples.push({
+      engine: "kimi",
+      model: sanitizeText(record.model, 160) || pending.model,
+      latencyMs,
+      outputTokens,
+      missTokens: finiteNonNegative(Number(record.usage.inputOther)),
+      followedByTool: false,
+      requestCount: 1,
+      observedAt: new Date(endMs).toISOString(),
+    });
+    pending = undefined;
+  }
+
+  return samples;
+}
+
+/** Parse Grok's per-turn API aggregates from session update logs. */
+export function extractGrokSpeedSamplesFromText(text: string): AgentSpeedRequestSample[] {
+  const samples: AgentSpeedRequestSample[] = [];
+
+  for (const rawLine of text.split(/\r?\n/)) {
+    const record = parseJsonRecord(rawLine);
+    if (!record || !isRecord(record.params) || !isRecord(record.params.update)) continue;
+    const usage = record.params.update.usage;
+    if (!isRecord(usage)) continue;
+    const observedAt = grokObservedAt(record);
+    if (!observedAt) continue;
+
+    const modelUsage = isRecord(usage.modelUsage) ? usage.modelUsage : undefined;
+    if (modelUsage) {
+      for (const [model, modelValue] of Object.entries(modelUsage)) {
+        if (!isRecord(modelValue)) continue;
+        const sample = grokUsageToSample(model, modelValue, observedAt);
+        if (sample) samples.push(sample);
+      }
+      continue;
+    }
+
+    const model = sanitizeText(record.params.update.model, 160) || sanitizeText(record.params.update.modelId, 160);
+    const sample = grokUsageToSample(model || "grok", usage, observedAt);
+    if (sample) samples.push(sample);
+  }
+
+  return samples;
+}
+
+function grokUsageToSample(
+  model: string,
+  usage: Record<string, unknown>,
+  observedAt: string
+): AgentSpeedRequestSample | undefined {
+  const latencyMs = finiteNonNegative(Number(usage.apiDurationMs));
+  const outputTokens = finiteNonNegative(Number(usage.outputTokens));
+  const requestCount = Math.max(1, Math.trunc(finiteNonNegative(Number(usage.modelCalls))));
+  if (latencyMs <= MIN_LATENCY_MS || outputTokens <= 0) return undefined;
+  const inputTokens = finiteNonNegative(Number(usage.inputTokens));
+  const cachedTokens = finiteNonNegative(Number(usage.cachedReadTokens));
+  return {
+    engine: "grok",
+    model: sanitizeText(model, 160) || "grok",
+    latencyMs,
+    outputTokens,
+    missTokens: Math.max(0, inputTokens - cachedTokens),
+    followedByTool: false,
+    requestCount,
+    observedAt,
+  };
+}
+
+function grokObservedAt(record: Record<string, unknown>) {
+  const params = isRecord(record.params) ? record.params : {};
+  const meta = isRecord(params._meta) ? params._meta : {};
+  const timeMs = epochMilliseconds(meta.agentTimestampMs ?? record.timestamp);
+  return Number.isFinite(timeMs) ? new Date(timeMs).toISOString() : "";
 }
 
 function extractRequestSamples(session: NormalizedSession, events: TimedEvent[]): AgentSpeedRequestSample[] {
@@ -430,7 +541,10 @@ function summarizeOneModel(samples: AgentSpeedRequestSample[]): AgentModelSpeedS
   const hasToolVariation = samples.some((sample) => sample.followedByTool) &&
     samples.some((sample) => !sample.followedByTool);
   const rows = samples.map((sample) => {
-    const row = [1, sample.outputTokens / 1_000];
+    // Grok persists one aggregate per turn. Multiplying the fixed-overhead
+    // predictor by modelCalls keeps the coefficient comparable to single-call
+    // Codex, Claude, and Kimi observations.
+    const row = [Math.max(1, sample.requestCount ?? 1), sample.outputTokens / 1_000];
     if (hasMissVariation) row.push(sample.missTokens / 10_000);
     if (hasToolVariation) row.push(sample.followedByTool ? 1 : 0);
     return row;
@@ -566,7 +680,7 @@ function weightedLeastSquares(rows: number[][], values: number[], weights: numbe
     }
   }
 
-  // Tiny ridge on non-intercept features only. It stabilizes nearly-collinear
+  // Tiny ridge on non-overhead features only. It stabilizes nearly-collinear
   // output/miss-token columns without biasing the fixed-overhead estimate.
   for (let index = 1; index < width; index += 1) {
     matrix[index][index] += 1e-9;
@@ -673,7 +787,7 @@ function normalizeDailySnapshot(value: unknown): AgentSpeedDailySnapshot | undef
 
 function normalizeModelSpeed(value: unknown): AgentModelSpeedSummary | undefined {
   if (!isRecord(value)) return undefined;
-  const engine = normalizeEngine(value.engine);
+  const engine = normalizeAgentSpeedEngine(value.engine);
   const model = sanitizeText(value.model, 160);
   const sampleCount = safeInteger(value.sampleCount, 10_000_000);
   const outputSpreadRatio = safeNumber(value.outputSpreadRatio, 0, 1_000_000_000);
@@ -739,8 +853,29 @@ function normalizeTimeComposition(value: unknown): AgentTimeCompositionSummary |
   };
 }
 
+function normalizeAgentSpeedEngine(value: unknown): AgentSpeedEngine | undefined {
+  return value === "codex" || value === "claude" || value === "grok" || value === "kimi" ? value : undefined;
+}
+
 function normalizeEngine(value: unknown): Engine | undefined {
   return value === "codex" || value === "claude" ? value : undefined;
+}
+
+function parseJsonRecord(value: string): Record<string, unknown> | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(trimmed);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function epochMilliseconds(value: unknown) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return Number.NaN;
+  return numeric < 1_000_000_000_000 ? numeric * 1_000 : numeric;
 }
 
 function safeInteger(value: unknown, max: number) {

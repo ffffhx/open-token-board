@@ -18,6 +18,9 @@ export function createAgentSpeedAnalyzer() {
       requests.push(...samples.requests);
       turns.push(...samples.turns);
     },
+    addRequestSamples(samples) {
+      requests.push(...samples);
+    },
     finish() {
       return analyzeAgentSpeedSamples(requests, turns);
     },
@@ -146,6 +149,93 @@ export function extractAgentSpeedSamples(session) {
     requests: extractRequestSamples(session, events),
     turns: extractTurnSamples(session, events),
   };
+}
+
+export function extractKimiSpeedSamplesFromText(text) {
+  const samples = [];
+  let pending;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const record = parseJsonRecord(rawLine);
+    if (!record) continue;
+    if (record.type === "llm.request") {
+      const timeMs = epochMilliseconds(record.time);
+      pending = Number.isFinite(timeMs)
+        ? { timeMs, model: sanitizeText(record.modelAlias, 160) || sanitizeText(record.model, 160) || "unknown" }
+        : undefined;
+      continue;
+    }
+    if (record.type !== "usage.record" || !pending || !isRecord(record.usage)) continue;
+    const endMs = epochMilliseconds(record.time);
+    const latencyMs = endMs - pending.timeMs;
+    const outputTokens = finiteNonNegative(Number(record.usage.output));
+    if (!Number.isFinite(latencyMs) || latencyMs <= MIN_LATENCY_MS || outputTokens <= 0) {
+      pending = undefined;
+      continue;
+    }
+    samples.push({
+      engine: "kimi",
+      model: sanitizeText(record.model, 160) || pending.model,
+      latencyMs,
+      outputTokens,
+      missTokens: finiteNonNegative(Number(record.usage.inputOther)),
+      followedByTool: false,
+      requestCount: 1,
+      observedAt: new Date(endMs).toISOString(),
+    });
+    pending = undefined;
+  }
+  return samples;
+}
+
+export function extractGrokSpeedSamplesFromText(text) {
+  const samples = [];
+  for (const rawLine of text.split(/\r?\n/)) {
+    const record = parseJsonRecord(rawLine);
+    if (!record || !isRecord(record.params) || !isRecord(record.params.update)) continue;
+    const usage = record.params.update.usage;
+    if (!isRecord(usage)) continue;
+    const observedAt = grokObservedAt(record);
+    if (!observedAt) continue;
+    const modelUsage = isRecord(usage.modelUsage) ? usage.modelUsage : undefined;
+    if (modelUsage) {
+      for (const [model, modelValue] of Object.entries(modelUsage)) {
+        if (!isRecord(modelValue)) continue;
+        const sample = grokUsageToSample(model, modelValue, observedAt);
+        if (sample) samples.push(sample);
+      }
+      continue;
+    }
+    const model = sanitizeText(record.params.update.model, 160) || sanitizeText(record.params.update.modelId, 160);
+    const sample = grokUsageToSample(model || "grok", usage, observedAt);
+    if (sample) samples.push(sample);
+  }
+  return samples;
+}
+
+function grokUsageToSample(model, usage, observedAt) {
+  const latencyMs = finiteNonNegative(Number(usage.apiDurationMs));
+  const outputTokens = finiteNonNegative(Number(usage.outputTokens));
+  const requestCount = Math.max(1, Math.trunc(finiteNonNegative(Number(usage.modelCalls))));
+  if (latencyMs <= MIN_LATENCY_MS || outputTokens <= 0) return undefined;
+  const inputTokens = finiteNonNegative(Number(usage.inputTokens));
+  const cachedTokens = finiteNonNegative(Number(usage.cachedReadTokens));
+  return {
+    engine: "grok",
+    model: sanitizeText(model, 160) || "grok",
+    latencyMs,
+    outputTokens,
+    missTokens: Math.max(0, inputTokens - cachedTokens),
+    followedByTool: false,
+    requestCount,
+    observedAt,
+  };
+}
+
+function grokObservedAt(record) {
+  const params = isRecord(record.params) ? record.params : {};
+  const meta = isRecord(params._meta) ? params._meta : {};
+  const timeMs = epochMilliseconds(meta.agentTimestampMs ?? record.timestamp);
+  return Number.isFinite(timeMs) ? new Date(timeMs).toISOString() : "";
 }
 
 function extractRequestSamples(session, events) {
@@ -312,7 +402,7 @@ function summarizeOneModel(samples) {
   const hasMissVariation = percentile(missValues, 0.9) > percentile(missValues, 0.1);
   const hasToolVariation = samples.some((sample) => sample.followedByTool) && samples.some((sample) => !sample.followedByTool);
   const rows = samples.map((sample) => {
-    const row = [1, sample.outputTokens / 1_000];
+    const row = [Math.max(1, sample.requestCount ?? 1), sample.outputTokens / 1_000];
     if (hasMissVariation) row.push(sample.missTokens / 10_000);
     if (hasToolVariation) row.push(sample.followedByTool ? 1 : 0);
     return row;
@@ -451,6 +541,33 @@ function isTurnActivity(event) {
 
 function finiteNonNegative(value) {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
+}
+
+function parseJsonRecord(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = JSON.parse(trimmed);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function sanitizeText(value, maxLength) {
+  return typeof value === "string"
+    ? value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength)
+    : "";
+}
+
+function epochMilliseconds(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return Number.NaN;
+  return numeric < 1_000_000_000_000 ? numeric * 1_000 : numeric;
 }
 
 function groupSamplesByDay(samples, offsetMinutes) {

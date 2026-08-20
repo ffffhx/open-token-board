@@ -7,6 +7,8 @@
 // sanitizeIngestEvents() chain — this layer does not re-implement any of it.
 //
 // Scope (step 1 of the migration): ASC supports engine = codex | claude only.
+// Native Grok/Kimi request aggregates are read separately for speed history;
+// they do not enter ASC or the token-usage event stream.
 // Codex/Claude rate-limits, the user runtime config report, and custom
 // non-codex/claude JSON usage extraction (the old collector's `custom` source +
 // generic visitJson scan) are NOT covered here and continue to use the old path.
@@ -21,10 +23,16 @@ import type {
   TokenUsageEvent as AscTokenUsageEvent,
 } from "agent-session-core";
 
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import {
   analyzeAgentSpeedSamples,
   buildAgentSpeedDailySnapshots,
   extractAgentSpeedSamples,
+  extractGrokSpeedSamplesFromText,
+  extractKimiSpeedSamplesFromText,
   type AgentSpeedAnalysis,
   type AgentSpeedDailySnapshot,
   type AgentSpeedRequestSample,
@@ -131,11 +139,18 @@ export async function collectLocalTokenUsageViaAscWithReport(
       out.push(mapEvent(ev, index === linesAnchorIndex ? linesWritten : null));
     });
   });
+  const native = await collectNativeSpeedSamples(config);
+  requests.push(...native.requests);
 
   return {
     events: out,
     speedHistory: buildAgentSpeedDailySnapshots(requests, turns),
-    ...visit,
+    filesDiscovered: visit.filesDiscovered + native.filesDiscovered,
+    filesParsed: visit.filesParsed + native.filesParsed,
+    // Native speed parsing is best-effort and must not make a complete token
+    // history replacement fail its ASC completeness guard.
+    parseFailures: visit.parseFailures,
+    complete: visit.complete,
   };
 }
 
@@ -153,12 +168,92 @@ export async function collectLocalAgentSpeedViaAscWithReport(
     requests.push(...samples.requests);
     turns.push(...samples.turns);
   });
+  const native = await collectNativeSpeedSamples(config);
+  requests.push(...native.requests);
 
   return {
     analysis: analyzeAgentSpeedSamples(requests, turns),
     speedHistory: buildAgentSpeedDailySnapshots(requests, turns),
-    ...visit,
+    filesDiscovered: visit.filesDiscovered + native.filesDiscovered,
+    filesParsed: visit.filesParsed + native.filesParsed,
+    parseFailures: [...visit.parseFailures, ...native.parseFailures],
+    complete: visit.complete && native.parseFailures.length === 0,
   };
+}
+
+type NativeSpeedFile = {
+  path: string;
+  source: "grok" | "kimi";
+};
+
+async function collectNativeSpeedSamples(config: TokenUsageCollectorConfig) {
+  const requests: AgentSpeedRequestSample[] = [];
+  const parseFailures: string[] = [];
+  if (config.includeDefaultSources === false) {
+    return { requests, filesDiscovered: 0, filesParsed: 0, parseFailures };
+  }
+
+  const roots = [
+    {
+      source: "grok" as const,
+      root: process.env.GROK_HOME || path.join(os.homedir(), ".grok"),
+      fileName: "updates.jsonl",
+    },
+    {
+      source: "kimi" as const,
+      root: process.env.KIMI_CODE_HOME || path.join(os.homedir(), ".kimi-code"),
+      fileName: "wire.jsonl",
+    },
+  ];
+  const sinceHours = config.sinceHours ?? DEFAULT_SINCE_HOURS;
+  const minMtime = sinceHours > 0 ? Date.now() - sinceHours * 60 * 60 * 1_000 : 0;
+  const files: NativeSpeedFile[] = [];
+  for (const root of roots) {
+    await discoverNativeSpeedFiles(path.join(root.root, "sessions"), root.source, root.fileName, minMtime, files, 0);
+  }
+
+  let filesParsed = 0;
+  for (const file of files) {
+    try {
+      const text = await fs.readFile(file.path, "utf8");
+      requests.push(...(file.source === "grok"
+        ? extractGrokSpeedSamplesFromText(text)
+        : extractKimiSpeedSamplesFromText(text)));
+      filesParsed += 1;
+    } catch {
+      parseFailures.push(file.path);
+    }
+  }
+  return { requests, filesDiscovered: files.length, filesParsed, parseFailures };
+}
+
+async function discoverNativeSpeedFiles(
+  directory: string,
+  source: NativeSpeedFile["source"],
+  fileName: string,
+  minMtime: number,
+  files: NativeSpeedFile[],
+  depth: number
+): Promise<void> {
+  if (depth > 8) return;
+  let entries;
+  try {
+    entries = await fs.readdir(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await discoverNativeSpeedFiles(entryPath, source, fileName, minMtime, files, depth + 1);
+      continue;
+    }
+    if (!entry.isFile() || entry.name !== fileName) continue;
+    const stat = await fs.stat(entryPath).catch(() => undefined);
+    if (stat && stat.mtimeMs >= minMtime && stat.size <= 512 * 1024 * 1024) {
+      files.push({ path: entryPath, source });
+    }
+  }
 }
 
 async function visitAscSessions(

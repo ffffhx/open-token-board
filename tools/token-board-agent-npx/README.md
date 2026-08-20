@@ -35,10 +35,10 @@ npx --yes token-board-agent watch
 - `resync`：忽略本地上传 checkpoint，重新同步扫描窗口内事件。
 - `replace`：用当前采集到的事件替换服务端该用户旧事件；没有采集到事件时不会清空远端。
 - `collect`：只打印将要上报的 JSON，不发网络请求。
-- `speed`：从本地 Codex / Claude Code Session 估算各模型的解码速度、固定开销、p90/p99 抖动，以及已闭合轮次的非工具/工具时间占比；结果不会上传。传 `--json` 可输出结构化结果。
+- `speed`：从本地 Codex、Claude Code、Grok Code 与 Kimi Code Session 估算各模型的解码速度、固定开销和 p90/p99 抖动；Codex / Claude Code 还会统计已闭合轮次的非工具/工具时间占比。结果不会上传，传 `--json` 可输出结构化结果。
 - `watch`：前台常驻循环，适合临时替代系统后台任务。
 
-`speed` 使用本地事件时间戳做稳健回归，固定开销和 tok/s 都是观测估算值，不是 TTFT 的直接测量。建议只在同一引擎内比较模型；样本少于 30 个或输出长度跨度不足 3 倍时不会给出速度结论。工具时间会合并并行区间，并包含权限确认等待。
+`speed` 使用本地事件时间戳做稳健回归，固定开销和 tok/s 都是观测估算值，不是 TTFT 的直接测量。Grok 的本地日志按轮保存 API 聚合，因此回归会使用 `modelCalls` 还原每次请求的固定开销。建议只在同一引擎内比较模型；样本少于 30 个或输出长度跨度不足 3 倍时不会给出速度结论。工具时间会合并并行区间，并包含权限确认等待。
 
 常规 `upload` / 后台同步会把同一批本地 Session 额外汇总成上海自然日统计并上传，用于网页 `/speed` 趋势。上传字段只有日期、引擎、模型名、样本量、回归结果和非工具/工具耗时；prompt、回复、工具参数、文件路径和 Session ID 不会进入速度历史。单独运行 `speed` 命令仍然只是本地查看，不发网络请求。
 
@@ -136,6 +136,8 @@ agent 会扫描最近一段时间内存在的本地日志目录：
 | --- | --- | --- |
 | Codex CLI | `codex` | `~/.codex/sessions`、`~/.codex/archived_sessions`、`~/.codex/projects`、`$CODEX_HOME/sessions`、`$CODEX_HOME/archived_sessions`，以及 Orca runtime home |
 | Claude Code | `claude-code` | `~/.claude/projects`、`~/.claude/history.jsonl` |
+| Grok Code（仅速度聚合） | `grok` | `$GROK_HOME/sessions` 或 `~/.grok/sessions` 下的 `updates.jsonl` |
+| Kimi Code（仅速度聚合） | `kimi` | `$KIMI_CODE_HOME/sessions` 或 `~/.kimi-code/sessions` 下的 `wire.jsonl` |
 | Gemini CLI | `gemini-cli` | `${GEMINI_DATA_DIR}`、`${GEMINI_CLI_HOME}/tmp`、`~/.gemini/tmp` |
 | opencode | `opencode` | `${OPENCODE_DATA_DIR}`、`~/.local/share/opencode`，识别 `opencode*.db` 和 legacy `storage/message/**/*.json` |
 | Cursor | `cursor` | 各平台 Cursor `globalStorage` 与 `logs` |

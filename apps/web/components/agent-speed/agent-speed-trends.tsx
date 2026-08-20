@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type {
   AgentModelSpeedSummary,
   AgentSpeedDailySnapshot,
+  AgentSpeedEngine,
   AgentTimeCompositionSummary,
 } from "@open-token-board/core/agent-speed";
 
@@ -29,7 +30,7 @@ type HistoryResponse = {
   snapshots: AgentSpeedDailySnapshot[];
 };
 
-type ModelOption = { key: string; engine: "codex" | "claude"; model: string };
+type ModelOption = { key: string; engine: AgentSpeedEngine; model: string };
 
 export function AgentSpeedTrends({ apiBaseUrl, initialNow }: { apiBaseUrl: string; initialNow: string }) {
   const { dict, locale } = useI18n();
@@ -176,7 +177,7 @@ export function AgentSpeedTrends({ apiBaseUrl, initialNow }: { apiBaseUrl: strin
                         }`}
                       >
                         <span className="block font-mono text-[10px] uppercase opacity-70">
-                          {option.engine === "codex" ? copy.model.codex : copy.model.claude}
+                          {copy.model[option.engine]}
                         </span>
                         <span className="mt-0.5 block max-w-56 truncate text-sm font-bold">{option.model}</span>
                       </button>
@@ -218,7 +219,15 @@ export function AgentSpeedTrends({ apiBaseUrl, initialNow }: { apiBaseUrl: strin
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(18rem,0.65fr)]">
               <section className="rounded-otb-card border border-slate-200 bg-white p-5 shadow-otb-card sm:p-6">
                 <PanelTitle title={copy.chart.speedTitle} description={copy.chart.speedDescription} />
-                <SpeedLineChart snapshots={report.snapshots} modelKey={selectedModel} ariaLabel={copy.chart.speedAria(selectedOption?.model ?? "model")} locale={locale} emptyLabel={copy.chart.noPoint} />
+                <MetricLineChart
+                  snapshots={report.snapshots}
+                  modelKey={selectedModel}
+                  metric="speed"
+                  unit={copy.units.tokensPerSecond}
+                  ariaLabel={copy.chart.speedAria(selectedOption?.model ?? "model")}
+                  locale={locale}
+                  emptyLabel={copy.chart.noPoint}
+                />
               </section>
 
               <aside className="rounded-otb-card border border-slate-200 bg-white p-5 shadow-otb-card sm:p-6">
@@ -230,12 +239,21 @@ export function AgentSpeedTrends({ apiBaseUrl, initialNow }: { apiBaseUrl: strin
                   <DetailRow label={copy.detail.rSquared} value={formatMetric(latest?.row.rSquared, 2)} />
                   <DetailRow label={copy.detail.outputSpread} value={`${formatMetric(latest?.row.outputSpreadRatio, 1)}${copy.units.multiplier}`} />
                 </dl>
-                <div className="mt-6 border-t border-slate-200 pt-5">
-                  <PanelTitle title={copy.chart.fixedTitle} description={copy.chart.fixedDescription} compact />
-                  <MiniLineChart snapshots={report.snapshots} modelKey={selectedModel} />
-                </div>
               </aside>
             </div>
+
+            <section className="rounded-otb-card border border-slate-200 bg-white p-5 shadow-otb-card sm:p-6">
+              <PanelTitle title={copy.chart.fixedTitle} description={copy.chart.fixedDescription} />
+              <MetricLineChart
+                snapshots={report.snapshots}
+                modelKey={selectedModel}
+                metric="fixed"
+                unit={copy.units.seconds}
+                ariaLabel={copy.chart.fixedAria(selectedOption?.model ?? "model")}
+                locale={locale}
+                emptyLabel={copy.chart.noPoint}
+              />
+            </section>
 
             <section className="rounded-otb-card border border-slate-200 bg-white p-5 shadow-otb-card sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -285,7 +303,23 @@ function RangeControl({ range, setRange, labels }: { range: HistoryRange; setRan
   );
 }
 
-function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: { snapshots: AgentSpeedDailySnapshot[]; modelKey: string; ariaLabel: string; locale: string; emptyLabel: string }) {
+function MetricLineChart({
+  snapshots,
+  modelKey,
+  metric,
+  unit,
+  ariaLabel,
+  locale,
+  emptyLabel,
+}: {
+  snapshots: AgentSpeedDailySnapshot[];
+  modelKey: string;
+  metric: "speed" | "fixed";
+  unit: string;
+  ariaLabel: string;
+  locale: string;
+  emptyLabel: string;
+}) {
   const [hoveredDate, setHoveredDate] = useState("");
   const width = 960;
   const height = 320;
@@ -295,8 +329,9 @@ function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: 
   const bottom = 44;
   const points = snapshots.flatMap((snapshot) => {
     const row = modelRow(snapshot, modelKey);
-    return row?.available && row.decodeTokensPerSecond
-      ? [{ date: snapshot.date, value: row.decodeTokensPerSecond, confidence: row.confidence, row }]
+    const value = metric === "speed" ? row?.decodeTokensPerSecond : row?.fixedOverheadSeconds;
+    return row?.available && typeof value === "number" && Number.isFinite(value) && value > 0
+      ? [{ date: snapshot.date, value, confidence: row.confidence, row }]
       : [];
   });
   if (!points.length) return <div className="mt-6 flex min-h-64 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-6 text-center text-sm text-slate-500">{emptyLabel}</div>;
@@ -308,18 +343,22 @@ function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: 
   const y = (value: number) => top + (1 - value / maxValue) * (height - top - bottom);
   const hovered = points.find((point) => point.date === hoveredDate) ?? points.at(-1)!;
   const ticks = [0, 0.25, 0.5, 0.75, 1];
+  const lineColor = metric === "speed" ? "var(--color-blue-600)" : "var(--color-amber-600)";
+  const areaColor = metric === "speed" ? "var(--color-blue-500)" : "var(--color-amber-500)";
+  const areaId = metric === "speed" ? "speed-area" : "fixed-overhead-area";
+  const axisDigits = metric === "fixed" && maxValue < 20 ? 1 : 0;
   return (
     <div className="mt-5">
       <div className="flex min-h-8 items-center justify-end gap-2 font-mono text-xs text-slate-500">
         <span>{formatDay(hovered.date, locale)}</span>
-        <span className="font-bold text-slate-950">{hovered.value.toFixed(1)} tok/s</span>
+        <span className="font-bold text-slate-950">{hovered.value.toFixed(1)} {unit}</span>
         <span className={`size-2 rounded-full ${hovered.confidence === "high" ? "bg-emerald-500" : hovered.confidence === "medium" ? "bg-amber-500" : "bg-slate-400"}`} />
       </div>
       <svg className="block h-auto w-full" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={ariaLabel}>
         <defs>
-          <linearGradient id="speed-area" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="var(--color-blue-500)" stopOpacity="0.24" />
-            <stop offset="1" stopColor="var(--color-blue-500)" stopOpacity="0" />
+          <linearGradient id={areaId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={areaColor} stopOpacity="0.24" />
+            <stop offset="1" stopColor={areaColor} stopOpacity="0" />
           </linearGradient>
         </defs>
         {ticks.map((tick) => {
@@ -328,18 +367,18 @@ function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: 
             <g key={tick}>
               <line x1={left} x2={width - right} y1={tickY} y2={tickY} stroke="var(--color-slate-200)" strokeWidth="1" />
               <text x={left - 10} y={tickY + 4} textAnchor="end" fill="var(--color-slate-500)" fontFamily="var(--font-space-mono)" fontSize="11">
-                {Math.round(maxValue * tick)}
+                {formatAxisMetric(maxValue * tick, axisDigits)}
               </text>
             </g>
           );
         })}
         {points.length > 1 ? (
-          <path d={`${linePath(points, x, y)} L ${x(points.at(-1)!.date)} ${height - bottom} L ${x(points[0].date)} ${height - bottom} Z`} fill="url(#speed-area)" />
+          <path d={`${linePath(points, x, y)} L ${x(points.at(-1)!.date)} ${height - bottom} L ${x(points[0].date)} ${height - bottom} Z`} fill={`url(#${areaId})`} />
         ) : null}
         {points.slice(1).map((point, index) => {
           const previous = points[index];
           const lowConfidence = point.confidence === "low" || previous.confidence === "low";
-          return <line key={point.date} x1={x(previous.date)} y1={y(previous.value)} x2={x(point.date)} y2={y(point.value)} stroke="var(--color-blue-600)" strokeWidth="3" strokeLinecap="round" strokeDasharray={lowConfidence ? "7 7" : undefined} />;
+          return <line key={point.date} x1={x(previous.date)} y1={y(previous.value)} x2={x(point.date)} y2={y(point.value)} stroke={lineColor} strokeWidth="3" strokeLinecap="round" strokeDasharray={lowConfidence ? "7 7" : undefined} />;
         })}
         {points.map((point, index) => (
           <circle
@@ -347,14 +386,14 @@ function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: 
             cx={x(point.date)}
             cy={y(point.value)}
             r={point.date === hovered.date ? 6 : index === points.length - 1 ? 5 : 3.5}
-            fill={point.confidence === "low" ? "var(--color-white)" : "var(--color-blue-600)"}
-            stroke="var(--color-blue-600)"
+            fill={point.confidence === "low" ? "var(--color-white)" : lineColor}
+            stroke={lineColor}
             strokeWidth="2.5"
             tabIndex={0}
             onMouseEnter={() => setHoveredDate(point.date)}
             onFocus={() => setHoveredDate(point.date)}
           >
-            <title>{`${formatDay(point.date, locale)} · ${point.value.toFixed(1)} tok/s · n=${point.row.sampleCount}`}</title>
+            <title>{`${formatDay(point.date, locale)} · ${point.value.toFixed(1)} ${unit} · n=${point.row.sampleCount}`}</title>
           </circle>
         ))}
         {[snapshots[0], snapshots[Math.floor((snapshots.length - 1) / 2)], snapshots.at(-1)].filter(Boolean).map((snapshot, index, array) => (
@@ -364,25 +403,6 @@ function SpeedLineChart({ snapshots, modelKey, ariaLabel, locale, emptyLabel }: 
         ))}
       </svg>
     </div>
-  );
-}
-
-function MiniLineChart({ snapshots, modelKey }: { snapshots: AgentSpeedDailySnapshot[]; modelKey: string }) {
-  const width = 320;
-  const height = 100;
-  const points = snapshots.flatMap((snapshot, index) => {
-    const row = modelRow(snapshot, modelKey);
-    return row?.available && row.fixedOverheadSeconds ? [{ index, value: row.fixedOverheadSeconds }] : [];
-  });
-  if (!points.length) return <div className="mt-4 h-24 rounded-lg bg-slate-50" />;
-  const max = Math.max(...points.map((point) => point.value), 1);
-  const x = (index: number) => 6 + index / Math.max(1, snapshots.length - 1) * (width - 12);
-  const y = (value: number) => 8 + (1 - value / max) * (height - 22);
-  return (
-    <svg className="mt-4 block h-24 w-full" preserveAspectRatio="none" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
-      <path d={points.map((point, index) => `${index ? "L" : "M"} ${x(point.index)} ${y(point.value)}`).join(" ")} fill="none" stroke="var(--color-amber-500)" strokeWidth="3" vectorEffect="non-scaling-stroke" />
-      {points.map((point) => <circle key={point.index} cx={x(point.index)} cy={y(point.value)} r="3" fill="var(--color-amber-500)" vectorEffect="non-scaling-stroke" />)}
-    </svg>
   );
 }
 
@@ -470,8 +490,8 @@ function PulseTrace() {
   );
 }
 
-function PanelTitle({ title, description, compact = false }: { title: string; description: string; compact?: boolean }) {
-  return <div><h2 className={`${compact ? "text-base" : "text-xl"} font-black tracking-[-0.02em] text-slate-950`}>{title}</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">{description}</p></div>;
+function PanelTitle({ title, description }: { title: string; description: string }) {
+  return <div><h2 className="text-xl font-black tracking-[-0.02em] text-slate-950">{title}</h2><p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">{description}</p></div>;
 }
 
 function DarkMetric({ label, value, unit }: { label: string; value: string; unit?: string }) {
@@ -500,6 +520,7 @@ function modelRow(snapshot: AgentSpeedDailySnapshot, key: string) { return snaps
 function dayTime(day: string) { return Date.parse(`${day}T00:00:00.000Z`); }
 function linePath(points: Array<{ date: string; value: number }>, x: (date: string) => number, y: (value: number) => number) { return points.map((point, index) => `${index ? "L" : "M"} ${x(point.date)} ${y(point.value)}`).join(" "); }
 function niceCeiling(value: number) { const magnitude = 10 ** Math.floor(Math.log10(Math.max(1, value))); return Math.ceil(value / magnitude * 2) / 2 * magnitude; }
+function formatAxisMetric(value: number, digits: number) { return value.toFixed(digits).replace(/\.0+$/, ""); }
 function formatMetric(value: number | undefined, digits: number) { return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "—"; }
 function formatInteger(value: number | undefined) { return typeof value === "number" ? new Intl.NumberFormat().format(value) : "—"; }
 function formatDay(day: string, locale: string) { return new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(`${day}T00:00:00Z`)); }

@@ -14,7 +14,11 @@ import {
   parseSessionFile as parseAscSessionFile,
   toTokenEvents as ascToTokenEvents,
 } from "agent-session-core";
-import { createAgentSpeedAnalyzer } from "./agent-speed.mjs";
+import {
+  createAgentSpeedAnalyzer,
+  extractGrokSpeedSamplesFromText,
+  extractKimiSpeedSamplesFromText,
+} from "./agent-speed.mjs";
 
 const API_URL = (process.env.TOKEN_BOARD_API_URL || "https://124-221-36-36.anyip.dev:8443/token-board").replace(/\/+$/, "");
 const LEADERBOARD_URL = process.env.TOKEN_BOARD_LEADERBOARD_URL || "https://ffffhx.github.io/open-token-board/board/";
@@ -51,7 +55,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 const COLLECTOR_SCHEMA_VERSION = 2;
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
@@ -527,16 +531,25 @@ async function printLocalAgentSpeed() {
     analyzer.addSession(session);
   }
 
+  const native = await collectNativeAgentSpeedSamples(config, SINCE_MS);
+  analyzer.addRequestSamples(native.requests);
+
   const analysis = analyzer.finish();
   const speedHistory = analyzer.finishHistory();
   if (process.argv.includes("--json")) {
-    console.log(JSON.stringify({ analysis, speedHistory, filesDiscovered: files.length, filesParsed, parseFailures }, null, 2));
+    console.log(JSON.stringify({
+      analysis,
+      speedHistory,
+      filesDiscovered: files.length + native.filesDiscovered,
+      filesParsed: filesParsed + native.filesParsed,
+      parseFailures: [...parseFailures, ...native.parseFailures],
+    }, null, 2));
     return;
   }
 
   console.log(`Local agent speed · last ${formatSpeedHours(SINCE_MS / 3_600_000)}`);
   console.log(
-    `Scanned ${filesParsed}/${files.length} session files; ` +
+    `Scanned ${filesParsed + native.filesParsed}/${files.length + native.filesDiscovered} session files; ` +
       `${analysis.requestSampleCount} requests and ${analysis.closedTurnCount} closed turns.\n`
   );
   console.log("Model speed (derived from local request timestamps)");
@@ -906,7 +919,7 @@ async function collectLocalUsageEvents(config, options = {}) {
 async function collectLocalUsageEventsWithReport(config, options = {}) {
   const maxEventAgeDays = readPositiveNumber(process.env.TOKEN_BOARD_MAX_EVENT_AGE_DAYS, 120);
   const sinceMs = options.fullHistory ? (maxEventAgeDays * 24 + 1) * 60 * 60 * 1000 : SINCE_MS;
-  const ascReport = collectAscUsageEvents(config, sinceMs);
+  const ascReport = await collectAscUsageEvents(config, sinceMs);
   const targets = sourceTargets(config).filter((target) => !["codex", "claude-code"].includes(target.source));
   const codexTitleIndex = await readCodexTitleIndex(targets);
   const minMtime = Date.now() - sinceMs;
@@ -964,7 +977,7 @@ async function collectLocalUsageEventsWithReport(config, options = {}) {
   };
 }
 
-function collectAscUsageEvents(config, sinceMs) {
+async function collectAscUsageEvents(config, sinceMs) {
   const roots = {};
   const usagePaths = readListEnv("TOKEN_BOARD_USAGE_PATHS") || readStringArray(config.usagePaths) || [];
   const includeDefaultSources =
@@ -1027,15 +1040,83 @@ function collectAscUsageEvents(config, sinceMs) {
       });
     });
   }
+  const native = await collectNativeAgentSpeedSamples(config, sinceMs);
+  speedAnalyzer.addRequestSamples(native.requests);
 
   return {
     events,
     speedHistory: speedAnalyzer.finishHistory(),
     parsedPaths,
+    // Native speed history is best-effort; token replacement completeness is
+    // still defined by the normalized Codex/Claude session set.
     parseFailures,
-    filesDiscovered: files.length,
-    filesParsed,
+    filesDiscovered: files.length + native.filesDiscovered,
+    filesParsed: filesParsed + native.filesParsed,
   };
+}
+
+async function collectNativeAgentSpeedSamples(config, sinceMs) {
+  const requests = [];
+  const parseFailures = [];
+  const includeDefaultSources =
+    process.env.TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES === "false" ? false : config.includeDefaultSources !== false;
+  if (!includeDefaultSources) {
+    return { requests, filesDiscovered: 0, filesParsed: 0, parseFailures };
+  }
+
+  const roots = [
+    {
+      source: "grok",
+      root: process.env.GROK_HOME || homePath(".grok"),
+      fileName: "updates.jsonl",
+    },
+    {
+      source: "kimi",
+      root: process.env.KIMI_CODE_HOME || homePath(".kimi-code"),
+      fileName: "wire.jsonl",
+    },
+  ];
+  const files = [];
+  const minMtime = sinceMs > 0 ? Date.now() - sinceMs : 0;
+  for (const root of roots) {
+    await discoverNativeSpeedFiles(path.join(root.root, "sessions"), root.source, root.fileName, minMtime, files, 0);
+  }
+
+  let filesParsed = 0;
+  for (const file of files) {
+    try {
+      const text = await fs.readFile(file.path, "utf8");
+      requests.push(...(file.source === "grok"
+        ? extractGrokSpeedSamplesFromText(text)
+        : extractKimiSpeedSamplesFromText(text)));
+      filesParsed += 1;
+    } catch {
+      parseFailures.push(file.path);
+    }
+  }
+  return { requests, filesDiscovered: files.length, filesParsed, parseFailures };
+}
+
+async function discoverNativeSpeedFiles(directory, source, fileName, minMtime, files, depth) {
+  if (depth > 8) return;
+  let entries;
+  try {
+    entries = await fs.readdir(directory, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await discoverNativeSpeedFiles(entryPath, source, fileName, minMtime, files, depth + 1);
+      continue;
+    }
+    if (!entry.isFile() || entry.name !== fileName) continue;
+    const stat = await fs.stat(entryPath).catch(() => undefined);
+    if (stat && stat.mtimeMs >= minMtime && stat.size <= MAX_FILE_BYTES) {
+      files.push({ path: entryPath, source });
+    }
+  }
 }
 
 function summarizeAscLinesWritten(session) {
