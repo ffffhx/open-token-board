@@ -14,14 +14,14 @@
   },
   "dependencies": {
     "@open-token-board/core": "workspace:*",
-    "pg": "^8.20.0",
+    "pg": "^8.23.0",
     "sanitize-html": "^2.17.5",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   },
   "devDependencies": {
     "@types/node": "^22.15.3",
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.21.0",
     "@types/sanitize-html": "^2.16.1"
   }
 }

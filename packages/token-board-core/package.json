@@ -21,13 +21,13 @@
   },
   "dependencies": {
     "agent-session-core": "^0.1.1",
-    "pg": "^8.20.0"
+    "pg": "^8.23.0"
   },
   "scripts": {
     "typecheck": "tsc --noEmit --project tsconfig.json"
   },
   "devDependencies": {
-    "@types/pg": "^8.20.0",
+    "@types/pg": "^8.21.0",
     "typescript": "^5.8.3"
   }
 }
