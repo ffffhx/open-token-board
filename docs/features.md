@@ -162,6 +162,7 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。�
 | `TOKEN_BOARD_PUBLIC_URL` | 从请求推断 | OAuth callback 与对外 URL。 |
 | `TOKEN_BOARD_ALLOWED_ORIGINS` | `*` | CORS origin。 |
 | `TOKEN_BOARD_ALLOWED_RETURN_ORIGINS` | 继承 allowed origins + 当前请求 origin | OAuth/logout 跳转白名单。 |
+| `TOKEN_BOARD_ALLOW_LOOPBACK_ORIGINS` | `false` | 是否额外允许 `localhost`、`127.0.0.1`、`[::1]` 的任意端口用于 CORS 与 OAuth/logout 回跳。 |
 | `TOKEN_BOARD_AUTH_SECRET` | 无 | 正式环境必须配置；本地可临时设 `TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET=true`。 |
 | `TOKEN_BOARD_DATABASE_URL` / `DATABASE_URL` | 无 | PostgreSQL 连接串；缺省用 JSON 文件。 |
 | `TOKEN_BOARD_DATA_FILE` | `.token-board/usage-events.json` | JSON 存储路径。 |

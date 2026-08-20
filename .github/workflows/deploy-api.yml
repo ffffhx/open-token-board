@@ -64,9 +64,14 @@ jobs:
           set -euo pipefail
           cd "${DEPLOY_PATH:-/home/deploy/token-board-service}"
 
+          # 允许 localhost / 127.0.0.1 / ::1 的任意端口访问 API，并作为 OAuth 回跳地址。
+          # 服务端仍会严格校验回环主机，不会把通用域名加入白名单。
+          touch .env
+          sed -i '/^TOKEN_BOARD_ALLOW_LOOPBACK_ORIGINS=/d' .env
+          echo "TOKEN_BOARD_ALLOW_LOOPBACK_ORIGINS=true" >> .env
+
           # 配置每日飞书战报的 env（仅当提供 webhook 时；幂等更新主机 .env，只改这几个键）
           if [ -n "${FEISHU_WEBHOOK_URL:-}" ]; then
-            touch .env
             sed -i -e '/^TOKEN_BOARD_FEISHU_WEBHOOK_URL=/d' \
                    -e '/^TOKEN_BOARD_DAILY_REPORT_AT=/d' \
                    -e '/^TOKEN_BOARD_DAILY_REPORT_TZ_OFFSET=/d' \

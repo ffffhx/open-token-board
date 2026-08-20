@@ -299,6 +299,7 @@ docker compose up -d --build
 | `TOKEN_BOARD_PUBLIC_URL` | API 对外访问地址，用于 OAuth callback 与 agent 配置。 |
 | `TOKEN_BOARD_ALLOWED_ORIGINS` | CORS 允许的前端 origin。 |
 | `TOKEN_BOARD_ALLOWED_RETURN_ORIGINS` | OAuth/logout `returnTo` 允许跳回的前端 origin。 |
+| `TOKEN_BOARD_ALLOW_LOOPBACK_ORIGINS` | 设为 `true` 时，额外允许 `localhost`、`127.0.0.1`、`[::1]` 的任意端口用于 CORS 与 OAuth/logout 回跳。 |
 | `TOKEN_BOARD_AUTH_SECRET` | 签发网页 session 和 agent token 的强随机密钥，正式环境必须配置。 |
 | `TOKEN_BOARD_COOKIE_SAMESITE` / `TOKEN_BOARD_COOKIE_SECURE` | 跨站部署时常用 `None` + `true`。 |
 | `TOKEN_BOARD_ALLOWED_GITHUB_LOGINS` | 可选 GitHub login 白名单，限制登录和 agent 上报。 |

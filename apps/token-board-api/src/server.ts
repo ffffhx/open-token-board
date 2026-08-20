@@ -505,7 +505,8 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
   if (request.method === "GET" && url.pathname === "/api/auth/logout") {
     response.setHeader("Set-Cookie", clearSessionCookie(request));
-    redirect(response, sanitizeReturnTo(url.searchParams.get("returnTo"), allowedReturnOrigins(request), "/"));
+    const requestedReturnTo = url.searchParams.get("returnTo");
+    redirect(response, sanitizeReturnTo(requestedReturnTo, allowedReturnOrigins(request, requestedReturnTo), "/"));
     return;
   }
 
@@ -3169,7 +3170,12 @@ async function handleGithubStart(request: IncomingMessage, response: ServerRespo
     return;
   }
   const clientId = requireEnv("GITHUB_CLIENT_ID");
-  const returnTo = sanitizeReturnTo(url.searchParams.get("returnTo"), allowedReturnOrigins(request), "/token-leaderboard/");
+  const requestedReturnTo = url.searchParams.get("returnTo");
+  const returnTo = sanitizeReturnTo(
+    requestedReturnTo,
+    allowedReturnOrigins(request, requestedReturnTo),
+    "/token-leaderboard/"
+  );
   const state = createOAuthState(returnTo, authSecret(), OAUTH_STATE_TTL_SECONDS);
   const params = new URLSearchParams({
     client_id: clientId,
@@ -3781,12 +3787,54 @@ function privateBlogAllowedGithubLogins() {
   return logins.length ? logins : DEFAULT_PRIVATE_BLOG_ALLOWED_GITHUB_LOGINS;
 }
 
-function allowedReturnOrigins(request: IncomingMessage) {
-  return (process.env.TOKEN_BOARD_ALLOWED_RETURN_ORIGINS || process.env.TOKEN_BOARD_ALLOWED_ORIGINS || "")
+function allowedReturnOrigins(request: IncomingMessage, returnTo: string | null = null) {
+  const configuredOrigins = (process.env.TOKEN_BOARD_ALLOWED_RETURN_ORIGINS || process.env.TOKEN_BOARD_ALLOWED_ORIGINS || "")
     .split(",")
     .map((origin) => origin.trim().replace(/\/+$/, ""))
-    .filter((origin) => origin && origin !== "*")
-    .concat(originFromRequest(request));
+    .filter((origin) => origin && origin !== "*");
+  const returnOrigin = originFromAbsoluteUrl(returnTo);
+
+  if (returnOrigin && isOriginAllowed(returnOrigin, configuredOrigins)) {
+    configuredOrigins.push(returnOrigin);
+  }
+
+  return [...new Set(configuredOrigins.concat(originFromRequest(request)))];
+}
+
+function originFromAbsoluteUrl(value: string | null) {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
+
+function isOriginAllowed(origin: string, configuredOrigins: string[]) {
+  return configuredOrigins.includes(origin) || (allowLoopbackOrigins() && isLoopbackOrigin(origin));
+}
+
+function allowLoopbackOrigins() {
+  return process.env.TOKEN_BOARD_ALLOW_LOOPBACK_ORIGINS === "true";
+}
+
+function isLoopbackOrigin(origin: string) {
+  const normalized = origin.trim().replace(/\/+$/, "");
+
+  try {
+    const url = new URL(normalized);
+    const isHttp = url.protocol === "http:" || url.protocol === "https:";
+    const isLoopbackHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
+
+    // Origin headers never contain credentials, paths, queries, or fragments.
+    // Requiring the canonical origin prevents lookalike hosts and crafted URLs.
+    return isHttp && isLoopbackHost && url.origin === normalized;
+  } catch {
+    return false;
+  }
 }
 
 function originFromRequest(request: IncomingMessage) {
@@ -4670,7 +4718,7 @@ function applyCors(request: IncomingMessage, response: ServerResponse) {
     .filter(Boolean);
   const origin = request.headers.origin || "";
   const wildcard = allowed.includes("*");
-  const explicitlyAllowed = Boolean(origin) && allowed.includes(origin);
+  const explicitlyAllowed = Boolean(origin) && isOriginAllowed(origin, allowed);
 
   if (explicitlyAllowed) {
     // Only an explicitly allowlisted origin may be paired with credentials.
