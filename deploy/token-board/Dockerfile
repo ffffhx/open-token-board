@@ -7,6 +7,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/token-board-api/package.json ./apps/token-board-api/package.json
 COPY deploy/token-board/package.json ./deploy/token-board/package.json
 COPY packages/token-board-core/package.json ./packages/token-board-core/package.json
+COPY patches/agent-session-core@0.1.1.patch ./patches/agent-session-core@0.1.1.patch
 RUN corepack enable && pnpm install --filter @open-token-board/core --filter @open-token-board/api --filter @open-token-board/service --prod --frozen-lockfile
 
 COPY tsconfig.base.json ./tsconfig.base.json

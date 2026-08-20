@@ -40,13 +40,14 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        # 只同步 Dockerfile 实际 COPY 的路径；不碰主机上的 .env / data / compose.yaml / Dockerfile。
+        # 只同步 Dockerfile 实际 COPY 的路径；不碰主机上的 .env / data / compose.yaml。
         run: |
           rsync -aR \
             -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts" \
             ./apps/token-board-api/src ./apps/token-board-api/package.json ./apps/token-board-api/tsconfig.json \
             ./packages/token-board-core/src ./packages/token-board-core/package.json \
-            ./deploy/token-board/package.json \
+            ./deploy/token-board/Dockerfile ./deploy/token-board/package.json \
+            ./patches/agent-session-core@0.1.1.patch \
             ./package.json ./pnpm-lock.yaml ./pnpm-workspace.yaml ./tsconfig.base.json \
             "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/"
 
