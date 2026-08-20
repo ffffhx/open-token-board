@@ -85,6 +85,10 @@ jobs:
             docker tag token-board-service:latest token-board-service:backup-previous
           fi
 
+          # 主机 compose 使用部署目录根部的 Dockerfile；用仓库版本覆盖后再构建。
+          install -m 0644 deploy/token-board/Dockerfile Dockerfile
+          test -f patches/agent-session-core@0.1.1.patch
+
           docker compose build token-board
           docker compose up -d --force-recreate token-board
 
