@@ -84,6 +84,12 @@ API 服务可以向飞书自定义机器人发送 interactive card。日报由 `
 
 使用方法：安装并登录 `token-board-agent` 后等待后台同步，打开 `/limits`。团队墙 `/api/usage/rate-limits/team` 需要网页 GitHub 登录；未登录只能看个人公开/回退接口。
 
+## Agent 速度趋势
+
+`/speed` 是登录用户自己的性能轨迹页，支持 7 / 30 / 90 天范围和模型切换，展示每日解码速度、固定开销、p90/p99 延迟抖动、回归置信度，以及全部/Codex/Claude Code 的非工具与工具时间构成。速度使用 Huber 稳健回归估算：`latency = 固定开销 + 输出 token + 未命中输入 token + 是否进入工具`；单模型单日至少需要 30 个请求且输出 token 的 p90/p10 不低于 3 才显示速度点。固定开销和 tok/s 都是观测估算，不是 TTFT 直接测量。
+
+常规 agent 上报会复用同一轮 ASC Session 扫描，按上海自然日生成近 30 天聚合并写入 `POST /api/agent-speed/history`；服务端按用户和日期幂等覆盖，文件部署写入 `agent-speed-history.json`，PostgreSQL 部署写入 `agent_speed_daily`。`GET /api/agent-speed/history?days=30` 只返回当前网页登录或 Bearer 身份的数据。上传结果不含 prompt、assistant 回复、工具参数、路径或 Session ID。
+
 ## MCP、导出与 statusline
 
 `token-board-agent mcp` 启动 stdio MCP server，复用 `~/.token-board-agent.json` 中的 API 地址和 agent token。工具包括 `get_leaderboard`、`get_my_usage`、`get_user_profile`、`get_rate_limits`。网页导出使用 `GET /api/usage/export`，支持 `csv|json` 和 `leaderboard|me`。`token-board-agent statusline` 会在 800ms 内读取当天个人导出，输出类似 `🏆#3 · 12.4M` 的短文本。
@@ -121,6 +127,8 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。�
 | `GET` | `/api/usage/rate-limits` | Query `days`，最大 90 | 可选网页登录 | 有登录用户快照时返回该用户 Codex 快照，否则回退 API 服务所在机器。 |
 | `GET` | `/api/usage/claude-rate-limits` | 无 | 可选网页登录 | 有登录用户快照时返回 Claude Code 快照，否则 `available:false`。 |
 | `GET` | `/api/usage/rate-limits/team` | 无 | 网页 GitHub 登录 | 团队 Codex/Claude 额度墙。 |
+| `GET` | `/api/agent-speed/history` | Query `days`，最大 365 | 网页 GitHub 登录或 Agent Bearer | 当前用户的速度日聚合。 |
+| `POST` | `/api/agent-speed/history` | JSON `{ schemaVersion: 1, snapshots: [...] }` | Agent Bearer 或 legacy token | 幂等写入当前用户近 120 个自然日聚合。 |
 | `GET` | `/api/snapshots/health` | 无 | 无 | snapshot 分享存储健康状态。 |
 | `GET` | `/api/explain-selection/health` | 无 | 无 | AI 解释服务健康状态、白名单、Kimi key 是否配置。 |
 | `POST` | `/api/explain-selection` | JSON 选词解释 payload | 网页 GitHub 登录且在解释白名单 | 调 Kimi/Moonshot 生成选词解释。 |
@@ -157,6 +165,7 @@ agent 默认扫描 Codex CLI、Claude Code、Gemini CLI、opencode、Cursor。�
 | `TOKEN_BOARD_AUTH_SECRET` | 无 | 正式环境必须配置；本地可临时设 `TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET=true`。 |
 | `TOKEN_BOARD_DATABASE_URL` / `DATABASE_URL` | 无 | PostgreSQL 连接串；缺省用 JSON 文件。 |
 | `TOKEN_BOARD_DATA_FILE` | `.token-board/usage-events.json` | JSON 存储路径。 |
+| `TOKEN_BOARD_AGENT_SPEED_DATA_FILE` | usage 数据文件同目录下的 `agent-speed-history.json` | 速度历史 JSON 存储路径；PostgreSQL 模式下忽略。 |
 | `TOKEN_BOARD_PRICING_FILE` | 无 | 自定义价格表。 |
 | `TOKEN_BOARD_ALLOWED_GITHUB_LOGINS` | 空，表示不限制 | 登录/上报白名单。 |
 | `TOKEN_BOARD_DAILY_REPORT_AT` | `09:00` | 日报本地时间。 |

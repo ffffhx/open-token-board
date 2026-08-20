@@ -13,7 +13,10 @@ import {
   collectTokenBoardUserConfig,
   type TokenUsageCollectorConfig,
 } from "@open-token-board/core/collector";
-import { collectLocalTokenUsageViaAscWithReport } from "@open-token-board/core/asc-collector";
+import {
+  collectLocalAgentSpeedViaAscWithReport,
+  collectLocalTokenUsageViaAscWithReport,
+} from "@open-token-board/core/asc-collector";
 import type { TokenBoardUserConfig } from "@open-token-board/core";
 
 type AgentConfig = TokenUsageCollectorConfig & {
@@ -81,6 +84,11 @@ async function main() {
     return;
   }
 
+  if (command === "speed") {
+    await printLocalAgentSpeed();
+    return;
+  }
+
   const config = await loadAgentConfig();
 
   if (command === "collect") {
@@ -142,6 +150,7 @@ async function replaceAll(config: AgentConfig) {
     }
   }
   const result = await postReplacePhase(config, "commit", replaceId, [], { digest });
+  await uploadAgentSpeedHistoryBestEffort(config, report.speedHistory);
 
   await writeState(config.stateFile, {
     apiUrl: config.apiUrl,
@@ -198,7 +207,8 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
   const force = options.force === true || process.env.TOKEN_BOARD_FORCE_RESYNC === "1";
   const stateMatches = uploadStateMatchesConfig(state, config);
   const uploadedIds = force || !stateMatches ? new Set<string>() : new Set(state.uploadedIds || []);
-  const collected = await collectAndSanitize(config);
+  const collectionReport = await collectAndSanitizeWithReport(config);
+  const collected = collectionReport.events;
   const collectedIds = new Set(collected.map((event) => event.id));
   const events = collected.filter((event) => !uploadedIds.has(event.id));
   const userConfig = await collectCurrentUserConfig();
@@ -207,6 +217,7 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
     if (userConfig) {
       await postIngest(config, [], userConfig);
     }
+    await uploadAgentSpeedHistoryBestEffort(config, collectionReport.speedHistory);
     logInfo(force ? "No token usage events collected for resync." : "No new token usage events to upload.");
     return { accepted: 0, duplicates: 0, records: 0 };
   }
@@ -220,6 +231,8 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
     result.duplicates += batchResult.duplicates;
     result.records = batchResult.records;
   }
+
+  await uploadAgentSpeedHistoryBestEffort(config, collectionReport.speedHistory);
 
   if (result.accepted > 0 || result.duplicates > 0) {
     await writeState(config.stateFile, {
@@ -235,6 +248,29 @@ export async function uploadOnce(config: AgentConfig, options: { force?: boolean
   );
 
   return result;
+}
+
+async function uploadAgentSpeedHistoryBestEffort(
+  config: AgentConfig,
+  snapshots: Awaited<ReturnType<typeof collectAndSanitizeWithReport>>["speedHistory"]
+) {
+  if (!snapshots.length) return;
+  const uploadSnapshots = snapshots.slice(-120);
+  const bearerToken = config.agentToken || config.uploadToken;
+  if (!bearerToken) return;
+  try {
+    const result = await requestJsonWithRetry(`${config.apiUrl}/api/agent-speed/history`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${bearerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ schemaVersion: 1, generatedAt: new Date().toISOString(), snapshots: uploadSnapshots }),
+    }, "Agent speed history") as { accepted?: number };
+    logInfo(`Uploaded ${result.accepted ?? uploadSnapshots.length} daily agent-speed aggregates.`);
+  } catch (error) {
+    logError(`Agent speed history upload will retry next cycle: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 function uploadStateMatchesConfig(state: AgentState, config: AgentConfig) {
@@ -330,6 +366,97 @@ export async function loadAgentConfig(): Promise<AgentConfig> {
       ),
     },
   };
+}
+
+async function loadLocalCollectionConfig(): Promise<TokenUsageCollectorConfig> {
+  const fileConfig = await readConfigFile(process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE);
+  return {
+    usagePaths: readListEnv("TOKEN_BOARD_USAGE_PATHS") || readStringArray(fileConfig.usagePaths),
+    includeDefaultSources: readBooleanEnv(
+      "TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES",
+      readBoolean(fileConfig.includeDefaultSources, true)
+    ),
+    sinceHours: readNumberEnv("TOKEN_BOARD_SINCE_HOURS", readNumber(fileConfig.sinceHours, 24 * 30)),
+    maxFiles: undefined,
+    maxFileBytes: undefined,
+  };
+}
+
+async function printLocalAgentSpeed() {
+  const config = await loadLocalCollectionConfig();
+  const report = await collectLocalAgentSpeedViaAscWithReport(config);
+  const asJson = process.argv.includes("--json");
+  if (asJson) {
+    console.log(JSON.stringify({ ...report, sinceHours: config.sinceHours }, null, 2));
+    return;
+  }
+
+  console.log(`Local agent speed · last ${formatHours(config.sinceHours ?? 24 * 30)}`);
+  console.log(
+    `Scanned ${report.filesParsed}/${report.filesDiscovered} session files; ` +
+      `${report.analysis.requestSampleCount} requests and ${report.analysis.closedTurnCount} closed turns.\n`
+  );
+
+  console.log("Model speed (derived from local request timestamps)");
+  const available = report.analysis.modelSpeed.filter((summary) => summary.available);
+  if (!available.length) {
+    console.log("  No model has enough varied samples yet.");
+  } else {
+    for (const summary of available) {
+      console.log(
+        `  ${summary.engine.padEnd(7)} ${summary.model.padEnd(28)} ` +
+          `${formatNumber(summary.decodeTokensPerSecond)} tok/s  ` +
+          `${formatNumber(summary.fixedOverheadSeconds)}s fixed  ` +
+          `jitter p90 ${formatNumber(summary.jitterP90)}x / p99 ${formatNumber(summary.jitterP99)}x  ` +
+          `n=${summary.sampleCount}  R²=${formatNumber(summary.rSquared, 2)}  ${summary.confidence}`
+      );
+    }
+  }
+
+  const unavailable = report.analysis.modelSpeed.filter((summary) => !summary.available);
+  for (const summary of unavailable) {
+    console.log(
+      `  ${summary.engine.padEnd(7)} ${summary.model.padEnd(28)} unavailable: ` +
+        `${speedUnavailableReason(summary.unavailableReason)} (n=${summary.sampleCount})`
+    );
+  }
+
+  console.log("\nTime composition (closed turns only; overlapping tools counted once)");
+  if (!report.analysis.timeComposition.length) {
+    console.log("  No closed turns available yet.");
+  } else {
+    for (const summary of report.analysis.timeComposition) {
+      console.log(
+        `  ${summary.engine.padEnd(7)} non-tool ${formatNumber(summary.nonToolPercent)}%  ` +
+          `tool ${formatNumber(summary.toolPercent)}%  turns=${summary.turnCount}`
+      );
+    }
+  }
+
+  if (report.parseFailures.length) {
+    console.warn(`\nWarning: ${report.parseFailures.length} files could not be parsed; results are partial.`);
+  }
+  console.log(
+    "\nNotes: fixed overhead and tok/s are estimates, not TTFT measurements. " +
+      "Compare models within the same engine; tool time includes permission-confirmation waits. Nothing is uploaded."
+  );
+}
+
+function formatHours(hours: number) {
+  if (hours >= 24 && hours % 24 === 0) {
+    return `${hours / 24}d`;
+  }
+  return `${hours}h`;
+}
+
+function formatNumber(value: number | undefined, digits = 1) {
+  return typeof value === "number" && Number.isFinite(value) ? value.toFixed(digits) : "-";
+}
+
+function speedUnavailableReason(reason: string | undefined) {
+  if (reason === "too_few_samples") return "needs at least 30 samples";
+  if (reason === "output_range_too_narrow") return "output-token range is too narrow";
+  return "regression was unstable";
 }
 
 async function syncOnce() {
@@ -744,6 +871,7 @@ function printHelp() {
   npx --yes token-board-agent uninstall
   npx --yes token-board-agent login
   npx --yes token-board-agent upload
+  npx --yes token-board-agent speed
   npx --yes token-board-agent resync
   npx --yes token-board-agent replace
   npx --yes token-board-agent watch
@@ -753,6 +881,7 @@ Local repo equivalents:
   pnpm token:agent login
   pnpm token:agent sync
   pnpm token:agent collect
+  pnpm token:agent speed
   pnpm token:agent upload
   pnpm token:agent resync
   pnpm token:agent replace

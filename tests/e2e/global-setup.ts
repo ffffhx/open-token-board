@@ -16,6 +16,7 @@ export default async function globalSetup() {
   try {
     const webUrl = `http://127.0.0.1:${webPort}`;
     harness = await startTokenBoardHarness({ allowedOrigins: [webUrl] });
+    await seedAgentSpeedHistory(harness);
     await buildWeb(harness.apiUrl);
     staticServer = await startStaticServer(path.join(repoRoot, "apps", "web", "out"), webPort);
 
@@ -38,6 +39,53 @@ export default async function globalSetup() {
     await harness?.close().catch(() => undefined);
     await fs.rm(path.dirname(e2eStatePath), { recursive: true, force: true });
     throw error;
+  }
+}
+
+async function seedAgentSpeedHistory(harness: TokenBoardHarness) {
+  const now = new Date();
+  const shifted = new Date(now.getTime() + 8 * 60 * 60 * 1_000);
+  const date = `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}-${String(shifted.getUTCDate()).padStart(2, "0")}`;
+  const response = await fetch(`${harness.apiUrl}/api/agent-speed/history`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${harness.agentToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      schemaVersion: 1,
+      snapshots: [{
+        date,
+        capturedAt: now.toISOString(),
+        requestSampleCount: 80,
+        closedTurnCount: 24,
+        modelSpeed: [{
+          engine: "codex",
+          model: "gpt-e2e",
+          sampleCount: 80,
+          outputSpreadRatio: 5.2,
+          available: true,
+          decodeTokensPerSecond: 64.5,
+          fixedOverheadSeconds: 2.4,
+          jitterP90: 1.4,
+          jitterP99: 2.1,
+          rSquared: 0.72,
+          confidence: "medium",
+        }],
+        timeComposition: [{
+          engine: "all",
+          turnCount: 24,
+          wallMs: 120_000,
+          toolMs: 30_000,
+          nonToolMs: 90_000,
+          toolPercent: 25,
+          nonToolPercent: 75,
+        }],
+      }],
+    }),
+  });
+  if (!response.ok) {
+    throw new Error(`agent speed seed failed: HTTP ${response.status} ${await response.text()}`);
   }
 }
 

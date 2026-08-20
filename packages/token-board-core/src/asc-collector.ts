@@ -17,9 +17,19 @@
 import type {
   DiscoverOptions,
   DiscoveredFile,
+  NormalizedSession,
   TokenUsageEvent as AscTokenUsageEvent,
 } from "agent-session-core";
 
+import {
+  analyzeAgentSpeedSamples,
+  buildAgentSpeedDailySnapshots,
+  extractAgentSpeedSamples,
+  type AgentSpeedAnalysis,
+  type AgentSpeedDailySnapshot,
+  type AgentSpeedRequestSample,
+  type AgentSpeedTurnSample,
+} from "./agent-speed";
 import type { TokenUsageEvent } from "./token-leaderboard";
 import type { TokenUsageCollectorConfig } from "./token-usage-collector";
 
@@ -78,6 +88,16 @@ export async function collectLocalTokenUsageViaAsc(
 
 export type AscCollectionReport = {
   events: TokenUsageEvent[];
+  speedHistory: AgentSpeedDailySnapshot[];
+  filesDiscovered: number;
+  filesParsed: number;
+  parseFailures: string[];
+  complete: boolean;
+};
+
+export type AscAgentSpeedReport = {
+  analysis: AgentSpeedAnalysis;
+  speedHistory: AgentSpeedDailySnapshot[];
   filesDiscovered: number;
   filesParsed: number;
   parseFailures: string[];
@@ -90,16 +110,64 @@ export async function collectLocalTokenUsageViaAscWithReport(
 ): Promise<AscCollectionReport> {
   // ASC is ESM-only. Keep this as a native dynamic import so the core package
   // also works when a TS runner/test harness loads token-board through CJS.
-  const { discoverSessionFiles, defaultRoots, parseSessionFile, toTokenEvents } = await import("agent-session-core");
-  const opts = buildDiscoverOptions(config, defaultRoots);
+  const { toTokenEvents } = await import("agent-session-core");
   const ctx = {
     userId: config.userId || "local",
     displayName: config.displayName,
     team: config.team,
   };
 
-  const files = discoverSessionFiles(opts);
   const out: TokenUsageEvent[] = [];
+  const requests: AgentSpeedRequestSample[] = [];
+  const turns: AgentSpeedTurnSample[] = [];
+  const visit = await visitAscSessions(config, (session) => {
+    const speedSamples = extractAgentSpeedSamples(session);
+    requests.push(...speedSamples.requests);
+    turns.push(...speedSamples.turns);
+    const linesWritten = summarizeAscLinesWritten(session);
+    const ascEvents = toTokenEvents(session, ctx);
+    const linesAnchorIndex = linesWritten === null ? -1 : latestAscTokenEventIndex(ascEvents);
+    ascEvents.forEach((ev, index) => {
+      out.push(mapEvent(ev, index === linesAnchorIndex ? linesWritten : null));
+    });
+  });
+
+  return {
+    events: out,
+    speedHistory: buildAgentSpeedDailySnapshots(requests, turns),
+    ...visit,
+  };
+}
+
+/**
+ * Read the same normalized local sessions used by token collection and derive
+ * speed metrics without uploading any transcript content or aggregate result.
+ */
+export async function collectLocalAgentSpeedViaAscWithReport(
+  config: TokenUsageCollectorConfig = {}
+): Promise<AscAgentSpeedReport> {
+  const requests: AgentSpeedRequestSample[] = [];
+  const turns: AgentSpeedTurnSample[] = [];
+  const visit = await visitAscSessions(config, (session) => {
+    const samples = extractAgentSpeedSamples(session);
+    requests.push(...samples.requests);
+    turns.push(...samples.turns);
+  });
+
+  return {
+    analysis: analyzeAgentSpeedSamples(requests, turns),
+    speedHistory: buildAgentSpeedDailySnapshots(requests, turns),
+    ...visit,
+  };
+}
+
+async function visitAscSessions(
+  config: TokenUsageCollectorConfig,
+  visit: (session: NormalizedSession) => void
+) {
+  const { discoverSessionFiles, defaultRoots, parseSessionFile } = await import("agent-session-core");
+  const opts = buildDiscoverOptions(config, defaultRoots);
+  const files = discoverSessionFiles(opts);
   const seenLogicalSessions = new Set<string>();
   const parseFailures: string[] = [];
   let filesParsed = 0;
@@ -128,17 +196,10 @@ export async function collectLocalTokenUsageViaAscWithReport(
       continue;
     }
     seenLogicalSessions.add(logicalSessionId);
-
-    const linesWritten = summarizeAscLinesWritten(session);
-    const ascEvents = toTokenEvents(session, ctx);
-    const linesAnchorIndex = linesWritten === null ? -1 : latestAscTokenEventIndex(ascEvents);
-    ascEvents.forEach((ev, index) => {
-      out.push(mapEvent(ev, index === linesAnchorIndex ? linesWritten : null));
-    });
+    visit(session);
   }
 
   return {
-    events: out,
     filesDiscovered: files.length,
     filesParsed,
     parseFailures,

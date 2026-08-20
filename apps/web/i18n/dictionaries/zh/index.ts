@@ -6,6 +6,7 @@ import { landing } from "./landing";
 import { limits } from "./limits";
 import { profile } from "./profile";
 import { share } from "./share";
+import { speed } from "./speed";
 import { wrapped } from "./wrapped";
 
 export const zh = {
@@ -17,6 +18,7 @@ export const zh = {
   limits,
   profile,
   share,
+  speed,
   wrapped,
 };
 

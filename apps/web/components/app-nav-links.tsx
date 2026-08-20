@@ -7,7 +7,7 @@ import { usePrivateBenchmarkAccess } from "@/components/private-benchmark-access
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useI18n } from "@/i18n";
 
-type AppNavPage = "home" | "board" | "card" | "limits" | "bench";
+type AppNavPage = "home" | "board" | "card" | "limits" | "speed" | "bench";
 type AppNavTheme = "light" | "dark";
 
 const navItems: Array<{ key: AppNavPage; href: string }> = [
@@ -15,6 +15,7 @@ const navItems: Array<{ key: AppNavPage; href: string }> = [
   { key: "board", href: "/board" },
   { key: "card", href: "/card" },
   { key: "limits", href: "/limits" },
+  { key: "speed", href: "/speed" },
   { key: "bench", href: "/bench" },
 ];
 

@@ -17,7 +17,7 @@ npx --yes token-board-agent uninstall
 - macOS：`~/Library/LaunchAgents/dev.ffffhx.token-board-agent.plist`
 - Windows：Task Scheduler 任务 `TokenBoardAgent`
 
-安装后后台默认每 5 分钟同步 token 用量、Codex 额度快照，以及可选的 Claude Code 订阅额度快照。
+安装后后台默认每 5 分钟同步 token 用量、Codex 额度快照、速度日聚合，以及可选的 Claude Code 订阅额度快照。
 
 一次性命令：
 
@@ -27,14 +27,20 @@ npx --yes token-board-agent upload
 npx --yes token-board-agent resync
 npx --yes token-board-agent replace
 npx --yes token-board-agent collect
+npx --yes token-board-agent speed
 npx --yes token-board-agent watch
 ```
 
-- `upload`：只上传本地 checkpoint 之后的新事件；没有新事件时仍会同步额度快照。
+- `upload`：只上传本地 checkpoint 之后的新事件；没有新事件时仍会同步额度快照和近 30 天速度日聚合。
 - `resync`：忽略本地上传 checkpoint，重新同步扫描窗口内事件。
 - `replace`：用当前采集到的事件替换服务端该用户旧事件；没有采集到事件时不会清空远端。
 - `collect`：只打印将要上报的 JSON，不发网络请求。
+- `speed`：从本地 Codex / Claude Code Session 估算各模型的解码速度、固定开销、p90/p99 抖动，以及已闭合轮次的非工具/工具时间占比；结果不会上传。传 `--json` 可输出结构化结果。
 - `watch`：前台常驻循环，适合临时替代系统后台任务。
+
+`speed` 使用本地事件时间戳做稳健回归，固定开销和 tok/s 都是观测估算值，不是 TTFT 的直接测量。建议只在同一引擎内比较模型；样本少于 30 个或输出长度跨度不足 3 倍时不会给出速度结论。工具时间会合并并行区间，并包含权限确认等待。
+
+常规 `upload` / 后台同步会把同一批本地 Session 额外汇总成上海自然日统计并上传，用于网页 `/speed` 趋势。上传字段只有日期、引擎、模型名、样本量、回归结果和非工具/工具耗时；prompt、回复、工具参数、文件路径和 Session ID 不会进入速度历史。单独运行 `speed` 命令仍然只是本地查看，不发网络请求。
 
 ## MCP Server
 

@@ -71,6 +71,16 @@ const smokePages = [
     },
   },
   {
+    name: "speed trends",
+    path: () => "/speed/",
+    assertVisible: async (page) => {
+      await expect(page.getByRole("heading", { name: "速度趋势" })).toBeVisible();
+      await expect(page.getByRole("button", { name: /gpt-e2e/ })).toBeVisible();
+      await expect(page.getByRole("img", { name: /gpt-e2e 每日解码速度趋势/ })).toBeVisible();
+      await expect(page.getByText("64.5").first()).toBeVisible();
+    },
+  },
+  {
     name: "legacy claude limits",
     path: () => "/claude-limits/",
     assertVisible: async (page) => {
@@ -353,6 +363,7 @@ for (const languageCase of [
 
 for (const target of [
   { name: "/board/", path: () => "/board/" },
+  { name: "/speed/", path: () => "/speed/" },
   { name: "/u/", path: (state) => `/u/?login=${state.primaryLogin}` },
 ]) {
   test(`${target.name} has no horizontal overflow at 390px`, async ({ page }) => {

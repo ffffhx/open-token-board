@@ -46,6 +46,7 @@ Open Token Board 是一套可以自己部署的 AI 编码用量榜单。
 - 🛡️ **上报校验**：服务端拒绝负数、加总不自洽、非法质量计数和超出允许范围的时间。
 - 📨 **飞书日报/周报**：日报包含今日事件，周一周报包含周冠军、7 天趋势、荣誉高光和 Top5。
 - 📟 **额度面板**：Codex 与 Claude Code 支持红黄绿状态、burn rate、预计耗尽；`/limits` 提供团队额度墙。
+- ⚡ **速度趋势**：本机用稳健回归估算模型解码速度、固定开销与抖动，只上传日聚合；`/speed` 展示个人历史和工具时间构成。
 - 🧰 **MCP / 导出 / statusline**：agent 内置 stdio MCP server、CSV/JSON 导出和 Claude Code statusLine 短状态。
 - 🔐 **GitHub 登录**：网页 OAuth 与 agent Device Flow 共用身份，可用 GitHub login 白名单限制访问。
 - 🕵️ **隐私优先**：默认只上报 token 数、模型、工具、项目 basename、会话短标题和时间戳，不上传 prompt 正文。
@@ -70,6 +71,7 @@ npx --yes token-board-agent status      # 查看安装、配置、最近同步�
 npx --yes token-board-agent upload      # 采集并上报一次
 npx --yes token-board-agent resync      # 忽略本地上传 checkpoint，重新同步扫描窗口内事件
 npx --yes token-board-agent collect     # 只采集并打印将要上报的 JSON
+npx --yes token-board-agent speed       # 本地估算各模型速度与 Agent 时间构成，不上传结果
 npx --yes token-board-agent uninstall   # 卸载后台任务，保留本地授权和状态文件
 ```
 
@@ -240,6 +242,8 @@ TOKEN_BOARD_FILE_RETENTION_EVENTS=0                # JSON 存储保留数；0 �
 | `GET` | `/api/usage/export` | `format=csv|json`、`scope=leaderboard|me`、`range`、`metric` | `leaderboard` 无；`me` 需要网页登录或 agent Bearer |
 | `GET` | `/api/usage/rate-limits` | `days` | 可选网页登录，未登录回退 API 服务所在机器 |
 | `GET` | `/api/usage/rate-limits/team` | 无 | 网页 GitHub 登录 |
+| `GET` | `/api/agent-speed/history` | `days=7|30|90` | 网页 GitHub 登录或 agent Bearer |
+| `POST` | `/api/agent-speed/history` | JSON `snapshots[]` 日聚合 | agent Bearer 或 `X-Token-Board-Token` |
 | `POST` | `/api/usage/ingest` | JSON `events[]` / `userConfig` | agent Bearer 或 `X-Token-Board-Token` |
 | `POST` | `/api/internal/daily-report/run` | `kind=daily|weekly` | `Authorization: Bearer TOKEN_BOARD_DAILY_REPORT_TRIGGER_TOKEN` |
 

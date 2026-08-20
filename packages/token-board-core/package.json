@@ -8,6 +8,8 @@
     "./codex-rate-limits": "./src/codex-rate-limits.ts",
     "./auth": "./src/token-board-auth.ts",
     "./automation": "./src/token-board-automation.ts",
+    "./agent-speed": "./src/agent-speed.ts",
+    "./agent-speed-storage": "./src/agent-speed-storage.ts",
     "./collector": "./src/token-usage-collector.ts",
     "./asc-collector": "./src/asc-collector.ts",
     "./goals": "./src/token-goals.ts",

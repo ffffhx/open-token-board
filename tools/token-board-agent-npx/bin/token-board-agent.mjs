@@ -14,6 +14,7 @@ import {
   parseSessionFile as parseAscSessionFile,
   toTokenEvents as ascToTokenEvents,
 } from "agent-session-core";
+import { createAgentSpeedAnalyzer } from "./agent-speed.mjs";
 
 const API_URL = (process.env.TOKEN_BOARD_API_URL || "https://124-221-36-36.anyip.dev:8443/token-board").replace(/\/+$/, "");
 const LEADERBOARD_URL = process.env.TOKEN_BOARD_LEADERBOARD_URL || "https://ffffhx.github.io/open-token-board/board/";
@@ -50,7 +51,7 @@ const CODEX_RATE_LIMIT_MAX_FILES = readPositiveNumber(process.env.TOKEN_BOARD_CO
 const CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS = readPositiveNumber(process.env.TOKEN_BOARD_CODEX_RATE_LIMIT_BURN_LOOKBACK_HOURS, 3);
 const CODEX_RATE_WINDOW_5H_MINUTES = 300;
 const CODEX_RATE_WINDOW_WEEKLY_MINUTES = 10080;
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const COLLECTOR_SCHEMA_VERSION = 2;
 const PACKAGE_NAME = "token-board-agent";
 const NPX_COMMAND = `npx --yes ${PACKAGE_NAME}`;
@@ -60,6 +61,7 @@ const CLAUDE_CODE_OUTPUT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "Noteboo
 const CODEX_STRUCTURED_PATCH_TOOLS = new Set(["apply_patch", "patch"]);
 const INSTALL_DIR = path.join(os.homedir(), ".token-board-agent");
 const INSTALLED_AGENT_FILE = path.join(INSTALL_DIR, "token-board-agent.mjs");
+const INSTALLED_AGENT_SPEED_FILE = path.join(INSTALL_DIR, "agent-speed.mjs");
 const INSTALLED_ASC_DIR = path.join(INSTALL_DIR, "node_modules", "agent-session-core");
 const CLAUDE_STATUSLINE_SHIM_FILE = path.join(INSTALL_DIR, "claude-statusline-capture.sh");
 const CLAUDE_SETTINGS_FILE =
@@ -203,7 +205,7 @@ main().catch((error) => {
 
 async function main() {
   const command = process.argv[2] || "sync";
-  const quietCommand = command === "mcp" || command === "statusline";
+  const quietCommand = command === "mcp" || command === "statusline" || (command === "speed" && process.argv.includes("--json"));
   if (command === "watch") {
     logInfo(`[token-board-agent] running ${command}`);
   } else if (!quietCommand) {
@@ -257,6 +259,11 @@ async function main() {
     } else {
       await printLaunchAgentStatus();
     }
+    return;
+  }
+
+  if (command === "speed") {
+    await printLocalAgentSpeed();
     return;
   }
 
@@ -367,6 +374,7 @@ async function uninstallLaunchAgent() {
 
   await fs.rm(LAUNCH_AGENT_PLIST, { force: true });
   await fs.rm(INSTALLED_AGENT_FILE, { force: true });
+  await fs.rm(INSTALLED_AGENT_SPEED_FILE, { force: true });
   await fs.rm(INSTALLED_ASC_DIR, { recursive: true, force: true });
   console.log("Token board background sync uninstalled.");
   console.log(`Kept auth config: ${CONFIG_FILE}`);
@@ -380,6 +388,7 @@ async function uninstallWindowsTask() {
   await fs.rm(WINDOWS_LAUNCHER_FILE, { force: true });
   await fs.rm(WINDOWS_WRAPPER_FILE, { force: true });
   await fs.rm(INSTALLED_AGENT_FILE, { force: true });
+  await fs.rm(INSTALLED_AGENT_SPEED_FILE, { force: true });
   await fs.rm(INSTALLED_ASC_DIR, { recursive: true, force: true });
   console.log("Token board background sync uninstalled.");
   console.log(`Removed Windows Task Scheduler task: ${WINDOWS_TASK_NAME}`);
@@ -473,11 +482,111 @@ async function sourceDiscoveryStatus(config) {
 async function installAgentScript() {
   await fs.mkdir(INSTALL_DIR, { recursive: true });
   await fs.copyFile(fileURLToPath(import.meta.url), INSTALLED_AGENT_FILE);
+  await fs.copyFile(fileURLToPath(new URL("./agent-speed.mjs", import.meta.url)), INSTALLED_AGENT_SPEED_FILE);
   await installRuntimeDependency("agent-session-core", INSTALLED_ASC_DIR);
   await fs.chmod(INSTALLED_AGENT_FILE, 0o755).catch(() => {});
   if (process.platform !== "win32") {
     await installClaudeStatuslineShim();
   }
+}
+
+async function printLocalAgentSpeed() {
+  const config = await readAgentConfig();
+  const roots = {};
+  const usagePaths = readListEnv("TOKEN_BOARD_USAGE_PATHS") || readStringArray(config.usagePaths) || [];
+  const includeDefaultSources =
+    process.env.TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES === "false" ? false : config.includeDefaultSources !== false;
+  if (includeDefaultSources) {
+    const defaults = ascDefaultRoots();
+    roots.codex = [...(defaults.codex || []), homePath(".codex", "projects")];
+    roots.claude = [...(defaults.claude || [])];
+  }
+  if (usagePaths.length) roots.__custom__ = usagePaths;
+
+  const files = discoverAscSessionFiles({
+    roots,
+    sinceMs: SINCE_MS,
+    maxFiles: Number.POSITIVE_INFINITY,
+    includeSubagentTranscripts: true,
+  });
+  const analyzer = createAgentSpeedAnalyzer();
+  const seenLogicalSessions = new Set();
+  const parseFailures = [];
+  let filesParsed = 0;
+  for (const file of files) {
+    const detectedFile = file.engine === "__custom__" ? { ...file, engine: undefined } : file;
+    const session = parseAscSessionFile(detectedFile);
+    if (!session) {
+      if (file.engine !== "__custom__") parseFailures.push(file.path);
+      continue;
+    }
+    filesParsed += 1;
+    const logicalSessionId = `${session.engine}:${session.id}`;
+    if (seenLogicalSessions.has(logicalSessionId)) continue;
+    seenLogicalSessions.add(logicalSessionId);
+    analyzer.addSession(session);
+  }
+
+  const analysis = analyzer.finish();
+  const speedHistory = analyzer.finishHistory();
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify({ analysis, speedHistory, filesDiscovered: files.length, filesParsed, parseFailures }, null, 2));
+    return;
+  }
+
+  console.log(`Local agent speed · last ${formatSpeedHours(SINCE_MS / 3_600_000)}`);
+  console.log(
+    `Scanned ${filesParsed}/${files.length} session files; ` +
+      `${analysis.requestSampleCount} requests and ${analysis.closedTurnCount} closed turns.\n`
+  );
+  console.log("Model speed (derived from local request timestamps)");
+  const available = analysis.modelSpeed.filter((summary) => summary.available);
+  if (!available.length) console.log("  No model has enough varied samples yet.");
+  for (const summary of available) {
+    console.log(
+      `  ${summary.engine.padEnd(7)} ${summary.model.padEnd(28)} ` +
+        `${formatSpeedNumber(summary.decodeTokensPerSecond)} tok/s  ` +
+        `${formatSpeedNumber(summary.fixedOverheadSeconds)}s fixed  ` +
+        `jitter p90 ${formatSpeedNumber(summary.jitterP90)}x / p99 ${formatSpeedNumber(summary.jitterP99)}x  ` +
+        `n=${summary.sampleCount}  R²=${formatSpeedNumber(summary.rSquared, 2)}  ${summary.confidence}`
+    );
+  }
+  for (const summary of analysis.modelSpeed.filter((item) => !item.available)) {
+    console.log(
+      `  ${summary.engine.padEnd(7)} ${summary.model.padEnd(28)} unavailable: ` +
+        `${speedUnavailableReason(summary.unavailableReason)} (n=${summary.sampleCount})`
+    );
+  }
+
+  console.log("\nTime composition (closed turns only; overlapping tools counted once)");
+  if (!analysis.timeComposition.length) console.log("  No closed turns available yet.");
+  for (const summary of analysis.timeComposition) {
+    console.log(
+      `  ${summary.engine.padEnd(7)} non-tool ${formatSpeedNumber(summary.nonToolPercent)}%  ` +
+        `tool ${formatSpeedNumber(summary.toolPercent)}%  turns=${summary.turnCount}`
+    );
+  }
+  if (parseFailures.length) {
+    console.warn(`\nWarning: ${parseFailures.length} files could not be parsed; results are partial.`);
+  }
+  console.log(
+    "\nNotes: fixed overhead and tok/s are estimates, not TTFT measurements. " +
+      "Compare models within the same engine; tool time includes permission-confirmation waits. Nothing is uploaded."
+  );
+}
+
+function formatSpeedHours(hours) {
+  return hours >= 24 && hours % 24 === 0 ? `${hours / 24}d` : `${hours}h`;
+}
+
+function formatSpeedNumber(value, digits = 1) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "-";
+}
+
+function speedUnavailableReason(reason) {
+  if (reason === "too_few_samples") return "needs at least 30 samples";
+  if (reason === "output_range_too_narrow") return "output-token range is too narrow";
+  return "regression was unstable";
 }
 
 async function installRuntimeDependency(packageName, targetDir) {
@@ -691,7 +800,8 @@ async function uploadOnce(config, options = {}) {
   const force = options.force === true || process.env.TOKEN_BOARD_FORCE_RESYNC === "1";
   const stateMatches = uploadStateMatchesConfig(state, config);
   const uploadedIds = force || !stateMatches ? new Set() : new Set(Array.isArray(state.uploadedIds) ? state.uploadedIds : []);
-  const collectedEvents = await collectLocalUsageEvents(config);
+  const collectionReport = await collectLocalUsageEventsWithReport(config);
+  const collectedEvents = collectionReport.events;
   const collectedIds = new Set(collectedEvents.map((event) => event.id));
   const events = collectedEvents.filter((event) => !uploadedIds.has(event.id));
   const userConfig = await collectUserConfig();
@@ -700,6 +810,7 @@ async function uploadOnce(config, options = {}) {
     if (userConfig) {
       await postIngest(config, [], userConfig);
     }
+    await uploadAgentSpeedHistoryBestEffort(config, collectionReport.speedHistory);
     logInfo(
       force
         ? "No token usage events collected for resync."
@@ -717,6 +828,8 @@ async function uploadOnce(config, options = {}) {
     result.duplicates += Number(batchResult.duplicates || 0);
     result.records = Number(batchResult.records || result.records || 0);
   }
+
+  await uploadAgentSpeedHistoryBestEffort(config, collectionReport.speedHistory);
 
   await writeJson(STATE_FILE, {
     apiUrl: API_URL,
@@ -760,6 +873,7 @@ async function replaceRemoteUsage(config) {
     await postReplacePhase(config, "append", replaceId, batch);
   }
   const result = await postReplacePhase(config, "commit", replaceId, [], { digest });
+  await uploadAgentSpeedHistoryBestEffort(config, report.speedHistory);
 
   await writeJson(STATE_FILE, {
     apiUrl: API_URL,
@@ -842,6 +956,7 @@ async function collectLocalUsageEventsWithReport(config, options = {}) {
     : combined;
   return {
     events: filtered,
+    speedHistory: ascReport.speedHistory,
     filesDiscovered: ascReport.filesDiscovered + files.length,
     filesParsed: ascReport.filesParsed + files.length,
     parseFailures: ascReport.parseFailures,
@@ -873,6 +988,7 @@ function collectAscUsageEvents(config, sinceMs) {
   const parsedPaths = new Set();
   const seenLogicalSessions = new Set();
   const parseFailures = [];
+  const speedAnalyzer = createAgentSpeedAnalyzer();
   let filesParsed = 0;
   for (const file of files) {
     const detectedFile = file.engine === "__custom__" ? { ...file, engine: undefined } : file;
@@ -890,6 +1006,7 @@ function collectAscUsageEvents(config, sinceMs) {
       continue;
     }
     seenLogicalSessions.add(logicalSessionId);
+    speedAnalyzer.addSession(session);
     const ascEvents = ascToTokenEvents(session, {
       userId: config.userId,
       displayName: config.displayName,
@@ -911,7 +1028,14 @@ function collectAscUsageEvents(config, sinceMs) {
     });
   }
 
-  return { events, parsedPaths, parseFailures, filesDiscovered: files.length, filesParsed };
+  return {
+    events,
+    speedHistory: speedAnalyzer.finishHistory(),
+    parsedPaths,
+    parseFailures,
+    filesDiscovered: files.length,
+    filesParsed,
+  };
 }
 
 function summarizeAscLinesWritten(session) {
@@ -1989,6 +2113,24 @@ async function postIngest(config, events, userConfig) {
     },
     body: JSON.stringify(createIngestPayload(events, userConfig)),
   }, "Upload");
+}
+
+async function uploadAgentSpeedHistoryBestEffort(config, snapshots) {
+  if (!Array.isArray(snapshots) || !snapshots.length || !config.agentToken) return;
+  const uploadSnapshots = snapshots.slice(-120);
+  try {
+    const result = await requestJsonWithRetry(`${API_URL}/api/agent-speed/history`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.agentToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ schemaVersion: 1, generatedAt: new Date().toISOString(), snapshots: uploadSnapshots }),
+    }, "Agent speed history");
+    logInfo(`Uploaded ${Number(result.accepted || uploadSnapshots.length)} daily agent-speed aggregates.`);
+  } catch (error) {
+    logError(`Agent speed history upload will retry next cycle: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 async function postReplacePhase(config, phase, replaceId, events, options = {}) {
@@ -3677,6 +3819,7 @@ function printHelp() {
   ${NPX_COMMAND} watch
   ${NPX_COMMAND} login
   ${NPX_COMMAND} collect
+  ${NPX_COMMAND} speed
   ${NPX_COMMAND} upload
   ${NPX_COMMAND} resync
   ${NPX_COMMAND} replace

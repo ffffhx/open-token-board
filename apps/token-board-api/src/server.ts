@@ -57,6 +57,14 @@ import {
   type TokenUsageEvent,
 } from "@open-token-board/core";
 import {
+  sanitizeAgentSpeedDailySnapshots,
+  type AgentSpeedDailySnapshot,
+} from "@open-token-board/core/agent-speed";
+import {
+  createAgentSpeedHistoryStore,
+  type AgentSpeedHistoryStore,
+} from "@open-token-board/core/agent-speed-storage";
+import {
   analyzeCodexRateLimits,
   type CodexRateLimitReport,
   type CodexRateWindow,
@@ -105,6 +113,8 @@ const LEADERBOARD_SNAPSHOT_REFRESH_MS = positiveNumberEnv(process.env.TOKEN_BOAR
 const LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS = positiveNumberEnv(process.env.TOKEN_BOARD_LEADERBOARD_SNAPSHOT_WRITE_DELAY_MS, 5_000);
 const SNAPSHOT_SHARE_DATA_FILE =
   process.env.SNAPSHOT_SHARE_DATA_FILE || path.join(process.cwd(), ".token-board", "snapshot-shares.json");
+const AGENT_SPEED_HISTORY_DATA_FILE =
+  process.env.TOKEN_BOARD_AGENT_SPEED_DATA_FILE || path.join(path.dirname(DATA_FILE), "agent-speed-history.json");
 // Directory holding pre-rendered private-blog HTML files (one per slug). These
 // are hidden posts exported from the garden-lab site and served here behind a
 // GitHub-login gate, since the public GitHub Pages build can't do server-side
@@ -115,6 +125,7 @@ const PRIVATE_BLOG_DIR =
 const MAX_SNAPSHOT_SHARE_BODY_BYTES = positiveNumberEnv(process.env.SNAPSHOT_SHARE_MAX_BODY_BYTES, 24 * 1024 * 1024);
 const MAX_SELECTION_EXPLAIN_BODY_BYTES = positiveNumberEnv(process.env.SELECTION_EXPLAIN_MAX_BODY_BYTES, 16 * 1024);
 const MAX_ARTICLE_CHAT_BODY_BYTES = positiveNumberEnv(process.env.ARTICLE_CHAT_MAX_BODY_BYTES, 128 * 1024);
+const MAX_AGENT_SPEED_BODY_BYTES = positiveNumberEnv(process.env.TOKEN_BOARD_AGENT_SPEED_MAX_BODY_BYTES, 1024 * 1024);
 const DEV_AUTH_SECRET_PLACEHOLDER = "dev-only-token-board-auth-secret";
 
 // Parse a positive numeric env var, falling back to a safe default when it is unset
@@ -186,6 +197,7 @@ type UsageReplaceStage = {
 const USAGE_REPLACE_STAGE_TTL_MS = 30 * 60 * 1000;
 const usageReplaceStages = new Map<string, UsageReplaceStage>();
 let snapshotShareStore: SnapshotShareStore | undefined;
+let agentSpeedHistoryStore: AgentSpeedHistoryStore | undefined;
 const GLOBAL_SUMMARY_CACHE_MS = 10_000;
 let globalSummaryCache: { key: string; at: number; value: unknown } | undefined;
 const LEADERBOARD_SNAPSHOT_RANGES: TokenBoardRange[] = ["today", "1D", "7D", "30D", "90D", "week", "month", "lastweek", "lastmonth"];
@@ -210,6 +222,7 @@ async function main() {
   authSecret(); // fail fast if the auth secret is missing/placeholder
   tokenUsageStore = await openTokenUsageStore();
   snapshotShareStore = await openSnapshotShareStore();
+  agentSpeedHistoryStore = await openAgentSpeedHistoryStore();
   await loadLeaderboardSnapshotsFromFile();
 
   if (process.env.TOKEN_BOARD_MIGRATE_JSON_ON_START === "true") {
@@ -234,6 +247,7 @@ async function main() {
     console.log(`token-board server listening on http://${HOST}:${PORT}`);
     console.log(`storage: ${tokenUsageStore?.kind} (${tokenUsageStore?.label})`);
     console.log(`snapshot shares: ${snapshotShareStore?.kind} (${snapshotShareStore?.label})`);
+    console.log(`agent speed history: ${agentSpeedHistoryStore?.kind} (${agentSpeedHistoryStore?.label})`);
     console.log(`leaderboard snapshots: ${LEADERBOARD_SNAPSHOT_FILE}`);
   });
 }
@@ -280,6 +294,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       records,
       eventsTotal: records,
       snapshotShares,
+      agentSpeedSnapshots: await speedHistoryStore().countSnapshots(),
       storage: store.kind,
       storageBackend: {
         type: storageHealth.kind,
@@ -304,6 +319,16 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
       githubAuth: Boolean(process.env.GITHUB_CLIENT_ID),
       generatedAt: new Date().toISOString(),
     });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/agent-speed/history") {
+    await handleAgentSpeedHistoryUpload(request, response);
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/agent-speed/history") {
+    await handleAgentSpeedHistoryGet(request, response, url);
     return;
   }
 
@@ -2429,6 +2454,76 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
   });
 }
 
+async function handleAgentSpeedHistoryUpload(request: IncomingMessage, response: ServerResponse) {
+  const identity = await authenticateIngestRequest(request);
+  if (!identity) {
+    sendJson(request, response, 401, { error: "Login required" });
+    return;
+  }
+
+  const body = await readJsonBody(request, MAX_AGENT_SPEED_BODY_BYTES);
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    sendJson(request, response, 400, { error: "Body must be a JSON object" });
+    return;
+  }
+  const rawSnapshots = (body as { snapshots?: unknown }).snapshots;
+  const sanitized = sanitizeAgentSpeedDailySnapshots(rawSnapshots);
+  const rangeErrors = sanitized.snapshots.flatMap(validateAgentSpeedSnapshotDate);
+  if (sanitized.errors.length || rangeErrors.length || sanitized.snapshots.length === 0) {
+    sendJson(request, response, 400, {
+      error: "Agent speed history rejected",
+      errors: [...sanitized.errors, ...rangeErrors, ...(sanitized.snapshots.length ? [] : ["snapshots cannot be empty"])],
+    });
+    return;
+  }
+
+  const result = await speedHistoryStore().upsertSnapshots(identity.userId, sanitized.snapshots);
+  sendJson(request, response, 200, {
+    ok: true,
+    accepted: result.accepted,
+    records: result.records,
+    generatedAt: new Date().toISOString(),
+  });
+}
+
+async function handleAgentSpeedHistoryGet(
+  request: IncomingMessage,
+  response: ServerResponse,
+  url: URL
+) {
+  const identity = await readUsageRequestIdentity(request);
+  if (!identity) {
+    sendJson(request, response, 401, { error: "GitHub login required" });
+    return;
+  }
+  const rawDays = Number(url.searchParams.get("days") || 30);
+  const days = Number.isFinite(rawDays) ? Math.max(1, Math.min(365, Math.trunc(rawDays))) : 30;
+  const snapshots = await speedHistoryStore().listSnapshots(identity.userId, { days });
+  sendJson(request, response, 200, {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    days,
+    user: {
+      userId: identity.userId,
+      displayName: identity.displayName,
+      githubLogin: identity.githubLogin,
+      avatarUrl: identity.avatarUrl,
+    },
+    snapshots,
+  });
+}
+
+function validateAgentSpeedSnapshotDate(snapshot: AgentSpeedDailySnapshot) {
+  const today = localDayKey(new Date(), 8 * 60);
+  const todayMs = dayKeyUtcTime(today);
+  const snapshotMs = dayKeyUtcTime(snapshot.date);
+  const minMs = todayMs - 399 * 24 * 60 * 60 * 1_000;
+  const maxMs = todayMs + 24 * 60 * 60 * 1_000;
+  return snapshotMs < minMs || snapshotMs > maxMs
+    ? [`${snapshot.date} is outside the accepted 400-day history window`]
+    : [];
+}
+
 async function handleReplace(request: IncomingMessage, response: ServerResponse) {
   const identity = await authenticateIngestRequest(request);
 
@@ -3789,6 +3884,15 @@ async function openSnapshotShareStore() {
   });
 }
 
+async function openAgentSpeedHistoryStore() {
+  return createAgentSpeedHistoryStore({
+    dataFile: AGENT_SPEED_HISTORY_DATA_FILE,
+    databaseUrl: normalizeOptionalText(process.env.TOKEN_BOARD_DATABASE_URL) || normalizeOptionalText(process.env.DATABASE_URL),
+    postgresSchema: normalizeOptionalText(process.env.TOKEN_BOARD_POSTGRES_SCHEMA) || "token_board",
+    postgresSsl: process.env.TOKEN_BOARD_DATABASE_SSL === "true" ? { rejectUnauthorized: process.env.TOKEN_BOARD_DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" } : undefined,
+  });
+}
+
 function usageStore() {
   if (!tokenUsageStore) {
     throw new Error("Token usage store is not initialized");
@@ -4550,6 +4654,13 @@ function shareStore() {
   }
 
   return snapshotShareStore;
+}
+
+function speedHistoryStore() {
+  if (!agentSpeedHistoryStore) {
+    throw new Error("Agent speed history store is not initialized");
+  }
+  return agentSpeedHistoryStore;
 }
 
 function applyCors(request: IncomingMessage, response: ServerResponse) {

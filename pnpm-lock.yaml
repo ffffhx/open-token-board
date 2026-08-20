@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  agent-session-core@0.1.1:
+    hash: f25a24e1990f6fffe8d8bd079378c3b51b7399215afed444db218c8c0c06c6ed
+    path: patches/agent-session-core@0.1.1.patch
+
 importers:
 
   .:
@@ -118,7 +123,7 @@ importers:
     dependencies:
       agent-session-core:
         specifier: ^0.1.1
-        version: 0.1.1
+        version: 0.1.1(patch_hash=f25a24e1990f6fffe8d8bd079378c3b51b7399215afed444db218c8c0c06c6ed)
       pg:
         specifier: ^8.20.0
         version: 8.21.0
@@ -152,7 +157,7 @@ importers:
     dependencies:
       agent-session-core:
         specifier: ^0.1.1
-        version: 0.1.1
+        version: 0.1.1(patch_hash=f25a24e1990f6fffe8d8bd079378c3b51b7399215afed444db218c8c0c06c6ed)
 
 packages:
 
@@ -1825,7 +1830,7 @@ snapshots:
 
   '@xmldom/xmldom@0.9.10': {}
 
-  agent-session-core@0.1.1: {}
+  agent-session-core@0.1.1(patch_hash=f25a24e1990f6fffe8d8bd079378c3b51b7399215afed444db218c8c0c06c6ed): {}
 
   ansi-regex@5.0.1: {}
 

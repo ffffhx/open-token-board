@@ -12,6 +12,8 @@ export const common = {
     cardDescription: "A shareable AI coding token report card with rank, usage, favorite model, activity trend, and one-click image export.",
     limitsTitle: "Quota Dashboard | Open Token Board",
     limitsDescription: "Track Codex CLI and Claude Code 5-hour and weekly quota remaining, reset countdowns, and estimated exhaustion time.",
+    speedTitle: "Agent Speed Trends | Open Token Board",
+    speedDescription: "Track daily decode speed, fixed overhead, latency jitter, and tool-time composition across Codex and Claude Code.",
     claudeLimitsTitle: "Claude Code Quota Dashboard | Open Token Board",
     claudeLimitsDescription: "Track Claude Code subscription 5-hour and weekly quota remaining plus reset countdowns from precise status-line reports.",
     profileTitle: "Public Profile | Open Token Board",
@@ -31,6 +33,7 @@ export const common = {
     board: "Token Board",
     card: "Report",
     limits: "Quotas",
+    speed: "Speed",
     bench: "AI Bench",
   },
   language: {

@@ -3,3 +3,6 @@ packages:
   - "packages/*"
   - "deploy/*"
   - "tools/*"
+
+patchedDependencies:
+  agent-session-core@0.1.1: patches/agent-session-core@0.1.1.patch

@@ -10,6 +10,8 @@ export const common = {
     cardDescription: "一张可分享的 AI 编码 Token 战报卡：排名、消耗、主力模型与活跃趋势，一键导出图片分享。",
     limitsTitle: "额度面板 | Open Token Board",
     limitsDescription: "实时查看 Codex CLI 与 Claude Code 的 5 小时与每周额度剩余、重置倒计时与预计耗尽时间。",
+    speedTitle: "Agent 速度趋势 | Open Token Board",
+    speedDescription: "查看 Codex 与 Claude Code 的每日解码速度、固定开销、延迟抖动和工具时间构成。",
     claudeLimitsTitle: "Claude Code 额度面板 | Open Token Board",
     claudeLimitsDescription: "实时查看 Claude Code 订阅的 5 小时与每周额度剩余、重置倒计时（来自状态栏精确上报）。",
     profileTitle: "公开个人主页 | Open Token Board",
@@ -29,6 +31,7 @@ export const common = {
     board: "Token 榜单",
     card: "战报",
     limits: "额度",
+    speed: "速度",
     bench: "AI 评测",
   },
   language: {

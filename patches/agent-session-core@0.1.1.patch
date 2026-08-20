@@ -1,0 +1,28 @@
+diff --git a/src/engines/codex.mjs b/src/engines/codex.mjs
+index 5e395f9b2a852202d1d8d2f373e8979c31cdcb99..262de987e4c40cedfe773dcde85c576b8618f4a3 100644
+--- a/src/engines/codex.mjs
++++ b/src/engines/codex.mjs
+@@ -108,15 +108,20 @@ export function parseCodexSession(input, fileInfo = {}) {
+         const internal = isBootstrapUserMessage(role, msgText);
+         session.events.push({ kind: "message", ts, role, text: msgText, images, internal });
+         if (!internal && role === "user" && !session.title && msgText) session.title = truncateForTitle(msgText);
+-      } else if (ptype === "function_call") {
++      } else if (ptype === "function_call" || ptype === "custom_tool_call") {
+         session.events.push({
+           kind: "tool_call",
+           ts,
+           name: typeof payload.name === "string" ? payload.name : "function_call",
+-          args: typeof payload.arguments === "string" ? payload.arguments : "",
++          args:
++            typeof payload.arguments === "string"
++              ? payload.arguments
++              : typeof payload.input === "string"
++                ? payload.input
++                : stringifyClaudeContent(payload.input ?? ""),
+           callId: typeof payload.call_id === "string" ? payload.call_id : undefined,
+         });
+-      } else if (ptype === "function_call_output") {
++      } else if (ptype === "function_call_output" || ptype === "custom_tool_call_output") {
+         const outputText = typeof payload.output === "string" ? payload.output : stringifyClaudeContent(payload.output);
+         session.events.push({
+           kind: "tool_result",
