@@ -1,8 +1,8 @@
 import { once } from "node:events";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { spawn } from "node:child_process";
 
+import { spawnPnpm } from "../../scripts/spawn-pnpm";
 import { getAvailablePort, repoRoot, startTokenBoardHarness, type TokenBoardHarness } from "../support/harness";
 import { startStaticServer, type StaticServer } from "../support/static-server";
 import { e2eStatePath, type E2eState } from "./state";
@@ -90,7 +90,7 @@ async function seedAgentSpeedHistory(harness: TokenBoardHarness) {
 }
 
 async function buildWeb(apiUrl: string) {
-  const child = spawn("pnpm", ["--filter", "@open-token-board/web", "build"], {
+  const child = spawnPnpm(["--filter", "@open-token-board/web", "build"], {
     cwd: repoRoot,
     env: {
       ...process.env,

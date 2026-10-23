@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-terra",
+  "label": "GPT-5.6 Terra",
+  "caseId": "B04",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 13,
+  "checksTotal": 13,
+  "checks": [
+    {
+      "id": "catalog-win32-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-darwin-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-linux-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-fresh-authority-and-ownership",
+      "passed": true
+    },
+    {
+      "id": "catalog-explicit-directory-and-validation",
+      "passed": true
+    },
+    {
+      "id": "catalog-malformed-registry-fallback",
+      "passed": true
+    },
+    {
+      "id": "ui-module-load",
+      "passed": true
+    },
+    {
+      "id": "rename-one-submit-existing-behavior",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-status-refresh",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-pending-save",
+      "passed": true
+    },
+    {
+      "id": "rename-failure-keeps-draft-and-retry",
+      "passed": true
+    },
+    {
+      "id": "rename-profile-boundary-and-noop-render",
+      "passed": true
+    },
+    {
+      "id": "report-present",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:20:17.920Z",
+    "taskStartedAt": "2026-10-02T15:20:18.097Z",
+    "taskCompletedAt": "2026-10-02T15:22:56.342Z",
+    "taskWallMs": 158245,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-terra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 420148,
+      "cached_input_tokens": 371968,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 6697,
+      "reasoning_output_tokens": 2278,
+      "total_tokens": 426845
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "f6dd14741d07252131586483773b32e4efc44cb8aabd4c43992b0bb0c2fd3d43",
+    "toolCallCount": 11,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:28:50.562Z",
+    "notes": [
+      "已阅读两份源码改动与报告；13项外部检查及改动范围均通过。",
+      "报告区分模拟与真实环境，未把本地HTTP检查写成浏览器E2E；未逐条审计所有额外自测声明。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "43e2cf6275290b7fee51aeb41d77879a260d4b7eb616a247e19e7c5338a90c51"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "e9544bdaaae96edbbc3ffeeca9bf80fba09755c21df6e8d795d872468f46cd8f"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "7f9c6641583ebaf8bd9ffc37ab84c2d2e89e44f48d9e7216bceaefc7e460df3c"
+    }
+  ],
+  "rawGradeSha256": "99bbeeb7b91ca7d66bf6168c324b05102f7a40aab68e51cc448e474c70ce427e",
+  "supplementalEnvironmentCheck": {
+    "passed": true,
+    "checks": [
+      {
+        "id": "explicit-directory-via-process-env",
+        "passed": true
+      }
+    ],
+    "sourceChanged": false,
+    "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+    "script": "check-b04-env.mjs",
+    "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+  }
+}

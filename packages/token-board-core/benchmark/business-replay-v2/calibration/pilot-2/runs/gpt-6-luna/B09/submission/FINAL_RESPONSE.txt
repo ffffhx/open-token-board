@@ -1,0 +1,5 @@
+已整理 [handbook.md](C:/Users/aa182/AppData/Local/Temp/otb-v2-p2-1791003563990/gpt-6-luna/B09/handbook.md) 中 ProfilePilot 正文，并写入 [REPORT.md](C:/Users/aa182/AppData/Local/Temp/otb-v2-p2-1791003563990/gpt-6-luna/B09/REPORT.md)。正文按参考资料说明了业务背景、难点、Agent 接入、Profile 分配、受控通信、人工接管和并行 Session 结果。
+
+开场区域未恢复：现有读取和快照对应的版本被用户明确指出是 Git 初始版，历史中没有可确认的 Ctrl+S 保存后文本。我在报告中记录了证据与这一限制，没有把该版本冒称为已恢复。
+
+已检查项目标题边界和 Markdown 结构；只改了 `handbook.md` 与 `REPORT.md`。未启动博客或访问外部链接。

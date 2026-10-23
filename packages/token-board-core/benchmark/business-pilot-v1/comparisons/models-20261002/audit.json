@@ -1,0 +1,1809 @@
+{
+  "passed": true,
+  "checkedAt": "2026-10-03T03:05:23.659Z",
+  "checksPassed": 450,
+  "checksTotal": 450,
+  "checks": [
+    {
+      "id": "complete-24-selected-runs",
+      "passed": true
+    },
+    {
+      "id": "eight-exact-models",
+      "passed": true
+    },
+    {
+      "id": "uniform-medium-policy",
+      "passed": true
+    },
+    {
+      "id": "frozen-suite-consistency",
+      "passed": true
+    },
+    {
+      "id": "unique-selected-model-cases",
+      "passed": true
+    },
+    {
+      "id": "supplemental-baseline-and-reference",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/explicit-adjudication",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/adjudication-policy",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/supplemental-evidence",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B04/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B09/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/record-consistency",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/review-finished",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/scope",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/runtime/exported-private/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/runtime/exported-private/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/runtime/published-content/release-notes.html",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/runtime/published-content/release-notes.json",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/scripts/release.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/B11/selected/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "two-preserved-default-low-runs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/sha256/src/profile-catalog.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/sha256/src/render-root.mjs",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/B04/excluded/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/single-context",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/model",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/effort",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/suite",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/raw-counts",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/time",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/sha256/handbook.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/sha256/REPORT.md",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/B09/excluded/archive-file-set",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6.1-sol/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-astra/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-sol/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-6-luna/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-sol/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-terra/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.6-luna/tokens/total_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/three-cases",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/accepted-count",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/wall-time-sum",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/cached_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/cache_write_input_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/reasoning_output_tokens",
+      "passed": true
+    },
+    {
+      "id": "gpt-5.5/tokens/total_tokens",
+      "passed": true
+    }
+  ],
+  "limitations": "Archive integrity and recorded configuration only; does not establish OS isolation, provider backend identity, or human review."
+}

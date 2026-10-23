@@ -73,6 +73,8 @@ export type TokenTrendBreakdown = {
 
 export type TokenUsageEvent = {
   id: string;
+  /** Server-owned provenance. Empty/absent means pre-upgrade, unscoped history. */
+  collectionDevices?: string[];
   /** Stable collector-native key; unlike `id`, it is independent of mutable usage metadata. */
   upstreamEventId?: string;
   userId: string;
@@ -553,17 +555,19 @@ export function buildTokenAccountUsageProfile(
     userId,
     range,
     now = new Date(),
+    leaderboardSummary,
   }: {
     userId: string;
     range: TokenBoardRange;
     now?: Date;
+    /** Reuse the server's ranking and lifetime achievements; entries may be range-scoped for ranked users. */
+    leaderboardSummary?: TokenLeaderboardSummary;
   }
 ): TokenAccountUsageProfile {
   const safeNow = Number.isFinite(now.getTime()) ? now : new Date();
   const normalizedEntries = dedupeTokenEvents(entries.map(normalizeTokenUsageEvent));
-  const globalSummary = buildTokenLeaderboard(normalizedEntries, { range, metric: "tokens", now: safeNow });
-  const start = new Date(globalSummary.startAt);
-  const end = new Date(globalSummary.endAt);
+  const globalSummary = leaderboardSummary ?? buildTokenLeaderboard(normalizedEntries, { range, metric: "tokens", now: safeNow });
+  const { start, end } = resolveTokenLeaderboardWindow(range, safeNow);
   const accountEntries = normalizedEntries.filter((entry) => {
     const timestamp = new Date(entry.timestamp).getTime();
     return entry.userId === userId && timestamp >= start.getTime() && timestamp <= end.getTime();
@@ -575,17 +579,13 @@ export function buildTokenAccountUsageProfile(
     rankedUser?.efficiency ??
     accountEfficiencySummary.users.get(userId) ??
     emptyTokenEfficiencyProfile(globalSummary.efficiency);
-  const achievements = buildTokenAchievementSummary(
-    normalizedEntries.filter((entry) => entry.userId === userId),
-    { now: safeNow }
-  );
   const effectiveAchievements = rankedUser
     ? {
         level: rankedUser.level,
         badges: rankedUser.badges,
         personalBests: rankedUser.personalBests,
       }
-    : achievements;
+    : buildTokenAchievementSummary(normalizedEntries.filter((entry) => entry.userId === userId), { now: safeNow });
   const accountUser = accountSummary.users[0]
     ? {
         ...accountSummary.users[0],
@@ -606,8 +606,8 @@ export function buildTokenAccountUsageProfile(
 
   return {
     range,
-    startAt: globalSummary.startAt,
-    endAt: globalSummary.endAt,
+    startAt: start.toISOString(),
+    endAt: end.toISOString(),
     user: accountUser,
     level: effectiveAchievements.level,
     badges: effectiveAchievements.badges,
@@ -715,6 +715,7 @@ export function normalizeTokenUsageEvent(value: Partial<TokenUsageEvent>): Token
   return {
     id,
     ...(upstreamEventId ? { upstreamEventId } : {}),
+    ...(value.collectionDevices?.length ? { collectionDevices: [...new Set(value.collectionDevices)].sort() } : {}),
     userId,
     displayName: normalizeText(value.displayName) || userId,
     team: normalizeText(value.team) || "Friends",
@@ -912,6 +913,7 @@ function recordsToEvents(records: unknown[]) {
       normalizeTokenUsageEvent({
         id: normalizeText(readField(value, ["id", "eventId"])),
         upstreamEventId: normalizeText(readField(value, ["upstreamEventId", "upstream_event_id"])),
+        collectionDevices: Array.isArray(value.collectionDevices) ? value.collectionDevices.filter((item): item is string => typeof item === "string") : undefined,
         userId,
         displayName: normalizeText(readField(value, ["displayName", "name", "username", "user"])) || userId,
         team: normalizeText(readField(value, ["team", "department", "group"])),

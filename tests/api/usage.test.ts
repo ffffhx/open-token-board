@@ -629,7 +629,7 @@ function replaceRequest(replace: Record<string, unknown>, events: unknown[]): Re
       Authorization: `Bearer ${harness.agentToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ events, replace }),
+    body: JSON.stringify({ events, replace: { scope: "account", confirmAccount: harness.identities.alice.userId, ...replace } }),
   };
 }
 

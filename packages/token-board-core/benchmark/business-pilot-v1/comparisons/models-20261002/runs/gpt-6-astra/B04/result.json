@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6-astra",
+  "label": "GPT-6 Astra",
+  "caseId": "B04",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 13,
+  "checksTotal": 13,
+  "checks": [
+    {
+      "id": "catalog-win32-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-darwin-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-linux-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-fresh-authority-and-ownership",
+      "passed": true
+    },
+    {
+      "id": "catalog-explicit-directory-and-validation",
+      "passed": true
+    },
+    {
+      "id": "catalog-malformed-registry-fallback",
+      "passed": true
+    },
+    {
+      "id": "ui-module-load",
+      "passed": true
+    },
+    {
+      "id": "rename-one-submit-existing-behavior",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-status-refresh",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-pending-save",
+      "passed": true
+    },
+    {
+      "id": "rename-failure-keeps-draft-and-retry",
+      "passed": true
+    },
+    {
+      "id": "rename-profile-boundary-and-noop-render",
+      "passed": true
+    },
+    {
+      "id": "report-present",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:51:20.435Z",
+    "taskStartedAt": "2026-10-02T15:51:20.695Z",
+    "taskCompletedAt": "2026-10-02T15:55:06.359Z",
+    "taskWallMs": 225664,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6-astra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 234572,
+      "cached_input_tokens": 212480,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 4858,
+      "reasoning_output_tokens": 506,
+      "total_tokens": 239430
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "3a9c0d1b5565069b12945d664d04cf5658107e34cc524f4930803579fbfb4488",
+    "toolCallCount": 7,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:56:44.847Z",
+    "notes": [
+      "Source changes and report reviewed; all frozen and supplemental checks pass; focus restoration is explicitly marked untested in a real browser, and adapter restart is not claimed as production persistence."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "65c7a1175b5a6e2633c046ce186916333dd90ab3d3c5e6f383ae80a99870183b"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "d060f4f7b0f790738a65f3f3b0343c56918be51efb603297e3f33e74ae6ace3f"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "4d13187e7a769b5a73bb8578d48206f19c6244ff9c550e0cffecd6d94b68915a"
+    }
+  ],
+  "rawGradeSha256": "b83256797c8ded9724c554033094634858b8414d0c45ba7686d0d332ad35aa87",
+  "supplementalEnvironmentCheck": {
+    "passed": true,
+    "checks": [
+      {
+        "id": "explicit-directory-via-process-env",
+        "passed": true
+      }
+    ],
+    "sourceChanged": false,
+    "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+    "script": "check-b04-env.mjs",
+    "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+  }
+}

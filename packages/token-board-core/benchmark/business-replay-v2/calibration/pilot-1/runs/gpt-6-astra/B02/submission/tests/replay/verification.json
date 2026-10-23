@@ -1,0 +1,81 @@
+{
+  "checks": [
+    "empty: all 54 complete results exactly equal",
+    "all lines absent, equal values/names, non-binary-exact costs: all 54 complete results exactly equal",
+    "synthetic: multiuser, null lines, ties, Shanghai boundaries: all 54 complete results exactly equal",
+    "HTTP: all 54 complete snapshots match original captured results",
+    "query failure rejects; all old HTTP snapshots remain valid; recovery clears error",
+    "historical correction: all 54 complete results exactly equal",
+    "historical correction and three overlapping refreshes: all 54 results exact",
+    "persistence recovery after new DB data: all 54 complete results exactly equal",
+    "snapshot persistence failure rejects, preserves old published cache despite new DB data, then recovers",
+    "restart with persisted cache and fresh DB refresh: all 54 results exact"
+  ],
+  "profiles": [
+    {
+      "label": "empty",
+      "baseline": {
+        "ms": 365.82249999999976,
+        "queries": 432,
+        "queryMs": 285.85450000000355
+      },
+      "candidate": {
+        "ms": 103.23850000000039,
+        "queries": 72,
+        "queryMs": 46.73239999999669
+      }
+    },
+    {
+      "label": "all lines absent, equal values/names, non-binary-exact costs",
+      "baseline": {
+        "ms": 545.3152999999998,
+        "queries": 486,
+        "queryMs": 332.60130000000026
+      },
+      "candidate": {
+        "ms": 198.11319999999978,
+        "queries": 81,
+        "queryMs": 55.487099999995735
+      }
+    },
+    {
+      "label": "synthetic: multiuser, null lines, ties, Shanghai boundaries",
+      "baseline": {
+        "ms": 7578.918900000001,
+        "queries": 486,
+        "queryMs": 4065.0951999999975
+      },
+      "candidate": {
+        "ms": 1499.2263000000003,
+        "queries": 81,
+        "queryMs": 706.5787999999957
+      }
+    },
+    {
+      "label": "historical correction",
+      "baseline": {
+        "ms": 7364.4594,
+        "queries": 486,
+        "queryMs": 3981.5156999999926
+      },
+      "candidate": {
+        "ms": 1437.4482999999964,
+        "queries": 81,
+        "queryMs": 680.6386999999995
+      }
+    },
+    {
+      "label": "persistence recovery after new DB data",
+      "baseline": {
+        "ms": 7619.981800000001,
+        "queries": 486,
+        "queryMs": 4093.75269999999
+      },
+      "candidate": {
+        "ms": 1402.8467000000019,
+        "queries": 81,
+        "queryMs": 664.1378000000041
+      }
+    }
+  ]
+}

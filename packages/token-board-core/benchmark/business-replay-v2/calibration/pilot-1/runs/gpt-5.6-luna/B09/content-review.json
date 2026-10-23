@@ -1,0 +1,239 @@
+{
+  "criteria": [
+    {
+      "id": "business-context",
+      "status": "supported",
+      "candidateEvidence": [
+        "在流舟商业化拦截和支付流程验证中，Agent 需要使用真实登录态操作页面，支付等环节又需要人工介入。",
+        "Agent 要在真实登录态下操作页面，支付和高风险步骤又必须保留人工介入。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。"
+      ],
+      "reason": "真实登录态、商业化验证与支付人工介入均准确。对“高风险步骤”的外延存在歧义，见 uncertainties；不因这一概括单独否认核心背景覆盖。"
+    },
+    {
+      "id": "collaboration-problem",
+      "status": "supported",
+      "candidateEvidence": [
+        "我们评测了 6 款主流浏览器自动化工具，发现它们普遍无法处理人与 Agent 抢占同一个 Chrome 窗口和焦点的问题。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。"
+      ],
+      "reason": "这一句完整保留评测范围、数量和焦点争用问题，必需事实已覆盖。常见追问中针对具名工具的扩张断言单列 claim-boundaries 与 unsupportedClaims，不把覆盖到的正确事实判为 missing。"
+    },
+    {
+      "id": "resource-allocation",
+      "status": "supported",
+      "candidateEvidence": [
+        "我参与研发 ProfilePilot：Gateway 统一管理多个已登录 Profile 和会话租约。",
+        "Gateway 维护已登录 Chrome Profile 的资源和租约，把空闲 Profile 动态分配给 Agent Session，避免多个 Session 同时占用同一个 Profile。",
+        "Profile 是已登录的浏览器资源，租约把它在一个时段内绑定给具体 Agent Session。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:199：针对这一痛点，我设计并落地了 ProfilePilot 控制台。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:207（图注）：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket。"
+      ],
+      "reason": "参与研发是对来源个人设计落地的保守表达，并非虚构独立完成范围。资源、租约和动态分配关系明确。对租约的时段绑定和避免并占按空闲资源分配与原子绑定的高层目的概括接受，不推导严格竞态、租约期限或崩溃恢复保证；边界见 uncertainties。"
+    },
+    {
+      "id": "controlled-communication",
+      "status": "supported",
+      "candidateEvidence": [
+        "Agent 不直接操作共享浏览器，而是经由 Wrapper 向 Gateway 申请一次性 Ticket；Daemon 建立 WebSocket 连接后，CDP 指令经过 Gateway 校验，再通过专用管道转发。",
+        "Gateway 同时承担 Profile 调度和通信校验，Agent 的连接因此受统一控制。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。"
+      ],
+      "reason": "授权申请、连接、校验与转发关系准确；未写出长连接时长细节不扣分。不会被理解为绕过 Gateway 无限制控制。“Agent 不直接操作”在完整句中是指通过 Gateway 链路，非否认 Agent 最终操作页面。"
+    },
+    {
+      "id": "visible-handoff",
+      "status": "supported",
+      "candidateEvidence": [
+        "页面注入的控制条展示任务状态，并提供暂停、接管和恢复入口。",
+        "Agent 等人工完成后再继续，因此页面操作和人工介入有明确边界。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:197（图注）：真实页面上的 Agent 控制条：任务进行中可暂停、继续，人和 Agent 不抢同一个窗口。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+      ],
+      "reason": "控制条与暂停、接管、恢复功能匹配；人工完成后继续属于恢复能力的流程性说明，不等于自动识别完成或特定协议保证。将实际控制权仲裁归于 Gateway 的额外组件职责断言另列事实边界，不否认已覆盖接管功能。"
+    },
+    {
+      "id": "observed-result",
+      "status": "supported",
+      "candidateEvidence": [
+        "它支持日常并行运行 3 个独立的 Agent 浏览器 Session。",
+        "日常并行运行 3 个独立 Agent 浏览器 Session，服务于商业化多需求自测。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:209：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+      ],
+      "reason": "数量、独立性和日常使用口径正确。“商业化多需求自测”结合本节业务背景与自动化验证属合理概括，未新增量化收益、容量上限或平台保证。"
+    },
+    {
+      "id": "claim-boundaries",
+      "status": "unsupported",
+      "candidateEvidence": [
+        "这些工具主要解决自动化执行本身，无法覆盖真实登录态 Profile 的分配、多个 Agent 的会话调度，以及人工介入时的控制权切换。",
+        "用户接管时，Gateway 负责仲裁控制权。",
+        "控制条负责让人看见并触发暂停、接管、恢复，Gateway 负责实际仲裁控制权。",
+        "直接连接无法统一回答“哪个 Agent 获得了哪个 Profile”以及“人工接管后谁拥有控制权”。",
+        "如果没有显式的暂停、接管和恢复状态，Agent 可能在人工操作时继续发送指令，或者多个 Session 争抢同一个 Profile。",
+        "我们对 6 款主流浏览器自动化工具做了评测，主要难点集中在真实 Profile 的分配、多个 Agent 的并发调度，以及人和 Agent 之间的控制权切换。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。",
+        "defense-notes.md:205（图注）：ProfilePilot 双核架构：左翼可编程 Agent 协同控制面与右翼本机优先 Profile 数据管理面。",
+        "defense-notes.md:207（图注）：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket。"
+      ],
+      "reason": "逐项复核：①具名 Playwright/Puppeteer 的定位与三项无法覆盖能力，没有所给资料支持；来源只给匿名六工具评测对窗口焦点争用的总体结论，不能推出这些产品的具体能力边界。此项明确 unsupported，足以使本准则不通过。②Gateway“实际仲裁控制权”是额外组件职责归因；所给资料只直接赋予其资源租约、Ticket、校验和转发职责，没有交代人工接管仲裁的执行组件；候选当成已落实事实而未标推断，暂列 unsupported，保留中等置信度歧义供裁决。③把资源分配、并发、控制切换归纳为方案难点，结合来源三个能力及三 Session 结果，是合理概括，不扣分。④“直接连接无法统一回答……”按相邻问题设定中的仅直连、没有统一控制面场景，是架构取舍的 qualified-inference，不是已测量的失败经历；措辞偏绝对，见 uncertainties。⑤“如果没有……可能……”明确为反事实风险推断，列 qualified-inference，未冒充实际事故，不扣分。⑥租约绑定、统一调度校验、任务状态、人工完成后继续与三 Session 结果已在对应准则核对；未发现其他无来源的量化成果、跨平台保证或个人独立经历。⑦高风险步骤外延见 uncertainties，不作为独立失败依据。"
+    },
+    {
+      "id": "readable-project",
+      "status": "supported",
+      "candidateEvidence": [
+        "### 90 秒展开版",
+        "方案由三个部分组成：",
+        "1. **Agent 接入**",
+        "2. **Profile 分配**",
+        "3. **受控通信与人工接管**",
+        "**落地结果**：日常并行运行 3 个独立 Agent 浏览器 Session，服务于商业化多需求自测。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。",
+        "defense-notes.md:209：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+      ],
+      "reason": "背景、难点、方案和结果衔接完整，角色明确，追问有解释而非纯关键词。正文事实边界问题不等同于不可读；不因篇幅较短或术语改写扣分。"
+    },
+    {
+      "id": "report-chain",
+      "status": "unsupported",
+      "candidateEvidence": [
+        "事件 `E0233`（2026-09-03 13:35:04.865 UTC）读取到的文档从第 25 行开始就是“45 秒精简版”和“开场后的项目选择”……事件 `E0243`（2026-09-03 13:35:25.542 UTC）再次读取了同一开场区域。",
+        "后续事件 `E0301`（13:38:20.811 UTC）和 `E0399`（13:43:23.920 UTC）记录了助手对文档的编辑，包含开场区域和 ProfilePilot 正文的替换。",
+        "因此本次按 E0233/E0243 的读取结果恢复开场，而没有把后续编辑结果当作用户保存版。",
+        "历史导出不是操作系统级审计，没有原生编辑器的 Ctrl+S 事件、完整工作树快照或 Git HEAD 证明。",
+        "正文事实只采用题包参考材料明确可见的相关内容，未把旧手册细节或其他项目数据补成已核实事实。"
+      ],
+      "sourceEvidence": [
+        "E0231 / E0233，2026-09-03T13:35:02.135Z / 13:35:04.865Z：T008 Read /workspace/handbook.md，offset=25；返回第 26 行“### 45 秒精简版”、第 30 行“### 开场后的项目选择”、第 40 行“## 二、云杉科技·流舟实习”。",
+        "E0236 / E0243，2026-09-03T13:35:22.812Z / 13:35:25.542Z：T009 Read /workspace/handbook.md，offset=1, limit=45；第 20 行为第二段导语，第 21–39 行为待恢复区域，第 24 行整体开场标题，第 26 行 45 秒版，第 30 行项目选择，第 40 行实习总标题。开场原句含“StreamHub和”“以及Agent”“当时把 一个”。",
+        "E0251 / E0258，13:36:04.897Z / 13:36:07.535Z，与 E0281 / E0288，13:37:22.024Z / 13:37:24.743Z，均为同一 /workspace/handbook.md 的 Read；第 24–39 行与 E0243 相同。",
+        "E0301 / E0309，13:38:20.811Z / 13:38:23.559Z：T018 Edit，file_path=/workspace/handbook.md，replace_all=false；old_string 开头为“## 一、整体面试开场白\\n\\n### 45 秒精简版”，保有同一手写段落与项目选择；new_string 增加“### 90 秒主版本”；结果为 updated successfully。",
+        "E0370，13:42:30.083Z：用户说“整体面试开场白别改！ 就改项目就行，整体面试开场白给我还原一下”。",
+        "E0374 / E0376，13:42:39.095Z / 13:42:42.729Z：git diff origin/main -- handbook.md，返回“index e6c0a73..f0d9850 100644”。E0384 / E0386，13:42:49.959Z / 13:42:53.810Z：git show origin/main:handbook.md，结果带 Exit code 255；可见仓库开场包含“## 怎么使用这份手册”和“### 90 秒主版本”。",
+        "E0399 / E0401，13:43:23.920Z / 13:43:26.718Z：T025 Edit 同一 /workspace/handbook.md；new_string 加回“## 怎么使用这份手册”和仓库式 90 秒、45 秒、项目选择，结果为 updated successfully。该次 Edit 本身止于实习总标题。",
+        "E0404 / E0411，13:43:34.053Z / 13:43:37.765Z：T026 git diff origin/main -- handbook.md | Select-Object -First 40；结果带 Exit code 255。",
+        "E0427，13:46:50.295Z：用户说“这是最初的那一版；最初的版本我自己手动更改，然后按Ctrl +  S保存了，我要我自己按Ctrl + S保存后的那个版本”。",
+        "MATERIALS.md：候选提交 cb414f0586b0bc78090b2c59d7e47ea38ebaa95d 对应 blob e6c0a732d0b0b394f8483eab370d8c9202438f2f；记录没有证明当时完整仓库 HEAD，不能替代已保存但未提交的内容；历史是节选，没有原生编辑器保存事件或完整工作树快照；原图未提供。",
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+      ],
+      "reason": "版本选择证据链本身 supported：同一文件的 E0233/E0243 读取、E0301 旧文本与后续改写、E0399 仓库式还原、E0427 用户澄清能支持恢复目标；没有原生保存事件或完整 HEAD 的虚假声明。第 25 行是空行、第 26 行才是 45 秒标题，但“从第 25 行开始”正确描述读取起点，不作逐字行号错误；E0301/E0399 合称改动开场及正文可按集合描述接受。不过报告声称正文事实全部来自参考明确可见内容，与正文具名竞品多项能力断言直接不一致；因此本准则要求的“实际差异与核验说法一致”未完整通过。这不是将版本链判错，也不是判定未执行其所报 PowerShell 检查；执行真实性与全文件差异交协调者另查。"
+    }
+  ],
+  "unsupportedClaims": [
+    {
+      "location": "projectBody / 常见追问 / 为什么市面已有 Playwright、Puppeteer，还要做 ProfilePilot？",
+      "candidateQuote": "这些工具主要解决自动化执行本身，无法覆盖真实登录态 Profile 的分配、多个 Agent 的会话调度，以及人工介入时的控制权切换。",
+      "status": "unsupported",
+      "sourceEvidence": [
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。"
+      ],
+      "reason": "题面正文唯一来源未给被测工具名称，也未给 Playwright/Puppeteer 的产品定位或这三项功能缺失结论。窗口与焦点争用未解决不能逻辑推出完全无法覆盖资源分配、会话调度和人工控制切换；候选用无条件能力断言，未标为假设或限于本次配置的观察。",
+      "confidence": "high"
+    },
+    {
+      "location": "projectBody / 方案第 3 点、最值得展开的技术点、人工接管追问",
+      "candidateQuote": "用户接管时，Gateway 负责仲裁控制权；……Gateway 负责实际仲裁控制权。",
+      "status": "unsupported",
+      "sourceEvidence": [
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。",
+        "defense-notes.md:205（图注）：ProfilePilot 双核架构：左翼可编程 Agent 协同控制面与右翼本机优先 Profile 数据管理面。"
+      ],
+      "reason": "资源租约与通信校验属于 Gateway，暂停/接管/恢复属于系统与控制条；来源没有指定人工接管时负责实际仲裁的组件。该归因合理但仍是额外架构推断，文本反复用已完成事实陈述而未注明推断。没有按未经来源支持的 controlGeneration 或即时吊销机制来加重判定。",
+      "confidence": "medium; adjudication requested"
+    },
+    {
+      "location": "report / 证据局限",
+      "candidateQuote": "正文事实只采用题包参考材料明确可见的相关内容，未把旧手册细节或其他项目数据补成已核实事实。",
+      "status": "unsupported",
+      "sourceEvidence": [
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+      ],
+      "reason": "“只采用明确可见”这一来源核验声明与该 packet 正文的 Playwright/Puppeteer 能力断言不一致；是否可接受 Gateway 仲裁推断不影响这个直接不一致。未因缺少参评执行记录推定测试造假。",
+      "confidence": "high"
+    }
+  ],
+  "businessPassed": false,
+  "deliveryPassed": false,
+  "reviewer": "independent-anonymous-content-review; rubric-v2; no model identity or score access; text evidence only",
+  "candidateSha256": "70d0a855a8ac5754192400b2f46efe7a45fb4ce7b4b5c6a7e1e6171361461228",
+  "uncertainties": [
+    {
+      "topic": "Gateway 负责实际仲裁人工接管控制权",
+      "decision": "暂列 unsupported；需协调者裁决可否视为高层角色概括。",
+      "reason": "支持接受的理由是 Gateway 已管理租约、校验通信，系统又提供接管，统一控制面很自然；反对接受的理由是源文没有把接管仲裁归到 Gateway，可能由其他组件落实。这里仅断言职责，没有写精确吊销算法，因此不应等同于编造 controlGeneration。即使改判 supported，具名竞品能力断言仍使 claim-boundaries 不通过。"
+    },
+    {
+      "topic": "支付和高风险步骤",
+      "decision": "不作为独立失败依据；若理解为新增支付以外的具体流程，则需要来源。",
+      "reason": "来源只写支付人工介入，但 rubric 允许把支付概括为需要人工判断的业务环节。这里可以读成此类环节的泛称，也可能扩展场景；没有新增实际案例或结果，故不为制造差异强判。"
+    },
+    {
+      "topic": "租约时段绑定与避免同时占用同一 Profile",
+      "decision": "supported，限于资源分配的高层含义。",
+      "reason": "201 的租约和空闲分配、207 的原子绑定足以支撑此概括；没有声明严格一 Profile 一 Session 的具体实现、不变量在故障下的保证或租约时长。若被解读为所有条件绝对排他，来源不支持，但候选未这样表述。"
+    },
+    {
+      "topic": "直接连接无法统一回答归属问题",
+      "decision": "qualified-inference，不作为独立失败依据。",
+      "reason": "置于“为什么还需要 Gateway，而不是让 Agent 直接连浏览器”的设计取舍问答中，可理解为缺少统一调度者的裸连场景推理，而非跨所有可能架构的能力结论；其绝对措辞最好收窄。与具名竞品问题不同，这里没有声称已测得某工具不支持该功能。"
+    },
+    {
+      "topic": "实际执行和全文件差异的外部核验",
+      "decision": "交协调者核对；本审查未认证也未否认所述 PowerShell 执行、链接扫描及范围外不变。",
+      "reason": "匿名 packet 未附实际参评工具记录。report-chain 不通过依据是可直接比对的正文来源声明不一致，不是凭空认定验证没有运行。"
+    }
+  ],
+  "independentReviewSha256": "469f069c413f6071dcc615785815b7921a068ea239ac3a8d8bac5d6445424871",
+  "coordinatorVerification": {
+    "humanReview": false,
+    "transcriptChecks": [
+      "Actual PowerShell output confirms ten assertions passed.",
+      "Those assertions check structure/keywords, not complete source support; independent source review remains decisive."
+    ],
+    "scope": "Machine scope and protected substantive content checks pass; original submission retained.",
+    "precision": {
+      "onlyFinalNewlineDifference": true,
+      "originalTrailingNewlines": 2,
+      "candidateTrailingNewlines": 1,
+      "affectsBusiness": false
+    }
+  },
+  "adjudication": {
+    "decision": "Failure is based on the unqualified named-competitor capability assertion and the report claiming all facts are source-supported.",
+    "nonDecisive": "Gateway arbitration may be a high-level role inference; it is not used as an independent rejection. The final blank-line difference is also nonblocking.",
+    "source": "defense-notes.md:193 gives six unnamed evaluated tools and window/focus contention, not named product capability conclusions."
+  }
+}

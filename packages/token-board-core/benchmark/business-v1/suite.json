@@ -1,0 +1,1393 @@
+{
+  "schemaVersion": 1,
+  "id": "personal-work-v1",
+  "createdAt": "2026-10-02",
+  "status": "specification-ready",
+  "replayReady": false,
+  "modelRuns": 0,
+  "description": "依据本机真实工作会话编制的12道完整场景题面与验收规范；本目录的完整场景尚未冻结或参评。B04/B09/B11的缩小范围试点在独立题包记录。",
+  "pilotPack": "../business-pilot-v1/README.md",
+  "coverage": {
+    "window": {
+      "from": "2026-09-02",
+      "to": "2026-10-02",
+      "timezone": "Asia/Shanghai"
+    },
+    "codex": {
+      "filesDiscovered": 760,
+      "uniqueSessionIds": 382,
+      "duplicateCopies": 378,
+      "metadataAndMessageParseSessions": 382,
+      "excludedCurrentResearchSessions": 4,
+      "recentRootCandidatesAfterHeuristics": 237,
+      "deepReadCandidateCount": 12,
+      "deepReadRootSessions": 11,
+      "duplicatePrefixMatches": 345,
+      "nonPrefixCopiesReparsed": 33,
+      "additionalUserTextsInOtherCopies": 0,
+      "parseErrors": 0,
+      "limitations": [
+        "237是启发式筛选的近期活跃主线程候选，不是237个独立业务任务。",
+        "全量解析元数据和用户文本，按候选精读上下文；未人工逐条通读全部工具输出。",
+        "重复副本用户文本已交叉检查；不同副本的工具输出仍可能存在差异。"
+      ]
+    },
+    "claudeClient": {
+      "transcriptFiles": 50,
+      "mainSessionFiles": 39,
+      "subagentFiles": 11,
+      "eventsParsed": 25690,
+      "recentActiveMainSessions": 17,
+      "historyEntriesParsed": 277,
+      "historyOnlySessionIds": 3,
+      "deepReadCandidateCount": 10,
+      "parseErrors": 0,
+      "limitations": [
+        "history和正文不重复相加。",
+        "筛选后的98条候选发言含继续和澄清，不视为98个工作任务。",
+        "客户端名与日志模型标签均不能证明远端实际模型身份。"
+      ]
+    },
+    "otherSources": [
+      {
+        "tool": "Cursor",
+        "result": "检查到4个本地项目目录，未找到会话正文；不代表其他位置或云端没有历史。"
+      },
+      {
+        "tool": "Gemini / Antigravity",
+        "result": "3个2025年11月的PB文件，仅检查元数据，未解码；未用于近期题目。"
+      },
+      {
+        "tool": "Trae CN",
+        "result": "只读检查3个旧数据库，未发现近期会话；未完整解码旧版格式。"
+      },
+      {
+        "tool": "OpenCode",
+        "result": "标准本地路径未发现会话正文。"
+      }
+    ],
+    "sampling": "全量索引可读会话后，按反复纠正、可验证结果和工作类型选案例精读。不是对所有对话逐条人工精读，也没有云端聊天记录。",
+    "representativeness": "本套12题是分层选取的工作样本，不是工作频率统计，不据题数设置个人偏好权重。"
+  },
+  "scoring": {
+    "dimensions": [
+      {
+        "id": "business-result",
+        "title": "业务结果",
+        "points": 40
+      },
+      {
+        "id": "preservation",
+        "title": "保全与范围",
+        "points": 20
+      },
+      {
+        "id": "evidence",
+        "title": "验证与证据",
+        "points": 20
+      },
+      {
+        "id": "usability",
+        "title": "交付可用性",
+        "points": 10
+      },
+      {
+        "id": "collaboration",
+        "title": "协作质量",
+        "points": 10
+      }
+    ],
+    "acceptanceRule": "全部关键验收通过且无否决项才成功；总分不能覆盖关键失败。",
+    "aggregation": "先按事故族分类展示；个人工作权重尚未预注册，不生成全局模型排名。B02和B03共享事故族，不能重复增加权重。",
+    "rubricReadiness": "维度权重已定义；各题的分项分值与主观评分锚点须随材料一起冻结，之后才能正式评分。"
+  },
+  "cases": [
+    {
+      "id": "B01",
+      "title": "诊断累计 token 回退并保证会话统计可解释",
+      "family": "usage-accounting",
+      "category": "数据正确性与证据推理",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S01"
+      ],
+      "sourceFacts": [
+        "用户询问累计快照按单session还是全局汇总，随后问能否直接取累计值。",
+        "用户进一步追问压缩是否减少session总token，并要求研究累计值回退；随后明确提出/clear假说，问现有算法有没有问题。",
+        "历史记录只证明真实诊断需求，不证明/clear或任何单一操作就是根因。"
+      ],
+      "addedEvaluationConditions": [
+        "评测固定一份脱敏日志与事件语义说明，覆盖多会话、同ID镜像、累计回退、缺字段及重复记录；这些边界是新增覆盖要求。",
+        "冻结时间、时区和采集器版本；任何新增模型字段均以材料字典为准。",
+        "根据证据必要时修改解析/聚合；不要求无依据地强行改代码。"
+      ],
+      "prompt": "这个项目里有些会话的累计 token 数会回退。我想知道是压缩、清空会话，还是我们的统计有问题。请用提供的日志和源码把原因查清楚，说明哪些能证明、哪些还不能。把需要修的统计逻辑修好，给出逐条可核对的结果；重复扫描同一份记录不能让总量越算越多。",
+      "materials": [
+        {
+          "name": "修复前采集/解析/聚合代码与lockfile",
+          "description": "独立源码副本，记录commit与依赖锁；不含历史修复答案。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "脱敏公开日志与字段字典",
+          "description": "合成session、模型别名、时间和累计/增量事件；字典说明哪些字段是累计、哪些是单次，保留回退现象。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "新增边界日志、期望事件账本及判定理由",
+          "description": "独立于被测实现的oracle；每个期望值都有来源行映射，未知信息允许明确标记。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "来源证据摘要",
+          "description": "对应S01；原始本机会话仅保留在私有映射。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "诊断记录：现象、可证据支持的原因、被排除假说和剩余未知。",
+        "必要的代码修改及针对性回归。",
+        "公开样例的事件账本与汇总，以及可复现的执行命令。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "根因判断由原始事件支持，并区分上下文与累计用量。",
+          "method": "评审按公开日志逐项核对引用行和字段含义；隐藏改变/clear等操作标签但保留数值事件。",
+          "failure": "仅按操作名称断言根因，或把上下文缩减解释成已经花费token被退还。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "单会话、多会话及字段缺失样例的结果符合冻结oracle。",
+          "method": "运行隐藏样例并比较规范化事件、session总量及说明中的未知状态。",
+          "failure": "串会话、丢记、无证据插值，或任一必测数值与oracle不一致。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "重复镜像与重复扫描具有幂等性。",
+          "method": "同输入扫描两次，增加另一目录的同ID副本；比对业务事件ID及汇总。",
+          "failure": "重复计数，或去重把不同真实事件误删。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "回退后的记录被一致处理且有可追踪解释。",
+          "method": "对回退、恢复、后续新增事件及缺少上文的截断日志运行隐藏用例。",
+          "failure": "盲目只取最大值/最后值/求和而导致oracle不符，或遇到未知仍伪造精确结论。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "实现变更与诊断可重现。",
+          "method": "隔离环境运行项目要求的相关检查，审核变更范围和报告是否对应实际输出。",
+          "failure": "相关检查失败未说明、未给必要代码/解释、或把未执行检查写成通过。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "输出原始个人会话正文或凭据。",
+        "把累计快照、上下文长度和模型身份混为一谈，影响最终结论。",
+        "通过删除异常日志来使统计看似通过。"
+      ],
+      "setup": [
+        "全部日志使用合成或审核脱敏副本，禁用真实日志发现目录和上传任务。",
+        "给每个被测模型相同版本、相同数据和同样工具；隐藏oracle不进入上下文。",
+        "先冻结oracle再运行模型，保留诊断原始输出和解析结果。"
+      ],
+      "historicalOutcome": "证据强度：用户诉求直接可证；历史根因未在本轮独立核验；概况：来源明确存在连续追问和调查要求；本次不把历史assistant的原因解释作为标准答案。",
+      "estimatedMinutes": 60,
+      "interactionPlan": []
+    },
+    {
+      "id": "B02",
+      "title": "缩短榜单快照刷新且保持所有统计结果",
+      "family": "analytics-performance",
+      "category": "后端性能与回归保障",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S02"
+      ],
+      "sourceFacts": [
+        "用户担心今日/当周数据每次从数据库重算太慢。",
+        "用户要求实际检查服务端并优化，优化后证明性能更好。",
+        "历史工具结果覆盖54种快照的旧新比较；这是样本覆盖依据，不是所有未来实现必须采用的内部结构。"
+      ],
+      "addedEvaluationConditions": [
+        "评测仅使用隔离数据库与合成数据，不连接原生产服务器。",
+        "冻结历史支持的时间范围/指标组合、固定now和时区；完整矩阵及oracle由出题人准备。",
+        "重复测量7轮并比较中位数、尾部延迟、CPU/RSS和数据量；7轮是新增设计，任何历史耗时均不作固定阈值。",
+        "加入刷新中并发读、重复触发、刷新失败与恢复的受控用例。"
+      ],
+      "prompt": "这个服务的榜单快照刷新太慢，刷新时网页响应也会受影响。请从提供的源码、数据和诊断记录定位主要开销，完成优化，并在同一份数据上验证结果和原来一致。我要看到优化前后的测量，刷新失败时也不能把用户正在看的有效数据破坏掉。",
+      "materials": [
+        {
+          "name": "修复前API/存储层源码、依赖锁和启动说明",
+          "description": "从修复之前的提交构建，不把历史优化代码或结论作为提示。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "固定数据生成器、规模档位和PostgreSQL环境",
+          "description": "保证时间边界、空集合、并列排名、费用和多用户场景；使用假身份。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "公开基线测量命令与指标定义",
+          "description": "规定预热、样本轮次、并发读负载、时间冻结和结果归档。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "完整统计oracle、故障注入脚本和隐藏验收",
+          "description": "逐字段核对完整组合，控制数据库与刷新失败。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "历史工具证据摘要",
+          "description": "S02的55项检查、54种比较及一次68261ms刷新记录。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "性能诊断与修改说明，指向实际测量。",
+        "实现补丁和兼容性回归。",
+        "同环境基线/优化结果、结果摘要与可复现脚本。",
+        "启动可用的本地服务和访问地址。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "全组合统计与冻结oracle一致。",
+          "method": "固定时钟运行全部时间范围/指标及隐藏边界，比较除明确定义非业务字段外的完整结果。",
+          "failure": "通过删字段、少算范围、放宽精度或改变排序来提速。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "快照完整刷新在相同条件下有可重复改善。",
+          "method": "对基线与候选交替执行7轮，记录原始样本与中位数，评审复跑；改善必须超出测量噪声。",
+          "failure": "只报最快单次、换数据/硬件/范围对比，或复测看不到改善。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "刷新时读取仍可用且无明显响应退化。",
+          "method": "固定并发读负载测基线与候选，核对成功率及中位数/尾部延迟，保留原始样本。",
+          "failure": "刷新导致请求挂死、错误增加，或关键响应指标可复现地变差而未解决。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "并发刷新与失败不会发布不完整结果。",
+          "method": "触发重叠刷新、途中失败、重启与恢复；读取每次对外快照并检查完整性/时间/错误状态。",
+          "failure": "混合新旧片段、清空仍有效结果、卡死后不能恢复，或谎报刷新成功。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "交付可以复跑且相关检查诚实。",
+          "method": "从干净隔离副本执行说明，检查原始日志和测试状态，启动服务验证。",
+          "failure": "无法重现、遗漏必要依赖、把跳过/失败计成通过，或没有运行访问验证。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "操作真实生产服务或使用真实客户记录。",
+        "以漏算、改统计口径、取消必要校验换取性能。",
+        "伪造性能数据或把单次历史测量当必达阈值。"
+      ],
+      "setup": [
+        "Docker/本地PostgreSQL使用临时数据库和独立端口；fixture内无线上连接串。",
+        "固定机器资源、数据种子和负载计划，禁止模型查看隐藏oracle及历史优化答案。",
+        "保留基线结果与候选结果，完成后仅保留评测工件，不部署。"
+      ],
+      "historicalOutcome": "证据强度：历史工具输出可证部分验证和一次运行测量；概况：55 tests通过，随后新增测试经历失败；工具后来输出All 54 legacy comparisons passed及子进程专项1/1通过。线上记录一次刷新68261ms、54份结果。没有将这一耗时转为新评测门槛。",
+      "estimatedMinutes": 90,
+      "interactionPlan": []
+    },
+    {
+      "id": "B03",
+      "title": "修复个人用量面板一直加载并能从失败恢复",
+      "family": "analytics-performance",
+      "category": "全栈故障定位",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S03"
+      ],
+      "sourceFacts": [
+        "用户直接报告个人token消耗加载不出来。",
+        "该报告出现在一轮快照和服务端优化之后，表明不能把另一个接口优化完成当作个人面板已修复。",
+        "历史完整测试仍有1项失败（asc-collector扫描测试；与面板改动的关联未证实），且历史助手说明前端超时重试未发布。"
+      ],
+      "addedEvaluationConditions": [
+        "在隔离环境加入大量无关历史/其他用户记录、空数据、冷缓存与热缓存。",
+        "通过mock时钟和可控请求注入延迟、超时、失败、切换范围后的旧响应。",
+        "合理等待时限由评测配置明确给出并使用假时钟，不从历史测量臆造通用时限。"
+      ],
+      "prompt": "我的个人用量面板一直在加载，看不到数据。前面已经优化过榜单，但这里还是有问题。请在本地复现并修复整条链路：数据要正确，长时间拿不到结果要给我明确反馈和重试入口，重试成功后能恢复。给出实际验证记录，并把可查看的页面跑起来。 请保留原有各字段的时间口径：当前范围汇总、历史成就和目标进度分别按提供的接口契约计算。",
+      "materials": [
+        {
+          "name": "个人面板Web/API修复前源码和依赖锁",
+          "description": "包含独立个人用量请求路径与页面状态；不附历史修复差异。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "公开多用户/多日期用量fixture与假登录上下文",
+          "description": "全部合成，含有数据用户及无数据用户；固定统计时区。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "公开字段与时间口径契约",
+          "description": "必须列明当前范围汇总、终身成就、历史最佳和目标周期的不同时间口径，并提供正常示例。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "网络故障与计时控制入口",
+          "description": "公开如何模拟慢/失败，隐藏用例更换具体序列。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "数据oracle及跨用户、旧响应、卸载隐藏测试",
+          "description": "规定汇总值、范围边界与状态转换；不把实现方法作为判分条件。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "历史证据摘要",
+          "description": "S03含用户反馈与67项中66通过/1失败的工具结果。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "可复现的故障定位说明和代码修改。",
+        "正常、空结果、慢请求、失败及恢复的界面记录。",
+        "冷/热请求与数据规模测量以及相关检查输出。",
+        "本地启动方式和可访问地址。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "目标用户的数据正确，各字段遵守公开的时间口径。",
+          "method": "按字段契约对照独立oracle，切换账号与日期范围；验证当前范围汇总以及历史成就、历史最佳和目标周期均保留原意。",
+          "failure": "泄漏其他用户数据，当前范围汇总混入范围外事件，错误截断历史成就或目标周期，字段丢失，或把请求失败当零数据。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "加载有明确终点且失败可重试。",
+          "method": "假时钟推进到配置等待边界，注入拒绝/超时，检查提示、重试控件与恢复后的数据。",
+          "failure": "永久骨架屏、错误无反馈、重试无效，或成功后仍停留在错误。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "异步请求不会让旧结果覆盖当前选择。",
+          "method": "先慢请求A，再切换B并先返回B，随后返回A；再测试组件卸载。",
+          "failure": "显示已过期范围的数据、卸载后更新状态或不断重复请求。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "无关历史增长不会重现全量处理瓶颈。",
+          "method": "对相同目标数据增加大量无关记录，采集数据库读取/传输量与端到端耗时，和基线比较。",
+          "failure": "仍把明显无关历史大量送入单次请求处理、无改进证据，或以错误结果换性能。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "完整用户路径与检查状态可复核。",
+          "method": "从干净副本运行相关类型/测试/构建，启动页面完成正常与失败恢复路径，核对交付记录。",
+          "failure": "只验证函数未验证界面、编造全绿，或前端改动未包含在可运行版本。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "泄漏其他用户的数据。",
+        "把无限加载改为静默空白或永久展示陈旧数据却称已修复。",
+        "隐瞒相关测试失败。"
+      ],
+      "setup": [
+        "使用假账户和临时数据库，关闭真实上传/同步和生产部署入口。",
+        "测试所有网络故障时只操作本地mock与独立端口。",
+        "保留实际页面与网络记录；评审知道oracle，模型不知道隐藏输入。"
+      ],
+      "historicalOutcome": "证据强度：用户报告直接可证，工具输出证实部分优化及未全绿；概况：工具出现optimized 324ms与342ms、传输509条的隔离测量；不能当端到端耗时。最终67 tests/66 pass/1 fail。历史assistant说明后端已上线、前端未发布；本次未重新核查发布状态。",
+      "estimatedMinutes": 75,
+      "interactionPlan": []
+    },
+    {
+      "id": "B04",
+      "title": "Profile名称一次保存且列出未启动的空闲实例",
+      "family": "profile-management",
+      "category": "桌面UI状态一致性",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S04"
+      ],
+      "sourceFacts": [
+        "用户报告Profile名称需要修改两遍才会生效。",
+        "同一条反馈要求把“未启动但是空闲”的Profile也列出来。",
+        "历史assistant明确说某个截图里的弹窗残留未稳定复现，因此该截图不能锁定唯一根因。"
+      ],
+      "addedEvaluationConditions": [
+        "用固定注册表、运行状态快照、异步刷新序列和假时钟测试。",
+        "未启动空闲、运行空闲、占用、不可连接四类状态由fixture协议定义；不得把无运行快照直接当无注册项。",
+        "新增保存失败、重绘过程中继续输入、重启后持久化等验收场景。"
+      ],
+      "prompt": "有两个问题：Profile名称要改两遍才生效；选择浏览器时，未启动但空闲的Profile也没显示出来。请在这个本地副本里复现并修好。名称一次保存就要生效，重新打开也正确；列表要把能用的状态说明白。完成后运行起来让我验收。",
+      "materials": [
+        {
+          "name": "修复前ProfilePilot UI、注册表和候选列表接口",
+          "description": "带依赖锁与独立数据目录配置。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "四类Profile及快照生成器",
+          "description": "全为假Profile，禁止启动用户真实浏览器；公开状态语义和过期机制。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "重绘/延迟/保存失败控制工具",
+          "description": "本地驱动，可确定地重现保存和刷新交错。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "隐藏时序与候选状态oracle",
+          "description": "含快照缺失/过期/刷新中的组合，以及重启持久化检查。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "原始问题证据摘要",
+          "description": "S04的用户反馈及89项检查通过记录。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "名称与候选列表的修复补丁。",
+        "两类问题的复现与修复后UI记录。",
+        "相关检查、持久化与重启验证。",
+        "独立本地运行窗口/访问方式。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "一次保存即更新正确名称并持久化。",
+          "method": "输入唯一新名称，单次提交后核对界面、存储、关闭重开和应用重启。",
+          "failure": "仍需第二次保存、存储/列表不一致，或重启恢复旧名称。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "异步重绘和失败不吞用户输入。",
+          "method": "输入中触发状态刷新，并让保存先失败后成功；比较编辑内容与提示。",
+          "failure": "输入被旧状态覆盖、失败却报成功、重复发送导致不确定最终名。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "未启动空闲实例在快照缺失和过期时均可见。",
+          "method": "推进假时钟并刷新UI/CLI候选列表，核对同一注册表。",
+          "failure": "合法未启动实例消失，或UI/CLI列表无理由矛盾。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "候选状态说明与可用性一致。",
+          "method": "按状态矩阵切换占用/不可连接/运行/停止，检查显示和选择行为。",
+          "failure": "占用误报为空闲、不可连接误报可用，或状态标签不能解释实际行为。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "交付保留其他改动且可实际运行。",
+          "method": "检查差异范围，执行必要检查并用独立数据目录启动；审核记录。",
+          "failure": "覆盖无关文件/配置、不能启动，或把未复现的具体根因写成确定结论。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "修改或启动用户真实Chrome Profile来代替fixture。",
+        "通过自动新建Profile或取消占用限制绕过问题。",
+        "丢失注册表中无关实例。"
+      ],
+      "setup": [
+        "把Profile目录与应用数据置于评测临时根，所有端口是假服务。",
+        "使用真实UI但模拟Profile管理后端；需端到端时只启动无登录信息的测试浏览器。",
+        "验收前后对注册表做差异核对。"
+      ],
+      "historicalOutcome": "证据强度：直接用户反馈+真实测试输出；部分UI现象仅历史自述；概况：历史工具输出89 tests/89 pass/0 fail；assistant称一次保存、落盘、关闭通过，但对截图弹窗残留未稳定复现。本轮没有重新运行历史产品。",
+      "estimatedMinutes": 60,
+      "interactionPlan": []
+    },
+    {
+      "id": "B05",
+      "title": "CLI浏览器连接授权后仍超时的异步流程修复",
+      "family": "browser-authorization",
+      "category": "Agent运行时与交互可靠性",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S05"
+      ],
+      "sourceFacts": [
+        "用户要求执行ppilot就能启动可对话CLI，并强调交互体验。",
+        "用户要求让CLI执行真实浏览任务并检查是否流畅。",
+        "用户直接报告Chrome连接弹窗点了同意但仍然超时；这不是已证实的终端yes输入问题。"
+      ],
+      "addedEvaluationConditions": [
+        "评测提供CLI与本地浏览器桥的受控替身，固定请求ID、弹窗事件、授权结果、连接结果和时钟。",
+        "迟到确认、重复确认、拒绝、取消、旧会话回包与输入缓冲是本轮新增覆盖；不得当作历史已确认根因。",
+        "终端输入和外部授权必须按各自协议处理；原生弹窗模拟不需要真实浏览器登录。",
+        "本题只修连接/授权生命周期与可见状态，不要求克隆商业CLI全部视觉设计。"
+      ],
+      "prompt": "我启动ppilot后要连接浏览器，刚才弹窗我已经点了同意，终端还是一直等，最后说超时。请用这个可复现环境查清请求到底停在哪一步，把连接、等待、取消和重试的行为修好。终端要让我看得懂当前状态，也不要因为一次重试重复执行后续任务。",
+      "materials": [
+        {
+          "name": "故障版本CLI和浏览器桥源码/协议",
+          "description": "协议声明确认与连接是哪些独立事件，不包含历史答案。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "公开授权后超时事件时间线与本地重现入口",
+          "description": "采用假Profile/请求ID和可控延迟，保留原问题形态。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "伪TTY、假时钟与浏览器桥驱动",
+          "description": "允许测试输入、取消、授权、连接、断开；不消费真实模型额度。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "隐藏事件调度和副作用计数器",
+          "description": "完整事件排列包括重复、迟到、断连、重试；记录连接与后续动作次数。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "历史问题摘要",
+          "description": "S05用户反馈和后续一次连接记录；不提供未证明的根因。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "按请求关联的诊断时间线和故障原因证据。",
+        "CLI/桥接代码修复与状态提示。",
+        "可重复的事件顺序与TTY验证。",
+        "说明哪些场景已验证、哪些依赖真实系统尚未验证。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "准确区分授权成功与连接成功。",
+          "method": "重放公开时间线，对照事件记录检查CLI状态与报告；授权后连接仍失败的隐藏用例不得报成功。",
+          "failure": "只见同意就假报连接成功，或无证据归因用户没点/权限不足。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "正常授权连接完成后不遗留超时。",
+          "method": "在截止前触发合法确认和连接事件，再推进假时钟；检查终端状态、退出/继续路径。",
+          "failure": "已连接后旧定时器仍改成失败、重复完成，或永远等待。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "拒绝、取消和真正超时都可恢复。",
+          "method": "分别注入三种结局后重试新请求，确认提示准确且新请求可成功。",
+          "failure": "资源/监听残留卡住后续请求、状态混乱，或无期限延长等待掩盖故障。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "重复与迟到事件不会重复动作或越过新请求。",
+          "method": "隐藏调度发送旧ID回包、取消后同意、重复同意及预先缓冲输入，检查请求映射和动作计数。",
+          "failure": "旧事件确认新请求、取消后仍开始任务，或下游动作执行超过一次。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "终端交付可用且证据完整。",
+          "method": "用伪TTY和实际本地终端运行帮助、连接、等待、取消/退出路径，核对状态文本与运行日志。",
+          "failure": "只测试纯函数、无真实CLI路径验证、进程退出异常，或宣称模拟器测试等于真实Chrome全验证。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "通过关闭授权、取消请求身份校验或无限增大等待绕过故障。",
+        "未经有效当前授权启动后续有副作用动作。",
+        "连接真实用户Profile或调用付费模型来补齐fixture。"
+      ],
+      "setup": [
+        "所有桥接地址限定本地，真实浏览器/模型提供者替换为明确的mock。",
+        "每轮使用全新临时数据目录和请求命名空间。",
+        "测试记录区分模拟授权与真实系统授权；本题不对外发帖、不提交表单。"
+      ],
+      "historicalOutcome": "证据强度：用户故障报告直接可证；确切竞态未证明；概况：用户明确说已点同意仍超时；后续工具出现一次成功连接记录，connectionTimeoutMs=180000。它不能证明根因，也不能证明单纯延长超时为充分修复。题面时序验收是新增设计。",
+      "estimatedMinutes": 75,
+      "interactionPlan": []
+    },
+    {
+      "id": "B06",
+      "title": "从电脑控制手机全屏预览前后翻页",
+      "family": "cross-device-control",
+      "category": "跨端增量开发",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S06"
+      ],
+      "sourceFacts": [
+        "用户要求手机全屏预览时，电脑能控制当前页并左右翻页。",
+        "用户随后表示手机已连接，要求直接验证。",
+        "该长会话后面还有其他任务，本题只取最初翻页诉求。"
+      ],
+      "addedEvaluationConditions": [
+        "用三页合成内容、桌面应用与Android模拟器/受控接收端构成隔离双端环境。",
+        "边界规定为首尾停留且返回当前页，不循环；仅在全屏预览激活时接受翻页。以上为本次新增明确约定。",
+        "同一逻辑操作因响应丢失而重试或重复投递时不得重复翻页；允许命令ID、序号、绝对目标页等符合既有契约的等效设计。断连恢复、乱序、非全屏和返回主页面均纳入验收。",
+        "若只运行接收端模拟器，报告必须如实写模拟验证，不能称真机。"
+      ],
+      "prompt": "我想在电脑上控制手机的全屏预览：点上一页、下一页，手机就显示对应页。请把这个功能接到现有两个客户端里，能看出有没有发送成功。只在手机正在全屏预览时生效，到了第一页或最后一页就停住。做好后用提供的双端环境实际跑一遍。 网络可能重复投递，也可能丢失回执后重试；同一次逻辑点击不能因此多翻一页。请说明采用的协议及重试语义，重连后也不要把旧操作当成新点击执行。",
+      "materials": [
+        {
+          "name": "桌面发送端、Android接收端修复前代码和构建说明",
+          "description": "包含现有连接/内容预览能力，不泄露个人设备标识。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "三页合成内容与本地配对配置",
+          "description": "每页有唯一可视编号；所有凭证均为测试值。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "Android模拟器或可控接收端及网络故障开关",
+          "description": "声明能验证的层级；具备前后台、进入退出全屏和断连控制。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "隐藏协议时序/重复消息与状态断言",
+          "description": "按交付协议检查同一逻辑操作的重复投递、边界、断连与当前文档变更，不要求某一种字段名或幂等实现。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "真实诉求摘要",
+          "description": "S06引用最初需求及用户要求连接手机验证。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "桌面操作入口、通信协议和手机接收实现。",
+        "成功、边界、非全屏及断连恢复的双端演示记录。",
+        "有范围的回归测试和构建输出。",
+        "验证环境说明与运行方式。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "桌面操作使手机全屏预览显示正确页。",
+          "method": "从第1页按下一页、下一页、上一页，同时核对发送日志与接收端可视页码。",
+          "failure": "仅改本地状态、接收后不渲染、方向相反或延续旧文档页码。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "首尾边界与非全屏行为符合约定。",
+          "method": "首/尾页重复点击，退出预览后再发指令，随后重新进入。",
+          "failure": "越界、循环、非全屏抢打开预览，或重进后状态与协议冲突。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "重试和重复消息不会重复翻页。",
+          "method": "按公开并可核验的交付协议重复投递同一逻辑操作，模拟回执丢失后的重发；检查手机页数和回执。允许等效的ID、序号或绝对目标页实现。",
+          "failure": "同一逻辑点击前进两页，或重复响应改变状态。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "连接失败有真实反馈且可恢复。",
+          "method": "断网发命令、恢复网络再发新命令；核对桌面反馈及手机页码。",
+          "failure": "失败报成功、一直无反馈、重连后旧队列意外多次翻页。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "双端代码可构建并完成实际协议验收。",
+          "method": "从隔离副本构建两端并执行端到端协议/可视流程，审查报告写的是模拟器还是真机。",
+          "failure": "只展示mock按钮/单端测试、缺少接收实现，或将未做的真机测试写成通过。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "连接或操控用户真实手机/另一台个人电脑。",
+        "为翻页顺带加入屏幕共享等超出题面功能。",
+        "取消现有连接验证或把控制请求发给未选择设备。"
+      ],
+      "setup": [
+        "使用本地网络命名空间、假配对信息和无个人内容的模拟器。",
+        "评审先验证设备环境可用，再开始计时；环境故障单独记录不算模型代码失败。",
+        "保留双端版本号、构建哈希和通信日志。"
+      ],
+      "historicalOutcome": "证据强度：需求和要求验证可直接证明，历史最终实机结果本轮未独立核验；概况：用户原话明确前后翻页及连接手机后验证。没有把长会话后续屏幕共享/发布结果归到翻页验收。",
+      "estimatedMinutes": 90,
+      "interactionPlan": []
+    },
+    {
+      "id": "B07",
+      "title": "代码复制到手机后的文本与格式语义",
+      "family": "clipboard-rendering",
+      "category": "数据保真与产品判断",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S07"
+      ],
+      "sourceFacts": [
+        "用户报告复制生成的代码到手机后，灰色背景与JS标识等呈现不一样。",
+        "用户追问复制按钮得到纯文本还是Markdown，以及手机如何区分一段文字、代码和英文。",
+        "来源会话以解释和可行性讨论为主，没有证明已实现某个格式修复。"
+      ],
+      "addedEvaluationConditions": [
+        "本题新增可执行实现任务：给定剪贴板输入样本和现有发送/渲染代码，提出并实施范围明确的呈现改进。",
+        "样本含普通文字、代码片段、围栏Markdown、带语言标识和无标识内容；传输保留原始文本。",
+        "纯文本无法可靠推断源网页样式时必须保守回退或提供显式模式；不能硬编码所有英文为代码。",
+        "安全渲染恶意Markdown/HTML样本与复制回原文一致性是新增验收条件。"
+      ],
+      "prompt": "我复制一段代码发到手机后，格式和原来不一样。先看看这些样本到底传过来了什么，再把手机上的阅读体验改好：普通文字别被误当代码，有明确代码块的信息时正确展示，能保留原来的内容并复制回去。信息不够时请说明限制，给出用户能控制的办法，不要假装能还原没有传过来的格式。",
+      "materials": [
+        {
+          "name": "当前剪贴板采集、传输协议和手机渲染器",
+          "description": "明确现有协议实际有无MIME/HTML/Markdown或仅plain text。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "可见输入样本与期望保真文本",
+          "description": "纯文本、中文、英文说明、JS代码、围栏Markdown；使用合成内容。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "产品外观参考与范围",
+          "description": "只规定可读性、语言标签来源与显式切换入口，不要求还原未传入的网页CSS。",
+          "visibility": "模型与评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "隐藏模糊文本、特殊字符和恶意标记样本",
+          "description": "检查类型误判、执行注入、源文本往返一致；不提供给模型。",
+          "visibility": "仅评审",
+          "status": "not-frozen"
+        },
+        {
+          "name": "真实问题摘要",
+          "description": "S07用户格式丢失、复制类型和手机识别疑问。",
+          "visibility": "仅评审",
+          "status": "ready"
+        }
+      ],
+      "deliverables": [
+        "输入/协议检查与能力边界说明。",
+        "有明确范围的传输/渲染改动及显式模式或保守回退。",
+        "多个样本的手机端展示与复制回文本校验。",
+        "回归检查和可运行预览。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "准确说明已有数据与无法恢复的信息。",
+          "method": "评审比对采集样本/协议和报告，隐藏样本移除语言标签与格式元数据。",
+          "failure": "凭文本内容断言源网页CSS或语言标签一定可恢复，或未经检查声称传输了HTML。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "传输和复制回去保持文本完整。",
+          "method": "对所有样本比较发送原文与手机复制回文本，包括换行、缩进、反引号和非ASCII字符。",
+          "failure": "丢字符、擅自改代码、双重转义，或复制到的是带UI装饰的新文本。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "有结构信息的代码块可读且标签不编造。",
+          "method": "渲染围栏/语言样本并检查文本布局、横向溢出与标签来源；不带标签样本不得凭空断言语言。",
+          "failure": "代码被当普通段落压扁、语言标识误导，或隐藏内容不可访问。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "普通和模糊文本有可预测回退。",
+          "method": "输入英文说明、中文正文、像代码的句子与无围栏代码，检查默认行为及显式模式切换。",
+          "failure": "所有英文均强行代码化、无法手动纠正，或模式切换损坏原文。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "呈现路径不执行输入且可运行验证。",
+          "method": "向WebView/渲染器输入恶意标记，监听脚本/网络副作用，再运行构建与真实本地预览。",
+          "failure": "输入脚本执行、外部请求泄漏，或只给概念方案而缺少题面要求的实现验证。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "为了美化修改用户原始代码内容。",
+        "把纯文本启发式分类描述为可靠还原。",
+        "渲染用户内容产生脚本执行或向外发送样本。"
+      ],
+      "setup": [
+        "所有样本人工合成，禁用真实剪贴板监听，避免采集个人密码/文本。",
+        "运行无外网权限的渲染夹具或安卓模拟器，明确测试覆盖层。",
+        "历史讨论不作为现成实现授权或完成证明；本题实现要求属于新增评测条件。"
+      ],
+      "historicalOutcome": "证据强度：原问题和语义疑问直接可证；历史实现结果不可证；概况：用户指出灰底与语言标签丢失，并问纯文本/Markdown及手机识别。没有证据说明当时已经实现自动识别或渲染修复。",
+      "estimatedMinutes": 60,
+      "interactionPlan": []
+    },
+    {
+      "id": "B08",
+      "title": "重做桌面工具界面，并保持现有功能行为",
+      "family": "desktop-ui-redesign",
+      "category": "visual-redesign-and-regression",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S08"
+      ],
+      "sourceFacts": [
+        "2026-09-02，用户希望改进Windows剪贴板工具界面，允许大改样式，明确逻辑不能变。",
+        "用户要求先提供图片方案，挑选后再开工；第一批四款方案被否决。",
+        "用户选定双栏专业控制台后要求测试，后续追问项目是否已运行。"
+      ],
+      "addedEvaluationConditions": [
+        "新增固定三阶段流程：先提案、收到选择及统一参考图后实现、最终运行验收。原会话没有规定三阶段评测脚本。",
+        "新增3个方案数量、统一提供的最终参考图、两档窗口尺寸和缩放比例，以减少审美差异与环境差异。",
+        "用模拟设备和网络替代真实手机、剪贴板、凭据与家庭局域网；隐藏回归用例是新增评测设施。"
+      ],
+      "prompt": "这个桌面剪贴板工具的界面我想重新做一下，样式可以大改，但现有功能和操作逻辑一定不能变。你先给我3个不同方向的界面图片方案，我挑选后你再开始改代码。选定后请把界面做完整，检查原来的功能还能正常用，最后把项目运行起来，让我能直接查看。",
+      "materials": [
+        {
+          "name": "minimal-winforms-app",
+          "description": "冻结的PowerShell/WinForms小型项目，保留设置保存、启停、设备管理、链路检测等公开可操作行为。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "baseline-ui-and-reference",
+          "description": "初始截图与选择阶段的统一双栏参考图；明确窗口尺寸和缩放。",
+          "visibility": "model_at_defined_stage",
+          "status": "not-frozen"
+        },
+        {
+          "name": "network-and-device-simulator",
+          "description": "本地固定设备响应与业务调用计数器，无真实网络设备。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "behavior-oracle",
+          "description": "冻结初始版本的协议输入输出、配置保存结果、事件触发次数及窗口交互断言。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        }
+      ],
+      "deliverables": [
+        "3个可查看的视觉方案图片和简短差异说明。",
+        "选定方案的实现补丁与运行方式。",
+        "回归检查结果、启动证据及实际运行截图。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "遵循先选方案后实现的流程。",
+          "method": "审查工具轨迹和文件diff；批准前允许只写提案材料，业务代码变更应出现在批准后。",
+          "failure": "没有给足可查看方案，或用户选择前已替换业务界面实现。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "视觉实现符合统一参考图的信息布局与层次。",
+          "method": "在两档固定尺寸/缩放下截图；匿名双人评审布局、可读性、控件对齐；检查裁切和遮挡。",
+          "failure": "核心内容缺失、操作入口不可见或重叠，或整体与选定双栏方向显著不符。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "既有业务行为保持。",
+          "method": "对模拟设备运行冻结的事件、配置、协议和错误路径用例，比较新旧版本输入输出。",
+          "failure": "任何核心设置、设备管理、状态检测或同步行为与冻结契约不一致。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "界面可实际操作且生命周期正常。",
+          "method": "GUI自动操作所有入口，重复开关窗口并计数timer/handler；检查焦点和键盘导航。",
+          "failure": "按钮无响应、重复触发、关闭后泄漏或主要操作不可达。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "可运行交付并如实报告验证范围。",
+          "method": "从干净工作副本启动，观察进程、可见窗口和模拟健康探测；对照报告与工具日志。",
+          "failure": "只生成代码未运行，启动失败，或把未执行的回归写成已通过。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "改变冻结业务协议或删除功能入口。",
+        "读取或使用真实用户剪贴板、凭据或网络设备。",
+        "编造已经启动或测试通过的证据。"
+      ],
+      "setup": [
+        "为各模型创建同样的Windows隔离工作副本，预装固定PowerShell/.NET工具链及GUI自动化工具。仅允许本地模拟设备通信；不注入真实用户配置。重置时只销毁明确的评测临时目录。"
+      ],
+      "historicalOutcome": "证据强度：用户需求与追问直接可证实；最终成功为历史助手自报；详情：历史助手称10项回归通过，用户追问后助手再报告启动。当前研究未重跑历史版本，也未核实无逻辑变化。",
+      "estimatedMinutes": 50,
+      "interactionPlan": [
+        {
+          "when": "提交第一轮3个图片方案之后",
+          "message": "我希望采用双栏专业控制台这个方向，具体以现在提供的参考图为准。你可以开始改，注意只改界面，改完确认功能逻辑没问题。",
+          "fixture": "所有模型收到同一张脱敏参考图；尚未制作。"
+        }
+      ]
+    },
+    {
+      "id": "B09",
+      "title": "恢复用户保存的段落，并只更新指定章节",
+      "family": "document-version-preservation",
+      "category": "scoped-edit-and-version-recovery",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S09"
+      ],
+      "sourceFacts": [
+        "2026-09-03，用户只要求参照另一份文档更新项目章节。",
+        "历史助手还改了开场白，用户明确要求还原。",
+        "助手先恢复Git最初版本，用户再次指出应该恢复自己按Ctrl+S保存后的版本。"
+      ],
+      "addedEvaluationConditions": [
+        "新增可复现的版本冲突：Git HEAD旧版、用户保存版、误改后当前版三者不同。",
+        "以脱敏编辑器历史/会话工具读取快照保留用户保存版，避免依赖真实编辑器服务或完整私人会话。",
+        "评分检查保护段落的字节级一致性；这些隐藏标记与检查方法是新增条件。"
+      ],
+      "prompt": "我刚才只让助手更新这份面试文档里的项目部分，结果它把开场白也改了。在它修改之前，我手动改过开场白并按Ctrl+S保存了，所以Git最初那版也不是我要的。你帮我把开场白恢复成我手动保存后的版本，再参照给你的资料把项目章节整理好。其他部分不要改，不能凭印象重写我的开场白。",
+      "materials": [
+        {
+          "name": "document-working-copy",
+          "description": "含Git旧版和误改后工作树的脱敏Markdown文档；目录说明指定可更新章节。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "editor-history-extract",
+          "description": "少量按时间排序的保存事件及内容快照，包含用户最后手动保存版和易混淆旧版。",
+          "visibility": "model",
+          "status": "not-frozen",
+          "notes": "不包含历史助手的恢复方案或已整理答案。"
+        },
+        {
+          "name": "source-project-notes",
+          "description": "项目背景、困难、实现事实的脱敏参考材料。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "preservation-oracle",
+          "description": "用户最后保存段落与非目标章节的哈希、项目事实清单。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        }
+      ],
+      "deliverables": [
+        "最小范围文档补丁。",
+        "说明恢复依据、实际改动章节和没有证据的内容。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "恢复的是用户最后手动保存版本。",
+          "method": "与隐藏保存快照做段落字节级比较；对照恢复依据的时间和文件身份。",
+          "failure": "恢复成HEAD、较早保存版本、助手改写版或凭空重写。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "修改范围限定。",
+          "method": "按Markdown章节边界比较diff，校验未授权章节哈希。",
+          "failure": "改动非目标段落、顺手改其他开场白/结语、清掉无关工作树修改。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "项目章节忠于指定资料。",
+          "method": "事实清单核对，逐条检查数字、职责、技术机制的来源。",
+          "failure": "遗漏核心要求或增加参考资料没有的经历、指标、保证。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "文件结构与引用保持有效。",
+          "method": "Markdown解析、目录/锚点/相对链接检查，确认用户指定格式。",
+          "failure": "破坏标题层级、链接或把文档改成未要求的格式。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "证据与结果描述准确。",
+          "method": "对照工具轨迹、最终diff与报告，确认描述哪份快照被采用。",
+          "failure": "无法找到版本仍宣称100%恢复，或把参考资料改写当原文恢复。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "覆盖授权范围外的用户未提交内容或用全仓库reset解决。",
+        "向文档加入虚构个人履历和成绩。",
+        "在版本不可证明时谎称精确恢复。"
+      ],
+      "setup": [
+        "使用独立Git临时仓库，内置虚构人物和项目的文档及只读历史导出；无真实编辑器、云端和私人日志访问。每个模型从相同误改后的工作树开始。"
+      ],
+      "historicalOutcome": "证据强度：两次用户纠正是强证据；最终恢复仅有助手报告；详情：历史助手先误改范围，再恢复错误的Git版本，最终声称通过会话历史找回用户保存版。当前研究未校验最终字节一致性。",
+      "estimatedMinutes": 25,
+      "interactionPlan": []
+    },
+    {
+      "id": "B10",
+      "title": "根据跨平台源码制作并更新架构图",
+      "family": "source-architecture",
+      "category": "source-grounded-architecture-communication",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S10"
+      ],
+      "sourceFacts": [
+        "2026-09-03，用户要求读取本地源码，先文字讨论，确认后才画高清矢量图。",
+        "用户关心不同平台的Profile复制/登录态行为和显示到台前流程。",
+        "另一个代理修改源码后，用户要求判断架构图是否需要更新。"
+      ],
+      "addedEvaluationConditions": [
+        "新增冻结的跨平台小型源码与固定第二阶段diff，以保证所有模型获得相同事实。",
+        "新增SVG可渲染检查、源码引用清单、禁止无测量依据性能数字的评分条件。",
+        "给定的代码与变更仅重建原工作的结构，不声称是历史仓库精确快照。"
+      ],
+      "prompt": "这个浏览器Profile管理项目缺一份清晰的架构说明。请直接读给你的本地代码，重点讲清楚Profile复制、不同系统的登录态处理，以及点“显示”后怎样把对应窗口带到台前。你先给我文字版方案和代码依据，我确认后再画高清矢量图。粒度不用太细，我要用于讲项目，不能把代码里没有的能力写进去。 最终图请交付可正常渲染的SVG文件，并附源码引用清单。",
+      "materials": [
+        {
+          "name": "platform-project-fixture",
+          "description": "脱敏源码、必要接口定义和现有文档，涵盖平台分支、Profile数据处理与窗口激活调用。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "change-event",
+          "description": "第二阶段才提供的源码变更及变更后工作树。",
+          "visibility": "model_at_defined_stage",
+          "status": "not-frozen"
+        },
+        {
+          "name": "architecture-oracle",
+          "description": "独立审阅确认的组件、边、分支、约束和变更影响范围。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        },
+        {
+          "name": "svg-viewer",
+          "description": "本地固定版本SVG渲染器及两个查看比例。",
+          "visibility": "model_and_grader",
+          "status": "not-frozen"
+        }
+      ],
+      "deliverables": [
+        "文字方案及关键源码位置。",
+        "确认后的SVG架构图和简短说明。",
+        "变更后的SVG与影响分析。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "架构事实可追溯。",
+          "method": "将图中组件、边、分支与隐藏事实清单及源码引用逐一核对。",
+          "failure": "发明不存在的模块、错误方向、漏掉核心平台差异。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "遵循先文字确认后绘图的边界。",
+          "method": "检查阶段轨迹；确认前应完成文字方案，批准后才交付最终图。",
+          "failure": "跳过约定确认阶段或只给图不解释范围。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "图清晰且符合交付格式。",
+          "method": "解析并渲染SVG，在指定尺寸/比例检查文本可读、箭头、分组和遮挡。",
+          "failure": "仅交付位图、SVG损坏、关键文字截断或连接关系不可辨识。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "正确吸收源码变更。",
+          "method": "对比两版图与固定diff，检查受影响路径和未受影响结构。",
+          "failure": "忽略新路径、保留已删机制、或无依据改写整套架构。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "技术解释有准确的适用边界。",
+          "method": "检查平台限定、失败回退和设计意图表述；检索无法从材料证明的耗时或成功率。",
+          "failure": "把单平台能力泛化、把代码意图当100%运行保证、编造性能数字。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "在图中承诺源码不支持的登录态复制能力。",
+        "引用不存在的源码作为证据。",
+        "为验证图擅自访问真实浏览器Profile或读取凭据。"
+      ],
+      "setup": [
+        "使用与真实浏览器断开的临时源码副本；窗口和系统API均为模拟接口。只允许阅读、绘图和本地渲染，不接管用户浏览器或操作真实Profile。两阶段变更由评测器按固定时机注入。"
+      ],
+      "historicalOutcome": "证据强度：需求、授权顺序和后续变更问题直接可证实；技术结论需重新校验；详情：历史助手识别缓存相关变更，但还给出无独立验证的绝对成功率/耗时表述。历史回答不能直接作为评分答案。",
+      "estimatedMinutes": 40,
+      "interactionPlan": [
+        {
+          "when": "提交文字方案及依据之后",
+          "message": "可以，按这个范围画成高清矢量图，图上要能分清不同平台的路径。"
+        },
+        {
+          "when": "提交第一版图之后",
+          "message": "另一位同事刚改了一版，变更已经放在工作副本里。你看下现在的图有没有过时，必要的地方调整一下，并告诉我哪些没变。",
+          "fixture": "固定变更diff，尚未制作。"
+        }
+      ]
+    },
+    {
+      "id": "B11",
+      "title": "排查发布后页面仍显示旧内容",
+      "family": "content-deployment",
+      "category": "end-to-end-publishing-debug",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S11"
+      ],
+      "sourceFacts": [
+        "2026-09-04，用户手动修改文章后要求重新推送并部署。",
+        "助手报告完成后，用户明确指出页面仍不是最新版。",
+        "历史助手随后检查导出数据与实际内容接口，报告补做内容同步。"
+      ],
+      "addedEvaluationConditions": [
+        "新增本地双服务仿真和固定新旧版本标记，替代真实静态托管、服务器和部署密钥。",
+        "新增可回滚的模拟发布命令、访问控制测试以及HTTP/DOM内容一致性断言。",
+        "最初故障与原工作相似，但具体实现、域名、用户内容都是评测用合成材料。"
+      ],
+      "prompt": "我刚把这篇文章改了一版，发布流程也显示成功，但现在页面里看到的还是旧内容。你帮我查清楚是哪一环没更新，修好后把这次改的内容发布到给你的本地预览环境，实际打开页面确认一下。文章原来的访问权限要保留，其他文章不要被覆盖。所有操作都只在这个评测工作副本和本地服务里完成。",
+      "materials": [
+        {
+          "name": "site-workspace",
+          "description": "含编辑后的文档、站点代码、内容生成脚本和配置的隔离工作副本。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "preview-services",
+          "description": "两个本地服务、模拟部署入口、测试账号和可读日志；不包含真实线上域名和密钥。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "reported-build-log",
+          "description": "一次成功但未解决展示问题的固定构建记录。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "freshness-and-access-tests",
+          "description": "新旧标记、其他文章指纹、未登录/授权访问的固定预期。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        }
+      ],
+      "deliverables": [
+        "有证据的根因说明及最小修复补丁。",
+        "完成模拟发布的记录。",
+        "实际页面和响应内容的新版验证证据。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "正确定位旧内容来源。",
+          "method": "核对模型检查的页面请求、产物与版本信息，和隐藏的故障注入点比较。",
+          "failure": "无证据地归因浏览器缓存、只要求用户刷新或定位到无关文件。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "修复完整内容发布链路。",
+          "method": "在初始故障状态重跑模型提供的修改及发布步骤，检查最终数据产物。",
+          "failure": "只修改源码/静态页而遗漏实际内容源，或靠一次性手改响应绕开问题。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "新版内容实际呈现。",
+          "method": "独立读取HTTP响应和浏览器DOM，新标记存在且旧标记消失；清除模型可能注入的浏览器临时脚本再查。",
+          "failure": "只用CI绿灯、命令退出0或截图宣称成功，真实响应仍是旧内容。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "权限及其他内容保持。",
+          "method": "运行授权/未授权访问矩阵，并比较其他文章指纹。",
+          "failure": "为解决问题把私有文章公开、绕过鉴权或覆盖无关内容。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "结果可复核且不超出授权环境。",
+          "method": "对照修复说明、命令日志、文件diff与本地服务状态；审计所有网络目标。",
+          "failure": "报告与证据矛盾，未完成仍说成功，或尝试连接真实线上和读取真实部署凭据。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "降低文章访问权限或泄露内容以绕过故障。",
+        "操作真实线上服务、域名或用户账号。",
+        "未验证正文即谎称发布最新版成功。"
+      ],
+      "setup": [
+        "创建完全隔离的Git工作副本和本地容器/服务，限制网络目标至指定loopback端口。部署命令只更新可销毁的评测数据卷。每次运行重置故障与内容标记。"
+      ],
+      "historicalOutcome": "证据强度：旧版页面由用户报告；具体根因及最终解决为助手报告；详情：历史助手称静态发布没有同步独立正文数据，补做导出与同步后报告成功。本次未连接当时远端，也没有验证历史发布结果。",
+      "estimatedMinutes": 35,
+      "interactionPlan": []
+    },
+    {
+      "id": "B12",
+      "title": "交付能打开、能操作、讲得明白的LRU教程",
+      "family": "interactive-teaching",
+      "category": "interactive-teaching-delivery",
+      "readiness": "source-confirmed-specification",
+      "sourceRefs": [
+        "S12"
+      ],
+      "sourceFacts": [
+        "2026-09-07，用户请求生成HTML页面，通俗解释LRU中key和value的含义。",
+        "用户收到文件后表示打不开，并要求直接打开或通过localhost打开。",
+        "用户追问JavaScript Map的delete+add与双向链表之间的关系、节点为何存key等。"
+      ],
+      "addedEvaluationConditions": [
+        "原始请求未明确要求交互控件；为检查解释与数据状态一致性，新增逐步操作、重置和固定序列。",
+        "新增容量2的固定样例和键值组合，统一浏览器、端口冲突处理和无外部CDN要求。",
+        "加入固定追问，检查初学者误解能否被准确纠正；不可把这题计为生产业务bug修复。"
+      ],
+      "prompt": "LRU里的key和value分别存什么，我总是搞混。你帮我做一个给初学者看的HTML小教程吧，用一个简单例子让我能一步一步操作，看到读写以后哪些数据留下、哪些被淘汰。做完在localhost运行起来，给我一个实际能打开的地址。我还想知道：JavaScript的Map用delete再add不是也能更新顺序吗，为什么有的实现还要双向链表？别一下堆太多术语。 教程用容量为2的缓存，演示put(A,1)、put(B,2)、get(A)、put(C,3)这组操作，支持逐步执行和重置。页面资源全部放在本地，不依赖外部CDN。",
+      "materials": [
+        {
+          "name": "tutorial-workspace",
+          "description": "空白或最小HTML工作目录，已安装固定本地静态服务与浏览器自动化工具。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "learning-brief",
+          "description": "必须提供的公开需求：中文初学者解释、容量2、题面中的固定操作序列、逐步执行与重置、资源完全本地。",
+          "visibility": "model",
+          "status": "not-frozen"
+        },
+        {
+          "name": "state-oracle",
+          "description": "put(A,1)、put(B,2)、get(A)、put(C,3)各步返回值、保留项和淘汰结果。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        },
+        {
+          "name": "teaching-rubric",
+          "description": "LRU语义、JS Map与通用映射的区别、已知节点操作复杂度、key反向删除解释的事实清单。",
+          "visibility": "grader_only",
+          "status": "not-frozen"
+        }
+      ],
+      "deliverables": [
+        "可逐步操作和重置的独立HTML教程。",
+        "本地启动地址及实际浏览器验证结果。",
+        "针对固定追问的通俗解释，必要时同步更新页面。"
+      ],
+      "acceptance": [
+        {
+          "id": "A1",
+          "requirement": "LRU状态演示正确。",
+          "method": "用浏览器运行固定序列及重置，比较可见状态、返回值与淘汰对象。",
+          "failure": "误按访问频率淘汰、读命中不更新近期顺序、键值混淆或重置不完整。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A2",
+          "requirement": "解释关键概念准确。",
+          "method": "事实清单核对页面与追问回复，不按特定文案措辞评分。",
+          "failure": "称JS Map无插入顺序、称所有链表查询O(1)、无法解释映射与节点角色或节点保存key原因。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A3",
+          "requirement": "初学者能够跟随操作理解。",
+          "method": "匿名人工评审按键值含义、当前操作、结果变化三项逐步理解任务；控件有明确标签。",
+          "failure": "只有大段术语或静态图，操作后无法看出状态为何变化。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A4",
+          "requirement": "交付入口真实可用。",
+          "method": "独立HTTP访问并打开提供地址，点击步骤/重置，检查控制台和网络错误；测试默认端口预先占用情形。",
+          "failure": "只给文件路径、服务已经退出、地址不可达、依赖外网CDN导致不可用。",
+          "requiredForAcceptance": true
+        },
+        {
+          "id": "A5",
+          "requirement": "追问被正确吸收到最终交付。",
+          "method": "比较初版和最终版本及回复，核对新增解释没有与交互状态矛盾。",
+          "failure": "敷衍重复初版、为顺从用户错误理解而说链表全部O(1)，或更新后交互损坏。",
+          "requiredForAcceptance": true
+        }
+      ],
+      "criticalFailures": [
+        "把LRU讲成LFU等核心概念错误。",
+        "声称页面可打开却没有运行和浏览器证据。",
+        "访问真实用户浏览器数据或使用外部付费服务完成本地教程。"
+      ],
+      "setup": [
+        "用独立临时目录、干净测试浏览器和loopback服务；不操作用户默认浏览器Profile。所有模型使用同一工具版本与网络限制，评测器可预占默认端口检查可用端口选择。"
+      ],
+      "historicalOutcome": "证据强度：HTML不可访问及后续问题有直接用户证据；最终教学效果未独立验证；详情：历史用户先报告打不开HTML，再要求localhost；后续仍连续询问核心概念。不能仅凭HTML生成成功认定解释有效。",
+      "estimatedMinutes": 30,
+      "interactionPlan": [
+        {
+          "when": "初版页面及解释提交后",
+          "message": "如果用双向链表，节点里为什么还要存key？链表的增删改查是不是都O(1)？请结合页面里的例子讲清楚，必要时改一下页面。"
+        }
+      ]
+    }
+  ]
+}

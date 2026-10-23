@@ -1,0 +1,367 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6-astra",
+  "caseId": "B04",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "execution": {
+    "taskStartedAt": "2026-10-03T03:40:54.648Z",
+    "taskCompletedAt": "2026-10-03T03:47:42.392Z",
+    "wallMs": 407744,
+    "observedModels": [
+      "gpt-6-astra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 927517,
+      "cached_input_tokens": 864000,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 8102,
+      "reasoning_output_tokens": 1080,
+      "total_tokens": 935619
+    },
+    "costUsd": null,
+    "transcriptSha256": "a72e81885f6acc803ce31e9d42da69e68cef506c12f46fd166e6a0605724219b",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 10,
+      "total": 10
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 5,
+      "total": 5
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "candidate-build",
+      "passed": true,
+      "category": "delivery",
+      "details": "Full renderer entry and main-process modules bundled from candidate source"
+    },
+    {
+      "id": "catalog-without-desktop",
+      "passed": true,
+      "category": "business",
+      "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+    },
+    {
+      "id": "catalog-stale-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-rename-and-identity",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-permission-disable",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-permission-enable",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-input-order",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-occupancy-permissions",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-path-containment",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-broken-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-live-lease-after-expiry",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-custom-data-root",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "rename-first-save-persists",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "savedName": "首次保存 · Research & Review",
+        "renameCalls": 1,
+        "storage": "real temporary profiles.json"
+      }
+    },
+    {
+      "id": "rename-empty-draft-validation",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "rename-cancel-does-not-cross-profile",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "rename-registry-preserves-neighbors",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "frozen-context-preserved",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "changedFiles": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/main.ts",
+          "src/renderer/render/modals.ts",
+          "src/renderer/types.ts"
+        ]
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "src/main/agent-browser-lease.ts",
+      "src/renderer/main.ts",
+      "src/renderer/render/modals.ts",
+      "src/renderer/types.ts",
+      "tests/catalog-replay.mjs",
+      "tests/rename-replay.mjs",
+      "tests/run-lease-regression.mjs"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "dist/**",
+      "test-results/**",
+      ".replay-tmp/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "schemaVersion": 1,
+    "caseId": "B04",
+    "checks": [
+      {
+        "id": "candidate-build",
+        "passed": true,
+        "category": "delivery",
+        "details": "Full renderer entry and main-process modules bundled from candidate source"
+      },
+      {
+        "id": "catalog-without-desktop",
+        "passed": true,
+        "category": "business",
+        "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+      },
+      {
+        "id": "catalog-stale-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-rename-and-identity",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-permission-disable",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-permission-enable",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-input-order",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-occupancy-permissions",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-path-containment",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-broken-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-live-lease-after-expiry",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-custom-data-root",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "rename-first-save-persists",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "savedName": "首次保存 · Research & Review",
+          "renameCalls": 1,
+          "storage": "real temporary profiles.json"
+        }
+      },
+      {
+        "id": "rename-empty-draft-validation",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "rename-cancel-does-not-cross-profile",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "rename-registry-preserves-neighbors",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "frozen-context-preserved",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "changedFiles": [
+            "src/main/agent-browser-lease.ts",
+            "src/renderer/main.ts",
+            "src/renderer/render/modals.ts",
+            "src/renderer/types.ts"
+          ]
+        }
+      }
+    ],
+    "passed": true,
+    "exitCode": 0
+  },
+  "submittedChanges": [
+    {
+      "path": "src/main/agent-browser-lease.ts",
+      "sha256": "f96f9c667041df1409770b82f221210ca95b2a6888aa6ad8dc74ba48ae49d5d8"
+    },
+    {
+      "path": "src/renderer/main.ts",
+      "sha256": "f71e283e64b2773f097e7efb1942b963b17b12991868ae2d6b66e9c9ae2e5aa5"
+    },
+    {
+      "path": "src/renderer/render/modals.ts",
+      "sha256": "9582eb9a67c562515c38a872e2c18c45826189c4961e65a824aa98bedcb08ea4"
+    },
+    {
+      "path": "src/renderer/types.ts",
+      "sha256": "a6a28131f58a73c6974424b8984b909605b35826f71d23cbde269238addb9c63"
+    },
+    {
+      "path": "tests/catalog-replay.mjs",
+      "sha256": "9dd89ece41e45f37e46252cc255743f0f589d609047c03081a3148d5d513968a"
+    },
+    {
+      "path": "tests/rename-replay.mjs",
+      "sha256": "323370a589c2f1316bd13f601a1903f50ac55670ab616cc62cdfb4c7b518c26f"
+    },
+    {
+      "path": "tests/run-lease-regression.mjs",
+      "sha256": "38c5c19946c034b861207f639edd55aaded8a8cde86a6fa973082553cb06b1ba"
+    }
+  ],
+  "finalResponseSha256": "9efd41dce5fc21a29d283a538df18aaee95392d9bfea5c349b8f1c2b9f550c57",
+  "rawGradeSha256": "f19cba06fb9ff1d370b08536efb497b497fb6aecbf5df35c5befcd2fa844717c",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T03:51:35.839Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "17项独立验收全部通过；真实浏览器异步草稿、登记目录与租约行为成立。报告中的浏览器回归、17项原测试和smoke均有执行轨迹，未声称跑过完整Electron或真实Chrome。"
+    ]
+  },
+  "executionReview": {
+    "scopeEvidence": "Inspected task calls operate within the export and neutral installed tools; no reference/grader reads observed.",
+    "selfTestEvidence": [
+      "Browser output: delayedSettingsDraft/firstSavePersisted/cancelAndSwitchReset/emptyValidation/registryReread = true",
+      "Public smoke: ordinaryRenamePersisted = true",
+      "Original lease tests: tests 17, pass 17, fail 0"
+    ],
+    "interpretation": "Reported validation matches recorded output; independent grader also passes all 17 checks."
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true
+}

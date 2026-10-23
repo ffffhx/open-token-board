@@ -42,6 +42,8 @@ export async function startTokenBoardHarness(options: {
   allowLoopbackOrigins?: boolean;
   apiPort?: number;
   githubClientId?: string;
+  databaseUrl?: string;
+  postgresSchema?: string;
 } = {}): Promise<TokenBoardHarness> {
   const fixture = createTokenBoardTestFixture();
   const apiPort = options.apiPort ?? (await getAvailablePort());
@@ -55,13 +57,14 @@ export async function startTokenBoardHarness(options: {
     `${JSON.stringify({ schemaVersion: 1, updatedAt: fixture.now.toISOString(), entries: fixture.events }, null, 2)}\n`
   );
 
-  const child = spawn("pnpm", ["token:server"], {
+  const child = spawn(process.execPath, ["--import", "tsx", path.join(repoRoot, "apps", "token-board-api", "src", "server.ts")], {
     cwd: repoRoot,
     detached: process.platform !== "win32",
     env: {
       ...process.env,
       DATABASE_URL: "",
-      TOKEN_BOARD_DATABASE_URL: "",
+      TOKEN_BOARD_DATABASE_URL: options.databaseUrl || "",
+      TOKEN_BOARD_POSTGRES_SCHEMA: options.postgresSchema || "token_board",
       TOKEN_BOARD_HOST: "127.0.0.1",
       TOKEN_BOARD_PORT: String(apiPort),
       TOKEN_BOARD_AUTH_SECRET: TEST_AUTH_SECRET,

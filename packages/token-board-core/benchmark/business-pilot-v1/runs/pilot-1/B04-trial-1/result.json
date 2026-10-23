@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "caseId": "B04",
+  "trial": 1,
+  "decision": "invalid-input-contract",
+  "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+  "preparedAt": "2026-10-02T14:40:10.769Z",
+  "gradedAt": "2026-10-02T14:50:49.060Z",
+  "participant": {
+    "harness": "collaboration-subagent",
+    "freshConversation": true,
+    "model": "inherited-session-configuration",
+    "providerModelIdentity": null,
+    "reasoningEffort": null,
+    "tokens": null,
+    "costUsd": null,
+    "generationDurationMs": null
+  },
+  "isolation": "Input export and fresh conversation; no OS-level sandbox or adversarial access audit",
+  "machineAccepted": false,
+  "machineChecks": {
+    "passed": 12,
+    "total": 13,
+    "checks": [
+      {
+        "id": "catalog-win32-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-darwin-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-linux-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-fresh-authority-and-ownership",
+        "passed": true
+      },
+      {
+        "id": "catalog-explicit-directory-and-validation",
+        "passed": false,
+        "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+      },
+      {
+        "id": "catalog-malformed-registry-fallback",
+        "passed": true
+      },
+      {
+        "id": "ui-module-load",
+        "passed": true
+      },
+      {
+        "id": "rename-one-submit-existing-behavior",
+        "passed": true
+      },
+      {
+        "id": "rename-draft-survives-status-refresh",
+        "passed": true
+      },
+      {
+        "id": "rename-draft-survives-pending-save",
+        "passed": true
+      },
+      {
+        "id": "rename-failure-keeps-draft-and-retry",
+        "passed": true
+      },
+      {
+        "id": "rename-profile-boundary-and-noop-render",
+        "passed": true
+      },
+      {
+        "id": "report-present",
+        "passed": true
+      }
+    ]
+  },
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "gradingDurationMs": 79,
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": "not-performed",
+    "notes": [
+      "首轮 12/13，唯一失败是只有 lastCdpPort 的已登记 Profile 被遗漏。",
+      "复核题面及全部导出输入，均未提供 lastCdpPort 的字段定义；该定义存在于历史 src/shared/types.ts，但出题时裁剪遗漏。此轮判为输入契约不完整，不能直接归因于模型能力。",
+      "保留原始评分与提交，补全输入契约后由新会话重跑，不在首轮提交上代修。",
+      "草稿保留逻辑与注册表/快照/租约合并已阅读；外部检查验证了其余 12 项。报告的自写断言未逐条独立重放，未将报告中的全部自测声明视为独立证据。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "e7a41d6cd83f561bddd756aa4f12d6c452ffb2b85fec7a477528d80d5846b8d4"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "15ce0cbc55213b865f77c4a09f32c1f7971819600fe36985d1d1917f88698d05"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "09577a9abf58f9eadb651b44784c35e92111dfccfbbb6cbd5249c844c8eae330"
+    }
+  ],
+  "rawReportSha256": "50f29a9969965fafd3081d77a8953e9e921e9b7beffafca74037b6b5097b1082",
+  "exportedFiles": {
+    "REPORT.md": "5e3f5477023297a0b641e83a5a875e17c82f4a8fdac6c371b8a03df521a678be",
+    "TASK.txt": "3f53bd62888de1c448e4c71ab52b28011a232c1b99255b24bcec6e95311068f4",
+    "catalog-fixture.mjs": "6a491b4aba2edd6bd9840ea35cae164c3e6e8b2246a44c516d8a54a6a1150a38",
+    "demo.mjs": "1d3e7d1b1d53f34d796f02f3f23624b18055d08b7f6bc4ab251b216cfeb63ec6",
+    "node-dom.mjs": "c23055548e65a767b491ec4bbf4c96337123a683f24bc4292205eb5df721deb3",
+    "src/fixture-ui.mjs": "a7264b50799f9c493474ae85531352dd7696398bc8746ca380bb93bffe9e92f7",
+    "src/profile-catalog.mjs": "ca46d589d378832e8f083f1b2b453c50c5adbb1b668b925e84c75248c02d6853",
+    "src/render-root.mjs": "3495c2c63bdf51aad0f7bdffb8286911e9fb3a005dc1ad8efddb819aaf7ab98e"
+  }
+}

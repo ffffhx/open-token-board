@@ -1,6 +1,5 @@
 import { once } from "node:events";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { inflateSync } from "node:zlib";
 
 import { chromium, type Browser, type BrowserContext, type Page } from "@playwright/test";
@@ -8,6 +7,7 @@ import { chromium, type Browser, type BrowserContext, type Page } from "@playwri
 import { repoRoot, startTokenBoardHarness, type TokenBoardHarness } from "../tests/support/harness";
 import { startStaticServer, type StaticServer } from "../tests/support/static-server";
 import { SESSION_COOKIE_NAME } from "../tests/support/fixtures";
+import { spawnPnpm } from "./spawn-pnpm";
 
 type AuditPage = {
   name: string;
@@ -218,7 +218,7 @@ async function main() {
 }
 
 async function buildWeb(apiUrl: string) {
-  const child = spawn("pnpm", ["--filter", "@open-token-board/web", "build"], {
+  const child = spawnPnpm(["--filter", "@open-token-board/web", "build"], {
     cwd: repoRoot,
     env: {
       ...process.env,

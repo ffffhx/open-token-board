@@ -1,0 +1,385 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6-luna",
+  "caseId": "B02",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+  "execution": {
+    "taskStartedAt": "2026-10-03T06:03:44.539Z",
+    "taskCompletedAt": "2026-10-03T06:14:08.043Z",
+    "wallMs": 623504,
+    "observedModels": [
+      "gpt-6-luna"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 3113637,
+      "cached_input_tokens": 3025408,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 17451,
+      "reasoning_output_tokens": 5342,
+      "total_tokens": 3131088
+    },
+    "costUsd": null,
+    "transcriptSha256": "af26fff5d99d4694c448dea3e263beff609e1c9ade22b0ade04ef9fce2d29898",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 7,
+      "total": 7
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 1,
+      "total": 1
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "all-statistics-identical",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "combinations": 54,
+        "passed": true
+      }
+    },
+    {
+      "id": "repeatable-refresh-improvement",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "baselineMs": [
+          6805.7980000000025,
+          6651.748800000001,
+          6496.921300000002,
+          6800.359799999998,
+          6480.899300000005,
+          6369.605899999995,
+          6362.665399999998
+        ],
+        "candidateMs": [
+          1305.4411000000036,
+          1290.0738999999958,
+          1506.3852999999945,
+          1423.3358000000007,
+          1443.7051000000065,
+          1373.2155000000057,
+          1419.0643000000127
+        ],
+        "baselineMedianMs": 6496.921300000002,
+        "candidateMedianMs": 1419.0643000000127,
+        "pairedGainMedianMs": 5037.194199999998,
+        "pairedNoise3MAD": 280.77930000003835,
+        "pairedWins": 7,
+        "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+      }
+    },
+    {
+      "id": "reads-available-during-refresh",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "reads": 177,
+        "successfulAndConsistent": 177,
+        "baselineP95Ms": 51.10949999999866,
+        "candidateP95Ms": 64.19079999999667,
+        "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+      }
+    },
+    {
+      "id": "corrected-data-and-overlap",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-preserves-valid-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "refreshRejected": true,
+        "errorRecorded": true,
+        "remainingEntries": 54,
+        "readStatus": 200
+      }
+    },
+    {
+      "id": "failure-recovery",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54,
+        "error": ""
+      }
+    },
+    {
+      "id": "restart-restores-full-results",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54
+      }
+    },
+    {
+      "id": "empty-dataset-compatible",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "replay-can-start-and-measure",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7\\measurements.json",
+        "eventCount": 3905,
+        "postgres": "16.14",
+        "rounds": 7,
+        "source": "full historical HTTP API and PostgreSQL storage"
+      }
+    },
+    {
+      "id": "measurement-report-delivered",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "apps/token-board-api/src/server.ts",
+      "packages/token-board-core/src/token-board-storage.ts",
+      "DELIVERY.md",
+      "tests/replay/compare-measurements.mjs"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "apps/*/node_modules/**",
+      "packages/*/node_modules/**",
+      "artifacts/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "checks": [
+      {
+        "id": "all-statistics-identical",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "combinations": 54,
+          "passed": true
+        }
+      },
+      {
+        "id": "repeatable-refresh-improvement",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "baselineMs": [
+            6805.7980000000025,
+            6651.748800000001,
+            6496.921300000002,
+            6800.359799999998,
+            6480.899300000005,
+            6369.605899999995,
+            6362.665399999998
+          ],
+          "candidateMs": [
+            1305.4411000000036,
+            1290.0738999999958,
+            1506.3852999999945,
+            1423.3358000000007,
+            1443.7051000000065,
+            1373.2155000000057,
+            1419.0643000000127
+          ],
+          "baselineMedianMs": 6496.921300000002,
+          "candidateMedianMs": 1419.0643000000127,
+          "pairedGainMedianMs": 5037.194199999998,
+          "pairedNoise3MAD": 280.77930000003835,
+          "pairedWins": 7,
+          "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+        }
+      },
+      {
+        "id": "reads-available-during-refresh",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "reads": 177,
+          "successfulAndConsistent": 177,
+          "baselineP95Ms": 51.10949999999866,
+          "candidateP95Ms": 64.19079999999667,
+          "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+        }
+      },
+      {
+        "id": "corrected-data-and-overlap",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "failure-preserves-valid-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "refreshRejected": true,
+          "errorRecorded": true,
+          "remainingEntries": 54,
+          "readStatus": 200
+        }
+      },
+      {
+        "id": "failure-recovery",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54,
+          "error": ""
+        }
+      },
+      {
+        "id": "restart-restores-full-results",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54
+        }
+      },
+      {
+        "id": "empty-dataset-compatible",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "replay-can-start-and-measure",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7\\measurements.json",
+          "eventCount": 3905,
+          "postgres": "16.14",
+          "rounds": 7,
+          "source": "full historical HTTP API and PostgreSQL storage"
+        }
+      },
+      {
+        "id": "measurement-report-delivered",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+        }
+      }
+    ],
+    "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7"
+  },
+  "submittedChanges": [
+    {
+      "path": "apps/token-board-api/src/server.ts",
+      "sha256": "21505aa619aa5fec684bda88d0c92a17900ac5094776a5a49f535e15c289544d"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-storage.ts",
+      "sha256": "9d3da2511a5ecb0d1d64f354a41f9d9ae15d30075ff8744080056ded524f9120"
+    },
+    {
+      "path": "DELIVERY.md",
+      "sha256": "01482331159f75f220bfc6f979ba5296312020f18fdeeba200319d9647bb1e78"
+    },
+    {
+      "path": "tests/replay/compare-measurements.mjs",
+      "sha256": "8e181859bc4c01d85730c0d6bcf85809050d2f7aa331db5f44bfc0d94a42df38"
+    }
+  ],
+  "finalResponseSha256": "f45c14563c52208628325637ae96c038aac044ce1526868cdc0aff3436710040",
+  "rawGradeSha256": "94316c1aa7ab196a32a04bd37ce2dd371a9c2a584864211e70783f21cbbf0a10",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T06:17:19.790Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "独立验收全部通过：54 种完整统计、历史修正、重叠刷新、查询故障恢复、重启及空数据等检查满足；刷新中位数 6496.9→1419.1ms，7/7 配对改善；177 次读取全部有效，P95 64.2ms（门槛 100ms）。类型检查、完整条目比较脚本及自报测量均有实际记录。模型如实披露未逐项自测故障恢复等场景，不将未测计作自测通过；自测配对是两次先后运行按轮次对照，独立成绩采用验收器交替测量。提交后 API 为 200、54 个完整快照，协调者随后关闭隔离服务和数据库。"
+    ]
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true,
+  "supplementaryEvidence": [
+    {
+      "kind": "independent-grader-measurement",
+      "originalPath": "<private grader>/measurements.json",
+      "archivePath": "evidence/independent-measurements.json",
+      "encoding": "identity",
+      "originalBytes": 317718,
+      "sha256": "ee04841accb56fbba277b25437d38f4165bc6d7566e1e28633a32ac150a75ab0",
+      "archiveSha256": "ee04841accb56fbba277b25437d38f4165bc6d7566e1e28633a32ac150a75ab0"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/baseline-measurement.json",
+      "archivePath": "evidence/participant/baseline-measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50258693,
+      "sha256": "0f52f5acb49d8bd4124a682e9a491aca00ddb2d0c53874d2a462018053631157",
+      "archiveSha256": "9eba2cc44fc5e380c87cfe6698a8377a31bdfdfe833790d37ed320d61f7f261d"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/measurement.json",
+      "archivePath": "evidence/participant/measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50061696,
+      "sha256": "be2b4073f415c5b416a798a55d1dbd6b26b3e145583fa4b3acc1be91bb56d0d7",
+      "archiveSha256": "b30e8f0097a85cab8cb769d40e74bcdb784938dc227c9a1dfd333e0c4d510d78"
+    },
+    {
+      "kind": "coordinator-service-probe",
+      "originalPath": "<coordinator>/service-probe.json",
+      "archivePath": "evidence/service-probe.json",
+      "encoding": "identity",
+      "originalBytes": 1024311,
+      "sha256": "b263552c2401164d156c66b62e3c4df585626533c3bf9ee9941f11c67774ed16",
+      "archiveSha256": "b263552c2401164d156c66b62e3c4df585626533c3bf9ee9941f11c67774ed16"
+    }
+  ]
+}

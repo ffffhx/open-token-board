@@ -1,0 +1,11 @@
+{
+  "runDir": "C:\\Users\\aa182\\Documents\\Codex\\2026-08-22\\new-chat-2\\repositories\\open-token-board\\tests\\.tmp\\business-replay-v2\\B02\\runtime\\runs\\consistency-THVU4J",
+  "passed": true,
+  "transaction": {
+    "pid": 35408,
+    "state": "active",
+    "backend_xmin": "772"
+  },
+  "before": "afdb236d9fce5034a24d5c930e50b5324a5241b86660c68299d4cf65aa09ec35",
+  "after": "d8fef2bd289bee01ecf7a07a946a286fd2c2db340308e2e221df082a8f3f2daf"
+}

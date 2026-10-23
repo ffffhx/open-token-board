@@ -20,6 +20,7 @@ import {
 import type { TokenBoardUserConfig } from "@open-token-board/core";
 
 type AgentConfig = TokenUsageCollectorConfig & {
+  deviceId: string;
   apiUrl: string;
   agentToken?: string;
   uploadToken?: string;
@@ -90,6 +91,17 @@ async function main() {
   }
 
   const config = await loadAgentConfig();
+
+  if (command === "logout") {
+    if (!config.agentToken) throw new Error("Legacy upload tokens must be rotated by the server operator");
+    await requestJsonWithRetry(`${config.apiUrl}/api/auth/agent/session`, { method: "DELETE", headers: { Authorization: `Bearer ${config.agentToken}` } }, "Logout");
+    const filePath = process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE;
+    const saved = await readConfigFile(filePath);
+    delete saved.agentToken;
+    await fs.writeFile(filePath, `${JSON.stringify(saved, null, 2)}\n`, { mode: 0o600 });
+    console.log("Agent session revoked. Run login to upload again.");
+    return;
+  }
 
   if (command === "collect") {
     const events = await collectAndSanitize(config);
@@ -191,7 +203,9 @@ async function postReplacePhase(
     },
     body: JSON.stringify({
       ...createIngestPayload(events, clientInfo(), options.userConfig),
+      deviceId: config.deviceId,
       replace: {
+        scope: "device",
         phase,
         replaceId,
         ...(options.expectedEvents !== undefined ? { expectedEvents: options.expectedEvents } : {}),
@@ -327,6 +341,7 @@ export async function loadAgentConfig(): Promise<AgentConfig> {
 
   return {
     apiUrl: apiUrl.replace(/\/+$/, ""),
+    deviceId: await readCollectionDeviceId(),
     agentToken,
     uploadToken,
     userId: readStringEnv("TOKEN_BOARD_USER_ID") || readString(fileConfig.userId) || os.userInfo().username,
@@ -571,8 +586,21 @@ async function postIngest(
       Authorization: `Bearer ${bearerToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(createIngestPayload(events, clientInfo(), userConfig)),
+    body: JSON.stringify({ ...createIngestPayload(events, clientInfo(), userConfig), deviceId: config.deviceId }),
   }, "Upload") as Promise<{ accepted: number; duplicates: number; records: number }>;
+}
+
+async function readCollectionDeviceId() {
+  const file = process.env.TOKEN_BOARD_DEVICE_ID_FILE || `${process.env.TOKEN_BOARD_AGENT_CONFIG || DEFAULT_CONFIG_FILE}.device-id`;
+  let value = process.env.TOKEN_BOARD_DEVICE_ID;
+  if (!value) {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    try { await fs.writeFile(file, randomUUID(), { flag: "wx", mode: 0o600 }); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error; }
+    value = (await fs.readFile(file, "utf8")).trim();
+  }
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error("Invalid collection device ID");
+  return value.toLowerCase();
 }
 
 function chunkEvents<T>(events: T[], size: number) {

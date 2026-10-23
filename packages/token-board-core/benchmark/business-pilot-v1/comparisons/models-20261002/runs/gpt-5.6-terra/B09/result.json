@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-terra",
+  "label": "GPT-5.6 Terra",
+  "caseId": "B09",
+  "trial": 1,
+  "status": "failed",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 8,
+  "checksTotal": 10,
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true
+    },
+    {
+      "id": "document-structure",
+      "passed": true
+    },
+    {
+      "id": "saved-opening",
+      "passed": true
+    },
+    {
+      "id": "protected-content",
+      "passed": false,
+      "details": "All content outside the opening and project 1 must be byte-identical to the supplied working copy."
+    },
+    {
+      "id": "project-updated",
+      "passed": true
+    },
+    {
+      "id": "project-source-numbers",
+      "passed": true
+    },
+    {
+      "id": "unsupported-guarantees",
+      "passed": true
+    },
+    {
+      "id": "source-link",
+      "passed": false,
+      "details": "Project notes have a valid relative link."
+    },
+    {
+      "id": "report-evidence",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:41:26.562Z",
+    "taskStartedAt": "2026-10-02T15:41:26.785Z",
+    "taskCompletedAt": "2026-10-02T15:45:32.314Z",
+    "taskWallMs": 245529,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-terra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 733375,
+      "cached_input_tokens": 691968,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 10806,
+      "reasoning_output_tokens": 2931,
+      "total_tokens": 744181
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "a95ef5986175e36b609a384614e8b87008129f7b85a0d327e18049030e2ea9d9",
+    "toolCallCount": 20,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "failed",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:15:02.443Z",
+    "notes": [
+      "Protected project-2 suffix loses exactly one final newline; business prose remains unchanged. Anonymous source review additionally finds generally changed to all tools and an unproven Session-identity association mechanism. Missing Markdown citation alone is advisory."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "c20c8aacddc8029439e558542773b213720f7b427f0624294dd191aea153f288"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "8a500d0183ccfa07148321d00761bd9463a15b71cedd7442b16b61ad3c8e29ce"
+    }
+  ],
+  "rawGradeSha256": "4cd6d30606b1dc6b76054ba78d424e400a0056674f4e5cd44398c4d582fc2e88",
+  "sourceReview": {
+    "record": "semantic-blind-review.json",
+    "anonymousId": "G",
+    "model": "gpt-5.6-terra",
+    "finding": "unsupported",
+    "coordinatorDecision": "overstated-evaluation-result",
+    "notes": [
+      "‘发现它们都无法处理’把来源的‘普遍’扩大为‘全部’。",
+      "‘CDP 通信需要与 Agent Session 的身份和 Profile 租约关联’推定更具体的关联机制，来源的 Ticket/校验/租约描述尚不能证实该机制。",
+      "另有独立的受保护区末尾一个换行丢失，业务文字未改。"
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "now": "2026-09-14T12:00:00.000Z",
+  "events": 3905,
+  "runDir": "C:\\Users\\aa182\\Documents\\Codex\\2026-08-22\\new-chat-2\\repositories\\open-token-board\\tests\\.tmp\\business-replay-v2\\B02\\runtime\\runs\\profile-FOg1QQ",
+  "results": [
+    {
+      "name": "baseline",
+      "elapsedMs": 9935.3834,
+      "cpuMs": 9515,
+      "queries": 486,
+      "categories": {
+        "aggregate": {
+          "count": 324,
+          "totalMs": 1035.0358000000042
+        },
+        "all-history-events": {
+          "count": 54,
+          "totalMs": 3146.1716000000024
+        },
+        "range-events": {
+          "count": 108,
+          "totalMs": 1059.3640000000132
+        }
+      },
+      "stages": {
+        "buildTokenEfficiencySummary": {
+          "calls": 54,
+          "totalMs": 32.70429999999578
+        },
+        "buildTokenAchievementSummariesByUser": {
+          "calls": 54,
+          "totalMs": 2104.5230000000065
+        },
+        "buildTokenLeaderboardTrends": {
+          "calls": 54,
+          "totalMs": 334.98279999999795
+        },
+        "buildTokenTeamLeaderboard": {
+          "calls": 54,
+          "totalMs": 27.553799999996954
+        },
+        "buildTokenProjectLeaderboard": {
+          "calls": 54,
+          "totalMs": 29.491899999999077
+        },
+        "buildTokenUsageDistribution": {
+          "calls": 54,
+          "totalMs": 6.866699999994125
+        }
+      },
+      "queryCompletionMs": 5240.57140000002
+    },
+    {
+      "name": "candidate",
+      "elapsedMs": 1786.185300000001,
+      "cpuMs": 1641,
+      "queries": 83,
+      "categories": {
+        "transaction": {
+          "count": 2,
+          "totalMs": 1.0280999999995402
+        },
+        "aggregate": {
+          "count": 54,
+          "totalMs": 199.9371000000101
+        },
+        "all-history-events": {
+          "count": 9,
+          "totalMs": 572.1803000000036
+        },
+        "range-events": {
+          "count": 18,
+          "totalMs": 186.7837000000036
+        }
+      },
+      "queryCompletionMs": 959.9292000000169
+    }
+  ]
+}

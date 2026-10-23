@@ -151,7 +151,11 @@ importers:
         specifier: ^5.8.3
         version: 5.8.3
 
-  tools/eval-runner: {}
+  tools/eval-runner:
+    dependencies:
+      cross-spawn:
+        specifier: ^7.0.6
+        version: 7.0.6
 
   tools/token-board-agent-npx:
     dependencies:

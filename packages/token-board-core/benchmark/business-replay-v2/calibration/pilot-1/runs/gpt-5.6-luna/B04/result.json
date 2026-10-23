@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-5.6-luna",
+  "caseId": "B04",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "execution": {
+    "taskStartedAt": "2026-10-03T03:41:13.293Z",
+    "taskCompletedAt": "2026-10-03T03:44:03.190Z",
+    "wallMs": 169897,
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 1295433,
+      "cached_input_tokens": 1181952,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5603,
+      "reasoning_output_tokens": 1823,
+      "total_tokens": 1301036
+    },
+    "costUsd": null,
+    "transcriptSha256": "bb22cbb51979a3c90947abc326d3f7b3b8bf6f5ad8afa9f5d49fa98a7c483a2b",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": false,
+  "machineAccepted": false,
+  "categories": {
+    "business": {
+      "passed": false,
+      "passedCount": 0,
+      "total": 10
+    },
+    "preservation": {
+      "passed": false,
+      "passedCount": 2,
+      "total": 5
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "candidate-build",
+      "passed": true,
+      "category": "delivery",
+      "details": "Full renderer entry and main-process modules bundled from candidate source"
+    },
+    {
+      "id": "catalog-without-desktop",
+      "passed": false,
+      "category": "business",
+      "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   9341,\n-   9342,\n-   9343,\n-   9344,\n-   9345\n- ]\n"
+    },
+    {
+      "id": "catalog-stale-snapshot",
+      "passed": false,
+      "category": "business",
+      "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Research Alpha'\n"
+    },
+    {
+      "id": "catalog-fresh-rename-and-identity",
+      "passed": false,
+      "category": "business",
+      "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Outdated Alpha'\n- 'Catalog Renamed'\n"
+    },
+    {
+      "id": "catalog-fresh-permission-disable",
+      "passed": false,
+      "category": "business",
+      "details": "Registry access changes must override a still-fresh conflicting snapshot\n\nfalse !== true\n"
+    },
+    {
+      "id": "catalog-fresh-permission-enable",
+      "passed": false,
+      "category": "business",
+      "details": "Registry access changes must override a still-fresh conflicting snapshot\n\ntrue !== false\n"
+    },
+    {
+      "id": "catalog-input-order",
+      "passed": false,
+      "category": "business",
+      "details": "Catalog order must not depend on registry/snapshot serialization order\n+ actual - expected\n\n  [\n    9341,\n-   9342,\n-   9343,\n-   9344,\n    9345,\n    9350\n  ]\n"
+    },
+    {
+      "id": "catalog-occupancy-permissions",
+      "passed": false,
+      "category": "business",
+      "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+    },
+    {
+      "id": "catalog-path-containment",
+      "passed": false,
+      "category": "preservation",
+      "details": "Valid registry entries must survive malformed neighbors"
+    },
+    {
+      "id": "catalog-broken-snapshot",
+      "passed": false,
+      "category": "business",
+      "details": "The expression evaluated to a falsy value:\n\n  assert.ok(list().some(p=>p.cdpPort===9342))\n"
+    },
+    {
+      "id": "catalog-live-lease-after-expiry",
+      "passed": false,
+      "category": "preservation",
+      "details": "Live holder PID keeps ownership\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+    },
+    {
+      "id": "catalog-custom-data-root",
+      "passed": false,
+      "category": "business",
+      "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Custom directory'\n"
+    },
+    {
+      "id": "rename-first-save-persists",
+      "passed": false,
+      "category": "business",
+      "details": "Background startup completion must preserve the draft\n+ actual - expected\n\n+ 'Catalog Renamed'\n- '首次保存 · Research & Review'\n"
+    },
+    {
+      "id": "rename-empty-draft-validation",
+      "passed": false,
+      "category": "preservation",
+      "details": "An intentional empty draft must not revert to the saved name\n+ actual - expected\n\n+ 'Research Beta'\n- ''\n"
+    },
+    {
+      "id": "rename-cancel-does-not-cross-profile",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "rename-registry-preserves-neighbors",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "frozen-context-preserved",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "changedFiles": [
+          "src/main/profile-manager.ts"
+        ]
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "src/main/profile-manager.ts"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "dist/**",
+      "test-results/**",
+      ".replay-tmp/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "schemaVersion": 1,
+    "caseId": "B04",
+    "checks": [
+      {
+        "id": "candidate-build",
+        "passed": true,
+        "category": "delivery",
+        "details": "Full renderer entry and main-process modules bundled from candidate source"
+      },
+      {
+        "id": "catalog-without-desktop",
+        "passed": false,
+        "category": "business",
+        "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   9341,\n-   9342,\n-   9343,\n-   9344,\n-   9345\n- ]\n"
+      },
+      {
+        "id": "catalog-stale-snapshot",
+        "passed": false,
+        "category": "business",
+        "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Research Alpha'\n"
+      },
+      {
+        "id": "catalog-fresh-rename-and-identity",
+        "passed": false,
+        "category": "business",
+        "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Outdated Alpha'\n- 'Catalog Renamed'\n"
+      },
+      {
+        "id": "catalog-fresh-permission-disable",
+        "passed": false,
+        "category": "business",
+        "details": "Registry access changes must override a still-fresh conflicting snapshot\n\nfalse !== true\n"
+      },
+      {
+        "id": "catalog-fresh-permission-enable",
+        "passed": false,
+        "category": "business",
+        "details": "Registry access changes must override a still-fresh conflicting snapshot\n\ntrue !== false\n"
+      },
+      {
+        "id": "catalog-input-order",
+        "passed": false,
+        "category": "business",
+        "details": "Catalog order must not depend on registry/snapshot serialization order\n+ actual - expected\n\n  [\n    9341,\n-   9342,\n-   9343,\n-   9344,\n    9345,\n    9350\n  ]\n"
+      },
+      {
+        "id": "catalog-occupancy-permissions",
+        "passed": false,
+        "category": "business",
+        "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+      },
+      {
+        "id": "catalog-path-containment",
+        "passed": false,
+        "category": "preservation",
+        "details": "Valid registry entries must survive malformed neighbors"
+      },
+      {
+        "id": "catalog-broken-snapshot",
+        "passed": false,
+        "category": "business",
+        "details": "The expression evaluated to a falsy value:\n\n  assert.ok(list().some(p=>p.cdpPort===9342))\n"
+      },
+      {
+        "id": "catalog-live-lease-after-expiry",
+        "passed": false,
+        "category": "preservation",
+        "details": "Live holder PID keeps ownership\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+      },
+      {
+        "id": "catalog-custom-data-root",
+        "passed": false,
+        "category": "business",
+        "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Custom directory'\n"
+      },
+      {
+        "id": "rename-first-save-persists",
+        "passed": false,
+        "category": "business",
+        "details": "Background startup completion must preserve the draft\n+ actual - expected\n\n+ 'Catalog Renamed'\n- '首次保存 · Research & Review'\n"
+      },
+      {
+        "id": "rename-empty-draft-validation",
+        "passed": false,
+        "category": "preservation",
+        "details": "An intentional empty draft must not revert to the saved name\n+ actual - expected\n\n+ 'Research Beta'\n- ''\n"
+      },
+      {
+        "id": "rename-cancel-does-not-cross-profile",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "rename-registry-preserves-neighbors",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "frozen-context-preserved",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "changedFiles": [
+            "src/main/profile-manager.ts"
+          ]
+        }
+      }
+    ],
+    "passed": false,
+    "exitCode": 1
+  },
+  "submittedChanges": [
+    {
+      "path": "src/main/profile-manager.ts",
+      "sha256": "f6c5e5e9376301628a538cdeef5ca9176551bf83b84ce0d0455af023479966cf"
+    }
+  ],
+  "finalResponseSha256": "808f072bbd2758844ebbd4634a264bfe1fe05791c4097dae036c5491fb8def97",
+  "rawGradeSha256": "49e84e987757979d880f4ce2d284573ffc75833cc47378eaadfa196b3b9692e1",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T03:47:07.831Z",
+    "businessOutcome": "failed",
+    "deliveryOutcome": "failed",
+    "structuredReview": null,
+    "notes": [
+      "首次提交只修改 ProfileManager，后台加载吞草稿和离线目录缺失均未解决，10 项业务检查全部失败。普通 smoke 通过及其他检查未跑通的记录真实，但最终声称完成修复并保证目录一致，超出了验证证据。初次 TASK.txt 被 PowerShell 默认编码读成乱码，未见正确重读；此结果包含工具使用因素，不能只归因于业务推理能力。"
+    ]
+  },
+  "executionReview": {
+    "scopeEvidence": "All inspected task file reads/edits stay in the export; applicable global instructions are allowed. No reference/grader access observed.",
+    "toolUseIssue": {
+      "kind": "participant-selected-text-decoding",
+      "command": "Get-Content -Raw TASK.txt (without -Encoding utf8)",
+      "observed": "Initial Chinese task output was mojibake; subsequent trace contains no successful reread of TASK.txt.",
+      "interpretation": "The readable UTF-8 input was available. This is an observed Windows tool-use failure, not an unavailable fixture. Its contribution cannot be separated from business reasoning in this single trial."
+    },
+    "selfTestClaims": "Transcript confirms public smoke passed; original desktop typecheck/test attempts reported missing environment/build inputs as stated."
+  },
+  "finalBusinessAccepted": false,
+  "finalDeliveryAccepted": false,
+  "finalAccepted": false
+}

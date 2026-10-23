@@ -26,11 +26,11 @@ type SignedTokenPayload = {
 };
 
 export function createWebSessionToken(identity: TokenBoardIdentity, secret: string, ttlSeconds: number) {
-  return signPayload({ purpose: "web", identity }, secret, ttlSeconds);
+  return signPayload({ purpose: "web", identity, nonce: randomBytes(16).toString("hex") }, secret, ttlSeconds);
 }
 
 export function createAgentSessionToken(identity: TokenBoardIdentity, secret: string, ttlSeconds: number) {
-  return signPayload({ purpose: "agent", identity }, secret, ttlSeconds);
+  return signPayload({ purpose: "agent", identity, nonce: randomBytes(16).toString("hex") }, secret, ttlSeconds);
 }
 
 export function createOAuthState(returnTo: string, secret: string, ttlSeconds: number) {
@@ -87,7 +87,7 @@ export function parseCookieHeader(header: string | undefined) {
   for (const item of (header || "").split(";")) {
     const [name, ...rest] = item.trim().split("=");
     if (name && rest.length) {
-      cookies.set(name, decodeURIComponent(rest.join("=")));
+      try { cookies.set(name, decodeURIComponent(rest.join("="))); } catch { /* Ignore malformed cookie encoding. */ }
     }
   }
 
@@ -137,16 +137,16 @@ function signPayload(
 }
 
 function verifySignedPayload(token: string, secret: string, purpose: SignedTokenPayload["purpose"]) {
-  const [encoded, signature] = token.split(".");
+  const [encoded, signature, extra] = token.split(".");
 
   try {
-    if (!encoded || !signature || !timingSafeStringEqual(signature, hmac(encoded, secret))) {
+    if (!encoded || !signature || extra !== undefined || !timingSafeStringEqual(signature, hmac(encoded, secret))) {
       return undefined;
     }
 
     const payload = JSON.parse(base64UrlDecode(encoded)) as SignedTokenPayload;
 
-    if (payload.purpose !== purpose || payload.exp < Math.floor(Date.now() / 1000)) {
+    if (payload.purpose !== purpose || !Number.isFinite(payload.exp) || !Number.isFinite(payload.iat) || payload.exp <= Math.floor(Date.now() / 1000)) {
       return undefined;
     }
 

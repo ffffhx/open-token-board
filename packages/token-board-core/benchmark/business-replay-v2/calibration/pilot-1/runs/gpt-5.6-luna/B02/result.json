@@ -1,0 +1,389 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-5.6-luna",
+  "caseId": "B02",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "execution": {
+    "taskStartedAt": "2026-10-03T04:09:07.643Z",
+    "taskCompletedAt": "2026-10-03T04:33:09.203Z",
+    "wallMs": 1441560,
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 7066767,
+      "cached_input_tokens": 6925824,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 28734,
+      "reasoning_output_tokens": 6762,
+      "total_tokens": 7095501
+    },
+    "costUsd": null,
+    "transcriptSha256": "b6e403fa330f4c701e9eff1e40e82cdc21e5e545c3a98cf061f502ae4b3fdf26",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": false,
+  "machineAccepted": false,
+  "categories": {
+    "business": {
+      "passed": false,
+      "passedCount": 6,
+      "total": 7
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 1,
+      "total": 1
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "all-statistics-identical",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "combinations": 54,
+        "passed": true
+      }
+    },
+    {
+      "id": "repeatable-refresh-improvement",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "baselineMs": [
+          7871.6379000000015,
+          7884.005299999997,
+          7843.254400000005,
+          9169.734299999996,
+          8979.5864,
+          9043.923999999999,
+          8899.403300000005
+        ],
+        "candidateMs": [
+          4750.972300000001,
+          5388.3537,
+          6314.785800000012,
+          6237.791599999997,
+          6463.093800000002,
+          6559.352400000003,
+          6330.757400000002
+        ],
+        "baselineMedianMs": 8899.403300000005,
+        "candidateMedianMs": 6314.785800000012,
+        "pairedGainMedianMs": 2516.4925999999978,
+        "pairedNoise3MAD": 156.4599000000162,
+        "pairedWins": 7,
+        "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+      }
+    },
+    {
+      "id": "reads-available-during-refresh",
+      "passed": false,
+      "category": "business",
+      "details": {
+        "reads": 389,
+        "successfulAndConsistent": 389,
+        "baselineP95Ms": 80.54730000000563,
+        "candidateP95Ms": 126.33550000000105,
+        "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+      }
+    },
+    {
+      "id": "corrected-data-and-overlap",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-preserves-valid-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "refreshRejected": true,
+        "errorRecorded": true,
+        "remainingEntries": 54,
+        "readStatus": 200
+      }
+    },
+    {
+      "id": "failure-recovery",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54,
+        "error": ""
+      }
+    },
+    {
+      "id": "restart-restores-full-results",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54
+      }
+    },
+    {
+      "id": "empty-dataset-compatible",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "replay-can-start-and-measure",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-IhW2nf\\measurements.json",
+        "eventCount": 3905,
+        "postgres": "16.14",
+        "rounds": 7,
+        "source": "full historical HTTP API and PostgreSQL storage"
+      }
+    },
+    {
+      "id": "measurement-report-delivered",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "apps/token-board-api/src/server.ts",
+      "packages/token-board-core/src/token-board-storage.ts",
+      "DELIVERY.md"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "apps/*/node_modules/**",
+      "packages/*/node_modules/**",
+      "artifacts/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "checks": [
+      {
+        "id": "all-statistics-identical",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "combinations": 54,
+          "passed": true
+        }
+      },
+      {
+        "id": "repeatable-refresh-improvement",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "baselineMs": [
+            7871.6379000000015,
+            7884.005299999997,
+            7843.254400000005,
+            9169.734299999996,
+            8979.5864,
+            9043.923999999999,
+            8899.403300000005
+          ],
+          "candidateMs": [
+            4750.972300000001,
+            5388.3537,
+            6314.785800000012,
+            6237.791599999997,
+            6463.093800000002,
+            6559.352400000003,
+            6330.757400000002
+          ],
+          "baselineMedianMs": 8899.403300000005,
+          "candidateMedianMs": 6314.785800000012,
+          "pairedGainMedianMs": 2516.4925999999978,
+          "pairedNoise3MAD": 156.4599000000162,
+          "pairedWins": 7,
+          "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+        }
+      },
+      {
+        "id": "reads-available-during-refresh",
+        "passed": false,
+        "category": "business",
+        "details": {
+          "reads": 389,
+          "successfulAndConsistent": 389,
+          "baselineP95Ms": 80.54730000000563,
+          "candidateP95Ms": 126.33550000000105,
+          "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+        }
+      },
+      {
+        "id": "corrected-data-and-overlap",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "failure-preserves-valid-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "refreshRejected": true,
+          "errorRecorded": true,
+          "remainingEntries": 54,
+          "readStatus": 200
+        }
+      },
+      {
+        "id": "failure-recovery",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54,
+          "error": ""
+        }
+      },
+      {
+        "id": "restart-restores-full-results",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54
+        }
+      },
+      {
+        "id": "empty-dataset-compatible",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "replay-can-start-and-measure",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-IhW2nf\\measurements.json",
+          "eventCount": 3905,
+          "postgres": "16.14",
+          "rounds": 7,
+          "source": "full historical HTTP API and PostgreSQL storage"
+        }
+      },
+      {
+        "id": "measurement-report-delivered",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+        }
+      }
+    ],
+    "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-IhW2nf"
+  },
+  "submittedChanges": [
+    {
+      "path": "apps/token-board-api/src/server.ts",
+      "sha256": "0c526bd0299491d45f24f78ab74dd82ef45df7e125135384b6d63a6d2420bc0b"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-storage.ts",
+      "sha256": "1a0955e2d3c6162d7c1d8280e9135f175726fad7c611e2714049813c56a23d73"
+    },
+    {
+      "path": "DELIVERY.md",
+      "sha256": "2429b9532ce4db1f002a87b51ffde305d1d6d36f33328c3f44453c4f0e9a18fe"
+    }
+  ],
+  "finalResponseSha256": "3667d1188257c552b3118d0c5f4ea14044ce4144c4fadaacf4d3f82477123e1e",
+  "rawGradeSha256": "9d818a3bd168b9d38665e156540575a4591ad0b16c969b37f2ca9bcca5c2c21b",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T04:38:08.798Z",
+    "businessOutcome": "failed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "独立验收54组合、历史修正、并发刷新、失败保全、恢复、重启和空数据均通过，刷新中位数8899.4→6314.8ms、7/7配对改善；但读取P95为126.3ms，超过按基线计算的104.7ms门槛。交付报告与实际自测日志一致、服务可访问，因此交付通过；自测为前后顺序七轮，不能替代外部交替配对验收。"
+    ]
+  },
+  "finalBusinessAccepted": false,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": false,
+  "executionReview": {
+    "selfTestEvidence": "The final typecheck completed for API and Core. Transcript and retained self-measurement outputs support all delivery numbers and the 54-entry comparison. Baseline was remeasured after the initial experiment was reverted, then retained before final changes. Self-measurements are sequential batches, not alternating pairs.",
+    "deliveryProbe": {
+      "model": "gpt-5.6-luna",
+      "checkedAt": "2026-10-03T04:33:29.6583178Z",
+      "url": "http://127.0.0.1:55993",
+      "healthOk": true,
+      "backend": "postgres",
+      "events": 3905,
+      "snapshotEntries": 54,
+      "lastError": null,
+      "httpStatus": 200,
+      "source": "snapshot",
+      "summaryPresent": true
+    },
+    "serviceDisposition": "Delivered service was independently checked, then only its verified disposable PostgreSQL cluster and associated trial API/serve processes were stopped before grading. Trial port and database PID were confirmed absent. Main project was not stopped.",
+    "scopeEvidence": "Source edits remained in the declared export. Initial Chinese decoding issue was corrected with explicit UTF-8 rereading before implementation. No parent answers or hidden-grader reads were observed.",
+    "performanceLimit": "Self-measured read P95 95.6369 ms passed the self-measurement threshold; the independent alternating run measured 126.3355 ms against 104.7115 ms allowed. Keep both observations; one trial does not establish a stable failure probability."
+  },
+  "supplementaryEvidence": [
+    {
+      "kind": "independent-grader-measurement",
+      "originalPath": "<private grader>/measurements.json",
+      "archivePath": "evidence/independent-measurements.json",
+      "encoding": "identity",
+      "originalBytes": 386089,
+      "sha256": "659c9339a01f6f51407ba6a6a94d9afdb6c56ec589d74906ca56404e7534e990",
+      "archiveSha256": "659c9339a01f6f51407ba6a6a94d9afdb6c56ec589d74906ca56404e7534e990"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/measurement-baseline.json",
+      "archivePath": "evidence/participant/measurement-baseline.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50243134,
+      "sha256": "1e1d02332ed1300e4f45e6f95578c9507545ca65b183ab16d16f072b0952a84b",
+      "archiveSha256": "2d20178466086870ef592e9ba383347db1361aa9d3dfaa45950997a0ee7b8d49"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/measurement.json",
+      "archivePath": "evidence/participant/measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50117089,
+      "sha256": "c2528e91cfcea4b1447e03b3d064f9979dac44310c81e013c2422cdc6367ab38",
+      "archiveSha256": "93c1b440f68f5f971f368a913a1b7fdab0880eb66064a78b51bc35985b68ef08"
+    }
+  ]
+}

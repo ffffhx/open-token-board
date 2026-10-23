@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   buildTokenLeaderboard,
@@ -32,6 +32,7 @@ import {
   TOAST_DISMISS_MS,
 } from "./token-leaderboard/constants";
 import { InstallGuideDialog } from "./token-leaderboard/install-guide-dialog";
+import { subscribeToBoardRefresh } from "./token-leaderboard/refresh-subscription";
 import {
   BreakdownPanel,
   DailyTokenTrendChart,
@@ -87,7 +88,7 @@ import {
 
 // Module-level cache survives route switches so returning users see the last
 // loaded data immediately while a background refresh catches up.
-const statsCache = new Map<string, { summary: TokenLeaderboardSummary; records: number | null }>();
+const statsCache = new Map<string, { summary: TokenLeaderboardSummary; records: number | null; generatedAt: string | null }>();
 const accountCache = new Map<string, TokenAccountUsageProfile>();
 function statsCacheKey(base: string, rangeKey: string, metric: TokenBoardMetric): string {
   return `${base}|${rangeKey}|${metric}`;
@@ -186,6 +187,10 @@ export function TokenLeaderboardApp({
   const [dataLoadError, setDataLoadError] = useState("");
   const [isLoadSlow, setIsLoadSlow] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [generatedAt, setGeneratedAt] = useState<string | null>(initialStats?.generatedAt ?? null);
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const [freshnessNow, setFreshnessNow] = useState(() => Date.now());
+  const lastRequestAt = useRef(0);
   const [now, setNow] = useState(() => new Date(initialNow));
   const [remoteSummary, setRemoteSummary] = useState<TokenLeaderboardSummary | null>(
     initialStats?.summary ?? null
@@ -203,6 +208,10 @@ export function TokenLeaderboardApp({
   useEffect(() => {
     setNow(new Date());
     setInstallGuidePlatform(detectInstallGuidePlatform());
+  }, []);
+
+  useEffect(() => {
+    return subscribeToBoardRefresh({ host: window, page: document, lastRequestAt: () => lastRequestAt.current, onRefresh: () => setReloadKey((key) => key + 1), onTick: setFreshnessNow });
   }, []);
 
   useEffect(() => {
@@ -231,6 +240,9 @@ export function TokenLeaderboardApp({
     }
 
     let active = true;
+    const controller = new AbortController();
+    lastRequestAt.current = Date.now();
+    setRefreshFailed(false);
     const params = new URLSearchParams({ metric });
 
     if (isCustomRange && appliedCustomRange) {
@@ -242,6 +254,7 @@ export function TokenLeaderboardApp({
 
     const cacheKey = statsCacheKey(normalizedApiBaseUrl, statsRangeKey, metric);
     const cached = statsCache.get(cacheKey);
+    setGeneratedAt(cached?.generatedAt ?? null);
 
     if (cached) {
       // Show cached data immediately; the request below refreshes it silently.
@@ -258,6 +271,7 @@ export function TokenLeaderboardApp({
       setStatus(dict.board.status.loadingRealUsers);
     }
     fetch(`${normalizedApiBaseUrl}/api/usage/stats?${params.toString()}`, {
+      signal: controller.signal,
       cache: "no-store",
       credentials: "include",
     })
@@ -276,13 +290,18 @@ export function TokenLeaderboardApp({
 
         const normalized = normalizeRemoteSummary(summary, metric);
         const records = typeof payload.records === "number" ? payload.records : null;
-        statsCache.set(cacheKey, { summary: normalized, records });
+        const updatedAt = typeof payload.generatedAt === "string" && Number.isFinite(Date.parse(payload.generatedAt)) ? payload.generatedAt : null;
+        statsCache.set(cacheKey, { summary: normalized, records, generatedAt: updatedAt });
+        if (statsCache.size > 48) statsCache.delete(statsCache.keys().next().value!);
 
         if (!active) {
           return;
         }
 
         setRemoteSummary(normalized);
+        setGeneratedAt(updatedAt);
+        setFreshnessNow(Date.now());
+        setRefreshFailed(false);
         setRemoteRecordCount(records);
         setDataLoadState("ready");
         setDataLoadError("");
@@ -290,9 +309,8 @@ export function TokenLeaderboardApp({
       })
       .catch((error) => {
         // Keep cached data visible if the background refresh fails.
-        if (!active || statsCache.has(cacheKey)) {
-          return;
-        }
+        if (!active) return;
+        if (statsCache.has(cacheKey)) { setRefreshFailed(true); return; }
 
         setRemoteSummary(null);
         setRemoteRecordCount(null);
@@ -304,6 +322,7 @@ export function TokenLeaderboardApp({
 
     return () => {
       active = false;
+      controller.abort();
     };
   }, [appliedCustomRange, dict, isCustomRange, metric, normalizedApiBaseUrl, range, reloadKey, statsRangeKey]);
 
@@ -345,6 +364,8 @@ export function TokenLeaderboardApp({
     const params = new URLSearchParams({ range });
     const cacheKey = accountCacheKey(normalizedApiBaseUrl, viewer.user?.userId ?? "viewer", range);
     const cached = accountCache.get(cacheKey);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 65_000);
 
     if (cached) {
       // Show cached data immediately; the request below refreshes it silently.
@@ -358,6 +379,7 @@ export function TokenLeaderboardApp({
     fetch(`${normalizedApiBaseUrl}/api/usage/me?${params.toString()}`, {
       cache: "no-store",
       credentials: "include",
+      signal: controller.signal,
     })
       .then((response) => {
         if (!response.ok) {
@@ -389,13 +411,16 @@ export function TokenLeaderboardApp({
 
         setAccountProfile(null);
         setAccountLoadState("error");
-        setAccountError(error instanceof Error ? error.message : dict.board.status.readFailed);
-      });
+        setAccountError(controller.signal.aborted ? dict.board.status.readFailed : error instanceof Error ? error.message : dict.board.status.readFailed);
+      })
+      .finally(() => window.clearTimeout(timeout));
 
     return () => {
       active = false;
+      window.clearTimeout(timeout);
+      controller.abort();
     };
-  }, [dict.board.status.invalidBackendShape, dict.board.status.readFailed, isCustomRange, normalizedApiBaseUrl, range, viewer?.authenticated, viewer?.user?.userId]);
+  }, [dict.board.status.invalidBackendShape, dict.board.status.readFailed, isCustomRange, normalizedApiBaseUrl, range, reloadKey, viewer?.authenticated, viewer?.user?.userId]);
 
   const emptySummary = useMemo(
     () => buildTokenLeaderboard([], { range, metric, now }),
@@ -742,6 +767,10 @@ export function TokenLeaderboardApp({
         <p className="min-h-5 rounded-lg bg-slate-50 px-3 py-2 text-xs text-stone-600" aria-live="polite">
           {isDataLoading ? <LoadingInline label={statusMessage} /> : statusMessage}
         </p>
+        {remoteSummary && <p data-testid="board-freshness" role="status" className="text-xs text-stone-600">
+          {generatedAt ? <time dateTime={generatedAt} title={new Date(generatedAt).toLocaleString()}>{dict.board.status.updatedMinutesAgo(Math.max(0, Math.floor((freshnessNow - Date.parse(generatedAt)) / 60_000)))}</time> : dict.board.status.updateTimeUnknown}
+          {refreshFailed ? ` · ${dict.board.status.refreshFailedCached}` : generatedAt && freshnessNow - Date.parse(generatedAt) > 300_000 ? ` · ${dict.board.status.dataStale}` : ""}
+        </p>}
       </div>
     </section>
   );
@@ -1042,6 +1071,7 @@ export function TokenLeaderboardApp({
           loadState={accountLoadState}
           onLogin={loginWithGitHub}
           onExport={(format) => openUsageExport("me", format)}
+          onRetry={retryDataLoad}
           profile={accountProfile}
           range={range}
           viewer={viewer}

@@ -1,0 +1,215 @@
+{
+  "id": "B09",
+  "title": "按真实 Read/Edit 时间线恢复用户保存的开场区域，并限定项目改写范围",
+  "version": 2,
+  "sourceCaseId": "B09",
+  "family": "document-version-preservation",
+  "referenceMode": "overlay",
+  "provenance": {
+    "kind": "redacted-full-document-historical-replay",
+    "sourceDate": "2026-09-03",
+    "sourceSessionSha256": "9800856a3cba93a722b865b30c86aa13f53714c84be72b61ad85ee0d57081646",
+    "sourceDiffSha256": "7207147a8fcf3dde04723dff16804d1ca782930bb3f0efcb01f8eecfb7716e02",
+    "sourceBlob": "e6c0a732d0b0b394f8483eab370d8c9202438f2f",
+    "candidateBaseCommit": "cb414f0586b0bc78090b2c59d7e47ea38ebaa95d",
+    "sourceDescription": "完整历史 Git blob 与实际持久化 diff 重建 13:42 工作文档，再应用 13:43:23.920Z 的实际 Edit；起点截止第二次用户纠正。所给 55 个事件保留工具类型、时间、Read 行号及 Edit old/new。",
+    "reconstruction": "原始 diff 每个上下文/删除行均匹配候选 blob；逆向两次已发生 Edit 与 12 次误改前 Read 的 651 个行观测逐条匹配。没有用后续恢复答案生成缺失历史。",
+    "referenceNotesSource": {
+      "events": [
+        "E0186",
+        "E0193",
+        "E0196",
+        "E0198"
+      ],
+      "readTimes": [
+        "2026-09-03T13:34:09.980Z",
+        "2026-09-03T13:34:16.893Z"
+      ],
+      "lineRange": [
+        1,
+        235
+      ]
+    },
+    "uncommittedContent": "历史完整 diff 中真实存在的未提交变化保留；未虚构保存事件、额外作者修改或冲突。",
+    "sourceHashes": {
+      "gitSha256": "8629bf1286dd3b10dbfe33c53e8f136813c35acddd601d21cb7b15cb2d1cf860",
+      "afterEditsSha256": "795b43c3b2c6407afec47e68b3ddce2e15186452e916956396d92f1fd48a0b05",
+      "currentRawSha256": "4f847bfd1f080d52856401d3c4078208bc9d91f673d6a018db434b6380a127b0"
+    },
+    "transforms": [
+      "姓名、学校、雇主与内部平台名称稳定替换",
+      "全部外部 URL 一致映射至 reference.invalid 占位符",
+      "本机绝对路径归一至 /workspace，文档名映射至 handbook.md / references/defense-notes.md",
+      "工具 ID 映射为中立编号，原工具类型及时间保留",
+      "LF 换行，Read 行号保留，历史业务数字不改写",
+      "参考文档仅将缺失图像改为图注与文件名，工具 Read 原记录仍保留原结构",
+      "持久化 diff 全文内联；去除私人存放路径，保留原始 diff 内容并脱敏",
+      "仅节选相关文档操作与用户消息；不给后续正确恢复操作、助手总结或答案标签"
+    ]
+  },
+  "allowedChanges": [
+    "handbook.md",
+    "REPORT.md"
+  ],
+  "editableRegions": [
+    "两段导语后至实习总标题前的开场区域",
+    "项目 1 主标题后至项目 2 主标题前的正文"
+  ],
+  "inputMaterials": [
+    "handbook.md",
+    ".history/repository-document.md",
+    ".history/tool-events.jsonl",
+    "references/defense-notes.md",
+    "MATERIALS.md"
+  ],
+  "materialHashes": {
+    "handbook.md": "8948e82cd59691e961dc65de5c6a74c16698aee94feb4a8f774d8283ce124b0a",
+    ".history/repository-document.md": "96556ed7415b41cb8469aae604222eb337d6ab1e5626f6d495107f75980b4438",
+    ".history/tool-events.jsonl": "6c509f8730ebdab1172c143588568642461d957cd823e8975b1e65ec8d500e74",
+    "references/defense-notes.md": "a2b95bb5b77920460a66e50857c0aac9bee2cf23bbf9d2afeca15b1b1290a7dc",
+    "MATERIALS.md": "76bb8db1d0f1ad459459a2ab4fcfc2b0a12015540f8f1f368b5bc1552cd053c9"
+  },
+  "knownLimits": [
+    "候选提交由 diff 旧 blob 精确匹配，但会话未打印完整 HEAD SHA，不能证明历史全仓库 HEAD。",
+    "没有原生 Ctrl+S 事件；保存行为来自用户陈述，保存内容有此前 Read 与 Edit 旧文本交叉证据。",
+    "这是完整单文档的脱敏历史重建，不是原项目全部工作树；未提供原生图片、私有 Wiki、源代码或真实凭据。",
+    "受保护的其他章节保留其当时原稿，即使可能有待核实的技术断言也不得在此次扩写事实范围。",
+    "格式使用脱敏后的 LF 标准；precision 指标不影响核心业务判定。",
+    "自动验收不能证明自然语言事实全面正确、报告真实或可读；必须结合 fact-rubric.json 完成正式结构化语义复核。"
+  ],
+  "expectedBaselineFailures": [
+    "opening-version",
+    "project-revised"
+  ],
+  "expectedReference": "reference",
+  "positiveAlternatives": [
+    "positive-alternatives/numbered-paraphrase",
+    "positive-alternatives/trailing-blank",
+    "positive-alternatives/qualified-results"
+  ],
+  "negativeControls": [
+    "negative-controls/wrong-git-restore",
+    "negative-controls/whole-file-revert",
+    "negative-controls/saved-snapshot-overwrite",
+    "negative-controls/invented-result"
+  ],
+  "controlExpectedFailures": {
+    "wrong-git-restore": [
+      "opening-version"
+    ],
+    "whole-file-revert": [
+      "opening-version",
+      "protected-content"
+    ],
+    "saved-snapshot-overwrite": [
+      "protected-content"
+    ]
+  },
+  "verification": {
+    "command": "node verify.mjs <candidate>",
+    "exitCodes": {
+      "0": "machine checks pass; structured semantic review remains required",
+      "1": "candidate check failure",
+      "2": "verifier/fixture error"
+    },
+    "categories": [
+      "business",
+      "preservation",
+      "delivery"
+    ],
+    "precision": "Only line-end whitespace and final blank lines are nonblocking; interior spacing, Markdown structure and protected text remain checked.",
+    "semanticReview": "fact-rubric.json; required contextual review. source-claims-review is advisory and never a machine business failure. Quoted, denied or qualified claims must be read in context.",
+    "reportPresenceIsNotSemanticPass": true
+  },
+  "difficultyChange": {
+    "oldCase": "裁剪为两个项目，事件说明直接指认误改前 Read，项目 2 经拼接。",
+    "newCase": "643 行真实完整起点，55 个中立工具/用户事件；含早期仓库近似稿、后来用户保存状态、助手扩写及错误 Git 恢复，必须自行辨认时间线。保留其他项目、数字表和引用。",
+    "authenticity": "无随机噪音、无新增用户冲突、无后见资料。"
+  },
+  "fixtureStats": {
+    "gitLines": 584,
+    "preEditLines": 564,
+    "currentLines": 643,
+    "events": 55,
+    "readChecks": [
+      {
+        "sourceLine": 208,
+        "passed": true,
+        "lines": 120
+      },
+      {
+        "sourceLine": 213,
+        "passed": true,
+        "lines": 100
+      },
+      {
+        "sourceLine": 228,
+        "passed": true,
+        "lines": 35
+      },
+      {
+        "sourceLine": 233,
+        "passed": true,
+        "lines": 40
+      },
+      {
+        "sourceLine": 243,
+        "passed": true,
+        "lines": 45
+      },
+      {
+        "sourceLine": 248,
+        "passed": true,
+        "lines": 25
+      },
+      {
+        "sourceLine": 258,
+        "passed": true,
+        "lines": 30
+      },
+      {
+        "sourceLine": 263,
+        "passed": true,
+        "lines": 30
+      },
+      {
+        "sourceLine": 278,
+        "passed": true,
+        "lines": 35
+      },
+      {
+        "sourceLine": 288,
+        "passed": true,
+        "lines": 25
+      },
+      {
+        "sourceLine": 293,
+        "passed": true,
+        "lines": 26
+      },
+      {
+        "sourceLine": 298,
+        "passed": true,
+        "lines": 40
+      }
+    ],
+    "hashes": {
+      "git": "96556ed7415b41cb8469aae604222eb337d6ab1e5626f6d495107f75980b4438",
+      "before": "4b9e37e7e5948b22b73a9788d9c7aa981d25e0c4bddd71d310f3a31b6ef48fa4",
+      "current": "8948e82cd59691e961dc65de5c6a74c16698aee94feb4a8f774d8283ce124b0a",
+      "reference": "a2b95bb5b77920460a66e50857c0aac9bee2cf23bbf9d2afeca15b1b1290a7dc"
+    }
+  },
+  "controlReviewRequired": {
+    "invented-result": {
+      "expectedReviewFlags": [
+        "source-claims-review"
+      ],
+      "rubric": "fact-rubric.json",
+      "expectedSemanticOutcome": "failed",
+      "criterion": "claim-boundaries",
+      "candidateEvidence": "实测自动化成功率达到 99.99%，平均操作延迟降低至 1 毫秒。",
+      "sourceReason": "参考资料仅记日常3个独立Session，无这两个测量；该控制必须经来源复核失败，机器仅提醒。"
+    }
+  }
+}

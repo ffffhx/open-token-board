@@ -1,0 +1,3764 @@
+{
+  "schemaVersion": 1,
+  "id": "models-20261002",
+  "status": "completed",
+  "updatedAt": "2026-10-02T16:16:05.647Z",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "harnessSha256": "c6d1b13f388222211673eda1cd4b9cf0180a35785edfd0b8f91068a98bd13f17",
+  "models": [
+    {
+      "model": "gpt-6.1-sol",
+      "label": "GPT-6.1 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed",
+      "accepted": 2,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 562194,
+      "totalTokenUsage": {
+        "input_tokens": 747487,
+        "cached_input_tokens": 636672,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14314,
+        "reasoning_output_tokens": 934,
+        "total_tokens": 761801
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "listedInSpawnTool": true,
+      "status": "completed",
+      "accepted": 3,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 542856,
+      "totalTokenUsage": {
+        "input_tokens": 577408,
+        "cached_input_tokens": 520832,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 11335,
+        "reasoning_output_tokens": 655,
+        "total_tokens": 588743
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed",
+      "accepted": 3,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 1062783,
+      "totalTokenUsage": {
+        "input_tokens": 1730575,
+        "cached_input_tokens": 1604864,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 24402,
+        "reasoning_output_tokens": 6526,
+        "total_tokens": 1754977
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "listedInSpawnTool": true,
+      "status": "completed",
+      "accepted": 3,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 698555,
+      "totalTokenUsage": {
+        "input_tokens": 1079809,
+        "cached_input_tokens": 989440,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 16618,
+        "reasoning_output_tokens": 4788,
+        "total_tokens": 1096427
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed",
+      "accepted": 3,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 940379,
+      "totalTokenUsage": {
+        "input_tokens": 1945284,
+        "cached_input_tokens": 1809664,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 31808,
+        "reasoning_output_tokens": 8375,
+        "total_tokens": 1977092
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "listedInSpawnTool": false,
+      "status": "completed",
+      "accepted": 2,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 481563,
+      "totalTokenUsage": {
+        "input_tokens": 1366299,
+        "cached_input_tokens": 1261568,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 20637,
+        "reasoning_output_tokens": 5781,
+        "total_tokens": 1386936
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "listedInSpawnTool": false,
+      "status": "completed",
+      "accepted": 2,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 666416,
+      "totalTokenUsage": {
+        "input_tokens": 2569908,
+        "cached_input_tokens": 2386432,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 26562,
+        "reasoning_output_tokens": 6030,
+        "total_tokens": 2596470
+      },
+      "costUsd": null
+    },
+    {
+      "model": "gpt-5.5",
+      "label": "GPT-5.5",
+      "listedInSpawnTool": false,
+      "status": "completed",
+      "accepted": 2,
+      "validTrials": 3,
+      "totalTasks": 3,
+      "wallMsSum": 873172,
+      "totalTokenUsage": {
+        "input_tokens": 2555844,
+        "cached_input_tokens": 2431744,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 35203,
+        "reasoning_output_tokens": 5295,
+        "total_tokens": 2591047
+      },
+      "costUsd": null
+    }
+  ],
+  "runs": [
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6.1-sol",
+      "label": "GPT-6.1 Sol",
+      "caseId": "B04",
+      "trial": 2,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 13,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": true
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:41:10.386Z",
+        "taskStartedAt": "2026-10-02T15:41:10.639Z",
+        "taskCompletedAt": "2026-10-02T15:45:05.916Z",
+        "taskWallMs": 235277,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 317763,
+          "cached_input_tokens": 249216,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 6098,
+          "reasoning_output_tokens": 469,
+          "total_tokens": 323861
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "623c5731206c7de81f6e0ef662afdafce73ce62ad4cfda798aeb2fd65284f9a3",
+        "toolCallCount": 8,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:54:20.743Z",
+        "notes": [
+          "Registry authority, draft preservation, and all frozen checks pass; report explicitly limits claims to adapters and local preview."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "a41829b5972a30cc1bc924e6624bf3feb3e9b32319ede2e873e5196c1d369199"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "d285a593cd325c12e4ccfdd9a0cbdcfb0d3eb6f04fc1ad62b6f94afe3270a681"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "cc3f4bc2a9fbaa1ec4111efe3a9dd34330dc8827c527a0baac2d73957c5a473f"
+        }
+      ],
+      "rawGradeSha256": "de9f7c7d1c760c1133c1a7ec87ea3790af0197d4d073d87a47e90e4e329ac61b",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "result": "runs/gpt-6.1-sol/B04-medium/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6.1-sol",
+      "label": "GPT-6.1 Sol",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:51:06.293Z",
+        "taskStartedAt": "2026-10-02T15:51:06.483Z",
+        "taskCompletedAt": "2026-10-02T15:53:33.355Z",
+        "taskWallMs": 146872,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 179212,
+          "cached_input_tokens": 160768,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3895,
+          "reasoning_output_tokens": 257,
+          "total_tokens": 183107
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "aa88c529c24b6e0a4e03bec3293cc5283df6cad0c81e7a5d67d2896d0c99e55b",
+        "toolCallCount": 5,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:55:30.504Z",
+        "notes": [
+          "Recovered E02 exactly and protected bytes preserved including final blank line; project assertions match provided source and report distinguishes absent Ctrl+S evidence. Missing newly formatted Markdown citation is advisory."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "0b42f100fd761c1fee757e2c3ed8c375c84ddca32176ade52dec31cba0afb62f"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "20132470ce7bde6847e2cd26afde181c81376387e9931b3081a5b6c5cd87bf54"
+        }
+      ],
+      "rawGradeSha256": "c37eda7dbc6a65b7bf5de0367f3cc8aea2a9a68162c53db3d67a04491eb50dc0",
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "source-link"
+        ],
+        "reason": [
+          "Recovered E02 exactly and protected bytes preserved including final blank line; project assertions match provided source and report distinguishes absent Ctrl+S evidence. Missing newly formatted Markdown citation is advisory."
+        ],
+        "rawMachineAccepted": false
+      },
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "F",
+        "model": "gpt-6.1-sol",
+        "finding": "supported",
+        "coordinatorDecision": "supported",
+        "notes": [
+          "背景、技术链路、控制条和两个 Session 有来源；控制面、统一调度入口属于合理概括。"
+        ]
+      },
+      "result": "runs/gpt-6.1-sol/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6.1-sol",
+      "label": "GPT-6.1 Sol",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "failed",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:57:25.712Z",
+        "taskStartedAt": "2026-10-02T15:57:25.927Z",
+        "taskCompletedAt": "2026-10-02T16:00:25.972Z",
+        "taskWallMs": 180045,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 250512,
+          "cached_input_tokens": 226688,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4321,
+          "reasoning_output_tokens": 208,
+          "total_tokens": 254833
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "5ff27cbf00f741bc0178eff010454de696ea61a1e7d4fe88074cb95456de1e67",
+        "toolCallCount": 8,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "failed",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:02:09.968Z",
+        "notes": [
+          "Release implementation passes all 19 functional checks and scope, but REPORT.md contains literal ASCII question marks replacing its Chinese explanations. Required root-cause, evidence and limitations report is unreadable as delivered. This is a delivery/report failure, not a publication-function failure; submission is preserved without repair."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "3bef0abb3686d6f0bc1c8a3565548cfe7ef96afb54118ded1d937f7328d1a23a"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "b23ce3da136099bf5d66e787f07380b3f785fd39f56e9c0a7c33ab28f2e5a4dd"
+        }
+      ],
+      "rawGradeSha256": "a2b0ea50235364241cbb35854ec70ea21ed859c6268c8e4ddd5235b1b9976cd2",
+      "result": "runs/gpt-6.1-sol/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 13,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": true
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:51:20.435Z",
+        "taskStartedAt": "2026-10-02T15:51:20.695Z",
+        "taskCompletedAt": "2026-10-02T15:55:06.359Z",
+        "taskWallMs": 225664,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-astra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 234572,
+          "cached_input_tokens": 212480,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4858,
+          "reasoning_output_tokens": 506,
+          "total_tokens": 239430
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "3a9c0d1b5565069b12945d664d04cf5658107e34cc524f4930803579fbfb4488",
+        "toolCallCount": 7,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:56:44.847Z",
+        "notes": [
+          "Source changes and report reviewed; all frozen and supplemental checks pass; focus restoration is explicitly marked untested in a real browser, and adapter restart is not claimed as production persistence."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "65c7a1175b5a6e2633c046ce186916333dd90ab3d3c5e6f383ae80a99870183b"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "d060f4f7b0f790738a65f3f3b0343c56918be51efb603297e3f33e74ae6ace3f"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "4d13187e7a769b5a73bb8578d48206f19c6244ff9c550e0cffecd6d94b68915a"
+        }
+      ],
+      "rawGradeSha256": "b83256797c8ded9724c554033094634858b8414d0c45ba7686d0d332ad35aa87",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "result": "runs/gpt-6-astra/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": false,
+          "details": "Numbers absent from the supplied source: 3.3"
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": true
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:26:47.563Z",
+        "taskStartedAt": "2026-10-02T15:26:47.809Z",
+        "taskCompletedAt": "2026-10-02T15:29:27.705Z",
+        "taskWallMs": 159896,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-astra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 150896,
+          "cached_input_tokens": 130304,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3381,
+          "reasoning_output_tokens": 107,
+          "total_tokens": 154277
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "98c017fb44a30ee5fc014d417f6c69d5f936d8462e65575f242d431555969950",
+        "toolCallCount": 5,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:38:03.193Z",
+        "notes": [
+          "唯一失败来自引用资料原有章节号3.3，并非新增业务指标；按统一规则纠正该误报，保留原机器9/10。",
+          "已复核开场白、保护区与只读材料均保持，项目事实来自资料，没有新增量化效果；报告清楚标明工具读取时间不等于Ctrl+S保存事件。"
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "a208c13554ee6b4206e47ea9deedbbe1ce4cdf16597b8cd75dbebfc9e0889267"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "6f8a33f4f525c5030b1af6d7d73ce9f71113fc5385a247534e637e485acb5409"
+        }
+      ],
+      "rawGradeSha256": "8537d28e1e86cca27d85c4479038b86e5795599a85899f157e3a9c294a8fb18a",
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "project-source-numbers"
+        ],
+        "reason": [
+          "唯一失败来自引用资料原有章节号3.3，并非新增业务指标；按统一规则纠正该误报，保留原机器9/10。",
+          "已复核开场白、保护区与只读材料均保持，项目事实来自资料，没有新增量化效果；报告清楚标明工具读取时间不等于Ctrl+S保存事件。"
+        ],
+        "rawMachineAccepted": false
+      },
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "D",
+        "model": "gpt-6-astra",
+        "finding": "supported",
+        "coordinatorDecision": "supported",
+        "notes": [
+          "技术链路、能力及数字有来源；引用章节 3.3 是结构编号，不是新增指标。"
+        ]
+      },
+      "result": "runs/gpt-6-astra/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T16:01:00.541Z",
+        "taskStartedAt": "2026-10-02T16:01:00.746Z",
+        "taskCompletedAt": "2026-10-02T16:03:38.042Z",
+        "taskWallMs": 157296,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-astra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 191940,
+          "cached_input_tokens": 178048,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3096,
+          "reasoning_output_tokens": 42,
+          "total_tokens": 195036
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "c343e55defd1fde73903ce09b8e8e86a9d33c6997aed28b514b4a2d6b7157609",
+        "toolCallCount": 7,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:04:30.626Z",
+        "notes": [
+          "Source export and per-slug sync correctly repair release; all 19 external checks pass. Readable report supplies local HTTP evidence and explicitly limits browser, third-version and transaction claims."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "cc49c01a0bdc772423cc3a4d5a5d12eabe9b7c73125c5496af70754eefe60d95"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "5c8dddf93398f6cc33c9240acf44232a1d806e731a0cda5bbda87975f9fa361c"
+        }
+      ],
+      "rawGradeSha256": "bcf16456d67ca40b9d13301d56b98dccc4bad503ae1a71bb3ad96fdae4a7b53c",
+      "result": "runs/gpt-6-astra/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 12,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": false,
+          "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:59:13.564Z",
+        "taskStartedAt": "2026-10-02T15:59:13.811Z",
+        "taskCompletedAt": "2026-10-02T16:04:41.612Z",
+        "taskWallMs": 327801,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 772250,
+          "cached_input_tokens": 720128,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 9923,
+          "reasoning_output_tokens": 2924,
+          "total_tokens": 782173
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "eb7341d99003b543b8881a02107b8659374ef47bf3056a199eadaf7eb9729b39",
+        "toolCallCount": 20,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:06:30.522Z",
+        "notes": [
+          "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "388f16d77cc76e8892c4a9de71dc2fe14b2d010892f29da55b007e76e486d88f"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "78dbd5e3ff513c06e43bbf0548869fef94338541ad22016e8231eab08aaab9c9"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "5cb208666a769eb485f76a53fd83eb1043d6d8ebc5bbcf9d80a14daed61d8009"
+        }
+      ],
+      "rawGradeSha256": "4e1d6dc4e2d5f76ccc0c3cf1e791c0fe607498bc17e38a175d73114b40c924fe",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "catalog-explicit-directory-and-validation"
+        ],
+        "reason": [
+          "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+        ],
+        "rawMachineAccepted": false
+      },
+      "result": "runs/gpt-6-sol/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:52:36.223Z",
+        "taskStartedAt": "2026-10-02T15:52:36.465Z",
+        "taskCompletedAt": "2026-10-02T15:57:05.364Z",
+        "taskWallMs": 268899,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 477873,
+          "cached_input_tokens": 449280,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 8586,
+          "reasoning_output_tokens": 1916,
+          "total_tokens": 486459
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "1cfb5a3c8d28145f700fe7db2036ac62694c94846b14b41bfb840d3ce9b42001",
+        "toolCallCount": 13,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:58:59.100Z",
+        "notes": [
+          "Project rewrite matches source, recovery event chronology is accurate, and all protected bytes pass. Missing a new Markdown citation is advisory; no unsupported details retained."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "b44d0bab58e58e41e45ccf76488272c87ae68a6bc2792d37a465a08bb20caef0"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "ed615dcdc31a473131b0c05689632972c99a7fa34c563a54898ffbca1175d2a0"
+        }
+      ],
+      "rawGradeSha256": "ca624d86430ee9bdde03254f4d42ee0a7bd1125d8a90ba8fd640266492b7fd95",
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "source-link"
+        ],
+        "reason": [
+          "Project rewrite matches source, recovery event chronology is accurate, and all protected bytes pass. Missing a new Markdown citation is advisory; no unsupported details retained."
+        ],
+        "rawMachineAccepted": false
+      },
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "H",
+        "model": "gpt-6-sol",
+        "finding": "supported",
+        "coordinatorDecision": "supported",
+        "notes": [
+          "事实与数字有来源，明确没有底层接管状态转换或输入拦截实现材料。"
+        ]
+      },
+      "result": "runs/gpt-6-sol/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:29:59.359Z",
+        "taskStartedAt": "2026-10-02T15:29:59.538Z",
+        "taskCompletedAt": "2026-10-02T15:37:45.621Z",
+        "taskWallMs": 466083,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 480452,
+          "cached_input_tokens": 435456,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5893,
+          "reasoning_output_tokens": 1686,
+          "total_tokens": 486345
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "f5953b0640a05fb41c3b09baa953e27bbb82f84f074fc91e5ea2ec1332abeed4",
+        "toolCallCount": 16,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:42:45.576Z",
+        "notes": [
+          "已阅读实现与报告；目标Markdown导出、逐文章同步和静态发布组成可重复命令，19项机器检查与文件范围通过。",
+          "报告描述本地HTTP验证及隔离副本第二次发布，不夸大成生产部署；外部验收独立确认正文、权限和其他内容保留。"
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "b23e6b5a026fb0af69d3395f5f2cdb0564e48ab4caaef5ee33d7fdd457701348"
+        }
+      ],
+      "rawGradeSha256": "049ee6c1bd4f561fceba03fe687b402221ff97c982cb296ce9ddcf131796eb89",
+      "result": "runs/gpt-6-sol/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 12,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": false,
+          "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:30:14.982Z",
+        "taskStartedAt": "2026-10-02T15:30:15.164Z",
+        "taskCompletedAt": "2026-10-02T15:36:52.033Z",
+        "taskWallMs": 396869,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 366234,
+          "cached_input_tokens": 324864,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 6284,
+          "reasoning_output_tokens": 1574,
+          "total_tokens": 372518
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "084c5bb0c98da6ef826fe78fd1c50706bf4e0b6fedb8e20de27b25b76750e866",
+        "toolCallCount": 10,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:54:25.536Z",
+        "notes": [
+          "TASK names env.CPM_DATA_DIR without specifying input.env. Unchanged submission passes identical validation cases through normal process.env injection. All other frozen checks and scope pass; report boundaries were reviewed."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "a150c659179175047e0e98e5a13a43391699582487c4dc2f0ccf4893d7312d19"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "14683429f48bc4ef9af544b27bf2f7a2e9d7c661cf44a4f55ed85c80da7f3ad8"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "016dc5c2bb7b0dc36791a1caf82163cea9a30754f9f86b1d8d0a6e0a506f2243"
+        }
+      ],
+      "rawGradeSha256": "3e06ce4639b6aa63b40a7d8edbca22bfad04a814819c9b0728b9358016191226",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "catalog-explicit-directory-and-validation"
+        ],
+        "reason": [
+          "TASK names env.CPM_DATA_DIR without specifying input.env. Unchanged submission passes identical validation cases through normal process.env injection. All other frozen checks and scope pass; report boundaries were reviewed."
+        ],
+        "rawMachineAccepted": false
+      },
+      "result": "runs/gpt-6-luna/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 10,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": true
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:55:44.888Z",
+        "taskStartedAt": "2026-10-02T15:55:45.156Z",
+        "taskCompletedAt": "2026-10-02T15:58:24.298Z",
+        "taskWallMs": 159142,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 369838,
+          "cached_input_tokens": 343040,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5788,
+          "reasoning_output_tokens": 1880,
+          "total_tokens": 375626
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "926375d3f29d5783eb26534382836e6d75c59a16e64bb711b515dc0b40cc96a8",
+        "toolCallCount": 11,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:59:55.097Z",
+        "notes": [
+          "Concise rewrite covers source-supported background, difficulty, solution and results; existing project title/order and all protected bytes pass. Recovery report accurately qualifies absent editor evidence."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "546e3228299dbb33998f3682b9b6d6cb56aea3fc1f4b5e71076193bb3de2ccf6"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "a82e4a983d052e49953d49783047507ca7337aa71471425046c67fae9931fcb2"
+        }
+      ],
+      "rawGradeSha256": "09a558911d26e05611056fe47f630c58a3d63120d92772a43ada9afdedd5b8f2",
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "A",
+        "model": "gpt-6-luna",
+        "finding": "supported",
+        "coordinatorDecision": "supported",
+        "notes": [
+          "背景、工具评测、Gateway/Ticket/CDP、接管能力和两个 Session 均获来源支持。"
+        ]
+      },
+      "result": "runs/gpt-6-luna/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T16:05:05.463Z",
+        "taskStartedAt": "2026-10-02T16:05:05.725Z",
+        "taskCompletedAt": "2026-10-02T16:07:28.269Z",
+        "taskWallMs": 142544,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 343737,
+          "cached_input_tokens": 321536,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4546,
+          "reasoning_output_tokens": 1334,
+          "total_tokens": 348283
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "4d38254590d98e0e7d2b9f60f92f511f5c25a0d0e3f53c946a9c456f81bcbfd9",
+        "toolCallCount": 11,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:08:46.285Z",
+        "notes": [
+          "Current-source export and per-slug sync pass all 19 external checks. Report states actual local HTTP checks and does not claim production authentication or participant testing of injected subsequent content."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "aca30041e32382eb0bb6f6cc6d6c5bd3b63d08411ee2bd0fa797d15cc2ba4ad0"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "6bb68f71d30a133fd3816b939b7229bdb2c9b2bccd03e4260b681c0e16b4ca59"
+        }
+      ],
+      "rawGradeSha256": "71531d7b2130266834a0150e958eab1572fcb43407ad7c65ab279702e2f6b8b8",
+      "result": "runs/gpt-6-luna/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 12,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": false,
+          "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:55:59.131Z",
+        "taskStartedAt": "2026-10-02T15:55:59.355Z",
+        "taskCompletedAt": "2026-10-02T16:00:57.830Z",
+        "taskWallMs": 298475,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 609026,
+          "cached_input_tokens": 581760,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 10135,
+          "reasoning_output_tokens": 3355,
+          "total_tokens": 619161
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "53a19c943a356e3edb441e32cc7a5cb80b23eac2b73339bb488c449066b9a95c",
+        "toolCallCount": 15,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:02:09.098Z",
+        "notes": [
+          "Frozen check assumes input.env, absent from TASK contract. Normal process.env supplemental check passes without modifying submission. Other 12 checks, scope, source review and qualified report pass."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "42974940153be68778122c556383d714086efed3dc43c773fe32e634d7ccaa0b"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "a376ed309f0e1b74ed1ec5d02e57a441a641627baa4365916ff38d74e8554fd5"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "e70b71197bd3f203798736ede28115eea22b8a22fc0614e3f9206286b456ba5a"
+        }
+      ],
+      "rawGradeSha256": "d4ca9d09b10ea8fe1715e73117b18f06713caea3408c047a9efef4fbcc769f93",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "catalog-explicit-directory-and-validation"
+        ],
+        "reason": [
+          "Frozen check assumes input.env, absent from TASK contract. Normal process.env supplemental check passes without modifying submission. Other 12 checks, scope, source review and qualified report pass."
+        ],
+        "rawMachineAccepted": false
+      },
+      "result": "runs/gpt-5.6-sol/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "caseId": "B09",
+      "trial": 2,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:43:01.169Z",
+        "taskStartedAt": "2026-10-02T15:43:01.444Z",
+        "taskCompletedAt": "2026-10-02T15:50:04.068Z",
+        "taskWallMs": 422624,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 935179,
+          "cached_input_tokens": 851328,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 14454,
+          "reasoning_output_tokens": 2828,
+          "total_tokens": 949633
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "9bca52734486440f9df6297a7a3d8ddef769e48013aeac1d7e5ea4f00e9b353b",
+        "toolCallCount": 22,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:54:23.600Z",
+        "notes": [
+          "Source-supported project facts and exact protected bytes pass; no newly formatted Markdown citation is required by TASK; recovery evidence and limitations are accurate."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "4a6626c5dd7b650fe2168f07496b459514a8a66752e49cb9f3b48605a8911177"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "693d1d88654c6fd7d2ac901d54f1689b71c0382e7faee1f88790dc34872f9a47"
+        }
+      ],
+      "rawGradeSha256": "2dad2710a5e2abd985a917c83362ed83b0e9457208c3ac7ad8629a420d91e8e2",
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "source-link"
+        ],
+        "reason": [
+          "Source-supported project facts and exact protected bytes pass; no newly formatted Markdown citation is required by TASK; recovery evidence and limitations are accurate."
+        ],
+        "rawMachineAccepted": false
+      },
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "B",
+        "model": "gpt-5.6-sol",
+        "finding": "ambiguous",
+        "coordinatorDecision": "accepted-with-advisory",
+        "notes": [
+          "‘一次性 Ticket 用于申领连接’比来源中‘Wrapper 申领 Ticket、Daemon 建立长连接’更具体。视为可理解的链路推论，提示措辞边界，不单独判为明确编造。"
+        ]
+      },
+      "result": "runs/gpt-5.6-sol/B09-medium/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T16:05:32.797Z",
+        "taskStartedAt": "2026-10-02T16:05:33.099Z",
+        "taskCompletedAt": "2026-10-02T16:09:12.379Z",
+        "taskWallMs": 219280,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 401079,
+          "cached_input_tokens": 376576,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 7219,
+          "reasoning_output_tokens": 2192,
+          "total_tokens": 408298
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "666b7a0f5e5415bfd14a498e2bc72db7de08436153fac468fcb7b56b6e7e2d96",
+        "toolCallCount": 12,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:09:56.895Z",
+        "notes": [
+          "Implementation uses fresh source export and slug-specific sync. All 19 external checks pass; report is readable, supplies actual localhost validation and states untested boundaries."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "2fda6d85b74c7a81c8e9abfae0bc8cb3db9f319fa3800bff2155d50d7ae42e76"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "473dc9d44bd2e83b300cd44b529b2fc74ad0c60e6e9c821a3b5d4a7bbde6065d"
+        }
+      ],
+      "rawGradeSha256": "474fdee5c98e39db52e94ec6fd9e6a5e25bdec44eeed2ae6e6735a2856dc4695",
+      "result": "runs/gpt-5.6-sol/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 13,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": true
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:20:17.920Z",
+        "taskStartedAt": "2026-10-02T15:20:18.097Z",
+        "taskCompletedAt": "2026-10-02T15:22:56.342Z",
+        "taskWallMs": 158245,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-terra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 420148,
+          "cached_input_tokens": 371968,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 6697,
+          "reasoning_output_tokens": 2278,
+          "total_tokens": 426845
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "f6dd14741d07252131586483773b32e4efc44cb8aabd4c43992b0bb0c2fd3d43",
+        "toolCallCount": 11,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:28:50.562Z",
+        "notes": [
+          "已阅读两份源码改动与报告；13项外部检查及改动范围均通过。",
+          "报告区分模拟与真实环境，未把本地HTTP检查写成浏览器E2E；未逐条审计所有额外自测声明。"
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "43e2cf6275290b7fee51aeb41d77879a260d4b7eb616a247e19e7c5338a90c51"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "e9544bdaaae96edbbc3ffeeca9bf80fba09755c21df6e8d795d872468f46cd8f"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "7f9c6641583ebaf8bd9ffc37ab84c2d2e89e44f48d9e7216bceaefc7e460df3c"
+        }
+      ],
+      "rawGradeSha256": "99bbeeb7b91ca7d66bf6168c324b05102f7a40aab68e51cc448e474c70ce427e",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "result": "runs/gpt-5.6-terra/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "failed",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 8,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": false,
+          "details": "All content outside the opening and project 1 must be byte-identical to the supplied working copy."
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:41:26.562Z",
+        "taskStartedAt": "2026-10-02T15:41:26.785Z",
+        "taskCompletedAt": "2026-10-02T15:45:32.314Z",
+        "taskWallMs": 245529,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-terra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 733375,
+          "cached_input_tokens": 691968,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 10806,
+          "reasoning_output_tokens": 2931,
+          "total_tokens": 744181
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "a95ef5986175e36b609a384614e8b87008129f7b85a0d327e18049030e2ea9d9",
+        "toolCallCount": 20,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "failed",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:15:02.443Z",
+        "notes": [
+          "Protected project-2 suffix loses exactly one final newline; business prose remains unchanged. Anonymous source review additionally finds generally changed to all tools and an unproven Session-identity association mechanism. Missing Markdown citation alone is advisory."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "c20c8aacddc8029439e558542773b213720f7b427f0624294dd191aea153f288"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "8a500d0183ccfa07148321d00761bd9463a15b71cedd7442b16b61ad3c8e29ce"
+        }
+      ],
+      "rawGradeSha256": "4cd6d30606b1dc6b76054ba78d424e400a0056674f4e5cd44398c4d582fc2e88",
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "G",
+        "model": "gpt-5.6-terra",
+        "finding": "unsupported",
+        "coordinatorDecision": "overstated-evaluation-result",
+        "notes": [
+          "‘发现它们都无法处理’把来源的‘普遍’扩大为‘全部’。",
+          "‘CDP 通信需要与 Agent Session 的身份和 Profile 租约关联’推定更具体的关联机制，来源的 Ticket/校验/租约描述尚不能证实该机制。",
+          "另有独立的受保护区末尾一个换行丢失，业务文字未改。"
+        ]
+      },
+      "result": "runs/gpt-5.6-terra/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:53:57.281Z",
+        "taskStartedAt": "2026-10-02T15:53:57.524Z",
+        "taskCompletedAt": "2026-10-02T15:55:15.313Z",
+        "taskWallMs": 77789,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-terra"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 212776,
+          "cached_input_tokens": 197632,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3134,
+          "reasoning_output_tokens": 572,
+          "total_tokens": 215910
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "a4cc7cbc3f3bbb06db768d9805b86ce09d9fef20ebd117426f0e7931fc313614",
+        "toolCallCount": 7,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:56:45.824Z",
+        "notes": [
+          "Release exports current Markdown and syncs only target slug before static build. HTTP proof, access control, repeated release and archive preservation pass; external verifier also checks fresh subsequent content."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "c38999c8a06648926bd14700759a952f02bde94c8d11c32b199c11e4d95a2bc2"
+        }
+      ],
+      "rawGradeSha256": "5484b5fdf650aef61035dc958816b6ece71229babb6b1f224145744772395820",
+      "result": "runs/gpt-5.6-terra/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 12,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": false,
+          "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T16:01:15.277Z",
+        "taskStartedAt": "2026-10-02T16:01:15.479Z",
+        "taskCompletedAt": "2026-10-02T16:05:06.425Z",
+        "taskWallMs": 230946,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 767068,
+          "cached_input_tokens": 728832,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 8222,
+          "reasoning_output_tokens": 2189,
+          "total_tokens": 775290
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "d1a0ba38ec60533ed3657875ddcf20c374ab8940074f3183a489a886bc0b41fa",
+        "toolCallCount": 20,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:06:31.394Z",
+        "notes": [
+          "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "d375f9a86a23fb853ae6b42a1f286789919413ebd7ae1badab4e729c30acc362"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "297c722ff0968bc9aa31dc3f7d2a8dcb6d8795d34b59885c3ebdd7e6c5f2915f"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "d42c9a37b2405e00b37551e50d03c166fb4bd8de21cea94269d0946990c4a968"
+        }
+      ],
+      "rawGradeSha256": "60be3ca421d357abe3e3364bc090ca61786c57fc7f53443e9dbf9abd6d711de0",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "machineCheckAdjudication": {
+        "policy": "adjudication.json",
+        "reviewer": "coordinating-agent",
+        "correctedChecks": [
+          "catalog-explicit-directory-and-validation"
+        ],
+        "reason": [
+          "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+        ],
+        "rawMachineAccepted": false
+      },
+      "result": "runs/gpt-5.6-luna/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "failed",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 8,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": false,
+          "details": "All content outside the opening and project 1 must be byte-identical to the supplied working copy."
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:20:48.478Z",
+        "taskStartedAt": "2026-10-02T15:20:48.659Z",
+        "taskCompletedAt": "2026-10-02T15:25:49.828Z",
+        "taskWallMs": 301169,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 1381583,
+          "cached_input_tokens": 1303040,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 13649,
+          "reasoning_output_tokens": 2852,
+          "total_tokens": 1395232
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "324f828db4c58430b7d7562a716e5869d502f9a168fe7c71c3b64231dcb47aa5",
+        "toolCallCount": 25,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "failed",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:15:01.502Z",
+        "notes": [
+          "Protected project-2 suffix loses exactly one final newline; its business prose is unchanged. Anonymous source review additionally finds an overstated evaluation result: all five tools fail rather than source wording generally fail. Missing Markdown citation alone is advisory."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "8550ae3a482d68596fb24dbf76f8c33d87ab5def9d40a72414688d0ac3e1bb0f"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "94944614567cdd3ff72d6d36ef72b0a0014e9f4cfae0b3d522f8b89a5f01a83f"
+        }
+      ],
+      "rawGradeSha256": "c2f3cb3d12c6be18ba2a7e0054744fa9457d97cdfe96e31ce564989d58bb8c6c",
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "E",
+        "model": "gpt-5.6-luna",
+        "finding": "unsupported",
+        "coordinatorDecision": "overstated-evaluation-result",
+        "notes": [
+          "‘我们评测的 5 款主流工具都无法解决’把来源的‘现有工具普遍无法解决’扩成全部五款均失败。该评测结论强于资料。",
+          "另有独立的受保护区末尾一个换行丢失，业务文字未改。"
+        ]
+      },
+      "result": "runs/gpt-5.6-luna/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:45:48.728Z",
+        "taskStartedAt": "2026-10-02T15:45:48.933Z",
+        "taskCompletedAt": "2026-10-02T15:48:03.234Z",
+        "taskWallMs": 134301,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 421257,
+          "cached_input_tokens": 354560,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 4691,
+          "reasoning_output_tokens": 989,
+          "total_tokens": 425948
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "a782a294322de5ca383f3796a1e99c10f96c419473d920ece88fb8b6dcbf2afa",
+        "toolCallCount": 14,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:54:22.626Z",
+        "notes": [
+          "Release calls current-source export and slug-specific sync before build; report records local HTTP evidence and limits; external grader also verifies a second source revision."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "434c110d604b53415beb90940fe42ebbfb4d76668c923b169e790ecd1b70454f"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "9d227c26080c6ab3276e85e8d706a616504a7907b0df105a1df4a36bcdfcce4e"
+        }
+      ],
+      "rawGradeSha256": "153f2342cdab446818ebc7663ad6029ef0f60054756fe9728b26b46052886f20",
+      "result": "runs/gpt-5.6-luna/B11/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.5",
+      "label": "GPT-5.5",
+      "caseId": "B04",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 13,
+      "checksTotal": 13,
+      "checks": [
+        {
+          "id": "catalog-win32-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-darwin-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-linux-missing-and-stale",
+          "passed": true
+        },
+        {
+          "id": "catalog-fresh-authority-and-ownership",
+          "passed": true
+        },
+        {
+          "id": "catalog-explicit-directory-and-validation",
+          "passed": true
+        },
+        {
+          "id": "catalog-malformed-registry-fallback",
+          "passed": true
+        },
+        {
+          "id": "ui-module-load",
+          "passed": true
+        },
+        {
+          "id": "rename-one-submit-existing-behavior",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-status-refresh",
+          "passed": true
+        },
+        {
+          "id": "rename-draft-survives-pending-save",
+          "passed": true
+        },
+        {
+          "id": "rename-failure-keeps-draft-and-retry",
+          "passed": true
+        },
+        {
+          "id": "rename-profile-boundary-and-noop-render",
+          "passed": true
+        },
+        {
+          "id": "report-present",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "REPORT.md",
+          "src/profile-catalog.mjs",
+          "src/render-root.mjs"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:46:03.880Z",
+        "taskStartedAt": "2026-10-02T15:46:04.140Z",
+        "taskCompletedAt": "2026-10-02T15:51:58.374Z",
+        "taskWallMs": 354234,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.5"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 923293,
+          "cached_input_tokens": 879872,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 15445,
+          "reasoning_output_tokens": 2908,
+          "total_tokens": 938738
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "5e223c13d85adb21961a2d8c117b199bd50f7b179023dc0057b1a8b3350d0faa",
+        "toolCallCount": 28,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:54:21.690Z",
+        "notes": [
+          "Changed implementation and report reviewed; registry validation, leases, draft preservation and all frozen checks pass; simulated restart is correctly qualified."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "REPORT.md",
+          "sha256": "076ae2f1b5dcc22b346acd9a1a3f7e16410be28538f6221254625efc6823b393"
+        },
+        {
+          "path": "src/profile-catalog.mjs",
+          "sha256": "ee56740ae9618e22d34803e1432915408edbb232cf0532c9f0bc72e08befd603"
+        },
+        {
+          "path": "src/render-root.mjs",
+          "sha256": "f9f4b1b15cda273930fd1ceeea28b8d57f232f42a0e12448bba17050f485eda9"
+        }
+      ],
+      "rawGradeSha256": "4cdd2b34395f4573484168eaf63e228dcd44458f97f230577c20702b434343a7",
+      "supplementalEnvironmentCheck": {
+        "passed": true,
+        "checks": [
+          {
+            "id": "explicit-directory-via-process-env",
+            "passed": true
+          }
+        ],
+        "sourceChanged": false,
+        "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+        "script": "check-b04-env.mjs",
+        "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+      },
+      "result": "runs/gpt-5.5/B04/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.5",
+      "label": "GPT-5.5",
+      "caseId": "B09",
+      "trial": 1,
+      "status": "failed",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true
+        },
+        {
+          "id": "document-structure",
+          "passed": true
+        },
+        {
+          "id": "saved-opening",
+          "passed": true
+        },
+        {
+          "id": "protected-content",
+          "passed": true
+        },
+        {
+          "id": "project-updated",
+          "passed": true
+        },
+        {
+          "id": "project-source-numbers",
+          "passed": true
+        },
+        {
+          "id": "unsupported-guarantees",
+          "passed": true
+        },
+        {
+          "id": "source-link",
+          "passed": false,
+          "details": "Project notes have a valid relative link."
+        },
+        {
+          "id": "report-evidence",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T16:03:51.008Z",
+        "taskStartedAt": "2026-10-02T16:03:51.219Z",
+        "taskCompletedAt": "2026-10-02T16:09:36.054Z",
+        "taskWallMs": 344835,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.5"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 1175874,
+          "cached_input_tokens": 1131008,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 13960,
+          "reasoning_output_tokens": 1910,
+          "total_tokens": 1189834
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "9f07983c05d5b7d4ed8a318c61ffada1bdb18d79a1ecda3b1421202fdfd6a98d",
+        "toolCallCount": 27,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "failed",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T16:15:00.550Z",
+        "notes": [
+          "Restored opening and protected bytes pass. Project rewrite adds an unsupported concrete UI feature: developers can see task status on the floating control bar; source only specifies pause, takeover and resume. Anonymous source-only review confirms the gap. Internship context elsewhere in the input is not treated alone as fabricated personal experience. Source-link format remains advisory."
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "1e10c59fb07254fb93005a40c347540ae728f791bc7ac74db17e4b145c371664"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "998ab2102230d95bfa3300c372132ad32a5ed5d365a7952770afdd79ec3d65a8"
+        }
+      ],
+      "rawGradeSha256": "3e9f7146faea583b5c07ccc12cd925179b9958b512584eb4983857d3345da24f",
+      "sourceReview": {
+        "record": "semantic-blind-review.json",
+        "anonymousId": "C",
+        "model": "gpt-5.5",
+        "finding": "unsupported",
+        "coordinatorDecision": "unsupported-feature",
+        "notes": [
+          "‘让开发者可以看到任务状态’新增具体状态展示能力；来源只写悬浮控制条与暂停、接管、恢复操作，未说明状态展示。",
+          "‘它们更偏向独占式自动化’及‘开发者介入时 Agent 又可能继续发指令’是来源未说明的解释，应标明推测。",
+          "匿名复核另指出‘我在流舟实习期间’未见于指定来源；协调者注意到实习语境已出现在输入文档其他区段，不单以此判作虚构个人经历。失败依据为未经资料证实的具体功能。"
+        ]
+      },
+      "result": "runs/gpt-5.5/B09/result.json"
+    },
+    {
+      "schemaVersion": 1,
+      "model": "gpt-5.5",
+      "label": "GPT-5.5",
+      "caseId": "B11",
+      "trial": 1,
+      "status": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "checks": [
+        {
+          "id": "protected-inputs",
+          "passed": true
+        },
+        {
+          "id": "report",
+          "passed": true
+        },
+        {
+          "id": "fixture-reproduces-stale-content",
+          "passed": true
+        },
+        {
+          "id": "static-http",
+          "passed": true
+        },
+        {
+          "id": "current-release-command",
+          "passed": true
+        },
+        {
+          "id": "current-json",
+          "passed": true
+        },
+        {
+          "id": "current-html",
+          "passed": true
+        },
+        {
+          "id": "current-access-control",
+          "passed": true
+        },
+        {
+          "id": "current-other-posts",
+          "passed": true
+        },
+        {
+          "id": "current-static-privacy",
+          "passed": true
+        },
+        {
+          "id": "repeat-release-command",
+          "passed": true
+        },
+        {
+          "id": "repeat-is-idempotent",
+          "passed": true
+        },
+        {
+          "id": "source-preserved",
+          "passed": true
+        },
+        {
+          "id": "new-edit-release-command",
+          "passed": true
+        },
+        {
+          "id": "new-edit-json",
+          "passed": true
+        },
+        {
+          "id": "new-edit-html",
+          "passed": true
+        },
+        {
+          "id": "new-edit-access-control",
+          "passed": true
+        },
+        {
+          "id": "new-edit-other-posts",
+          "passed": true
+        },
+        {
+          "id": "new-edit-static-privacy",
+          "passed": true
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "runtime/exported-private/release-notes.html",
+          "runtime/exported-private/release-notes.json",
+          "runtime/published-content/release-notes.html",
+          "runtime/published-content/release-notes.json",
+          "scripts/release.mjs",
+          "REPORT.md"
+        ],
+        "forbidden": []
+      },
+      "infrastructureError": null,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:23:27.346Z",
+        "taskStartedAt": "2026-10-02T15:23:27.544Z",
+        "taskCompletedAt": "2026-10-02T15:26:21.647Z",
+        "taskWallMs": 174103,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.5"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "tokenUsage": {
+          "input_tokens": 456677,
+          "cached_input_tokens": 420864,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 5798,
+          "reasoning_output_tokens": 477,
+          "total_tokens": 462475
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "000bd3f14ba5397e3a09cba7384c69a2492b2f7ceb12634911c235f17afdf081",
+        "toolCallCount": 35,
+        "turnCount": 1
+      },
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "status": "accepted",
+        "humanReview": false,
+        "reviewedAt": "2026-10-02T15:28:51.550Z",
+        "notes": [
+          "已阅读发布脚本与报告；从当前Markdown导出并同步，再完成静态发布，19项外部检查及范围均通过。",
+          "外部验收另验证了注入新正文后的可重复发布；这部分由评审执行，不算参评者自行完成的验证。报告没有冒称生产部署。"
+        ]
+      },
+      "submittedChanges": [
+        {
+          "path": "runtime/exported-private/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/exported-private/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "runtime/published-content/release-notes.html",
+          "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+        },
+        {
+          "path": "runtime/published-content/release-notes.json",
+          "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+        },
+        {
+          "path": "scripts/release.mjs",
+          "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "debeaa4705888b80d281df6b0b873569162825ebd95854c7cb76c36c4f5476e6"
+        }
+      ],
+      "rawGradeSha256": "315daf5570f3404dd9c0c268030a8c64c5a7c9c21fd860199eb897f3507b3148",
+      "result": "runs/gpt-5.5/B11/result.json"
+    }
+  ],
+  "excludedDefaultEffortRuns": [
+    {
+      "model": "gpt-6.1-sol",
+      "caseId": "B04",
+      "trial": 1,
+      "reason": "User selected uniform medium; default low run excluded, not erased",
+      "result": "runs/gpt-6.1-sol/B04/result.json",
+      "machineAccepted": false,
+      "checksPassed": 11,
+      "checksTotal": 13,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:26:29.934Z",
+        "taskStartedAt": "2026-10-02T15:26:30.154Z",
+        "taskCompletedAt": "2026-10-02T15:29:16.384Z",
+        "taskWallMs": 166230,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "low"
+        ],
+        "tokenUsage": {
+          "input_tokens": 231693,
+          "cached_input_tokens": 190464,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 3962,
+          "reasoning_output_tokens": 329,
+          "total_tokens": 235655
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "2c3cf5cd8384a30e70fbeb4088abc27cb96061a79b0b526ab1660374f5111e3e",
+        "toolCallCount": 6,
+        "turnCount": 1
+      }
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "caseId": "B09",
+      "trial": 1,
+      "reason": "User selected uniform medium; default low run excluded, not erased",
+      "result": "runs/gpt-5.6-sol/B09/result.json",
+      "machineAccepted": false,
+      "checksPassed": 9,
+      "checksTotal": 10,
+      "execution": {
+        "sessionCreatedAt": "2026-10-02T15:30:27.487Z",
+        "taskStartedAt": "2026-10-02T15:30:27.664Z",
+        "taskCompletedAt": "2026-10-02T15:41:52.797Z",
+        "taskWallMs": 685133,
+        "recordedModelProvider": "openai",
+        "observedModels": [
+          "gpt-5.6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "low"
+        ],
+        "tokenUsage": {
+          "input_tokens": 731498,
+          "cached_input_tokens": 694912,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 11219,
+          "reasoning_output_tokens": 1076,
+          "total_tokens": 742717
+        },
+        "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+        "costUsd": null,
+        "transcriptSha256": "0c795537971a17cf34fcc7bf7d326f5b504c9bf2715d0f34b58fefcdf6e070b5",
+        "toolCallCount": 16,
+        "turnCount": 1
+      }
+    }
+  ],
+  "limitations": [
+    "Single valid trial per model/case, insufficient for stable ranking.",
+    "Host tools are not OS-isolated; fresh context and exported inputs do not establish adversarial secrecy.",
+    "Requested model ID and actual turn_context model/effort are recorded; provider internal backend identity is not independently verified.",
+    "Unavailable models are recorded as not run; no substitute models are used.",
+    "No API or alternate-client runs are mixed into native subagent comparisons."
+  ]
+}

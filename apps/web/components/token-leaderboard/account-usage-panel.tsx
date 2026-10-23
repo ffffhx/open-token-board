@@ -50,6 +50,7 @@ export function AccountUsagePanel({
   loadState,
   onExport,
   onLogin,
+  onRetry,
   profile,
   range,
   viewer,
@@ -60,6 +61,7 @@ export function AccountUsagePanel({
   loadState: AccountLoadState;
   onExport?: (format: "csv" | "json") => void;
   onLogin: () => void;
+  onRetry?: () => void;
   profile: TokenAccountUsageProfile | null;
   range: TokenBoardRange;
   viewer: ViewerState | null;
@@ -163,7 +165,10 @@ export function AccountUsagePanel({
       ) : loadState === "loading" ? (
         <AccountLoadingState />
       ) : loadState === "error" ? (
-        <AccountEmptyState title={account.loadFailedTitle} description={error || account.refreshLater} />
+        <div>
+          <AccountEmptyState title={account.loadFailedTitle} description={error || account.refreshLater} />
+          {onRetry ? <div className="px-6 pb-5"><button type="button" onClick={onRetry} className="min-h-11 rounded-md border border-stone-300 px-4 text-sm font-semibold">{dict.common.actions.retry}</button></div> : null}
+        </div>
       ) : !dashboardProfile || !user ? (
         <AccountEmptyState
           title={account.noAccountDataTitle}

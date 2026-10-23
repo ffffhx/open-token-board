@@ -1,0 +1,40 @@
+{
+  "id": "B11",
+  "title": "发布成功后私有文章仍显示旧内容",
+  "sourceCaseId": "B11",
+  "provenance": {
+    "kind": "source-grounded-reconstruction",
+    "baseCommit": "1e55df8b2abd4ae7e0d67a7ada120aa0fe48014b",
+    "relation": "该提交是用户报告页面旧版之前的文章编辑提交。已在该树核对静态发布工作流、私有文章HTML/JSON导出、独立数据同步及鉴权读取机制；这里提供这些机制的脱敏缩小重建，并非该提交的完整checkout或故障前服务器快照。",
+    "caveats": [
+      "历史远端数据卷、浏览器截图及当时未提交状态未冻结；初始旧内容为合成数据。",
+      "以Node标准库、简单Markdown渲染、本地文件复制、测试身份替代Next.js、SSH/Docker和OAuth；不含真实主机、账号、凭据或私人正文。",
+      "历史助手报告补导出和同步后修好；该历史结果没有在生产端复核。",
+      "自动验收通过真实HTTP读取JSON与HTML；不代表完整浏览器交互/布局或生产部署验证。"
+    ]
+  },
+  "runtime": { "node": ">=22", "dependencies": "none", "network": "127.0.0.1 only; dynamic ports" },
+  "allowedChanges": ["scripts/**", "lib/**", "site/**", "runtime/**", "REPORT.md"],
+  "commands": {
+    "preview": "node services/preview.mjs",
+    "release": "node scripts/release.mjs release-notes",
+    "verify": "node verify.mjs <workspace>"
+  },
+  "expectedBaselineFailures": ["current-json", "current-html", "new-edit-json", "new-edit-html", "report"],
+  "controlExpectedFailures": {
+    "static-only": ["current-json", "current-html", "new-edit-json", "new-edit-html"],
+    "export-without-sync": ["current-json", "current-html", "new-edit-json", "new-edit-html"]
+  },
+  "controls": {
+    "reference": "reference/",
+    "negative": "Only rebuilding/publishing static files must leave API content stale. An export without content synchronization must also fail."
+  },
+  "acceptance": [
+    "目标文章的API JSON和受保护HTML均与最新Markdown一致，旧版段落消失。",
+    "之后再次编辑正文、重复执行同一发布命令，也应更新正确。",
+    "未登录和普通读者均不能获取私有正文，作者可读。",
+    "静态产物不得包含私有正文，不能修改hidden属性或鉴权。",
+    "其他已发布文章（包括仅存在于数据卷中的文章）逐字节保留。",
+    "保留用户编辑的原始文章并提交包含排查证据及本地验证命令的REPORT.md。"
+  ]
+}

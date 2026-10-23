@@ -1,0 +1,40 @@
+{
+  "id": "B09",
+  "title": "找回用户手动保存的开场白，只整理有依据的项目章节",
+  "sourceCaseId": "B09",
+  "provenance": {
+    "kind": "redacted-historical-document-extract",
+    "baseCommit": "cb414f0586b0bc78090b2c59d7e47ea38ebaa95d",
+    "sourceBlob": "e6c0a732d0b0b394f8483eab370d8c9202438f2f",
+    "relation": "这是事故发生前最近可达的候选提交。该提交中文档开场白与历史助手随后从 Git 恢复的错误旧版逐字匹配；误改前 Read 的开场白与首次 Edit 的 old_string、最后恢复 Edit 的 new_string 三方相同。未把当前仓库代码当起点。",
+    "sourceDate": "2026-09-03",
+    "caveats": [
+      "会话未打印当时完整 HEAD SHA，因此候选提交不能证明事故时全仓库 HEAD 或全部未提交文件。",
+      "没有原生编辑器 Ctrl+S 事件：保存行为来自用户明确陈述，保存内容由误改前 Read 和 Edit 旧文本交叉证明。",
+      "这是一道历史内容脱敏节选重放，不是原始文件物理字节或原仓库完整重放。姓名、学校、雇主、内部标识与部分数字已稳定替换，换行统一为 LF。",
+      "本次仅整理一个项目；其余大型文档被裁剪。项目 2 固定为当前版相邻上下文，所有历史材料中的项目 2 都经过相同拼接，只有开场白与项目 1 的先后关系用于恢复。",
+      "未附答辩截图、内部 Wiki、原始源码或完整聊天；不可据此证明底层实现细节与未经测量的保证。"
+    ]
+  },
+  "allowedChanges": ["handbook.md", "REPORT.md"],
+  "inputMaterials": ["handbook.md", ".history/git-head.md", ".history/read-02.md", ".history/read-03.md", ".history/events.json", "references/project-notes.md", "MATERIALS.md"],
+  "expectedBaselineFailures": ["saved-opening", "project-source-numbers", "report-evidence"],
+  "expectedReference": "reference",
+  "positiveAlternatives": ["positive-alternatives/concise"],
+  "negativeControls": ["negative-controls/git-old-opening", "negative-controls/out-of-scope", "negative-controls/invented-metric"],
+  "controlExpectedFailures": {
+    "git-old-opening": ["saved-opening"],
+    "out-of-scope": ["protected-content"],
+    "invented-metric": ["project-source-numbers"]
+  },
+  "manualReviewRequired": [
+    "核对项目正文每个技术断言、职责、因果与结果是否受给定参考资料支持；自动硬检查覆盖数字与已知过度保证，职责关键词仅输出 advisoryChecks 提示，不能穷尽自然语言虚构。",
+    "确认 REPORT.md 对采用版本、恢复证据及实际验证的描述真实；机器只检索引用与时间，不证明发生过该行为。",
+    "检查正文可读性、没有把负面或否定描述写成已完成成果；接受合理改写，不按参考措辞评分。"
+  ],
+  "verification": {
+    "command": "node verify.mjs <workspace>",
+    "interpretation": "passed 仅表示硬约束与机器可检查事实门槛通过；完整通过仍需上述人工语义复核。",
+    "positiveControlPurpose": "两个措辞、结构和长度不同的参考输出都应通过，防止将开放写作变成标准答案匹配。"
+  }
+}

@@ -8,8 +8,8 @@ import { readdirSync, readFileSync, writeFileSync, cpSync, mkdirSync, existsSync
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import spawn from "cross-spawn";
 import {
   CLAUDE_CMD, CODEX_MODEL, CODEX_EFFORT, CLAUDE_MODEL,
   runStreaming, sh, readJson,
@@ -36,7 +36,7 @@ function loadUiTasks(filter) {
 }
 
 async function render(htmlPath, outPng) {
-  await sh(AB, [...CDP, "open", `file://${htmlPath}`]);
+  await sh(AB, [...CDP, "open", pathToFileURL(htmlPath).href]);
   await sleep(900); // let fonts/layout settle
   await sh(AB, [...CDP, "screenshot", outPng]);
   return existsSync(outPng);

@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6-astra",
+  "label": "GPT-6 Astra",
+  "caseId": "B09",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 9,
+  "checksTotal": 10,
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true
+    },
+    {
+      "id": "document-structure",
+      "passed": true
+    },
+    {
+      "id": "saved-opening",
+      "passed": true
+    },
+    {
+      "id": "protected-content",
+      "passed": true
+    },
+    {
+      "id": "project-updated",
+      "passed": true
+    },
+    {
+      "id": "project-source-numbers",
+      "passed": false,
+      "details": "Numbers absent from the supplied source: 3.3"
+    },
+    {
+      "id": "unsupported-guarantees",
+      "passed": true
+    },
+    {
+      "id": "source-link",
+      "passed": true
+    },
+    {
+      "id": "report-evidence",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:26:47.563Z",
+    "taskStartedAt": "2026-10-02T15:26:47.809Z",
+    "taskCompletedAt": "2026-10-02T15:29:27.705Z",
+    "taskWallMs": 159896,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6-astra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 150896,
+      "cached_input_tokens": 130304,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 3381,
+      "reasoning_output_tokens": 107,
+      "total_tokens": 154277
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "98c017fb44a30ee5fc014d417f6c69d5f936d8462e65575f242d431555969950",
+    "toolCallCount": 5,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:38:03.193Z",
+    "notes": [
+      "唯一失败来自引用资料原有章节号3.3，并非新增业务指标；按统一规则纠正该误报，保留原机器9/10。",
+      "已复核开场白、保护区与只读材料均保持，项目事实来自资料，没有新增量化效果；报告清楚标明工具读取时间不等于Ctrl+S保存事件。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "a208c13554ee6b4206e47ea9deedbbe1ce4cdf16597b8cd75dbebfc9e0889267"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "6f8a33f4f525c5030b1af6d7d73ce9f71113fc5385a247534e637e485acb5409"
+    }
+  ],
+  "rawGradeSha256": "8537d28e1e86cca27d85c4479038b86e5795599a85899f157e3a9c294a8fb18a",
+  "machineCheckAdjudication": {
+    "policy": "adjudication.json",
+    "reviewer": "coordinating-agent",
+    "correctedChecks": [
+      "project-source-numbers"
+    ],
+    "reason": [
+      "唯一失败来自引用资料原有章节号3.3，并非新增业务指标；按统一规则纠正该误报，保留原机器9/10。",
+      "已复核开场白、保护区与只读材料均保持，项目事实来自资料，没有新增量化效果；报告清楚标明工具读取时间不等于Ctrl+S保存事件。"
+    ],
+    "rawMachineAccepted": false
+  },
+  "sourceReview": {
+    "record": "semantic-blind-review.json",
+    "anonymousId": "D",
+    "model": "gpt-6-astra",
+    "finding": "supported",
+    "coordinatorDecision": "supported",
+    "notes": [
+      "技术链路、能力及数字有来源；引用章节 3.3 是结构编号，不是新增指标。"
+    ]
+  }
+}

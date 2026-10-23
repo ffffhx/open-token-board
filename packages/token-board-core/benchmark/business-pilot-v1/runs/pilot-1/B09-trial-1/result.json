@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "caseId": "B09",
+  "trial": 1,
+  "decision": "accepted",
+  "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+  "preparedAt": "2026-10-02T14:40:11.486Z",
+  "gradedAt": "2026-10-02T14:46:12.537Z",
+  "participant": {
+    "harness": "collaboration-subagent",
+    "freshConversation": true,
+    "model": "inherited-session-configuration",
+    "providerModelIdentity": null,
+    "reasoningEffort": null,
+    "tokens": null,
+    "costUsd": null,
+    "generationDurationMs": null
+  },
+  "isolation": "Input export and fresh conversation; no OS-level sandbox or adversarial access audit",
+  "machineAccepted": true,
+  "machineChecks": {
+    "passed": 10,
+    "total": 10,
+    "checks": [
+      {
+        "id": "file-scope",
+        "passed": true
+      },
+      {
+        "id": "readonly-materials",
+        "passed": true
+      },
+      {
+        "id": "document-structure",
+        "passed": true
+      },
+      {
+        "id": "saved-opening",
+        "passed": true
+      },
+      {
+        "id": "protected-content",
+        "passed": true
+      },
+      {
+        "id": "project-updated",
+        "passed": true
+      },
+      {
+        "id": "project-source-numbers",
+        "passed": true
+      },
+      {
+        "id": "unsupported-guarantees",
+        "passed": true
+      },
+      {
+        "id": "source-link",
+        "passed": true
+      },
+      {
+        "id": "report-evidence",
+        "passed": true
+      }
+    ]
+  },
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "gradingDurationMs": 57,
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": "not-performed",
+    "notes": [
+      "复核 handbook.md、REPORT.md、project-notes.md 与事件记录：采用 E02 的误改前版本，报告没有把 Read 时间冒充 Ctrl+S 时间。",
+      "项目 1 的业务背景、5 款工具调研、Gateway/Ticket/Daemon/CDP、接管控制和日常 2 个 Session 均有提供资料支持；未新增测量值、个人经历或实现保证。",
+      "外部检查确认开场白、非授权区域、只读材料与标题结构；项目 2 原有表述按题目保留，不属于本次事实背书。",
+      "协调 Agent 作内容复核，未进行人类风格偏好评审；报告中的全部自测过程没有逐条审计。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "7541c38d25ef6b662cc16f34b9ba62eaf34a5bfe9f10a07f753b74a058dca6dc"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "17909801a98e6b2124559d03d83b9030ba3a728c2ab46e24eceea21a4564389b"
+    }
+  ],
+  "rawReportSha256": "62275119f83f976bfba934bf69ec642bc33c0292ce63b29859e8ced1282b80b8",
+  "exportedFiles": {
+    ".history/events.json": "5eb54de18056a76836c88b17a536d3af1a297a014cf9ba0b05c731764b1a4638",
+    ".history/git-head.md": "c6b5df70ff82ee8cf4161b23a0523c89b56de123c2d18c9248b35b09499f5f54",
+    ".history/read-02.md": "b82f317de53f9d62f15bd3b6655ca233cac8df93779e0c9542e4b276d9e4dcb4",
+    ".history/read-03.md": "e4e470adb0224b0c8b88b5dcdf370a1fb5bd759d55c7072935e74c69707d6be9",
+    "MATERIALS.md": "ff5cfda0b63da2235fc0824be446dc2ea5a846f3ae64bcd52f178ad0ceb2c002",
+    "TASK.txt": "09e04c6d22ae3ffe00d9b499d475bdd8879590f5456616cfa1f1703eae36a4fb",
+    "handbook.md": "6106d764f0f5666d12a0eb748a2eab8f8160708bbff70fbb6da31704a418ea84",
+    "references/project-notes.md": "3f6ff843a609956f53454c8c3f3a1e37ab847ab31f885862ca078c6bfdcd0950"
+  }
+}

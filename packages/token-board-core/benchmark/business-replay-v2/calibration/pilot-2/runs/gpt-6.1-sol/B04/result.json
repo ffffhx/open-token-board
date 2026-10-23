@@ -1,0 +1,366 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6.1-sol",
+  "caseId": "B04",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+  "execution": {
+    "taskStartedAt": "2026-10-03T05:00:47.307Z",
+    "taskCompletedAt": "2026-10-03T05:07:13.690Z",
+    "wallMs": 386383,
+    "observedModels": [
+      "gpt-6.1-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 802006,
+      "cached_input_tokens": 682112,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 9951,
+      "reasoning_output_tokens": 2411,
+      "total_tokens": 811957
+    },
+    "costUsd": null,
+    "transcriptSha256": "cf85ca2c25ba48e85b96552a62a0cdb2d8a90c5624ab8b9fe64a836559e263b6",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 10,
+      "total": 10
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 5,
+      "total": 5
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "candidate-build",
+      "passed": true,
+      "category": "delivery",
+      "details": "Full renderer entry and main-process modules bundled from candidate source"
+    },
+    {
+      "id": "catalog-without-desktop",
+      "passed": true,
+      "category": "business",
+      "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+    },
+    {
+      "id": "catalog-stale-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-rename-and-identity",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-permission-disable",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-fresh-permission-enable",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-input-order",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-occupancy-permissions",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-path-containment",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-broken-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-live-lease-after-expiry",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "catalog-custom-data-root",
+      "passed": true,
+      "category": "business",
+      "details": "passed"
+    },
+    {
+      "id": "rename-first-save-persists",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "savedName": "首次保存 · Research & Review",
+        "renameCalls": 1,
+        "storage": "real temporary profiles.json"
+      }
+    },
+    {
+      "id": "rename-empty-draft-validation",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "rename-cancel-does-not-cross-profile",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "rename-registry-preserves-neighbors",
+      "passed": true,
+      "category": "preservation",
+      "details": "passed"
+    },
+    {
+      "id": "frozen-context-preserved",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "changedFiles": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/main.ts",
+          "src/renderer/render/modals.ts",
+          "src/renderer/render/render-root.ts",
+          "src/renderer/types.ts"
+        ]
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "src/main/agent-browser-lease.ts",
+      "src/renderer/main.ts",
+      "src/renderer/render/modals.ts",
+      "src/renderer/render/render-root.ts",
+      "src/renderer/types.ts",
+      "tests/catalog-replay.mjs",
+      "tests/original-regressions.mjs",
+      "tests/rename-replay.mjs"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "dist/**",
+      "test-results/**",
+      ".replay-tmp/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "schemaVersion": 1,
+    "caseId": "B04",
+    "checks": [
+      {
+        "id": "candidate-build",
+        "passed": true,
+        "category": "delivery",
+        "details": "Full renderer entry and main-process modules bundled from candidate source"
+      },
+      {
+        "id": "catalog-without-desktop",
+        "passed": true,
+        "category": "business",
+        "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+      },
+      {
+        "id": "catalog-stale-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-rename-and-identity",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-permission-disable",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-fresh-permission-enable",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-input-order",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-occupancy-permissions",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-path-containment",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-broken-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-live-lease-after-expiry",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "catalog-custom-data-root",
+        "passed": true,
+        "category": "business",
+        "details": "passed"
+      },
+      {
+        "id": "rename-first-save-persists",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "savedName": "首次保存 · Research & Review",
+          "renameCalls": 1,
+          "storage": "real temporary profiles.json"
+        }
+      },
+      {
+        "id": "rename-empty-draft-validation",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "rename-cancel-does-not-cross-profile",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "rename-registry-preserves-neighbors",
+        "passed": true,
+        "category": "preservation",
+        "details": "passed"
+      },
+      {
+        "id": "frozen-context-preserved",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "changedFiles": [
+            "src/main/agent-browser-lease.ts",
+            "src/renderer/main.ts",
+            "src/renderer/render/modals.ts",
+            "src/renderer/render/render-root.ts",
+            "src/renderer/types.ts"
+          ]
+        }
+      }
+    ],
+    "passed": true,
+    "exitCode": 0
+  },
+  "submittedChanges": [
+    {
+      "path": "src/main/agent-browser-lease.ts",
+      "sha256": "324647f702902218af07f879e0986b62a9531e84ca6be86d63a469400cefffe6"
+    },
+    {
+      "path": "src/renderer/main.ts",
+      "sha256": "1cbf51e3a5bc8b628b6d3c8c9e0a6dd30437cb820638912ac2d03df750b096bb"
+    },
+    {
+      "path": "src/renderer/render/modals.ts",
+      "sha256": "1270c9dc58dec562f5ad4253ad32de749ce74797ed3a011255181cfc36472761"
+    },
+    {
+      "path": "src/renderer/render/render-root.ts",
+      "sha256": "5ebdd59d391345b4a84bd8525ccedd19cf6bbf0356cf72f01d6d9ceec297d827"
+    },
+    {
+      "path": "src/renderer/types.ts",
+      "sha256": "e12edc066ef49eec12a542e29dda211c1ee75214d19969a0991375cfc8364486"
+    },
+    {
+      "path": "tests/catalog-replay.mjs",
+      "sha256": "00b7f78b2935da9428faaf504c3a2f4cc0403655f49da57c369c4003451f1cca"
+    },
+    {
+      "path": "tests/original-regressions.mjs",
+      "sha256": "1cab043318d8a43f8b1931fb72a963e5e9ec089a2c84e0d5ac7f15280f3aef73"
+    },
+    {
+      "path": "tests/rename-replay.mjs",
+      "sha256": "7f70d09d5f4cc7dc4026af892446daff72d2a504972737d3c0abbf99e9bbb797"
+    }
+  ],
+  "finalResponseSha256": "88b54ee01838ab377a74dc304a188c0800a7c1e6116ff892a2d50fb6797070c0",
+  "rawGradeSha256": "a4ba50f8b12772a8630f8410e6b261aa484be8c00bc250bf843da86c0d198482",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T05:08:56.033Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "17项独立验收全部通过：首次改名、草稿保全、离线及过时状态目录、名称与权限更新、身份匹配、排序、路径与租约均符合冻结要求。会话日志证实浏览器改名测试、目录测试和21项回归测试实际通过；最终说明如实披露未执行完整TypeScript检查，未将其算作通过。"
+    ]
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true
+}

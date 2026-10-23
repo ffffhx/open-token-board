@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 // Validate tasks: verify must PASS on solution/ and FAIL on workspace/.
 // Also checks meta.json required fields. Usage: node validate.mjs [taskId,...]
-import { readdirSync, cpSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { readdirSync, cpSync, mkdtempSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import spawn from "cross-spawn";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, "../..");
@@ -18,7 +18,7 @@ function runVerify(srcDir, verifyDir, cmd) {
   cpSync(srcDir, dir, { recursive: true });
   cpSync(verifyDir, join(dir, "verify"), { recursive: true });
   const [c, ...a] = cmd.split(" ");
-  const r = spawnSync(c, a, { cwd: dir, encoding: "utf8" });
+  const r = spawn.sync(c, a, { cwd: dir, encoding: "utf8" });
   rmSync(dir, { recursive: true, force: true });
   return { code: r.status, err: (r.stderr || "").split("\n")[0] };
 }
@@ -37,7 +37,7 @@ for (const id of ids) {
   const problems = [];
   let meta;
   try {
-    meta = JSON.parse(spawnSync("cat", [join(dir, "meta.json")], { encoding: "utf8" }).stdout);
+    meta = JSON.parse(readFileSync(join(dir, "meta.json"), "utf8"));
   } catch (e) {
     console.log(`✗ ${id}: meta.json invalid (${e.message})`);
     bad++;

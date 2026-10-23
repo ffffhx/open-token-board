@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>本地文章预览</title>
+<style>body{max-width:760px;margin:48px auto;padding:0 24px;font:18px/1.7 system-ui;color:#182532}select,button{padding:8px;font:inherit}article{margin-top:28px;border-top:1px solid #ccd;padding-top:20px}</style>
+<h1>文章预览</h1>
+<label>本地测试身份 <select id="identity"><option value="">未登录</option><option value="reader">普通读者</option><option value="author">作者</option></select></label>
+<button id="load">读取服务交接说明</button><p id="status">请选择身份并读取文章。</p><article id="content"></article>
+<script src="/environment.js"></script><script type="module" src="/client.mjs"></script></html>

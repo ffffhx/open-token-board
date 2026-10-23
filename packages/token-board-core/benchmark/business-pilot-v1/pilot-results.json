@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "id": "business-pilot-20261002",
+  "kind": "workflow-pilot-not-model-ranking",
+  "status": "completed",
+  "recordedAt": "2026-10-02T15:09:54.435Z",
+  "workflowCompleted": true,
+  "modelComparisonPerformed": false,
+  "selectedCases": [
+    "B04",
+    "B09",
+    "B11"
+  ],
+  "currentSuiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "initialSuiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+  "harnessSha256": "c6d1b13f388222211673eda1cd4b9cf0180a35785edfd0b8f91068a98bd13f17",
+  "runtime": {
+    "platform": "win32",
+    "node": "v22.14.0"
+  },
+  "participantConfiguration": {
+    "harness": "collaboration-subagent",
+    "configuration": "inherited session model, no per-agent overrides",
+    "providerModelIdentity": null,
+    "reasoningEffort": null,
+    "generationTokens": null,
+    "costUsd": null,
+    "accurateGenerationDurationMs": null
+  },
+  "isolation": {
+    "freshConversationPerRun": true,
+    "inputOnlyExport": true,
+    "operatingSystemSandbox": false,
+    "adversarialAccessAudit": false
+  },
+  "outcomes": {
+    "taskCount": 3,
+    "participantRuns": 4,
+    "validInputRuns": 3,
+    "invalidInputContractRuns": 1,
+    "acceptedCases": [
+      "B04",
+      "B09",
+      "B11"
+    ],
+    "failedCases": [],
+    "humanReview": "not-performed",
+    "contentReviewer": "coordinating-agent"
+  },
+  "validation": {
+    "passed": true,
+    "recordedAt": "2026-10-02T14:57:26.556Z",
+    "cases": [
+      {
+        "caseId": "B04",
+        "baselinePassed": false,
+        "baselineFailedChecks": [
+          "catalog-win32-missing-and-stale",
+          "catalog-darwin-missing-and-stale",
+          "catalog-linux-missing-and-stale",
+          "catalog-fresh-authority-and-ownership",
+          "catalog-explicit-directory-and-validation",
+          "catalog-malformed-registry-fallback",
+          "rename-draft-survives-status-refresh",
+          "rename-draft-survives-pending-save",
+          "rename-failure-keeps-draft-and-retry"
+        ],
+        "referencePassed": true,
+        "referenceCheckCount": 13,
+        "referenceScopePassed": true,
+        "negativeControls": [
+          {
+            "name": "ignores-occupancy",
+            "expectedFailureObserved": true
+          }
+        ],
+        "alternativeCorrectControls": []
+      },
+      {
+        "caseId": "B09",
+        "baselinePassed": false,
+        "baselineFailedChecks": [
+          "saved-opening",
+          "project-updated",
+          "project-source-numbers",
+          "unsupported-guarantees",
+          "source-link",
+          "report-evidence"
+        ],
+        "referencePassed": true,
+        "referenceCheckCount": 10,
+        "referenceScopePassed": true,
+        "negativeControls": [
+          {
+            "name": "git-old-opening",
+            "expectedFailureObserved": true
+          },
+          {
+            "name": "invented-metric",
+            "expectedFailureObserved": true
+          },
+          {
+            "name": "out-of-scope",
+            "expectedFailureObserved": true
+          }
+        ],
+        "alternativeCorrectControls": [
+          {
+            "name": "positive-alternatives/concise",
+            "passed": true
+          }
+        ]
+      },
+      {
+        "caseId": "B11",
+        "baselinePassed": false,
+        "baselineFailedChecks": [
+          "report",
+          "current-json",
+          "current-html",
+          "new-edit-json",
+          "new-edit-html"
+        ],
+        "referencePassed": true,
+        "referenceCheckCount": 19,
+        "referenceScopePassed": true,
+        "negativeControls": [
+          {
+            "name": "export-without-sync",
+            "expectedFailureObserved": true
+          },
+          {
+            "name": "static-only",
+            "expectedFailureObserved": true
+          }
+        ],
+        "alternativeCorrectControls": []
+      }
+    ]
+  },
+  "amendment": {
+    "record": "revisions/registry-contract-amendment.json",
+    "changedFiles": [
+      "B04/prompt.txt",
+      "B04/task.json"
+    ],
+    "verifiersUnchanged": true,
+    "otherCasesUnchanged": true
+  },
+  "runs": [
+    {
+      "caseId": "B04",
+      "trial": 1,
+      "decision": "invalid-input-contract",
+      "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+      "machineAccepted": false,
+      "checksPassed": 12,
+      "checksTotal": 13,
+      "scopePassed": true,
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": "not-performed",
+        "notes": [
+          "首轮 12/13，唯一失败是只有 lastCdpPort 的已登记 Profile 被遗漏。",
+          "复核题面及全部导出输入，均未提供 lastCdpPort 的字段定义；该定义存在于历史 src/shared/types.ts，但出题时裁剪遗漏。此轮判为输入契约不完整，不能直接归因于模型能力。",
+          "保留原始评分与提交，补全输入契约后由新会话重跑，不在首轮提交上代修。",
+          "草稿保留逻辑与注册表/快照/租约合并已阅读；外部检查验证了其余 12 项。报告的自写断言未逐条独立重放，未将报告中的全部自测声明视为独立证据。"
+        ]
+      },
+      "result": "runs/pilot-1/B04-trial-1/result.json",
+      "submission": "runs/pilot-1/B04-trial-1/submission/",
+      "preparedAt": "2026-10-02T14:40:10.769Z",
+      "gradedAt": "2026-10-02T14:50:49.060Z",
+      "gradingDurationMs": 79
+    },
+    {
+      "caseId": "B04",
+      "trial": 2,
+      "decision": "accepted",
+      "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+      "machineAccepted": true,
+      "checksPassed": 13,
+      "checksTotal": 13,
+      "scopePassed": true,
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": "not-performed",
+        "notes": [
+          "已阅读两份源码改动与 REPORT.md：重绘前后保存同一编辑流程的草稿；注册表读取补齐 fixedCdpPort/lastCdpPort 回退，并在目录合并后检查租约。",
+          "13 项外部验收及文件范围检查全部通过，包括首轮暴露的合法 lastCdpPort 条目、草稿保留、失败重试、占用限制和平台路径 adapter。",
+          "报告明确区分模拟重启与真实桌面重启，未把 HTTP 冒烟当作浏览器 E2E，也未宣称解决截图弹窗残留。",
+          "复核结论限定于本题声明并实际验收的范围；真实焦点、输入法、磁盘链接、租约竞争及其他状态组合未全面验证。报告中的额外自测未逐条独立重放。"
+        ]
+      },
+      "result": "runs/pilot-1/B04-trial-2/result.json",
+      "submission": "runs/pilot-1/B04-trial-2/submission/",
+      "preparedAt": "2026-10-02T14:57:27.302Z",
+      "gradedAt": "2026-10-02T15:08:47.935Z",
+      "gradingDurationMs": 75
+    },
+    {
+      "caseId": "B09",
+      "trial": 1,
+      "decision": "accepted",
+      "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+      "machineAccepted": true,
+      "checksPassed": 10,
+      "checksTotal": 10,
+      "scopePassed": true,
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": "not-performed",
+        "notes": [
+          "复核 handbook.md、REPORT.md、project-notes.md 与事件记录：采用 E02 的误改前版本，报告没有把 Read 时间冒充 Ctrl+S 时间。",
+          "项目 1 的业务背景、5 款工具调研、Gateway/Ticket/Daemon/CDP、接管控制和日常 2 个 Session 均有提供资料支持；未新增测量值、个人经历或实现保证。",
+          "外部检查确认开场白、非授权区域、只读材料与标题结构；项目 2 原有表述按题目保留，不属于本次事实背书。",
+          "协调 Agent 作内容复核，未进行人类风格偏好评审；报告中的全部自测过程没有逐条审计。"
+        ]
+      },
+      "result": "runs/pilot-1/B09-trial-1/result.json",
+      "submission": "runs/pilot-1/B09-trial-1/submission/",
+      "preparedAt": "2026-10-02T14:40:11.486Z",
+      "gradedAt": "2026-10-02T14:46:12.537Z",
+      "gradingDurationMs": 57
+    },
+    {
+      "caseId": "B11",
+      "trial": 1,
+      "decision": "accepted",
+      "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+      "machineAccepted": true,
+      "checksPassed": 19,
+      "checksTotal": 19,
+      "scopePassed": true,
+      "semanticReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": "not-performed",
+        "notes": [
+          "已阅读 scripts/release.mjs 与 REPORT.md：发布命令补入当前 Markdown 导出及目标正文同步，且在同步完成后才报告成功，未以手改产物代替修复。",
+          "19 项外部验收通过，独立重置产物后仍可发布原稿与注入的新正文；作者可读，未登录与普通读者被拒绝，其他正文及仅存在于卷中的记录保留。",
+          "报告明确限定本地 HTTP 验证，没有宣称做过浏览器 GUI、真实远端部署、并发或故障原子性测试；报告中的额外自测未逐条独立重放。",
+          "用户询问进度时发生工具中断；原计划清理的隔离测试副本改为保留在允许的 runtime/ 中，报告已完成。没有发现自动审批拒绝理由，不能把中断说成审批拒绝。"
+        ]
+      },
+      "result": "runs/pilot-1/B11-trial-1/result.json",
+      "submission": "runs/pilot-1/B11-trial-1/submission/",
+      "preparedAt": "2026-10-02T14:40:12.184Z",
+      "gradedAt": "2026-10-02T15:02:25.049Z",
+      "gradingDurationMs": 388
+    }
+  ],
+  "orchestrationNotes": [
+    "Two initial B11 spawn attempts hit the thread limit; a later fresh spawn succeeded. Failed spawns are not counted as model runs.",
+    "B11 had an interrupted cleanup/report tool call. It resumed in the same conversation; the test copy was retained and the report completed. No automatic approval rejection reason was observed.",
+    "No solutions or grader feedback were sent back to participants. B04 was rerun by a fresh agent after the input contract was corrected.",
+    "B09 and B11 were graded with their original frozen suite. Their task files and graders are byte-identical in revision 2."
+  ],
+  "limitations": [
+    "Three narrowed tasks, not full historical repositories or the entire 12-case suite.",
+    "No cross-model comparison, no repeated trials under an identical valid input contract, and no statistical ranking.",
+    "No OS-level restriction prevents a participant from accessing other host files; isolation is conversational and procedural.",
+    "B04 uses DOM, filesystem and platform adapters, not actual Electron or three native OS executions.",
+    "B09 uses redacted historical excerpts; source support was reviewed, but no human style assessment or original Ctrl+S log exists.",
+    "B11 uses reconstructed loopback HTTP services, not production infrastructure or browser DOM testing.",
+    "Participant reports are preserved as claims; external checks and coordinating-agent content review are recorded separately. Additional self-test claims were not exhaustively audited.",
+    "Model backend identity, generation time, tokens and cost were not independently measured."
+  ]
+}

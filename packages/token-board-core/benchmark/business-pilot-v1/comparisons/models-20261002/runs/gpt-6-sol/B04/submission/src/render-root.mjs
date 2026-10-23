@@ -1,0 +1,145 @@
+// Historical renderer; unrelated panels are provided by fixture-ui.
+import { isBusyAction, renderToastBody, renderConfirmModal, renderSyncPanel, renderAgentAccessDock, renderAgentIntegrationModal, renderOnboardingModal, renderClonePoolModal, renderLiveZoomModal, renderMini, renderBifrostProxyModal, renderCdpModal, renderCloneTagModal, renderExtensionMigrationModal, renderGlobalInstructionsModal, renderNewModal, renderRenameModal, renderEmpty, renderExternalDetailsModal, renderProfileDetailsModal, renderProfilesPanel, appRoot, store, escapeHtml, renderBusyBanner, renderButtonLabel } from './fixture-ui.mjs';
+let lastMainHtml = "";
+function renderToast() {
+    let toast = document.getElementById("app-toast");
+    if (!store.toast) {
+        toast?.remove();
+        return;
+    }
+    if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "app-toast";
+        toast.setAttribute("role", "status");
+        document.body.appendChild(toast);
+    }
+    toast.className = `toast fixed right-[18px] bottom-[18px] z-20 max-w-[min(420px,calc(100vw-36px))] border-solid border border-accent-line rounded-lg bg-[#0a1411] text-[#dcfff1] px-[14px] py-3 [box-shadow:0_18px_50px_rgba(2,6,9,0.7),var(--glow-accent)] ${store.toastKind === "error" ? "error" : ""}`;
+    const body = renderToastBody(store.toast);
+    if (toast.innerHTML !== body) toast.innerHTML = body;
+}
+export function render() {
+    if (store.viewMode === "mini") {
+        lastMainHtml = "";
+        renderMini();
+        return;
+    }
+    document.body.classList.remove("mini-mode", "mini-panel-open");
+    renderToast();
+    if (!store.state) {
+        lastMainHtml = "";
+        appRoot.innerHTML = '<div class="app-loading p-8 text-muted font-mono text-[13px] tracking-[0.04em]">正在载入…</div>';
+        return;
+    }
+    const profiles = store.state.profiles || [];
+    const profileDetailsId = store.modal?.kind === "profile-details" ? store.modal.profileId : null;
+    const externalDetailsDir = store.modal?.kind === "external-details" ? store.modal.userDataDir : null;
+    const profileDetailsProfile = profileDetailsId ? profiles.find((profile)=>profile.id === profileDetailsId) || null : null;
+    const externalDetailsInstance = externalDetailsDir ? (store.state.externalInstances || []).find((instance)=>instance.userDataDir === externalDetailsDir) || null : null;
+    const runningNames = store.state.runningProfiles.map((profile)=>profile.name).join("、");
+    const currentLabel = store.state.runningProfiles.length ? runningNames : "无";
+    const currentNote = store.state.runningProfiles.length ? `${store.state.runningProfiles.length} 个 Profile 正在运行` : "当前没有正在运行的 Profile";
+    const refreshing = isBusyAction("refresh");
+    const busyHasEmbeddedProgress = store.busyState?.key === "account-sync" || store.busyState?.key === "migrate-extensions";
+    const html = `
+    <div class="shell w-[min(1760px,calc(100vw-clamp(24px,3vw,56px)))] mx-auto my-0 pt-[28px] px-0 pb-[40px]">
+      <a class="skip-link" href="#main-content">跳到 Profile 列表</a>
+      <header class="app-header flex items-start justify-between gap-5 pt-2 px-0 pb-[22px] border-solid border-b border-line">
+        <div class="brand-lockup flex items-center gap-4 min-w-0">
+          <img class="brand-mark w-[52px] h-[52px] flex-[0_0_auto] rounded-xl" src="./assets/profilepilot-mark.svg" width="52" height="52" alt="" />
+          <div class="brand-copy min-w-0">
+            <h1>ProfilePilot</h1>
+            <p class="brand-subtitle">管理 Chrome Profile、连接与 Agent 控制权</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a class="primary" href="./tasks.html" style="padding: 9px 14px; border-radius: 8px; text-decoration: none;">浏览器任务 ↗</a>
+          <button type="button" role="switch" data-action="toggle-startup"
+            aria-checked="${store.startupSettings?.enabled === true}" aria-label="开机自启动"
+            aria-describedby="startup-note"
+            title="登录系统后自动启动 ProfilePilot"
+            ${store.busy || !store.startupSettings?.supported ? "disabled" : ""}>
+            开机自启动 <span class="${store.startupSettings?.enabled ? "text-accent-bright" : "text-muted"}">${!store.startupSettings ? "读取中…" : store.startupSettings.requiresApproval ? "待允许" : store.startupSettings.enabled ? "开启" : "关闭"}</span>
+          </button>
+          <button type="button" data-action="open-mini-window" title="切换到悬浮窗">悬浮窗</button>
+          <button type="button" data-action="open-global-instructions">全局指令</button>
+          <button type="button" class="${refreshing ? "loading" : ""}" data-action="refresh" ${store.busy ? "disabled" : ""}>
+            ${renderButtonLabel(refreshing, "刷新", "刷新中…")}
+          </button>
+          <button type="button" class="primary" data-action="new-profile" ${store.busy ? "disabled" : ""}>新建独立 Profile</button>
+        </div>
+      </header>
+
+      <p id="startup-note" class="${store.startupSettings?.error || store.startupSettings?.requiresApproval ? "mt-3 text-[12px] text-muted" : "sr-only"}" role="status">${escapeHtml(store.startupSettings?.error || (store.startupSettings?.requiresApproval ? "请在系统设置 → 通用 → 登录项中允许 ProfilePilot 自启动。" : "登录系统后自动启动 ProfilePilot；关闭后会保留你的选择。"))}</p>
+
+      ${busyHasEmbeddedProgress ? "" : renderBusyBanner()}
+
+      <section class="status-grid grid grid-cols-[minmax(0,1.6fr)_repeat(2,minmax(130px,0.7fr))] gap-px overflow-hidden border-solid border border-line rounded-xl bg-line mt-[22px]" aria-label="Profile 状态概览">
+        <div class="status-item current relative min-w-0 pt-4 pr-4 pb-4 pl-5 bg-panel">
+          <span class="status-label block mb-2 text-muted text-[12px] font-semibold">当前运行</span>
+          <strong class="status-value block [overflow-wrap:anywhere] text-[20px] font-semibold tabular-nums">${escapeHtml(currentLabel)}</strong>
+          <span class="status-note block mt-2 [overflow-wrap:anywhere] text-muted text-[12px]">${escapeHtml(currentNote)}</span>
+        </div>
+        <div class="status-item relative min-w-0 pt-4 pr-4 pb-4 pl-5 bg-panel">
+          <span class="status-label block mb-2 text-muted text-[12px] font-semibold">已管理</span>
+          <strong class="status-value block [overflow-wrap:anywhere] text-[20px] font-semibold tabular-nums">${profiles.length}</strong>
+          <span class="status-note block mt-2 [overflow-wrap:anywhere] text-muted text-[12px]">本机所有可管理的 Chrome Profile</span>
+        </div>
+        <div class="status-item relative min-w-0 pt-4 pr-4 pb-4 pl-5 bg-panel">
+          <span class="status-label block mb-2 text-muted text-[12px] font-semibold">运行中</span>
+          <strong class="status-value block [overflow-wrap:anywhere] text-[20px] font-semibold tabular-nums">${store.state.runningProfiles.length}</strong>
+          <span class="status-note block mt-2 [overflow-wrap:anywhere] text-muted text-[12px]">可以点击“显示”拉到屏幕最前面</span>
+        </div>
+      </section>
+
+      ${renderAgentAccessDock(profiles)}
+
+      ${renderSyncPanel(profiles)}
+
+      <main id="main-content" class="layout grid grid-cols-1 gap-6 mt-6 items-start">
+        <section class="profiles-section">
+          <div class="profiles-section-head">
+            <div class="profiles-section-title">
+              <span>Profile Registry</span>
+              <h2>Profiles</h2>
+            </div>
+            <span class="profiles-count"><strong>${profiles.length}</strong> Registered</span>
+          </div>
+          ${profiles.length || (store.state.externalInstances?.length ?? 0) ? renderProfilesPanel(profiles, store.state.externalInstances || []) : renderEmpty()}
+        </section>
+      </main>
+    </div>
+    ${store.modal?.kind === "new" ? renderNewModal() : ""}
+    ${store.modal?.kind === "rename" ? renderRenameModal(store.modal.profileId) : ""}
+    ${store.modal?.kind === "cdp" ? renderCdpModal(store.modal.profileId, store.modal.portSuggestion) : ""}
+    ${store.modal?.kind === "bifrost-proxy" ? renderBifrostProxyModal(store.modal.profileId, store.modal.snapshot) : ""}
+    ${store.modal?.kind === "clone-pool" ? renderClonePoolModal(profiles) : ""}
+    ${store.modal?.kind === "clone-tag" ? renderCloneTagModal(store.modal.profileId) : ""}
+    ${store.modal?.kind === "global-instructions" ? renderGlobalInstructionsModal() : ""}
+    ${store.modal?.kind === "onboarding" ? renderOnboardingModal() : ""}
+    ${store.modal?.kind === "agent-integration" ? renderAgentIntegrationModal(profiles) : ""}
+    ${store.modal?.kind === "profile-details" ? renderProfileDetailsModal(profileDetailsProfile) : ""}
+    ${store.modal?.kind === "external-details" ? renderExternalDetailsModal(externalDetailsInstance) : ""}
+    ${store.modal?.kind === "live-zoom" ? renderLiveZoomModal(store.modal.profileId) : ""}
+    ${store.modal?.kind === "extension-migration" ? renderExtensionMigrationModal(profiles) : ""}
+    ${store.modal?.kind === "confirm" ? renderConfirmModal(store.modal) : ""}
+  `;
+    if (lastMainHtml === html) {
+        return;
+    }
+    // A status/busy update can rebuild the whole root while a rename is in progress.
+    // Keep the live form value only while this same profile's dialog stays open.
+    const previousForm = appRoot.querySelector('[data-rename-form]');
+    const draft = store.modal?.kind === "rename" && previousForm?.dataset.profileId === store.modal.profileId
+        ? previousForm.querySelector('#profile-rename')?.value
+        : undefined;
+    lastMainHtml = html;
+    appRoot.className = "";
+    appRoot.innerHTML = html;
+    if (draft !== undefined) {
+        const currentForm = appRoot.querySelector('[data-rename-form]');
+        if (currentForm?.dataset.profileId === store.modal?.profileId) {
+            const input = currentForm.querySelector('#profile-rename');
+            if (input) input.value = draft;
+        }
+    }
+}

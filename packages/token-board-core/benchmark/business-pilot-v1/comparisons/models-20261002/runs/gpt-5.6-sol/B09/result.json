@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-sol",
+  "label": "GPT-5.6 Sol",
+  "caseId": "B09",
+  "trial": 1,
+  "status": "graded",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 9,
+  "checksTotal": 10,
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true
+    },
+    {
+      "id": "document-structure",
+      "passed": true
+    },
+    {
+      "id": "saved-opening",
+      "passed": true
+    },
+    {
+      "id": "protected-content",
+      "passed": true
+    },
+    {
+      "id": "project-updated",
+      "passed": true
+    },
+    {
+      "id": "project-source-numbers",
+      "passed": true
+    },
+    {
+      "id": "unsupported-guarantees",
+      "passed": true
+    },
+    {
+      "id": "source-link",
+      "passed": false,
+      "details": "Project notes have a valid relative link."
+    },
+    {
+      "id": "report-evidence",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:30:27.487Z",
+    "taskStartedAt": "2026-10-02T15:30:27.664Z",
+    "taskCompletedAt": "2026-10-02T15:41:52.797Z",
+    "taskWallMs": 685133,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-sol"
+    ],
+    "observedReasoningEfforts": [
+      "low"
+    ],
+    "tokenUsage": {
+      "input_tokens": 731498,
+      "cached_input_tokens": 694912,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 11219,
+      "reasoning_output_tokens": 1076,
+      "total_tokens": 742717
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "0c795537971a17cf34fcc7bf7d326f5b504c9bf2715d0f34b58fefcdf6e070b5",
+    "toolCallCount": 16,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "pending",
+    "humanReview": false,
+    "notes": []
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "b0028813f245132cce571da1d1b95bcc8b32556a2f9aa22a37d1069586588f7a"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "ca4f71cef7faef733371a105583efe85296e1d4ce7a728cd407d134e77e5a877"
+    }
+  ],
+  "rawGradeSha256": "33b5f9a821489427ea86e7aca1e9cd649b1001ececf1b03f1de11a2630597ce3"
+}

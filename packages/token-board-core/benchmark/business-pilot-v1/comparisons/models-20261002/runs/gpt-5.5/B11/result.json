@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.5",
+  "label": "GPT-5.5",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:23:27.346Z",
+    "taskStartedAt": "2026-10-02T15:23:27.544Z",
+    "taskCompletedAt": "2026-10-02T15:26:21.647Z",
+    "taskWallMs": 174103,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.5"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 456677,
+      "cached_input_tokens": 420864,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5798,
+      "reasoning_output_tokens": 477,
+      "total_tokens": 462475
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "000bd3f14ba5397e3a09cba7384c69a2492b2f7ceb12634911c235f17afdf081",
+    "toolCallCount": 35,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:28:51.550Z",
+    "notes": [
+      "已阅读发布脚本与报告；从当前Markdown导出并同步，再完成静态发布，19项外部检查及范围均通过。",
+      "外部验收另验证了注入新正文后的可重复发布；这部分由评审执行，不算参评者自行完成的验证。报告没有冒称生产部署。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "debeaa4705888b80d281df6b0b873569162825ebd95854c7cb76c36c4f5476e6"
+    }
+  ],
+  "rawGradeSha256": "315daf5570f3404dd9c0c268030a8c64c5a7c9c21fd860199eb897f3507b3148"
+}

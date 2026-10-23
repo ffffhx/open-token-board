@@ -1,0 +1,186 @@
+{
+  "commit": "cd20aef5e0f75f0aec5bd14b29fe0befce22e77c",
+  "sourceRef": "S02",
+  "sessionId": "01a0a04c-32f0-7953-a2ac-26898bc3a9f2",
+  "baselineCleanEvidenceLines": [
+    20,
+    291,
+    376
+  ],
+  "requirementLines": [
+    224,
+    285,
+    355
+  ],
+  "referencePatchLines": [
+    381,
+    390,
+    398
+  ],
+  "files": [
+    {
+      "path": "LICENSE",
+      "sha256": "74d3ef5862d268aceb9420e9cdb45c34023dbe4e377e1a38aadad39c1419a80a",
+      "gitBlob": "bbeaba83b1042de346e9783b5adda8d3649a470c"
+    },
+    {
+      "path": "apps/token-board-api/package.json",
+      "sha256": "2e2294344b3fb8c68cd51ed035f5e1fd3af84492ca17f4cb0b7265a0f6a1cdaa",
+      "gitBlob": "b14b95db718efe0dac7b1bd7036ed181fc8b6a2b"
+    },
+    {
+      "path": "apps/token-board-api/src/agent.ts",
+      "sha256": "6dffda3a5251182768a7434e9a1a62906f226586f3c51ac2547603bfd8599d63",
+      "gitBlob": "a629f3fcbdff1c660e3d7220c3bec564f0b9c261"
+    },
+    {
+      "path": "apps/token-board-api/src/daily-report.ts",
+      "sha256": "387f2a70a9c901ca333ce89c88f51254f5396c2b2135a94721638e2f33233d06",
+      "gitBlob": "06eeb33a3d09fba45657c111dc3833c80c83b121"
+    },
+    {
+      "path": "apps/token-board-api/src/selection-explainer-server.ts",
+      "sha256": "eea26a4f93638536c25d751e6281c6aa779fa8783d7948bd3ea0a985db765db6",
+      "gitBlob": "e4779dcaa91e295956a26ae998baf03b44d7d81b"
+    },
+    {
+      "path": "apps/token-board-api/src/server.ts",
+      "sha256": "2312905c6f2bd778a25f4280a4e5251d75c279c0948c8d2872725fca76e35f1b",
+      "gitBlob": "384412f110095385aa82eca679827ccb17c25535"
+    },
+    {
+      "path": "apps/token-board-api/tsconfig.json",
+      "sha256": "409151ef67c97616c60477ad3adc4ec2392d34e6475a405ccf4bd4ba30db77e7",
+      "gitBlob": "fd623aa753a72830a03353be089c3a8830be4884"
+    },
+    {
+      "path": "packages/token-board-core/package.json",
+      "sha256": "6dd848c59ef8b29771cb485b7bffaff8f6172108394bdcad069e8d22926a4cd5",
+      "gitBlob": "e8d8753fbecae078cd9d98016ac1e71023444802"
+    },
+    {
+      "path": "packages/token-board-core/src/agent-speed-storage.ts",
+      "sha256": "ecf62a2171d4977ba399a007608a8f1098a06ebe58441d5156f58775bb621f39",
+      "gitBlob": "45532bf2f674766f72d7c79812a10036a78f87f6"
+    },
+    {
+      "path": "packages/token-board-core/src/agent-speed.ts",
+      "sha256": "3a6119e171751747d8c10020e7e5aec598ba4e32ba757b41c5023f7f35df9d86",
+      "gitBlob": "ba935eb114c0f049a31da588785754d1314ded56"
+    },
+    {
+      "path": "packages/token-board-core/src/asc-collector.ts",
+      "sha256": "1eb1369ae4a930b95bc39bf2eea107769c532c00c244fc8771a9688c2860f95e",
+      "gitBlob": "e469750a3f1ada7bf2ab610a27ea261ed75bba27"
+    },
+    {
+      "path": "packages/token-board-core/src/benchmark-data.generated.ts",
+      "sha256": "5a84ae3d852c81707e58926d4d78d4f1c1c0b5ba7e0128afa567b9cb703833e4",
+      "gitBlob": "6524d556ec9da32ce7b053e98ee22fd525ccefc7"
+    },
+    {
+      "path": "packages/token-board-core/src/benchmark.ts",
+      "sha256": "3383e7392953796816e8548da36e2b71614f8f30dd8a48fb098c385a1c6240e9",
+      "gitBlob": "96cdf4bcedc44c15bc2f78a4ad6ca156606b4e14"
+    },
+    {
+      "path": "packages/token-board-core/src/codex-benchmark.ts",
+      "sha256": "7cc6a7f2041eee906b02f7ee5ad4d72a29e6688262d658e1c11bc743e1184fe3",
+      "gitBlob": "51f6bd73673a3053a6bee6c844b681a87b44b5f4"
+    },
+    {
+      "path": "packages/token-board-core/src/codex-rate-limits.ts",
+      "sha256": "f08a523b716f0422f68576d86f718c946b6d9d62d886b6a785fe77fd9f856f98",
+      "gitBlob": "d10a51709e89eaf0e0600a3e8e0a080ab315b05b"
+    },
+    {
+      "path": "packages/token-board-core/src/index.ts",
+      "sha256": "ca91a71a2b1749491e8ea3e15243f5af21dc737dd64a86b3c3480234360bf57c",
+      "gitBlob": "59649645e3d4ef0a33c953d3586d6bca4751f50a"
+    },
+    {
+      "path": "packages/token-board-core/src/selection-explainer.ts",
+      "sha256": "0bd6c0d8390280f1953c21045bf4837e6ceb73d086a6b7567bfa1478a24d8bd7",
+      "gitBlob": "023b69a75b1ebf3fb63360970034f86396199822"
+    },
+    {
+      "path": "packages/token-board-core/src/snapshot-share-storage.ts",
+      "sha256": "d2bc254cf3caa5a16d390b1c83947c95007e40b658650d8f9bcd43aa1ae975fe",
+      "gitBlob": "6f04e0a55c661ae84dd014c86c18ccf1a933d6aa"
+    },
+    {
+      "path": "packages/token-board-core/src/token-achievements.ts",
+      "sha256": "57102f01b7a6ec40053764acd58f754e4d88977a4cae8d3e00600a7554e5347e",
+      "gitBlob": "ad277f4a84d08e0e12acc2bd8d1b46ecbd6abda3"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-auth.ts",
+      "sha256": "a8ff35880a5fbc8bd293136492fc3cb2a52c98e074fc3a3d6a64e47577d1be5b",
+      "gitBlob": "a6b4b4e6f0f3a2b9017d9ccde9bbbf0ca648582c"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-automation.ts",
+      "sha256": "6549aa65f04b408f74eec2dae5fc6d7fb2bcc08e4b27ee0f5a1c6c9de83938fc",
+      "gitBlob": "e328b929f8857953305c6a457a7060ce9e91be65"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-storage.ts",
+      "sha256": "39ed9695dccf5f24b3b28bb3d1681fd93a7aa7a77d2428f3b9d66c333633a8e6",
+      "gitBlob": "74aaec9ba85081e99ff56a373c747dace351151f"
+    },
+    {
+      "path": "packages/token-board-core/src/token-efficiency.ts",
+      "sha256": "f7b01c955e2d7cfb6fcbf0c6ac50264213e409683764df274b7ad41254adf6cf",
+      "gitBlob": "752454fe401a997b3bb1e6480d254d695fd057c4"
+    },
+    {
+      "path": "packages/token-board-core/src/token-goals.ts",
+      "sha256": "4fc5e09f436f8744cf562f3bfdaa52b05a3fc2484afb03af4f8bb3b8033aab5b",
+      "gitBlob": "0a5e45a6ede3cce59d5a0e73b238f92ddd9cdeb4"
+    },
+    {
+      "path": "packages/token-board-core/src/token-leaderboard.ts",
+      "sha256": "813b37f4c9a9385034e450eff6642319ac07e7739eb1315c2252610531a7f45e",
+      "gitBlob": "82f52eb56cbd394f554e57f8b6d6c2afe3c0a602"
+    },
+    {
+      "path": "packages/token-board-core/src/token-usage-collector.ts",
+      "sha256": "29c6821ea27068e7975ffae2d94c5a34c850b64cc5be8c1254b602808aa57d05",
+      "gitBlob": "8fd70fb6d2e31f41cce3774dc9a770134ddfc73f"
+    },
+    {
+      "path": "packages/token-board-core/src/token-usage-snapshot.ts",
+      "sha256": "bf6d3c8f43bdb2d5e043128854b52ed8a21eacfbf2b1d8eba854ce229a740268",
+      "gitBlob": "f6381696f6cb6dae217742864d4ff8c78441189b"
+    },
+    {
+      "path": "packages/token-board-core/src/token-wrapped.ts",
+      "sha256": "8f781850c4f8177bb428e3932493927af3cb835465ecbedc9008ebf1c90ac998",
+      "gitBlob": "53f0d97686eaa08a765c88459f8886662bf85d02"
+    },
+    {
+      "path": "packages/token-board-core/tsconfig.json",
+      "sha256": "409151ef67c97616c60477ad3adc4ec2392d34e6475a405ccf4bd4ba30db77e7",
+      "gitBlob": "fd623aa753a72830a03353be089c3a8830be4884"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "sha256": "8bdfa4e2dfb331008a096724591e453941a121cc816bad81378fed8e52cfdbef",
+      "gitBlob": "36c0921963b17b56d12d89d8de57c51008dc72bd"
+    },
+    {
+      "path": "tests/support/fixtures.ts",
+      "sha256": "25f11f4f7c39c79810cd11204a2356b80e1cd67748aff640cc0f98cca9ba1b83",
+      "gitBlob": "4dc5469b3a1a0794740abe2c334c4497c8ec109f"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "sha256": "c26c3d2f97d397466bbbb55b6da3073b33e54b3b4985d6c5a2d796e162cfbbd3",
+      "gitBlob": "d2d8c510cae6c67eadf1474e9c976d0cfdeb5d1e"
+    }
+  ],
+  "examinedButNotAppliedTestPatchLines": [
+    414
+  ],
+  "hashesDescribe": "Original historical file bytes before the explicitly documented replay transformations; workspace server appends the replay-only control transport."
+}

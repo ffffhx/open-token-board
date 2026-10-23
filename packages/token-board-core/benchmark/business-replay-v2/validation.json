@@ -1,0 +1,3479 @@
+{
+  "kind": "case-and-grader-validation-not-model-results",
+  "archivedAt": "2026-10-03T03:40:06.655Z",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "harnessSha256": "34ebdd2fff738d186bec0e9b0337295ad3d5e37d8f68b44a69045ec5390443ff",
+  "passed": true,
+  "semanticControlReview": "cases/B09/control-review.json",
+  "note": "Three B09 controls fail machine checks; invented-result is flagged for source review and fails its separately archived semantic review. Positive quoted/denied claims remain acceptable.",
+  "validations": [
+    {
+      "caseId": "B02",
+      "validatedAt": "2026-10-03T03:38:43.850Z",
+      "rawReportSha256": "8c641b8f6f6e923cac0e73efda534ac1b92729cdf8494c090f520dbdfd4690b4",
+      "passed": true,
+      "baselineReproduced": true,
+      "baseline": {
+        "passed": false,
+        "businessPassed": false,
+        "categories": {
+          "business": {
+            "passed": false,
+            "passedCount": 6,
+            "total": 7
+          },
+          "preservation": {
+            "passed": true,
+            "passedCount": 1,
+            "total": 1
+          },
+          "delivery": {
+            "passed": false,
+            "passedCount": 1,
+            "total": 2
+          },
+          "precision": {
+            "passed": true,
+            "passedCount": 0,
+            "total": 0
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 1,
+        "durationMs": 210462,
+        "evaluation": {
+          "checks": [
+            {
+              "id": "all-statistics-identical",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "combinations": 54,
+                "passed": true
+              }
+            },
+            {
+              "id": "repeatable-refresh-improvement",
+              "passed": false,
+              "category": "business",
+              "details": {
+                "baselineMs": [
+                  8133.4594,
+                  9364.43710000001,
+                  9007.79789999999,
+                  8968.078300000008,
+                  8533.058099999995,
+                  8926.608999999997,
+                  9053.492100000003
+                ],
+                "candidateMs": [
+                  7903.864699999998,
+                  7914.224200000004,
+                  9136.185700000002,
+                  9186.599199999997,
+                  9408.87509999999,
+                  9000.678599999985,
+                  9528.209600000002
+                ],
+                "baselineMedianMs": 8968.078300000008,
+                "candidateMedianMs": 9136.185700000002,
+                "pairedGainMedianMs": -128.38780000001134,
+                "pairedNoise3MAD": 1038.9890999999625,
+                "pairedWins": 2,
+                "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+              }
+            },
+            {
+              "id": "reads-available-during-refresh",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "reads": 997,
+                "successfulAndConsistent": 997,
+                "baselineP95Ms": 81.19250000000466,
+                "candidateP95Ms": 86.0289000000048,
+                "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+              }
+            },
+            {
+              "id": "corrected-data-and-overlap",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "passed": true
+              }
+            },
+            {
+              "id": "failure-preserves-valid-snapshot",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "refreshRejected": true,
+                "errorRecorded": true,
+                "remainingEntries": 54,
+                "readStatus": 200
+              }
+            },
+            {
+              "id": "failure-recovery",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "entries": 54,
+                "error": ""
+              }
+            },
+            {
+              "id": "restart-restores-full-results",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "entries": 54
+              }
+            },
+            {
+              "id": "empty-dataset-compatible",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "passed": true
+              }
+            },
+            {
+              "id": "replay-can-start-and-measure",
+              "passed": true,
+              "category": "delivery",
+              "details": {
+                "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZR4b41\\measurements.json",
+                "eventCount": 3905,
+                "postgres": "16.14",
+                "rounds": 7,
+                "source": "full historical HTTP API and PostgreSQL storage"
+              }
+            },
+            {
+              "id": "measurement-report-delivered",
+              "passed": false,
+              "category": "delivery",
+              "details": {
+                "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+              }
+            }
+          ],
+          "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZR4b41"
+        },
+        "stderr": "B02 pair 1/7: baseline=8133ms candidate=7904ms\nB02 pair 2/7: baseline=9364ms candidate=7914ms\nB02 pair 3/7: baseline=9008ms candidate=9136ms\nB02 pair 4/7: baseline=8968ms candidate=9187ms\nB02 pair 5/7: baseline=8533ms candidate=9409ms\nB02 pair 6/7: baseline=8927ms candidate=9001ms\nB02 pair 7/7: baseline=9053ms candidate=9528ms\n"
+      },
+      "reference": {
+        "passed": true,
+        "businessPassed": true,
+        "categories": {
+          "business": {
+            "passed": true,
+            "passedCount": 7,
+            "total": 7
+          },
+          "preservation": {
+            "passed": true,
+            "passedCount": 1,
+            "total": 1
+          },
+          "delivery": {
+            "passed": true,
+            "passedCount": 2,
+            "total": 2
+          },
+          "precision": {
+            "passed": true,
+            "passedCount": 0,
+            "total": 0
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 0,
+        "durationMs": 117228,
+        "evaluation": {
+          "checks": [
+            {
+              "id": "all-statistics-identical",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "combinations": 54,
+                "passed": true
+              }
+            },
+            {
+              "id": "repeatable-refresh-improvement",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "baselineMs": [
+                  8231.8328,
+                  7799.279300000002,
+                  7809.165999999997,
+                  7890.912700000001,
+                  7915.719799999992,
+                  7532.261899999998,
+                  7373.422900000005
+                ],
+                "candidateMs": [
+                  1625.4288000000015,
+                  1528.5985,
+                  1511.7520999999979,
+                  1500.5193,
+                  1529.4686999999976,
+                  1503.0743999999977,
+                  1577.275800000003
+                ],
+                "baselineMedianMs": 7809.165999999997,
+                "candidateMedianMs": 1528.5985,
+                "pairedGainMedianMs": 6297.4139,
+                "pairedNoise3MAD": 278.93850000000384,
+                "pairedWins": 7,
+                "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+              }
+            },
+            {
+              "id": "reads-available-during-refresh",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "reads": 312,
+                "successfulAndConsistent": 312,
+                "baselineP95Ms": 66.31549999999697,
+                "candidateP95Ms": 19.12120000000141,
+                "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+              }
+            },
+            {
+              "id": "corrected-data-and-overlap",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "passed": true
+              }
+            },
+            {
+              "id": "failure-preserves-valid-snapshot",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "refreshRejected": true,
+                "errorRecorded": true,
+                "remainingEntries": 54,
+                "readStatus": 200
+              }
+            },
+            {
+              "id": "failure-recovery",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "entries": 54,
+                "error": ""
+              }
+            },
+            {
+              "id": "restart-restores-full-results",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "entries": 54
+              }
+            },
+            {
+              "id": "empty-dataset-compatible",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "passed": true
+              }
+            },
+            {
+              "id": "replay-can-start-and-measure",
+              "passed": true,
+              "category": "delivery",
+              "details": {
+                "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-guhOCb\\measurements.json",
+                "eventCount": 3905,
+                "postgres": "16.14",
+                "rounds": 7,
+                "source": "full historical HTTP API and PostgreSQL storage"
+              }
+            },
+            {
+              "id": "measurement-report-delivered",
+              "passed": true,
+              "category": "delivery",
+              "details": {
+                "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+              }
+            }
+          ],
+          "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-guhOCb"
+        },
+        "stderr": "B02 pair 1/7: baseline=8232ms candidate=1625ms\nB02 pair 2/7: baseline=7799ms candidate=1529ms\nB02 pair 3/7: baseline=7809ms candidate=1512ms\nB02 pair 4/7: baseline=7891ms candidate=1501ms\nB02 pair 5/7: baseline=7916ms candidate=1529ms\nB02 pair 6/7: baseline=7532ms candidate=1503ms\nB02 pair 7/7: baseline=7373ms candidate=1577ms\n"
+      },
+      "referenceScope": {
+        "passed": true,
+        "changed": [
+          "apps/token-board-api/src/server.ts",
+          "packages/token-board-core/src/token-board-storage.ts",
+          "DELIVERY.md",
+          "apps/token-board-api/src/leaderboard-snapshot-job.ts",
+          "apps/token-board-api/src/leaderboard-snapshot-worker.ts",
+          "docs/reference-measurement.json"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "apps/*/node_modules/**",
+          "packages/*/node_modules/**",
+          "artifacts/**"
+        ]
+      },
+      "controls": [
+        {
+          "name": "clear-on-failure",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 6,
+                "total": 7
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 120967,
+            "evaluation": {
+              "checks": [
+                {
+                  "id": "all-statistics-identical",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "combinations": 54,
+                    "passed": true
+                  }
+                },
+                {
+                  "id": "repeatable-refresh-improvement",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "baselineMs": [
+                      8557.798199999997,
+                      8468.3194,
+                      8164.0455,
+                      8245.310000000005,
+                      7716.680999999997,
+                      7709.231899999999,
+                      7966.520399999994
+                    ],
+                    "candidateMs": [
+                      1571.8242000000027,
+                      1618.7743999999948,
+                      1593.770000000004,
+                      1576.8714000000036,
+                      1515.9051000000036,
+                      1485.4561000000103,
+                      1579.9529000000039
+                    ],
+                    "baselineMedianMs": 8164.0455,
+                    "candidateMedianMs": 1576.8714000000036,
+                    "pairedGainMedianMs": 6570.275499999996,
+                    "pairedNoise3MAD": 837.8085000000283,
+                    "pairedWins": 7,
+                    "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+                  }
+                },
+                {
+                  "id": "reads-available-during-refresh",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "reads": 321,
+                    "successfulAndConsistent": 321,
+                    "baselineP95Ms": 72.17180000000371,
+                    "candidateP95Ms": 19.11119999999937,
+                    "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+                  }
+                },
+                {
+                  "id": "corrected-data-and-overlap",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "passed": true
+                  }
+                },
+                {
+                  "id": "failure-preserves-valid-snapshot",
+                  "passed": false,
+                  "category": "business",
+                  "details": {
+                    "refreshRejected": true,
+                    "errorRecorded": true,
+                    "remainingEntries": 0,
+                    "readStatus": 500
+                  }
+                },
+                {
+                  "id": "failure-recovery",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "entries": 54,
+                    "error": ""
+                  }
+                },
+                {
+                  "id": "restart-restores-full-results",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "entries": 54
+                  }
+                },
+                {
+                  "id": "empty-dataset-compatible",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "passed": true
+                  }
+                },
+                {
+                  "id": "replay-can-start-and-measure",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-AM5euN\\measurements.json",
+                    "eventCount": 3905,
+                    "postgres": "16.14",
+                    "rounds": 7,
+                    "source": "full historical HTTP API and PostgreSQL storage"
+                  }
+                },
+                {
+                  "id": "measurement-report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+                  }
+                }
+              ],
+              "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-AM5euN"
+            },
+            "stderr": "B02 pair 1/7: baseline=8558ms candidate=1572ms\nB02 pair 2/7: baseline=8468ms candidate=1619ms\nB02 pair 3/7: baseline=8164ms candidate=1594ms\nB02 pair 4/7: baseline=8245ms candidate=1577ms\nB02 pair 5/7: baseline=7717ms candidate=1516ms\nB02 pair 6/7: baseline=7709ms candidate=1485ms\nB02 pair 7/7: baseline=7967ms candidate=1580ms\n"
+          },
+          "expectedFailures": [
+            "failure-preserves-valid-snapshot"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "drop-lines",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 0,
+                "total": 2
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 22808,
+            "evaluation": {
+              "checks": [
+                {
+                  "id": "all-statistics-identical",
+                  "passed": false,
+                  "category": "business",
+                  "details": {
+                    "combinations": 54,
+                    "passed": false,
+                    "mismatched": [
+                      "today:lines",
+                      "1D:lines",
+                      "7D:lines",
+                      "30D:lines",
+                      "90D:lines",
+                      "week:lines",
+                      "month:lines",
+                      "lastweek:lines",
+                      "lastmonth:lines"
+                    ],
+                    "actualKeys": [
+                      "today:tokens",
+                      "today:cost",
+                      "today:sessions",
+                      "today:messages",
+                      "today:users",
+                      "1D:tokens",
+                      "1D:cost",
+                      "1D:sessions",
+                      "1D:messages",
+                      "1D:users",
+                      "7D:tokens",
+                      "7D:cost",
+                      "7D:sessions",
+                      "7D:messages",
+                      "7D:users",
+                      "30D:tokens",
+                      "30D:cost",
+                      "30D:sessions",
+                      "30D:messages",
+                      "30D:users",
+                      "90D:tokens",
+                      "90D:cost",
+                      "90D:sessions",
+                      "90D:messages",
+                      "90D:users",
+                      "week:tokens",
+                      "week:cost",
+                      "week:sessions",
+                      "week:messages",
+                      "week:users",
+                      "month:tokens",
+                      "month:cost",
+                      "month:sessions",
+                      "month:messages",
+                      "month:users",
+                      "lastweek:tokens",
+                      "lastweek:cost",
+                      "lastweek:sessions",
+                      "lastweek:messages",
+                      "lastweek:users",
+                      "lastmonth:tokens",
+                      "lastmonth:cost",
+                      "lastmonth:sessions",
+                      "lastmonth:messages",
+                      "lastmonth:users"
+                    ],
+                    "expectedKeys": [
+                      "today:tokens",
+                      "today:cost",
+                      "today:sessions",
+                      "today:messages",
+                      "today:users",
+                      "today:lines",
+                      "1D:tokens",
+                      "1D:cost",
+                      "1D:sessions",
+                      "1D:messages",
+                      "1D:users",
+                      "1D:lines",
+                      "7D:tokens",
+                      "7D:cost",
+                      "7D:sessions",
+                      "7D:messages",
+                      "7D:users",
+                      "7D:lines",
+                      "30D:tokens",
+                      "30D:cost",
+                      "30D:sessions",
+                      "30D:messages",
+                      "30D:users",
+                      "30D:lines",
+                      "90D:tokens",
+                      "90D:cost",
+                      "90D:sessions",
+                      "90D:messages",
+                      "90D:users",
+                      "90D:lines",
+                      "week:tokens",
+                      "week:cost",
+                      "week:sessions",
+                      "week:messages",
+                      "week:users",
+                      "week:lines",
+                      "month:tokens",
+                      "month:cost",
+                      "month:sessions",
+                      "month:messages",
+                      "month:users",
+                      "month:lines",
+                      "lastweek:tokens",
+                      "lastweek:cost",
+                      "lastweek:sessions",
+                      "lastweek:messages",
+                      "lastweek:users",
+                      "lastweek:lines",
+                      "lastmonth:tokens",
+                      "lastmonth:cost",
+                      "lastmonth:sessions",
+                      "lastmonth:messages",
+                      "lastmonth:users",
+                      "lastmonth:lines"
+                    ]
+                  }
+                },
+                {
+                  "id": "performance-not-graded",
+                  "passed": false,
+                  "category": "business",
+                  "details": {
+                    "error": "Full statistics contract failed; performance is not graded for a candidate that changes the result."
+                  }
+                }
+              ],
+              "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-lVDKuT"
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "all-statistics-identical"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "invalid-startup",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 0,
+                "total": 1
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 19619,
+            "evaluation": {
+              "checks": [
+                {
+                  "id": "candidate-execution",
+                  "passed": false,
+                  "category": "business",
+                  "details": {
+                    "error": "Service startup failed: \r\nnode:internal/modules/run_main:122\r\n    triggerUncaughtException(\r\n    ^\r\nError [TransformError]: Transform failed with 1 error:\r\n<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\apps\\token-board-api\\src\\server.ts:2:6: ERROR: Expected identifier but found \"=\"\r\n    at failureErrorWithLog (<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\node_modules\\.pnpm\\esbuild@0.27.7\\node_modules\\esbuild\\lib\\main.js:1748:15)\r\n    at <repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\node_modules\\.pnpm\\esbuild@0.27.7\\node_modules\\esbuild\\lib\\main.js:1017:50\r\n    at responseCallbacks.<computed> (<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\node_modules\\.pnpm\\esbuild@0.27.7\\node_modules\\esbuild\\lib\\main.js:884:9)\r\n    at handleIncomingPacket (<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\node_modules\\.pnpm\\esbuild@0.27.7\\node_modules\\esbuild\\lib\\main.js:939:12)\r\n    at Socket.readFromStdout (<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn\\candidate\\node_modules\\.pnpm\\esbuild@0.27.7\\node_modules\\esbuild\\lib\\main.js:862:7)\r\n    at Socket.emit (node:events:518:28)\r\n    at addChunk (node:internal/streams/readable:561:12)\r\n    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)\r\n    at Readable.push (node:internal/streams/readable:392:5)\r\n    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)\r\n\r\nNode.js v22.14.0\r\n"
+                  }
+                }
+              ],
+              "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-GTMmGn"
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "candidate-execution"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        }
+      ],
+      "alternatives": []
+    },
+    {
+      "caseId": "B04",
+      "validatedAt": "2026-10-03T03:27:41.545Z",
+      "rawReportSha256": "769354c2419ae3c749596a462a4e03dcddaa8612a09dca63b644ff0db12cd8e4",
+      "passed": true,
+      "baselineReproduced": true,
+      "baseline": {
+        "passed": false,
+        "businessPassed": false,
+        "categories": {
+          "business": {
+            "passed": false,
+            "passedCount": 0,
+            "total": 10
+          },
+          "preservation": {
+            "passed": false,
+            "passedCount": 2,
+            "total": 5
+          },
+          "delivery": {
+            "passed": true,
+            "passedCount": 2,
+            "total": 2
+          },
+          "precision": {
+            "passed": true,
+            "passedCount": 0,
+            "total": 0
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 1,
+        "durationMs": 3498,
+        "evaluation": {
+          "schemaVersion": 1,
+          "caseId": "B04",
+          "checks": [
+            {
+              "id": "candidate-build",
+              "passed": true,
+              "category": "delivery",
+              "details": "Full renderer entry and main-process modules bundled from candidate source"
+            },
+            {
+              "id": "catalog-without-desktop",
+              "passed": false,
+              "category": "business",
+              "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   9341,\n-   9342,\n-   9343,\n-   9344,\n-   9345\n- ]\n"
+            },
+            {
+              "id": "catalog-stale-snapshot",
+              "passed": false,
+              "category": "business",
+              "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Research Alpha'\n"
+            },
+            {
+              "id": "catalog-fresh-rename-and-identity",
+              "passed": false,
+              "category": "business",
+              "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Outdated Alpha'\n- 'Catalog Renamed'\n"
+            },
+            {
+              "id": "catalog-fresh-permission-disable",
+              "passed": false,
+              "category": "business",
+              "details": "Registry access changes must override a still-fresh conflicting snapshot\n\nfalse !== true\n"
+            },
+            {
+              "id": "catalog-fresh-permission-enable",
+              "passed": false,
+              "category": "business",
+              "details": "Registry access changes must override a still-fresh conflicting snapshot\n\ntrue !== false\n"
+            },
+            {
+              "id": "catalog-input-order",
+              "passed": false,
+              "category": "business",
+              "details": "Catalog order must not depend on registry/snapshot serialization order\n+ actual - expected\n\n  [\n    9341,\n-   9342,\n-   9343,\n-   9344,\n    9345,\n    9350\n  ]\n"
+            },
+            {
+              "id": "catalog-occupancy-permissions",
+              "passed": false,
+              "category": "business",
+              "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+            },
+            {
+              "id": "catalog-path-containment",
+              "passed": false,
+              "category": "preservation",
+              "details": "Valid registry entries must survive malformed neighbors"
+            },
+            {
+              "id": "catalog-broken-snapshot",
+              "passed": false,
+              "category": "business",
+              "details": "The expression evaluated to a falsy value:\n\n  assert.ok(list().some(p=>p.cdpPort===9342))\n"
+            },
+            {
+              "id": "catalog-live-lease-after-expiry",
+              "passed": false,
+              "category": "preservation",
+              "details": "Live holder PID keeps ownership\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+            },
+            {
+              "id": "catalog-custom-data-root",
+              "passed": false,
+              "category": "business",
+              "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Custom directory'\n"
+            },
+            {
+              "id": "rename-first-save-persists",
+              "passed": false,
+              "category": "business",
+              "details": "Background startup completion must preserve the draft\n+ actual - expected\n\n+ 'Catalog Renamed'\n- '首次保存 · Research & Review'\n"
+            },
+            {
+              "id": "rename-empty-draft-validation",
+              "passed": false,
+              "category": "preservation",
+              "details": "An intentional empty draft must not revert to the saved name\n+ actual - expected\n\n+ 'Research Beta'\n- ''\n"
+            },
+            {
+              "id": "rename-cancel-does-not-cross-profile",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "rename-registry-preserves-neighbors",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "frozen-context-preserved",
+              "passed": true,
+              "category": "delivery",
+              "details": {
+                "changedFiles": []
+              }
+            }
+          ],
+          "passed": false,
+          "exitCode": 1
+        },
+        "stderr": ""
+      },
+      "reference": {
+        "passed": true,
+        "businessPassed": true,
+        "categories": {
+          "business": {
+            "passed": true,
+            "passedCount": 10,
+            "total": 10
+          },
+          "preservation": {
+            "passed": true,
+            "passedCount": 5,
+            "total": 5
+          },
+          "delivery": {
+            "passed": true,
+            "passedCount": 2,
+            "total": 2
+          },
+          "precision": {
+            "passed": true,
+            "passedCount": 0,
+            "total": 0
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 0,
+        "durationMs": 3768,
+        "evaluation": {
+          "schemaVersion": 1,
+          "caseId": "B04",
+          "checks": [
+            {
+              "id": "candidate-build",
+              "passed": true,
+              "category": "delivery",
+              "details": "Full renderer entry and main-process modules bundled from candidate source"
+            },
+            {
+              "id": "catalog-without-desktop",
+              "passed": true,
+              "category": "business",
+              "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+            },
+            {
+              "id": "catalog-stale-snapshot",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-fresh-rename-and-identity",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-fresh-permission-disable",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-fresh-permission-enable",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-input-order",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-occupancy-permissions",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-path-containment",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-broken-snapshot",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-live-lease-after-expiry",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "catalog-custom-data-root",
+              "passed": true,
+              "category": "business",
+              "details": "passed"
+            },
+            {
+              "id": "rename-first-save-persists",
+              "passed": true,
+              "category": "business",
+              "details": {
+                "savedName": "首次保存 · Research & Review",
+                "renameCalls": 1,
+                "storage": "real temporary profiles.json"
+              }
+            },
+            {
+              "id": "rename-empty-draft-validation",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "rename-cancel-does-not-cross-profile",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "rename-registry-preserves-neighbors",
+              "passed": true,
+              "category": "preservation",
+              "details": "passed"
+            },
+            {
+              "id": "frozen-context-preserved",
+              "passed": true,
+              "category": "delivery",
+              "details": {
+                "changedFiles": [
+                  "src/main/agent-browser-lease.ts",
+                  "src/renderer/render/render-root.ts"
+                ]
+              }
+            }
+          ],
+          "passed": true,
+          "exitCode": 0
+        },
+        "stderr": ""
+      },
+      "referenceScope": {
+        "passed": true,
+        "changed": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/render/render-root.ts"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "dist/**",
+          "test-results/**",
+          ".replay-tmp/**"
+        ]
+      },
+      "controls": [
+        {
+          "name": "availability-bypass",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 6,
+                "total": 10
+              },
+              "preservation": {
+                "passed": false,
+                "passedCount": 4,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 3520,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": true,
+                  "category": "business",
+                  "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n\ntrue !== false\n"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Initial catalog must reflect the existing access setting\n\ntrue !== false\n"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Recommendations must apply permission/exclusion filtering and ascending port order\n+ actual - expected\n\n  [\n    9341,\n    9342,\n+   9343,\n    9345,\n    9350\n  ]\n"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n\nnull !== 'occupied'\n"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": "Live holder PID keeps ownership\n\nnull !== 'occupied'\n"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "savedName": "首次保存 · Research & Review",
+                    "renameCalls": 1,
+                    "storage": "real temporary profiles.json"
+                  }
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/main/agent-browser-lease.ts",
+                      "src/renderer/render/render-root.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": false,
+              "exitCode": 1
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "catalog-occupancy-permissions"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "catalog-only",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 9,
+                "total": 10
+              },
+              "preservation": {
+                "passed": false,
+                "passedCount": 4,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 3279,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": true,
+                  "category": "business",
+                  "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Background startup completion must preserve the draft\n+ actual - expected\n\n+ 'Catalog Renamed'\n- '首次保存 · Research & Review'\n"
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": "An intentional empty draft must not revert to the saved name\n+ actual - expected\n\n+ 'Research Beta'\n- ''\n"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/main/agent-browser-lease.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": false,
+              "exitCode": 1
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "rename-first-save-persists"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "display-only-save",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 9,
+                "total": 10
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 5,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 3439,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": true,
+                  "category": "business",
+                  "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": false,
+                  "category": "business",
+                  "details": "First save must reach the real registry\n+ actual - expected\n\n+ 'Catalog Renamed'\n- '首次保存 · Research & Review'\n"
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/main/agent-browser-lease.ts",
+                      "src/renderer/main.ts",
+                      "src/renderer/render/render-root.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": false,
+              "exitCode": 1
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "rename-first-save-persists"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "runtime-permission-priority",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 8,
+                "total": 10
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 5,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 3400,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": true,
+                  "category": "business",
+                  "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Registry access changes must override a still-fresh conflicting snapshot\n\nfalse !== true\n"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Registry access changes must override a still-fresh conflicting snapshot\n\ntrue !== false\n"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "savedName": "首次保存 · Research & Review",
+                    "renameCalls": 1,
+                    "storage": "real temporary profiles.json"
+                  }
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/main/agent-browser-lease.ts",
+                      "src/renderer/render/render-root.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": false,
+              "exitCode": 1
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "catalog-fresh-permission-disable",
+            "catalog-fresh-permission-enable"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "ui-only",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 1,
+                "total": 10
+              },
+              "preservation": {
+                "passed": false,
+                "passedCount": 3,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 3650,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   9341,\n-   9342,\n-   9343,\n-   9344,\n-   9345\n- ]\n"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Research Alpha'\n"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ 'Outdated Alpha'\n- 'Catalog Renamed'\n"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Registry access changes must override a still-fresh conflicting snapshot\n\nfalse !== true\n"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Registry access changes must override a still-fresh conflicting snapshot\n\ntrue !== false\n"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Catalog order must not depend on registry/snapshot serialization order\n+ actual - expected\n\n  [\n    9341,\n-   9342,\n-   9343,\n-   9344,\n    9345,\n    9350\n  ]\n"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": "Valid registry entries must survive malformed neighbors"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": false,
+                  "category": "business",
+                  "details": "The expression evaluated to a falsy value:\n\n  assert.ok(list().some(p=>p.cdpPort===9342))\n"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": "Live holder PID keeps ownership\n+ actual - expected\n\n+ undefined\n- 'occupied'\n"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Expected values to be strictly equal:\n+ actual - expected\n\n+ undefined\n- 'Custom directory'\n"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "savedName": "首次保存 · Research & Review",
+                    "renameCalls": 1,
+                    "storage": "real temporary profiles.json"
+                  }
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/renderer/render/render-root.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": false,
+              "exitCode": 1
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "catalog-without-desktop",
+            "catalog-fresh-rename-and-identity"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        }
+      ],
+      "alternatives": [
+        {
+          "name": "positive-controls/process-environment",
+          "result": {
+            "passed": true,
+            "businessPassed": true,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 10,
+                "total": 10
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 5,
+                "total": 5
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 2
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 0,
+                "total": 0
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 0,
+            "durationMs": 3428,
+            "evaluation": {
+              "schemaVersion": 1,
+              "caseId": "B04",
+              "checks": [
+                {
+                  "id": "candidate-build",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "Full renderer entry and main-process modules bundled from candidate source"
+                },
+                {
+                  "id": "catalog-without-desktop",
+                  "passed": true,
+                  "category": "business",
+                  "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+                },
+                {
+                  "id": "catalog-stale-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-rename-and-identity",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-disable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-fresh-permission-enable",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-input-order",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-occupancy-permissions",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-path-containment",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-broken-snapshot",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-live-lease-after-expiry",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "catalog-custom-data-root",
+                  "passed": true,
+                  "category": "business",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-first-save-persists",
+                  "passed": true,
+                  "category": "business",
+                  "details": {
+                    "savedName": "首次保存 · Research & Review",
+                    "renameCalls": 1,
+                    "storage": "real temporary profiles.json"
+                  }
+                },
+                {
+                  "id": "rename-empty-draft-validation",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-cancel-does-not-cross-profile",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "rename-registry-preserves-neighbors",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "passed"
+                },
+                {
+                  "id": "frozen-context-preserved",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": {
+                    "changedFiles": [
+                      "src/main/agent-browser-lease.ts",
+                      "src/renderer/render/render-root.ts"
+                    ]
+                  }
+                }
+              ],
+              "passed": true,
+              "exitCode": 0
+            },
+            "stderr": ""
+          },
+          "scope": {
+            "passed": true,
+            "changed": [
+              "src/main/agent-browser-lease.ts",
+              "src/renderer/render/render-root.ts"
+            ],
+            "forbidden": [],
+            "ignoredGeneratedPaths": [
+              "node_modules/**",
+              "dist/**",
+              "test-results/**",
+              ".replay-tmp/**"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "caseId": "B09",
+      "validatedAt": "2026-10-03T03:30:59.919Z",
+      "rawReportSha256": "8d3d216ab78800e51c3f2eb3cdd6e11bffeb289d84db680b05c3f5a7db00e207",
+      "passed": true,
+      "baselineReproduced": true,
+      "baseline": {
+        "passed": false,
+        "businessPassed": false,
+        "categories": {
+          "business": {
+            "passed": false,
+            "passedCount": 0,
+            "total": 3
+          },
+          "preservation": {
+            "passed": true,
+            "passedCount": 4,
+            "total": 4
+          },
+          "delivery": {
+            "passed": false,
+            "passedCount": 0,
+            "total": 1
+          },
+          "precision": {
+            "passed": false,
+            "passedCount": 2,
+            "total": 3
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 1,
+        "durationMs": 87,
+        "evaluation": {
+          "passed": false,
+          "businessPassed": false,
+          "preservationPassed": true,
+          "deliveryPassed": false,
+          "checks": [
+            {
+              "id": "file-scope",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "unexpectedFiles": []
+              }
+            },
+            {
+              "id": "readonly-materials",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "modifiedOrMissing": []
+              }
+            },
+            {
+              "id": "document-regions",
+              "passed": true,
+              "category": "preservation",
+              "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+            },
+            {
+              "id": "opening-version",
+              "passed": false,
+              "category": "business",
+              "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+            },
+            {
+              "id": "protected-content",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "changedRegions": [],
+                "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+              }
+            },
+            {
+              "id": "project-revised",
+              "passed": false,
+              "category": "business",
+              "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+            },
+            {
+              "id": "source-claims-review",
+              "passed": false,
+              "category": "business",
+              "required": false,
+              "details": {
+                "flaggedClaims": [
+                  "为了防止活跃浏览器写入造成数据损坏，我设计了事务同步状态机：先做差异预览，把 Cookies、Storage 写入 staging 暂存区，完成后使用原子 rename 快速切换；覆盖前自动创建备份，遇到异常或进程崩溃可瞬间回滚",
+                  "- **登录态事务级同步语义**：`diff → staging → rename → backup/rollback`，保障数据无损、可取消、可崩溃恢复"
+                ],
+                "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+              }
+            },
+            {
+              "id": "report-delivered",
+              "passed": false,
+              "category": "delivery",
+              "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+            },
+            {
+              "id": "opening-bytes",
+              "passed": false,
+              "category": "precision",
+              "details": "Exact sanitized LF content including intra-paragraph spacing."
+            },
+            {
+              "id": "protected-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+            },
+            {
+              "id": "utf8-lf",
+              "passed": true,
+              "category": "precision",
+              "details": "UTF-8 without BOM, replacement characters or CRLF."
+            }
+          ],
+          "precisionChecks": [
+            {
+              "id": "opening-bytes",
+              "passed": false,
+              "category": "precision",
+              "details": "Exact sanitized LF content including intra-paragraph spacing."
+            },
+            {
+              "id": "protected-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+            },
+            {
+              "id": "utf8-lf",
+              "passed": true,
+              "category": "precision",
+              "details": "UTF-8 without BOM, replacement characters or CRLF."
+            }
+          ],
+          "manualReviewRequired": true,
+          "reviewStatus": "pending-semantic-review",
+          "reviewPacket": {
+            "rubric": "fact-rubric.json",
+            "candidateSha256": "8948e82cd59691e961dc65de5c6a74c16698aee94feb4a8f774d8283ce124b0a",
+            "projectBody": "\n### 一句话定位\n\n解决真实登录态安全复用与多 Agent 并发调度冲突的 local-first Chrome Profile 控制台与受控 CDP 网关。\n\n### 30 秒版\n\n我在流舟实习期间主导研发了 ProfilePilot。我们调研评测了市面上 6 款主流浏览器自动化工具，发现它们都无法解决“人与 Agent 抢占同一个 Chrome 窗口与焦点”的痛点。ProfilePilot 采用双核架构：右翼是 Profile 数据管理面，通过 `diff → staging → rename → backup/rollback` 事务化同步真实 Chrome 登录态到隔离副本，规避 Chrome 136+ 限制远程调试端口的安全约束；左翼是 Agent 协同控制面，通过本地 Gateway 集中管理 Profile 租约与代次（`controlGeneration`），为 CDP 连接派发一次性 Ticket；结合页面悬浮控制条与 macOS 原生 Input Guard，实现随时人机接管且互不抢占。日常稳定支撑并行运行 3 个独立 Agent 浏览器 Session，赋能商业化多需求并发自测。\n\n### 90 秒展开版\n\n**业务背景与痛点**：在流舟商业化拦截和复杂配置流验证中，大量场景必须由 Agent 在真实内网登录态下操作页面闭环验证，而支付与高危环节又需人工随时介入。传统方案面临三大死穴：第一，使用纯净临时浏览器需要反复重新登录公司内网多套系统；第二，直接给日常默认 Chrome 挂 `--remote-debugging-port`，不仅存在严重的数据污染隐患，且 Chrome 136 之后已对默认数据目录限制远程调试；第三，多个 Agent 或人和 Agent 同时操作时，窗口焦点抢占、点击冲突频发，甚至造成误触线上数据的灾难性后果。\n\n**双核架构设计**：\n\n1. **右翼：本机优先 Profile 数据管理面**：从 Chrome `Local State` 和系统进程中智能发现真实 Profile，并在独立 `user-data-dir` 中创建隔离副本。为了防止活跃浏览器写入造成数据损坏，我设计了事务同步状态机：先做差异预览，把 Cookies、Storage 写入 staging 暂存区，完成后使用原子 rename 快速切换；覆盖前自动创建备份，遇到异常或进程崩溃可瞬间回滚。\n2. **左翼：可编程 Agent 协同控制面**：彻底告别裸连 CDP 端口。前端 Wrapper 解析指令向 Gateway 申领短时一次性 Ticket，Daemon 通过 WebSocket 建连，CDP 指令经 Gateway 进行安全审计和请求拦截后，通过专用 pipe 转发给浏览器。Gateway 实行严格的“一 Profile 一 Session”排他租约调度，并通过代次计数器（`controlGeneration`）进行权限管理——当用户接管、任务归还或任务重置时，Gateway 立即递增代次，旧 WebSocket 连接的发送权限瞬间失效，杜绝幽灵指令。\n3. **可见可接管的人机分层防护**：在页面端注入轻量悬浮控制条（可见任务状态、随时暂停/接管/恢复）；同时清醒认识到 DOM 遮罩防不住浏览器原生标签栏和地址栏，因此在 macOS 端增加了按 Chrome 进程拦截的原生 Input Guard，结合 Gateway 所有权仲裁，构建了从网页 UI、系统输入层到协议通信层的三重防护壁垒。\n\n### 最值得展开的技术点\n\n- **登录态事务级同步语义**：`diff → staging → rename → backup/rollback`，保障数据无损、可取消、可崩溃恢复。\n- **Gateway 租约与代次协议**：Profile Lease 解决并发归属，一次性 Ticket 验证连接身份，`controlGeneration` 彻底斩断旧连接越权。\n- **三层人机协同防护体系**：网页 DOM 悬浮条（交互感知） + 原生 Input Guard（真实系统输入拦截） + Gateway（连接所有权终审）。\n- **多需求并发自测落地**：日常并行运行 3 个独立 Agent 浏览器 Session，实现研发多分支多需求并行验证。\n\n### 常见追问\n\n**为什么市面已有 Playwright、Puppeteer，还要自研 ProfilePilot？**\n\n市面工具面向自动化爬虫或端到端测试，默认假定独占纯净浏览器。我们评测 6 款主流工具后确认：没有工具能解决“人和 Agent 共用浏览器时的焦点抢占与接管”；也没有工具能无感、安全地将真实 Chrome 登录态事务化同步到隔离环境以绕过 Chrome 136 端口限制。ProfilePilot 解决的是 AI 辅助真实研发验证的控制面空白。\n\n**为什么给 Chrome 开一个固定 CDP 端口还不够？**\n\n固定端口只能建立网络连接，回答不了高层协同问题：“现在是哪个 Agent 在操作？”“用户点击接管后，Agent 发送的下一个 CDP 包如何拒收？” Gateway 将端口映射、Session 租约、Ticket 凭证和控制代次统一收口，才能在协议层实现强约束。\n\n**登录态同步的原子性和备份机制具体是怎么做的？**\n\n真实 Chrome 运行时会锁住 Cookies 数据库文件。直接复制可能拷出残缺数据。我们是在冷启动或静默期读取只读快照，先拷到 staging 临时目录完成结构校验，再触发 rename 原子替换当前隔离 Profile 的对应路径；同时保留最近一次 snapshot 备份，出现校验异常直接重命名恢复。\n\n**DOM 遮罩和原生 Input Guard 的边界是什么？**\n\nDOM 遮罩仅能在视口内防误触，无法拦截用户点击标签页切换、关闭窗口、地址栏跳转或原生 dialog；macOS 下借助系统 Accessibility/Event Tap 实现进程级 Input Guard，在接管前拦截鼠标键盘发往 Chrome 进程的真实物理事件，把防误触做到系统级。\n\n**跨平台支持现状怎么说最准确？**\n\nProfile 管理、事务同步与 Gateway 核心控制协议跨平台完全支持（macOS / Windows）；原生 Input Guard 和窗口焦点保护在 macOS 上实现最为完整，Windows 上部分底层能力仍处于受限支持状态。\n\n---\n\n",
+            "report": "",
+            "requiredDecisions": [
+              "source-grounding",
+              "required-fact-coverage",
+              "readable-project",
+              "report-chain"
+            ],
+            "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+          }
+        },
+        "stderr": ""
+      },
+      "reference": {
+        "passed": true,
+        "businessPassed": true,
+        "categories": {
+          "business": {
+            "passed": true,
+            "passedCount": 3,
+            "total": 3
+          },
+          "preservation": {
+            "passed": true,
+            "passedCount": 4,
+            "total": 4
+          },
+          "delivery": {
+            "passed": true,
+            "passedCount": 1,
+            "total": 1
+          },
+          "precision": {
+            "passed": true,
+            "passedCount": 3,
+            "total": 3
+          }
+        },
+        "infrastructureError": null,
+        "inputUnchanged": true,
+        "exitCode": 0,
+        "durationMs": 87,
+        "evaluation": {
+          "passed": true,
+          "businessPassed": true,
+          "preservationPassed": true,
+          "deliveryPassed": true,
+          "checks": [
+            {
+              "id": "file-scope",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "unexpectedFiles": []
+              }
+            },
+            {
+              "id": "readonly-materials",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "modifiedOrMissing": []
+              }
+            },
+            {
+              "id": "document-regions",
+              "passed": true,
+              "category": "preservation",
+              "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+            },
+            {
+              "id": "opening-version",
+              "passed": true,
+              "category": "business",
+              "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+            },
+            {
+              "id": "protected-content",
+              "passed": true,
+              "category": "preservation",
+              "details": {
+                "changedRegions": [],
+                "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+              }
+            },
+            {
+              "id": "project-revised",
+              "passed": true,
+              "category": "business",
+              "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+            },
+            {
+              "id": "source-claims-review",
+              "passed": true,
+              "category": "business",
+              "required": false,
+              "details": {
+                "flaggedClaims": [],
+                "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+              }
+            },
+            {
+              "id": "report-delivered",
+              "passed": true,
+              "category": "delivery",
+              "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+            },
+            {
+              "id": "opening-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact sanitized LF content including intra-paragraph spacing."
+            },
+            {
+              "id": "protected-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+            },
+            {
+              "id": "utf8-lf",
+              "passed": true,
+              "category": "precision",
+              "details": "UTF-8 without BOM, replacement characters or CRLF."
+            }
+          ],
+          "precisionChecks": [
+            {
+              "id": "opening-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact sanitized LF content including intra-paragraph spacing."
+            },
+            {
+              "id": "protected-bytes",
+              "passed": true,
+              "category": "precision",
+              "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+            },
+            {
+              "id": "utf8-lf",
+              "passed": true,
+              "category": "precision",
+              "details": "UTF-8 without BOM, replacement characters or CRLF."
+            }
+          ],
+          "manualReviewRequired": true,
+          "reviewStatus": "pending-semantic-review",
+          "reviewPacket": {
+            "rubric": "fact-rubric.json",
+            "candidateSha256": "75de77791568fa9ff72f4a9325dea220c759cd6ec3938a2ae02d1f024271a26b",
+            "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+            "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+            "requiredDecisions": [
+              "source-grounding",
+              "required-fact-coverage",
+              "readable-project",
+              "report-chain"
+            ],
+            "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+          }
+        },
+        "stderr": ""
+      },
+      "referenceScope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": []
+      },
+      "controls": [
+        {
+          "name": "invented-result",
+          "result": {
+            "passed": true,
+            "businessPassed": true,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 3
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 4,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 0,
+            "durationMs": 86,
+            "evaluation": {
+              "passed": true,
+              "businessPassed": true,
+              "preservationPassed": true,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": false,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [
+                      "实测自动化成功率达到 99.99%，平均操作延迟降低至 1 毫秒"
+                    ],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "af323d5bb54670612622d45a5d469dc79025504fbe8c7bf54d2c9597e8b1469a",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n实测自动化成功率达到 99.99%，平均操作延迟降低至 1 毫秒。\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "source-claims-review"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": {
+            "expectedReviewFlags": [
+              "source-claims-review"
+            ],
+            "rubric": "fact-rubric.json",
+            "expectedSemanticOutcome": "failed",
+            "criterion": "claim-boundaries",
+            "candidateEvidence": "实测自动化成功率达到 99.99%，平均操作延迟降低至 1 毫秒。",
+            "sourceReason": "参考资料仅记日常3个独立Session，无这两个测量；该控制必须经来源复核失败，机器仅提醒。"
+          },
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "saved-snapshot-overwrite",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              },
+              "preservation": {
+                "passed": false,
+                "passedCount": 3,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": false,
+                "passedCount": 2,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 87,
+            "evaluation": {
+              "passed": false,
+              "businessPassed": false,
+              "preservationPassed": false,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [
+                      "suffix"
+                    ],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": true,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "dc7178726a7b22921b22edfbd854df933362baf9f2da1d60bba1746d8f9a1552",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "protected-content"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "whole-file-revert",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 2,
+                "total": 3
+              },
+              "preservation": {
+                "passed": false,
+                "passedCount": 3,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": false,
+                "passedCount": 1,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 90,
+            "evaluation": {
+              "passed": false,
+              "businessPassed": false,
+              "preservationPassed": false,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": false,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [
+                      "prefix",
+                      "suffix"
+                    ],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": true,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "edc92e0774dbd48f5cdbf86dd73d4f2b4efb488da16203e9588d8f561c5f5164",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "opening-version",
+            "protected-content"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        },
+        {
+          "name": "wrong-git-restore",
+          "result": {
+            "passed": false,
+            "businessPassed": false,
+            "categories": {
+              "business": {
+                "passed": false,
+                "passedCount": 2,
+                "total": 3
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 4,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": false,
+                "passedCount": 2,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 1,
+            "durationMs": 90,
+            "evaluation": {
+              "passed": false,
+              "businessPassed": false,
+              "preservationPassed": true,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": false,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": true,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "218ec4f9bef5093e950584bb526bc6b328f282a17c17a2688b5836e010fce15d",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "expectedFailures": [
+            "opening-version"
+          ],
+          "expectedFailuresObserved": true,
+          "reviewExpectation": null,
+          "intendedOutcomeObserved": true
+        }
+      ],
+      "alternatives": [
+        {
+          "name": "positive-alternatives/numbered-paraphrase",
+          "result": {
+            "passed": true,
+            "businessPassed": true,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 4,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 0,
+            "durationMs": 93,
+            "evaluation": {
+              "passed": true,
+              "businessPassed": true,
+              "preservationPassed": true,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": true,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "418cf10098c57ed318873d7147c4a40887369fd0a86e60a4e9970924632169d8",
+                "projectBody": "\n1. 业务背景是商业化页面与支付验证：Agent 要沿用真实登录状态完成操作，付款阶段还需要人参与。评测六款自动化工具后，团队仍遇到开发者与 Agent 争用同一个 Chrome 窗口和焦点的问题。\n\n2. 我设计落地 ProfilePilot。Gateway 负责管理已登录的浏览器 Profile 和租约，按需将空闲资源分配给 Agent 会话。命令由 Wrapper 解析并申请一次性 Ticket，Daemon 以 WebSocket 维持连接；CDP 请求在 Gateway 通过安全检查后走专用管道转发。\n\n3. 页面悬浮条让开发者看见任务，并能暂停、接手控制，再恢复 Agent 工作。日常使用时已有三个独立 Agent 浏览器 Session 并行运行，用于多项需求的开发和自动化验证；这不是最大并发能力的测量。\n\n事实来源：实习答辩第 3.3 节。资料没有给出成功率或耗时，无法据此宣称百分之百成功。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "scope": {
+            "passed": true,
+            "changed": [
+              "handbook.md",
+              "REPORT.md"
+            ],
+            "forbidden": [],
+            "ignoredGeneratedPaths": []
+          }
+        },
+        {
+          "name": "positive-alternatives/qualified-results",
+          "result": {
+            "passed": true,
+            "businessPassed": true,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 2,
+                "total": 3
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 4,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 0,
+            "durationMs": 90,
+            "evaluation": {
+              "passed": true,
+              "businessPassed": true,
+              "preservationPassed": true,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": false,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [
+                      "成功率 99.99% 是现有资料无法支持的结论"
+                    ],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "1e85bf158cce7a5a2b14641a76e783a4e1d7fbadc541447e5d414d0fea13c9b9",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。成功率 99.99% 是现有资料无法支持的结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "scope": {
+            "passed": true,
+            "changed": [
+              "handbook.md",
+              "REPORT.md"
+            ],
+            "forbidden": [],
+            "ignoredGeneratedPaths": []
+          }
+        },
+        {
+          "name": "positive-alternatives/trailing-blank",
+          "result": {
+            "passed": true,
+            "businessPassed": true,
+            "categories": {
+              "business": {
+                "passed": true,
+                "passedCount": 3,
+                "total": 3
+              },
+              "preservation": {
+                "passed": true,
+                "passedCount": 4,
+                "total": 4
+              },
+              "delivery": {
+                "passed": true,
+                "passedCount": 1,
+                "total": 1
+              },
+              "precision": {
+                "passed": false,
+                "passedCount": 2,
+                "total": 3
+              }
+            },
+            "infrastructureError": null,
+            "inputUnchanged": true,
+            "exitCode": 0,
+            "durationMs": 92,
+            "evaluation": {
+              "passed": true,
+              "businessPassed": true,
+              "preservationPassed": true,
+              "deliveryPassed": true,
+              "checks": [
+                {
+                  "id": "file-scope",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "unexpectedFiles": []
+                  }
+                },
+                {
+                  "id": "readonly-materials",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "modifiedOrMissing": []
+                  }
+                },
+                {
+                  "id": "document-regions",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+                },
+                {
+                  "id": "opening-version",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+                },
+                {
+                  "id": "protected-content",
+                  "passed": true,
+                  "category": "preservation",
+                  "details": {
+                    "changedRegions": [],
+                    "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+                  }
+                },
+                {
+                  "id": "project-revised",
+                  "passed": true,
+                  "category": "business",
+                  "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+                },
+                {
+                  "id": "source-claims-review",
+                  "passed": true,
+                  "category": "business",
+                  "required": false,
+                  "details": {
+                    "flaggedClaims": [],
+                    "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+                  }
+                },
+                {
+                  "id": "report-delivered",
+                  "passed": true,
+                  "category": "delivery",
+                  "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+                },
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "precisionChecks": [
+                {
+                  "id": "opening-bytes",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "Exact sanitized LF content including intra-paragraph spacing."
+                },
+                {
+                  "id": "protected-bytes",
+                  "passed": false,
+                  "category": "precision",
+                  "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+                },
+                {
+                  "id": "utf8-lf",
+                  "passed": true,
+                  "category": "precision",
+                  "details": "UTF-8 without BOM, replacement characters or CRLF."
+                }
+              ],
+              "manualReviewRequired": true,
+              "reviewStatus": "pending-semantic-review",
+              "reviewPacket": {
+                "rubric": "fact-rubric.json",
+                "candidateSha256": "a9601825320a89b9dc03ed070d6cfe69907f69a5fa73691033962b9bfb497c83",
+                "projectBody": "\n### 背景与难点\n\n商业化拦截与支付流程中，很多场景需要 Agent 使用真实登录态操作页面完成验证，支付环节又需要人工介入。团队比较了 6 款主流浏览器自动化工具，发现开发者和 Agent 仍会争用同一个 Chrome 窗口与焦点。项目需要让自动化验证与人工参与能够协作进行。\n\n### 我的方案\n\n我设计并落地了 ProfilePilot 控制台。Gateway 统一管理已登录的 Chrome Profile 资源与租约，为 Agent Session 动态分配空闲 Profile。Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接；CDP 指令经 Gateway 安全校验后，通过专用管道转发。\n\n页面上的悬浮控制条提供可见的接管入口，开发者可以暂停、接管或恢复 Agent 任务。这样，业务验证中需要人工参与的环节可以衔接自动化操作。\n\n### 结果与边界\n\n资料记录的日常使用结果是并行运行 3 个独立 Agent 浏览器 Session，支持多个需求并行开发与自动化验证。这是当时的使用记录，不是并发上限。资料没有提供成功率、耗时测量或各平台的实现保证，因此这里不扩写这些结论。\n\n资料依据：实习答辩文档的「通用 AI 工程化：ProfilePilot」一节。\n\n---\n\n",
+                "report": "# 修改与核验\n\n恢复依据来自 `.history/tool-events.jsonl` 中同一 `/workspace/handbook.md` 的连续证据。E0045（2026-09-03T13:21:33.280Z）的 Read 和仓库快照是较早的内容；E0243（13:35:25.542Z）的 Read 已显示单一的「45 秒精简版」，保留用户不规则空格及当时的项目选择列表。E0288（13:37:24.743Z）再次读取相同开场区域；E0301（13:38:20.811Z）的 Edit.old_string 与之对应，而 new_string 增加了 90 秒主版本并扩写开场白。\n\nE0386（13:42:53.810Z）读取的 origin/main 旧稿与随后 E0399（13:43:23.920Z）写入的开场区域相符；用户在 E0427（13:46:50.295Z）明确否定这一版本。我据前面的 Read 与 Edit.old_string 恢复，去掉该次错误恢复带回的「怎么使用这份手册」小节，保留两段导语和实习总标题。没有将整个历史文件覆盖到当前文档。\n\n项目 1 正文根据 `references/defense-notes.md` 的第 3.3 节整理了业务验证与人工支付背景、窗口与焦点冲突、Gateway 分配资源和租约、Wrapper/Ticket/Daemon/WebSocket/CDP 通信以及悬浮条接管。6 款工具与日常 3 个独立 Session 都来自该节；没有将其他项目的性能和业务数字挪进来。没有把手册旧稿里的事务同步实现、Input Guard、平台支持或瞬时回滚补成已核实事实。\n\n已逐区域比较：文档导语、实习总标题、项目 1 主标题，以及项目 2 起的所有章节与起始工作文档相同；历史文件和参考资料未修改。开场区域来自可交叉核对的历史文本，保留对应段落与空格。正文中的来源使用文字说明，未新增 Markdown 链接。\n\n证据局限：记录没有原生 Ctrl+S 保存事件，保存行为依赖用户陈述；能够确认的是在助手 Edit 之前 Read 已观察到的内容，不能证明未展示的编辑器操作、原始物理换行或完整仓库状态。没有访问内部链接或验证底层实现。\n",
+                "requiredDecisions": [
+                  "source-grounding",
+                  "required-fact-coverage",
+                  "readable-project",
+                  "report-chain"
+                ],
+                "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+              }
+            },
+            "stderr": ""
+          },
+          "scope": {
+            "passed": true,
+            "changed": [
+              "handbook.md",
+              "REPORT.md"
+            ],
+            "forbidden": [],
+            "ignoredGeneratedPaths": []
+          }
+        }
+      ]
+    }
+  ]
+}

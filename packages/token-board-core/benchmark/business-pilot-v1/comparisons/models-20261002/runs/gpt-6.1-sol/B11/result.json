@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6.1-sol",
+  "label": "GPT-6.1 Sol",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "failed",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:57:25.712Z",
+    "taskStartedAt": "2026-10-02T15:57:25.927Z",
+    "taskCompletedAt": "2026-10-02T16:00:25.972Z",
+    "taskWallMs": 180045,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6.1-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 250512,
+      "cached_input_tokens": 226688,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 4321,
+      "reasoning_output_tokens": 208,
+      "total_tokens": 254833
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "5ff27cbf00f741bc0178eff010454de696ea61a1e7d4fe88074cb95456de1e67",
+    "toolCallCount": 8,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "failed",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:02:09.968Z",
+    "notes": [
+      "Release implementation passes all 19 functional checks and scope, but REPORT.md contains literal ASCII question marks replacing its Chinese explanations. Required root-cause, evidence and limitations report is unreadable as delivered. This is a delivery/report failure, not a publication-function failure; submission is preserved without repair."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "3bef0abb3686d6f0bc1c8a3565548cfe7ef96afb54118ded1d937f7328d1a23a"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "b23ce3da136099bf5d66e787f07380b3f785fd39f56e9c0a7c33ab28f2e5a4dd"
+    }
+  ],
+  "rawGradeSha256": "a2b0ea50235364241cbb35854ec70ea21ed859c6268c8e4ddd5235b1b9976cd2"
+}

@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6.1-sol",
+  "label": "GPT-6.1 Sol",
+  "caseId": "B09",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 9,
+  "checksTotal": 10,
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true
+    },
+    {
+      "id": "document-structure",
+      "passed": true
+    },
+    {
+      "id": "saved-opening",
+      "passed": true
+    },
+    {
+      "id": "protected-content",
+      "passed": true
+    },
+    {
+      "id": "project-updated",
+      "passed": true
+    },
+    {
+      "id": "project-source-numbers",
+      "passed": true
+    },
+    {
+      "id": "unsupported-guarantees",
+      "passed": true
+    },
+    {
+      "id": "source-link",
+      "passed": false,
+      "details": "Project notes have a valid relative link."
+    },
+    {
+      "id": "report-evidence",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:51:06.293Z",
+    "taskStartedAt": "2026-10-02T15:51:06.483Z",
+    "taskCompletedAt": "2026-10-02T15:53:33.355Z",
+    "taskWallMs": 146872,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6.1-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 179212,
+      "cached_input_tokens": 160768,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 3895,
+      "reasoning_output_tokens": 257,
+      "total_tokens": 183107
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "aa88c529c24b6e0a4e03bec3293cc5283df6cad0c81e7a5d67d2896d0c99e55b",
+    "toolCallCount": 5,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:55:30.504Z",
+    "notes": [
+      "Recovered E02 exactly and protected bytes preserved including final blank line; project assertions match provided source and report distinguishes absent Ctrl+S evidence. Missing newly formatted Markdown citation is advisory."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "0b42f100fd761c1fee757e2c3ed8c375c84ddca32176ade52dec31cba0afb62f"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "20132470ce7bde6847e2cd26afde181c81376387e9931b3081a5b6c5cd87bf54"
+    }
+  ],
+  "rawGradeSha256": "c37eda7dbc6a65b7bf5de0367f3cc8aea2a9a68162c53db3d67a04491eb50dc0",
+  "machineCheckAdjudication": {
+    "policy": "adjudication.json",
+    "reviewer": "coordinating-agent",
+    "correctedChecks": [
+      "source-link"
+    ],
+    "reason": [
+      "Recovered E02 exactly and protected bytes preserved including final blank line; project assertions match provided source and report distinguishes absent Ctrl+S evidence. Missing newly formatted Markdown citation is advisory."
+    ],
+    "rawMachineAccepted": false
+  },
+  "sourceReview": {
+    "record": "semantic-blind-review.json",
+    "anonymousId": "F",
+    "model": "gpt-6.1-sol",
+    "finding": "supported",
+    "coordinatorDecision": "supported",
+    "notes": [
+      "背景、技术链路、控制条和两个 Session 有来源；控制面、统一调度入口属于合理概括。"
+    ]
+  }
+}

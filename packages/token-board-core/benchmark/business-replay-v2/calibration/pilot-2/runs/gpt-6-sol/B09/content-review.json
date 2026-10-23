@@ -1,0 +1,576 @@
+{
+  "packet": "R",
+  "rubric": "fact-rubric.json",
+  "rubricVersion": 2,
+  "reviewScope": {
+    "businessPassed": "仅项目 1 新正文的来源事实与必要覆盖。",
+    "deliveryPassed": "仅 packet 文字可读性与报告的历史证据链；不代表工作区改动或实际命令执行验收。",
+    "excluded": [
+      "候选工作区完整文件及文件改动范围",
+      "候选命令实际执行记录与运行验证",
+      "源码实现、原图、内部 Wiki、性能实测",
+      "原有其他项目章节"
+    ]
+  },
+  "criteria": [
+    {
+      "id": "business-context",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "流舟的商业化拦截与支付流程需要 Agent 在真实登录态下验证页面，其中支付环节还需要人工介入。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            191,
+            191
+          ],
+          "quote": "在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。"
+        }
+      ],
+      "reason": "商业化拦截与支付验证、Agent 真实登录态与支付人工介入均明确，因果和适用场景与来源一致。"
+    },
+    {
+      "id": "collaboration-problem",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "评测 6 款主流浏览器自动化工具后，我们发现开发者与 Agent 抢占同一个 Chrome 窗口和焦点的问题仍没有得到解决。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            193,
+            193
+          ],
+          "quote": "我们对市面上 6 款主流浏览器自动化工具进行了多维度评测（详见内部 Wiki：[Agent浏览器控制工具测评](https://reference.invalid/source/014)），发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。"
+        }
+      ],
+      "reason": "评测对象是 6 款主流浏览器自动化工具，问题是开发者与 Agent 争用 Chrome 窗口、焦点；没有外推为全行业、永久结论或虚构评分。"
+    },
+    {
+      "id": "resource-allocation",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "我设计并落地了 ProfilePilot：它管理多个已登录的隔离 Profile，把空闲 Profile 分配给 Agent Session；"
+        },
+        {
+          "field": "projectBody",
+          "quote": "Gateway 管理 Profile 资源和租约，将空闲 Profile 分配给 Agent Session。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            199,
+            199
+          ],
+          "quote": "针对这一痛点，我设计并落地了 **ProfilePilot** 控制台："
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            201,
+            201
+          ],
+          "quote": "- **Gateway 统一管理**：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session；"
+        }
+      ],
+      "reason": "保留了个人设计落地、Gateway 管理已登录 Profile 与租约，以及把空闲资源分配给 Agent Session 的关系；没有扩大为个人独立完成全项目或严格排他协议。"
+    },
+    {
+      "id": "controlled-communication",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "Agent 的命令先由 Wrapper 解析并向 Gateway 申领一次性 Ticket；Daemon 建立 WebSocket 连接后，CDP 指令由 Gateway 校验，再通过专用管道转发到浏览器。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            202,
+            202
+          ],
+          "quote": "- **受控 CDP 通信**：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发；"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            207,
+            207
+          ],
+          "quote": "资料图：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket（附件未随本题提供：figure-wb-07-profilepilot-seq.svg）"
+        }
+      ],
+      "reason": "一次性授权、Daemon 的 WebSocket 接入、Gateway 对 CDP 的校验与专用管道转发对应来源；没有把客户端写成绕过 Gateway 的无限制控制。"
+    },
+    {
+      "id": "visible-handoff",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "页面悬浮控制条显示任务状态，开发者可以暂停、接管和恢复 Agent 任务，配合 Profile 占用管理处理人和 Agent 的操作交接。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            197,
+            197
+          ],
+          "quote": "资料图：真实页面上的 Agent 控制条：任务进行中可暂停、继续，人和 Agent 不抢同一个窗口（附件未随本题提供：figure-10-agent-overlay.png）"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            203,
+            203
+          ],
+          "quote": "- **可见可接管**：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+        }
+      ],
+      "reason": "页面控制条的任务可见性及暂停、接管、恢复对应正文与图注。这里只描述交互能力，没有写入权限吊销、原生输入拦截或控制权状态机保证。"
+    },
+    {
+      "id": "observed-result",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "答辩材料记录的结果是日常并行运行 3 个独立 Agent 浏览器 Session，支持多需求并行开发与自动化验证。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            209,
+            209
+          ],
+          "quote": "**产出成果**：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+        }
+      ],
+      "reason": "3 的主体是日常独立并行 Agent 浏览器 Session，结果服务多需求开发与自动化验证；不是最大并发容量或量化性能改善。"
+    },
+    {
+      "id": "claim-boundaries",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "ProfilePilot 把已登录 Chrome Profile 的管理和 Agent 的浏览器连接放到同一个本地控制台。它为多个隔离 Profile 分配端口、同步登录态并展示 Agent 占用；"
+        },
+        {
+          "field": "projectBody",
+          "quote": "这样，Agent 接入、Profile 分配和浏览器通信有同一个管理入口。"
+        },
+        {
+          "field": "report",
+          "quote": "未沿用旧手册中没有得到该材料支持的 Chrome 版本限制、同步原子性与回滚保证、控制代次、系统级 Input Guard 和跨平台保证。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            191,
+            191
+          ],
+          "quote": "在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            195,
+            195
+          ],
+          "quote": "资料图：ProfilePilot：给多个隔离 Profile 分配端口、同步登录态，并查看 Agent 占用（附件未随本题提供：figure-09-profilepilot.png）"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            197,
+            197
+          ],
+          "quote": "资料图：真实页面上的 Agent 控制条：任务进行中可暂停、继续，人和 Agent 不抢同一个窗口（附件未随本题提供：figure-10-agent-overlay.png）"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            199,
+            199
+          ],
+          "quote": "针对这一痛点，我设计并落地了 **ProfilePilot** 控制台："
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            201,
+            201
+          ],
+          "quote": "- **Gateway 统一管理**：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session；"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            202,
+            202
+          ],
+          "quote": "- **受控 CDP 通信**：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发；"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            203,
+            203
+          ],
+          "quote": "- **可见可接管**：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            205,
+            205
+          ],
+          "quote": "资料图：ProfilePilot 双核架构：左翼可编程 Agent 协同控制面与右翼本机优先 Profile 数据管理面（附件未随本题提供：figure-wb-08-profilepilot-arch.svg）"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            207,
+            207
+          ],
+          "quote": "资料图：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket（附件未随本题提供：figure-wb-07-profilepilot-seq.svg）"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            209,
+            209
+          ],
+          "quote": "**产出成果**：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+        },
+        {
+          "file": "MATERIALS.md",
+          "lines": [
+            8,
+            8
+          ],
+          "quote": "- `references/defense-notes.md` 由记录中对另一份文档的两次 Read 拼接，保留全部可见的文字。原图附件不在题包内，对应位置只保留图注与原文件名；链接已经替换为不可访问的脱敏占位地址，不需要打开。"
+        },
+        {
+          "file": "MATERIALS.md",
+          "lines": [
+            14,
+            14
+          ],
+          "quote": "所有文件均是离线脱敏导出：人名、学校、雇主、内部工具标识、路径与链接经过一致替换；时间和原始业务数字保留；换行统一为 LF。外部链接占位符和缺失图像不是本题要求修复的对象。题包未给出的源码、内部 Wiki、截图或平台能力不可自行补作事实。"
+        }
+      ],
+      "reason": "全文未发现无依据的实现、个人经历或量化保证。隔离 Profile、端口分配、登录态同步和占用来自图注 195，本地控制台是图注 205 本机优先 Profile 数据管理面与正文 199 控制台的合理高层概括；不据此推定所有组件的精确部署拓扑。统一管理入口和交接关系是已给出组件角色的连贯转述，并未额外承诺租约排他细则、连接吊销或系统输入层保证。仅有 6 款评测与日常 3 个 Session 两项业务数量。"
+    },
+    {
+      "id": "readable-project",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "projectBody",
+          "quote": "**业务背景与难点**：商业化拦截需要在用户的真实登录状态下检查页面行为，支付流程又不能完全交给 Agent。"
+        },
+        {
+          "field": "projectBody",
+          "quote": "这样，Agent 接入、Profile 分配和浏览器通信有同一个管理入口。"
+        },
+        {
+          "field": "projectBody",
+          "quote": "答辩材料记录的结果是日常并行运行 3 个独立 Agent 浏览器 Session，支持多需求并行开发与自动化验证。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            191,
+            191
+          ],
+          "quote": "在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            193,
+            193
+          ],
+          "quote": "我们对市面上 6 款主流浏览器自动化工具进行了多维度评测（详见内部 Wiki：[Agent浏览器控制工具测评](https://reference.invalid/source/014)），发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            201,
+            201
+          ],
+          "quote": "- **Gateway 统一管理**：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session；"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            202,
+            202
+          ],
+          "quote": "- **受控 CDP 通信**：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发；"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            203,
+            203
+          ],
+          "quote": "- **可见可接管**：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+        },
+        {
+          "file": "defense-notes.md",
+          "lines": [
+            209,
+            209
+          ],
+          "quote": "**产出成果**：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+        }
+      ],
+      "reason": "正文从真实登录态和人工介入需求解释窗口焦点冲突，随后说明 Profile、Gateway、Wrapper、Daemon、控制条如何衔接，最后给出日常结果。角色明确，篇幅紧凑且连贯，不是关键词堆砌，也没有复制整份答辩。"
+    },
+    {
+      "id": "report-chain",
+      "status": "supported",
+      "candidateEvidence": [
+        {
+          "field": "report",
+          "quote": "故选择 E0301 修改前、由多次 Read 相互印证的工作文档内容。"
+        },
+        {
+          "field": "report",
+          "quote": "13:43:23 的 E0399 把助手改写过的开场替换成仓库式开场，E0401 报告成功；13:46:50 的 E0427 中，用户指出那是最初版本，明确要求之前手动修改并按 Ctrl+S 保存后的版本。这排除了把仓库 blob 当作恢复目标。"
+        },
+        {
+          "field": "report",
+          "quote": "用户的 Ctrl+S 陈述结合连续 Read 和 Edit 的旧文本，支持恢复这份可见的手动版本；不能证明未导出的时间点没有别的修改。"
+        }
+      ],
+      "sourceEvidence": [
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0045",
+          "timestamp": "2026-09-03T13:21:33.280Z",
+          "toolUseId": "T001",
+          "field": "content",
+          "quote": "23\t## 怎么使用这份手册\n24\t"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0045",
+          "timestamp": "2026-09-03T13:21:33.280Z",
+          "toolUseId": "T001",
+          "field": "content",
+          "quote": "37\t### 90 秒主版本"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0243",
+          "timestamp": "2026-09-03T13:35:25.542Z",
+          "toolUseId": "T009",
+          "field": "content",
+          "quote": "22\t---\n23\t\n24\t## 一、整体面试开场白\n25\t\n26\t### 45 秒精简版"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0243",
+          "timestamp": "2026-09-03T13:35:25.542Z",
+          "toolUseId": "T009",
+          "field": "content",
+          "quote": "30\t### 开场后的项目选择"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0243",
+          "timestamp": "2026-09-03T13:35:25.542Z",
+          "toolUseId": "T009",
+          "field": "content",
+          "quote": "38\t---\n39\t\n40\t## 二、云杉科技·流舟实习"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0258",
+          "timestamp": "2026-09-03T13:36:07.535Z",
+          "toolUseId": "T011",
+          "field": "content",
+          "quote": "24\t## 一、整体面试开场白\n25\t\n26\t### 45 秒精简版"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0288",
+          "timestamp": "2026-09-03T13:37:24.743Z",
+          "toolUseId": "T015",
+          "field": "content",
+          "quote": "24\t## 一、整体面试开场白\n25\t\n26\t### 45 秒精简版"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0301",
+          "timestamp": "2026-09-03T13:38:20.811Z",
+          "toolUseId": "T018",
+          "field": "input.old_string",
+          "quote": "## 一、整体面试开场白\n\n### 45 秒精简版\n\n面试官您好，我叫林舟，来自海岚大学软件工程专业。在流舟、StreamHub和远帆软件三段前端实习经历。"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0301",
+          "timestamp": "2026-09-03T13:38:20.811Z",
+          "toolUseId": "T018",
+          "field": "input.new_string",
+          "quote": "## 一、整体面试开场白\n\n### 90 秒主版本"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0309",
+          "timestamp": "2026-09-03T13:38:23.559Z",
+          "toolUseId": "T018",
+          "field": "content",
+          "quote": "The file /workspace/handbook.md has been updated successfully."
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0376",
+          "timestamp": "2026-09-03T13:42:42.729Z",
+          "toolUseId": "T022",
+          "field": "content",
+          "quote": "index e6c0a73..f0d9850 100644"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0386",
+          "timestamp": "2026-09-03T13:42:53.810Z",
+          "toolUseId": "T023",
+          "field": "content",
+          "quote": "Exit code 255"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0399",
+          "timestamp": "2026-09-03T13:43:23.920Z",
+          "toolUseId": "T025",
+          "field": "input.new_string",
+          "quote": "## 怎么使用这份手册"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0399",
+          "timestamp": "2026-09-03T13:43:23.920Z",
+          "toolUseId": "T025",
+          "field": "input.new_string",
+          "quote": "## 一、整体面试开场白\n\n### 90 秒主版本"
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0401",
+          "timestamp": "2026-09-03T13:43:26.718Z",
+          "toolUseId": "T025",
+          "field": "content",
+          "quote": "The file /workspace/handbook.md has been updated successfully."
+        },
+        {
+          "file": ".history/tool-events.jsonl",
+          "eventId": "E0427",
+          "timestamp": "2026-09-03T13:46:50.295Z",
+          "toolUseId": null,
+          "field": "content",
+          "quote": "你这也不对啊，这是最初的那一版；最初的版本我自己手动更改，然后按Ctrl +  S保存了，我要我自己按Ctrl + S保存后的那个版本"
+        },
+        {
+          "file": "MATERIALS.md",
+          "lines": [
+            3,
+            3
+          ],
+          "quote": "仓库文档的候选提交为 `cb414f0586b0bc78090b2c59d7e47ea38ebaa95d`，对应 Git blob 为 `e6c0a732d0b0b394f8483eab370d8c9202438f2f`。它与历史 diff 的旧 blob 精确匹配，但记录没有证明当时完整仓库的 HEAD；也不能用该提交替代用户已保存的未提交工作内容。"
+        },
+        {
+          "file": "MATERIALS.md",
+          "lines": [
+            10,
+            10
+          ],
+          "quote": "工具事件每行是一项 JSON 对象。`eventId` 仅供引用；`timestamp` 使用 UTC；`type` 为 `tool_use`、`tool_result` 或 `text`。调用与结果用 `toolUseId` 配对；调用保留 `name` 与 `input`，结果保留 `content` 与 `isError`。Read 结果里的 `行号\\t内容` 是当次读取时的文件行号，不是 JSONL 行号；不同时间的同一行号可能已经对应不同内容。Edit 的 `old_string` 与 `new_string` 为原工具参数，`replace_all` 保留原值。PowerShell 结果可能有非零退出码，不能将工具文字本身当作成功承诺。"
+        },
+        {
+          "file": "MATERIALS.md",
+          "lines": [
+            12,
+            12
+          ],
+          "quote": "其中一个工具结果原本保存在单独文本文件；导出时将其全文内联，并附 `exportNote` 说明。工具事件不是连续的操作系统审计记录；没有原生编辑器保存事件或完整的工作树快照。用户消息是保存行为的一项证据，具体内容需结合文件读取与编辑记录判断。"
+        }
+      ],
+      "reason": "同一路径 /workspace/handbook.md 的 T009/T011/T015 Read 与 T018 Edit 形成版本链：E0243、E0258、E0288 的开场文本一致，E0301 old_string 对应片段相同，new_string 则加入 90 秒版且改写原有正文，E0309 确认写入。E0399/E0401 改回初稿式结构，E0427 随后否认初稿；MATERIALS 的 blob 只识别仓库基线。报告的版本选择、事件时间和因果符合材料，且没有把用户保存陈述说成原生保存日志。实际成品是否逐字恢复、修改范围是否完全限定、声称的验证是否真正执行未在本审查权限内核验，见 pendingCoordinatorChecks；本项通过仅指文字与历史证据链。"
+    }
+  ],
+  "unsupportedClaims": [],
+  "businessPassed": false,
+  "deliveryPassed": true,
+  "reviewer": "anonymous-document-fact-review-agent",
+  "humanReview": false,
+  "candidateSha256": "cacebbae6dbdc6ad9f1c1af10fbac213477c4d0fe9c2dde169cee630b657dadc",
+  "candidateSha256Source": "R.json 的 candidateSha256 字段；未重算未提供的候选成品。",
+  "pendingCoordinatorChecks": [
+    {
+      "status": "not-reviewed",
+      "candidateEvidence": {
+        "field": "report",
+        "quote": "已核对恢复后的开场与 E0301 `old_string` 的对应片段逐字一致，并检查正文在项目 2 标题前结束，两个保留标题仍在原层级。"
+      },
+      "reason": "仅在 packet 中看到声明；实际执行和文件范围由协调者另核，不能据此宣称本审查者已验证。"
+    },
+    {
+      "status": "not-reviewed",
+      "candidateEvidence": {
+        "field": "report",
+        "quote": "新增本报告。没有改动历史记录、参考资料或 `MATERIALS.md`，没有访问外部链接或调用原项目服务。"
+      },
+      "reason": "仅在 packet 中看到声明；实际执行和文件范围由协调者另核，不能据此宣称本审查者已验证。"
+    }
+  ],
+  "notes": [
+    "报告没有逐一列出 E0386 等全部事件；已有多次 Read、覆盖 Edit、后续用户否认仓库初稿的交叉链足够，不要求事件号全量覆盖。",
+    "业务来源包括可见正文与图注；合理角色概括可以成立，无需逐字复述术语。",
+    "保存版本归属是由用户陈述与连续内容证据支持的选择，不是完整编辑器保存快照。"
+  ],
+  "independentReviewOutcome": {
+    "projectFactsPassed": true,
+    "textAndEvidenceChainPassed": true
+  },
+  "coordinatorAdjudication": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "executionEvidence": "Actual PowerShell checks in the first-turn transcript were reviewed. Commands and reported checks were executed; readonly inputs and protected substantive content were independently checked by the frozen grader.",
+    "openingTextRestored": true,
+    "openingStructurePreserved": false,
+    "notes": [
+      "The submitted opening exactly matches the historical wording after removing the initial Markdown thematic break (--- followed by a blank line). E0243 line 22 proves the omitted structure. Under the frozen task rule, opening-version fails; this is not selection of the wrong textual version.",
+      "The participant actually compared only the substring beginning at the opening heading to E0301 old_string. That test passed, but excluded the preceding separator. Its limited validation is not treated as fabricated test execution.",
+      "A trailing blank-line difference is precision-only. No unsupported project claims were found."
+    ]
+  }
+}

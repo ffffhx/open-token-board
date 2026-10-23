@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "caseId": "B04",
+  "trial": 2,
+  "decision": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "preparedAt": "2026-10-02T14:57:27.302Z",
+  "gradedAt": "2026-10-02T15:08:47.935Z",
+  "participant": {
+    "harness": "collaboration-subagent",
+    "freshConversation": true,
+    "model": "inherited-session-configuration",
+    "providerModelIdentity": null,
+    "reasoningEffort": null,
+    "tokens": null,
+    "costUsd": null,
+    "generationDurationMs": null
+  },
+  "isolation": "Input export and fresh conversation; no OS-level sandbox or adversarial access audit",
+  "machineAccepted": true,
+  "machineChecks": {
+    "passed": 13,
+    "total": 13,
+    "checks": [
+      {
+        "id": "catalog-win32-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-darwin-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-linux-missing-and-stale",
+        "passed": true
+      },
+      {
+        "id": "catalog-fresh-authority-and-ownership",
+        "passed": true
+      },
+      {
+        "id": "catalog-explicit-directory-and-validation",
+        "passed": true
+      },
+      {
+        "id": "catalog-malformed-registry-fallback",
+        "passed": true
+      },
+      {
+        "id": "ui-module-load",
+        "passed": true
+      },
+      {
+        "id": "rename-one-submit-existing-behavior",
+        "passed": true
+      },
+      {
+        "id": "rename-draft-survives-status-refresh",
+        "passed": true
+      },
+      {
+        "id": "rename-draft-survives-pending-save",
+        "passed": true
+      },
+      {
+        "id": "rename-failure-keeps-draft-and-retry",
+        "passed": true
+      },
+      {
+        "id": "rename-profile-boundary-and-noop-render",
+        "passed": true
+      },
+      {
+        "id": "report-present",
+        "passed": true
+      }
+    ]
+  },
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "gradingDurationMs": 75,
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": "not-performed",
+    "notes": [
+      "已阅读两份源码改动与 REPORT.md：重绘前后保存同一编辑流程的草稿；注册表读取补齐 fixedCdpPort/lastCdpPort 回退，并在目录合并后检查租约。",
+      "13 项外部验收及文件范围检查全部通过，包括首轮暴露的合法 lastCdpPort 条目、草稿保留、失败重试、占用限制和平台路径 adapter。",
+      "报告明确区分模拟重启与真实桌面重启，未把 HTTP 冒烟当作浏览器 E2E，也未宣称解决截图弹窗残留。",
+      "复核结论限定于本题声明并实际验收的范围；真实焦点、输入法、磁盘链接、租约竞争及其他状态组合未全面验证。报告中的额外自测未逐条独立重放。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "68182f1e50c706fc1af01e6a0e273ca366cfc15bf1e5b59c92f488308c78b655"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "58bd68764ba8af1791c4c3510a53318129400b61756d09a651df8b847269bfe2"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "9e5f054411a3b9e8f2ff598e84df1de666c843acd36d75ead2ad896ffaca83d3"
+    }
+  ],
+  "rawReportSha256": "6693e92e4faaf5b5cb2dc3efd3e3a74726a302f1412fb724202c2cb7e0249b16",
+  "exportedFiles": {
+    "REPORT.md": "5e3f5477023297a0b641e83a5a875e17c82f4a8fdac6c371b8a03df521a678be",
+    "TASK.txt": "3fe850d0c552fec0f9c531c80c6a6ce25f568b3322b57252cc7f164dbcb42ff7",
+    "catalog-fixture.mjs": "6a491b4aba2edd6bd9840ea35cae164c3e6e8b2246a44c516d8a54a6a1150a38",
+    "demo.mjs": "1d3e7d1b1d53f34d796f02f3f23624b18055d08b7f6bc4ab251b216cfeb63ec6",
+    "node-dom.mjs": "c23055548e65a767b491ec4bbf4c96337123a683f24bc4292205eb5df721deb3",
+    "src/fixture-ui.mjs": "a7264b50799f9c493474ae85531352dd7696398bc8746ca380bb93bffe9e92f7",
+    "src/profile-catalog.mjs": "ca46d589d378832e8f083f1b2b453c50c5adbb1b668b925e84c75248c02d6853",
+    "src/render-root.mjs": "3495c2c63bdf51aad0f7bdffb8286911e9fb3a005dc1ad8efddb819aaf7ab98e"
+  }
+}

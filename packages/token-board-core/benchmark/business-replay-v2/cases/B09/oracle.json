@@ -1,0 +1,15 @@
+{
+  "visibility": "grader_only",
+  "opening": "---\n\n## 一、整体面试开场白\n\n### 45 秒精简版\n\n面试官您好，我叫林舟，来自海岚大学软件工程专业。在流舟、StreamHub和远帆软件三段前端实习经历。最近一段在流舟，主要做商业化相关业务、基础设施建设以及Agent 工程化相关的东西：研发了 ProfilePilot 浏览器控制面、测试账号切换工具链和内部 Agent Skills，完成了商业化域重构及流舟权益拦截能力建设。此前在 StreamHub，当时把 一个 1400 多单元格表格的查看态到编辑态耗时从 10 秒降到了 1.8 秒；也做过 qiankun 与 Vite 的微前端兼容。业余时间我维护 Agent Snapshots 和 Open Token Board 两个 AI 编码工具项目。\n\n### 开场后的项目选择\n\n- 面试官关注 AI / Agent：先讲 ProfilePilot，再讲测试账号工具链或 Agent Snapshots。\n- 面试官关注前端性能：讲 StreamHub 大表格。\n- 面试官关注架构治理：讲商业化域重构，再补远帆微前端。\n- 面试官关注全栈或数据一致性：讲 Open Token Board。\n- 面试官关注业务抽象和跨团队协作：讲流舟 3.0 权益与付费墙。\n\n---\n\n",
+  "openingSha256": "d11705327ffe4e8cb381a57267a05202dd9fc877d2468defb753a33deafd62bf",
+  "derivation": {
+    "contentWitnesses": [
+      "E0243",
+      "E0288",
+      "E0301.input.old_string"
+    ],
+    "cutoff": "2026-09-03T13:46:50.295Z",
+    "historicalFinalRecoveryNotUsed": true
+  },
+  "referenceSha256": "75de77791568fa9ff72f4a9325dea220c759cd6ec3938a2ae02d1f024271a26b"
+}

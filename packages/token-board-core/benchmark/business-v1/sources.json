@@ -1,0 +1,110 @@
+[
+  {
+    "id": "S01",
+    "date": "2026-09-13",
+    "tool": "Codex",
+    "summary": "累计 token 回退的会话用量诊断",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：用户诉求直接可证；历史根因未在本轮独立核验；概况：来源明确存在连续追问和调查要求；本次不把历史assistant的原因解释作为标准答案。",
+    "privateLocator": "本机私有索引中的 S01；不随题包分发"
+  },
+  {
+    "id": "S02",
+    "date": "2026-09-14",
+    "tool": "Codex",
+    "summary": "榜单快照提速并保持统计结果",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：历史工具输出可证部分验证和一次运行测量；概况：55 tests通过，随后新增测试经历失败；工具后来输出All 54 legacy comparisons passed及子进程专项1/1通过。线上记录一次刷新68261ms、54份结果。没有将这一耗时转为新评测门槛。",
+    "privateLocator": "本机私有索引中的 S02；不随题包分发"
+  },
+  {
+    "id": "S03",
+    "date": "2026-09-15",
+    "tool": "Codex",
+    "summary": "个人用量面板无限加载与冷查询",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：用户报告直接可证，工具输出证实部分优化及未全绿；概况：工具出现optimized 324ms与342ms、传输509条的隔离测量；不能当端到端耗时。最终67 tests/66 pass/1 fail。历史assistant说明后端已上线、前端未发布；本次未重新核查发布状态。",
+    "privateLocator": "本机私有索引中的 S03；不随题包分发"
+  },
+  {
+    "id": "S04",
+    "date": "2026-09-22",
+    "tool": "Codex",
+    "summary": "名称一次保存与未启动空闲 Profile 列表",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：直接用户反馈+真实测试输出；部分UI现象仅历史自述；概况：历史工具输出89 tests/89 pass/0 fail；assistant称一次保存、落盘、关闭通过，但对截图弹窗残留未稳定复现。本轮没有重新运行历史产品。",
+    "privateLocator": "本机私有索引中的 S04；不随题包分发"
+  },
+  {
+    "id": "S05",
+    "date": "2026-09-25 至 2026-09-26",
+    "tool": "Codex",
+    "summary": "CLI 到浏览器授权后的等待与超时",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：用户故障报告直接可证；确切竞态未证明；概况：用户明确说已点同意仍超时；后续工具出现一次成功连接记录，connectionTimeoutMs=180000。它不能证明根因，也不能证明单纯延长超时为充分修复。题面时序验收是新增设计。",
+    "privateLocator": "本机私有索引中的 S05；不随题包分发"
+  },
+  {
+    "id": "S06",
+    "date": "2026-09-19 至 2026-09-20",
+    "tool": "Codex",
+    "summary": "电脑控制手机全屏预览翻页",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：需求和要求验证可直接证明，历史最终实机结果本轮未独立核验；概况：用户原话明确前后翻页及连接手机后验证。没有把长会话后续屏幕共享/发布结果归到翻页验收。",
+    "privateLocator": "本机私有索引中的 S06；不随题包分发"
+  },
+  {
+    "id": "S07",
+    "date": "2026-09-19",
+    "tool": "Codex",
+    "summary": "剪贴板代码到手机的格式语义",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：原问题和语义疑问直接可证；历史实现结果不可证；概况：用户指出灰底与语言标签丢失，并问纯文本/Markdown及手机识别。没有证据说明当时已经实现自动识别或渲染修复。",
+    "privateLocator": "本机私有索引中的 S07；不随题包分发"
+  },
+  {
+    "id": "S08",
+    "date": "2026-09-02",
+    "tool": "Claude Code 客户端",
+    "summary": "WinForms 界面重做，同时保持剪贴板同步行为",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：用户需求与追问直接可证实；最终成功为历史助手自报；详情：历史助手称10项回归通过，用户追问后助手再报告启动。当前研究未重跑历史版本，也未核实无逻辑变化。",
+    "privateLocator": "本机私有索引中的 S08；不随题包分发"
+  },
+  {
+    "id": "S09",
+    "date": "2026-09-03",
+    "tool": "Claude Code 客户端",
+    "summary": "限定文档编辑范围并保护用户手动保存版本",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：两次用户纠正是强证据；最终恢复仅有助手报告；详情：历史助手先误改范围，再恢复错误的Git版本，最终声称通过会话历史找回用户保存版。当前研究未校验最终字节一致性。",
+    "privateLocator": "本机私有索引中的 S09；不随题包分发"
+  },
+  {
+    "id": "S10",
+    "date": "2026-09-03",
+    "tool": "Claude Code 客户端",
+    "summary": "从跨平台源码生成准确且可更新的架构图",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：需求、授权顺序和后续变更问题直接可证实；技术结论需重新校验；详情：历史助手识别缓存相关变更，但还给出无独立验证的绝对成功率/耗时表述。历史回答不能直接作为评分答案。",
+    "privateLocator": "本机私有索引中的 S10；不随题包分发"
+  },
+  {
+    "id": "S11",
+    "date": "2026-09-04",
+    "tool": "Claude Code 客户端",
+    "summary": "部署成功但文章仍是旧版：追踪独立内容数据链路",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：旧版页面由用户报告；具体根因及最终解决为助手报告；详情：历史助手称静态发布没有同步独立正文数据，补做导出与同步后报告成功。本次未连接当时远端，也没有验证历史发布结果。",
+    "privateLocator": "本机私有索引中的 S11；不随题包分发"
+  },
+  {
+    "id": "S12",
+    "date": "2026-09-07",
+    "tool": "Claude Code 客户端",
+    "summary": "LRU概念解释与可访问HTML教程",
+    "evidenceLevel": "user-request-confirmed",
+    "historicalResult": "证据强度：HTML不可访问及后续问题有直接用户证据；最终教学效果未独立验证；详情：历史用户先报告打不开HTML，再要求localhost；后续仍连续询问核心概念。不能仅凭HTML生成成功认定解释有效。",
+    "privateLocator": "本机私有索引中的 S12；不随题包分发"
+  }
+]

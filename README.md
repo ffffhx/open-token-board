@@ -111,16 +111,51 @@ npx --yes token-board-agent statusline
 }
 ```
 
+Windows 上把 `command` 写成对应的本机路径，例如：
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"C:/Users/you/.token-board-agent/token-board-agent.mjs\" statusline"
+  }
+}
+```
+
 ### B. 自己跑起来（本地开发）
 
-```bash
-pnpm install
+项目固定使用 pnpm 10.20.0。先在 macOS、Linux 或 Windows 上安装对应版本并安装依赖：
 
+```bash
+corepack enable
+corepack install --global pnpm@10.20.0
+pnpm install
+```
+
+macOS / Linux（分别在两个终端中运行）：
+
+```bash
 # 启动本地后端。正式部署请改用强随机 TOKEN_BOARD_AUTH_SECRET。
 TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET=true TOKEN_BOARD_HOST=127.0.0.1 TOKEN_BOARD_PORT=8787 pnpm token:server
 
 # 启动网页端，指向本地后端。
 NEXT_PUBLIC_TOKEN_BOARD_API_URL=http://127.0.0.1:8787 pnpm dev
+```
+
+Windows PowerShell（分别在两个 PowerShell 窗口中运行）：
+
+```powershell
+# 启动本地后端。正式部署请改用强随机 TOKEN_BOARD_AUTH_SECRET。
+$env:TOKEN_BOARD_ALLOW_DEV_AUTH_SECRET = "true"
+$env:TOKEN_BOARD_HOST = "127.0.0.1"
+$env:TOKEN_BOARD_PORT = "8787"
+pnpm token:server
+```
+
+```powershell
+# 启动网页端，指向本地后端。
+$env:NEXT_PUBLIC_TOKEN_BOARD_API_URL = "http://127.0.0.1:8787"
+pnpm dev
 ```
 
 打开这些页面：
@@ -135,6 +170,14 @@ NEXT_PUBLIC_TOKEN_BOARD_API_URL=http://127.0.0.1:8787 pnpm dev
 ```bash
 TOKEN_BOARD_API_URL=http://127.0.0.1:8787 pnpm token:agent login
 TOKEN_BOARD_API_URL=http://127.0.0.1:8787 pnpm token:agent upload
+```
+
+Windows PowerShell：
+
+```powershell
+$env:TOKEN_BOARD_API_URL = "http://127.0.0.1:8787"
+pnpm token:agent login
+pnpm token:agent upload
 ```
 
 GitHub 登录和 Device Flow 需要 API 服务配置 `GITHUB_CLIENT_ID`，网页 OAuth 还需要 `GITHUB_CLIENT_SECRET`。
@@ -195,7 +238,7 @@ pnpm codex:limits:serve
 - `/claude-limits`：兼容旧链接，默认打开 Claude Code 标签。
 - `/board`：登录用户个人区域内嵌 Codex 额度摘要。
 
-Claude Code 不在本地持久化订阅额度，精确 5h / weekly 数据只出现在 statusLine JSON。`token-board-agent install` 会生成 `~/.token-board-agent/claude-statusline-capture.sh`，把 `rate_limits` 离线保存到 `~/.token-board-agent/claude-rate-limits.json`，再由后台任务上传。接入方式见 [agent README](./tools/token-board-agent-npx/README.md#claude-code-订阅额度statusline-捕获)。
+Claude Code 不在本地持久化订阅额度，精确 5h / weekly 数据只出现在 statusLine JSON。macOS/Linux 可使用 `token-board-agent install` 生成的 `~/.token-board-agent/claude-statusline-capture.sh`；Windows 可把已安装 agent 的 `capture-statusline` 命令直接配置为 statusLine。两种方式都会把 `rate_limits` 离线保存到 `~/.token-board-agent/claude-rate-limits.json`，再由后台任务上传。接入方式见 [agent README](./tools/token-board-agent-npx/README.md#claude-code-订阅额度statusline-捕获)。
 
 ## 🔒 隐私与口径
 

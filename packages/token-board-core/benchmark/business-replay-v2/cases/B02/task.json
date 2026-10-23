@@ -1,0 +1,90 @@
+{
+  "id": "B02",
+  "title": "真实 PostgreSQL 榜单快照提速与数据一致性",
+  "sourceRef": "S02",
+  "referenceMode": "overlay",
+  "controlMode": "overlay",
+  "allowedChanges": [
+    "apps/token-board-api/src/**",
+    "packages/token-board-core/src/**",
+    "DELIVERY.md",
+    "docs/**",
+    "tests/replay/**"
+  ],
+  "generatedPaths": [
+    "node_modules/**",
+    "apps/*/node_modules/**",
+    "packages/*/node_modules/**",
+    "artifacts/**"
+  ],
+  "expectedBaselineFailures": [
+    "repeatable-refresh-improvement"
+  ],
+  "expectedBusinessFailures": [
+    "repeatable-refresh-improvement"
+  ],
+  "controlExpectedFailures": {
+    "drop-lines": [
+      "all-statistics-identical"
+    ],
+    "clear-on-failure": [
+      "failure-preserves-valid-snapshot"
+    ],
+    "invalid-startup": [
+      "candidate-execution"
+    ]
+  },
+  "runtime": {
+    "prepareScript": "prepare.mjs",
+    "prepareTimeoutMs": 300000,
+    "verifyTimeoutMs": 1200000,
+    "node": ">=22",
+    "postgres": "16.14.0-beta.17",
+    "platform": "Windows x64; Linux x64 non-root",
+    "dependencyLock": "workspace/pnpm-lock.yaml",
+    "fixtureSeed": 90214,
+    "fixedNow": "2026-09-14T12:00:00.000Z",
+    "timezone": "Asia/Shanghai",
+    "rounds": 7,
+    "performanceMustRunSerially": true,
+    "verifiedPlatform": "Windows x64",
+    "pnpm": "9.1.4"
+  },
+  "provenance": {
+    "historicalCommit": "cd20aef5e0f75f0aec5bd14b29fe0befce22e77c",
+    "sourceRef": "S02",
+    "details": "provenance/history.json",
+    "baselineEvidence": "历史会话20/291/376行git status没有API/Core的本地改动；381/390/398行记录完整性能修复补丁。当前工作树有未提交后续改动，本题没有复制它们。",
+    "transformations": [
+      "仅导出32个API/Core与必要配置/fixture文件，保留完整模块与原调用链",
+      "追加受B02_REPLAY_CONTROL保护的IPC测试运输层，调用原刷新函数并读取原缓存",
+      "以预载模块冻结业务Date而保留真实performance.now；合成数据替换客户数据",
+      "新增固定本机PostgreSQL16.14运行环境、工作区依赖锁、启动与测量脚本；历史原锁另存provenance/historical-pnpm-lock.yaml",
+      "移除无关Web/mobile/部署工程，未缩写统计函数或模拟SQL",
+      "重放工作区使用本机已验证的pnpm9.1.4生成的锁；历史原始锁单独保留，不计依赖准备耗时。"
+    ],
+    "reference": "历史性能补丁由会话381/390/398行恢复；本次参考另外改为逐份IPC传输、分段临时文件序列化、落盘成功后发布。新增部分解决本次合成数据19MB快照引出的尾延迟问题，并非历史已经完成的修改。",
+    "simulation": "没有数据库模拟器；PostgreSQL为真实本机进程。IPC控制、固定时钟及故障注入是明示的重放工具。",
+    "referenceAdditionalChanges": [
+      "逐份IPC传输54个完整结果，等全部完成后返回",
+      "逐条异步写完整JSON临时文件并原子重命名",
+      "持久化成功后才替换可见缓存"
+    ],
+    "firstReferenceTrial": {
+      "artifact": "provenance/historical-reference-first-trial.json",
+      "passed": false,
+      "reason": "历史补丁统计/提速通过，但候选读取P95 128.48ms超过100ms门槛；未放宽阈值。"
+    }
+  },
+  "verification": {
+    "oracle": "冻结的历史完整服务同数据结果；除generatedAt外逐字段精确比较，不删除业务字段",
+    "performance": "外部计时，交替7配对，先预热；中位数至少15%改善，6次配对胜出，配对收益中位数>3MAD",
+    "failure": "独立数据库临时重命名usage_events后刷新，要求旧快照可读、刷新拒绝且记录错误；恢复表后可成功刷新",
+    "boundaries": "多用户、全部组合、历史修正、上海日/周/月边界、缺失lines、tie、previous-only、empty、重叠刷新、重启",
+    "exits": {
+      "0": "全部检查通过",
+      "1": "业务/保持性/交付检查失败，包括候选语法、启动和控制接口合同失败",
+      "2": "依赖、数据库、冻结基线无法启动或验收基础设施失败"
+    }
+  }
+}

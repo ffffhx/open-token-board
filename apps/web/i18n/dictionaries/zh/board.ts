@@ -11,6 +11,10 @@ export const board = {
   status: {
     backendRows: (count: string) => `后端数据 ${count} 条`,
     loadingRealUsers: "正在加载真实用户数据",
+    updatedMinutesAgo: (minutes: number) => minutes < 1 ? "数据刚刚更新" : `数据更新于 ${minutes} 分钟前`,
+    updateTimeUnknown: "数据更新时间未知",
+    dataStale: "数据较旧，正在等待更新",
+    refreshFailedCached: "刷新失败，当前显示上次成功加载的数据",
     apiMissing: "未配置 Token Board API，无法读取自动上报数据",
     apiRequired: "需要连接 Token Board 后端后才能加载榜单",
     invalidBackendShape: "后端返回格式不正确",

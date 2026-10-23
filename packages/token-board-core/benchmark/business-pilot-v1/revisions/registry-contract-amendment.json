@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "reason": "B04 exported inputs omitted the historical lastCdpPort field contract",
+  "oldSuiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+  "newSuiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "amendedAt": "2026-10-02T14:57:24.104Z",
+  "changedFiles": [
+    "B04/prompt.txt",
+    "B04/task.json"
+  ],
+  "verifiersUnchanged": true,
+  "harnessUnchanged": true,
+  "otherCasesUnchanged": true,
+  "initialB04Decision": "invalid-input-contract",
+  "initialManifest": "initial/manifest.json",
+  "initialPrompt": "initial/B04-prompt.txt",
+  "initialTaskMetadata": "initial/B04-task.json",
+  "notes": [
+    "Revision 2 only supplies missing input-schema information; no hidden check was weakened.",
+    "B04 is rerun with a fresh participant; initial B09/B11 inputs and graders are byte-identical across revisions.",
+    "Initial grader is preserved privately so B11 can finish and be graded against its original receipt."
+  ]
+}

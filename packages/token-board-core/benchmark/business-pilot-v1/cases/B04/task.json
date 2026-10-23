@@ -1,0 +1,88 @@
+{
+  "id": "B04",
+  "title": "Profile 名称草稿重绘丢失与未启动候选遗漏",
+  "sourceCaseId": "B04",
+  "sourceRef": "S04",
+  "status": "historical-fragment-replay-validated",
+  "inputRevision": 2,
+  "inputContractAmendment": "The first trial exposed that lastCdpPort was tested but absent from all exported inputs. Revision 2 adds the historical StoredProfile field contract to the prompt. Verifier, starting code and reference solution are unchanged. The first trial remains archived as invalid-input-contract, not a model capability failure.",
+  "provenance": {
+    "kind": "historical-code-fragment-replay",
+    "repositoryAlias": "profile-manager-desktop",
+    "baseCommit": "0c5a1bf3c45478f90ba85cf7de3df6bc475edd99",
+    "fixCommit": "384af4955639e3ee4728fb25a4e66410c4a0779e",
+    "relation": "S04 session metadata explicitly records baseCommit. Initial git status has unrelated dirty/untracked files, but the renderer/root, modal, busy, main rename handler and catalog/lease source files used here are clean. Catalog changes in fixCommit match the session's applied patches. Reference renderer starts from baseCommit and applies only the evidenced rename-draft patch, excluding later unrelated header/workspace changes.",
+    "historicalSourceFiles": [
+      "src/renderer/render/render-root.ts",
+      "src/renderer/render/modals.ts",
+      "src/renderer/main.ts",
+      "src/renderer/busy.ts",
+      "src/main/agent-browser-lease.ts",
+      "src/shared/types.ts"
+    ],
+    "transformations": [
+      "TypeScript function bodies are transpiled to dependency-free JavaScript; selected catalog/lease read functions retain historical behavior. Lease writes, cleanup and browser process control are omitted.",
+      "Renderer imports unrelated panels from an explicit fixture adapter; historical render, rename modal, withBusy and submit logic are preserved. The submit wrapper exposes its Promise to deterministic tests.",
+      "UI tests use a minimal form DOM adapter, mocked backend storage and controlled promises. The demo optionally renders the historical form in a localhost page.",
+      "Catalog tests inject an in-memory filesystem and fixture-only process-liveness checks; all names, IDs, ports and home directories are synthetic.",
+      "Session paths, line locators and user directory names are stored only in the local private provenance index. No original registry or account data is included."
+    ],
+    "caveats": [
+      "This is not a full historical working-tree or Electron application replay; unrelated uncommitted changes are not reconstructed.",
+      "The historical basic one-submit save already succeeded. The confirmed regression is draft loss during redraw; the screenshot's lingering modal/root cause was never stably reproduced and is not asserted here.",
+      "Persistence/restart is simulated backend state rehydration, not a real disk-write or Electron-restart test.",
+      "Windows/macOS/Linux paths are exercised through platform adapters, not three native OS executions.",
+      "No real Profile startup, actual IPC, CLI presentation parity, screenshots or browser E2E is graded. Full business-v1 B04 acceptance is deliberately narrower in this pilot."
+    ]
+  },
+  "runtime": {
+    "node": ">=22",
+    "dependencies": [],
+    "network": "none",
+    "demo": "node demo.mjs",
+    "smoke": "node demo.mjs --once"
+  },
+  "allowedChanges": [
+    "src/render-root.mjs",
+    "src/profile-catalog.mjs",
+    "REPORT.md"
+  ],
+  "expectedBaselineFailures": [
+    "catalog-win32-missing-and-stale",
+    "catalog-darwin-missing-and-stale",
+    "catalog-linux-missing-and-stale",
+    "catalog-fresh-authority-and-ownership",
+    "catalog-explicit-directory-and-validation",
+    "catalog-malformed-registry-fallback",
+    "rename-draft-survives-status-refresh",
+    "rename-draft-survives-pending-save",
+    "rename-failure-keeps-draft-and-retry"
+  ],
+  "additionalAssessmentConditions": [
+    "Fixed profile state combinations, virtual time, controlled failed save and restart are evaluation fixtures, explicitly disclosed to the participant.",
+    "REPORT.md must describe observed evidence and uncovered behaviors; presence alone is automated, truthfulness needs reviewer assessment.",
+    "The runner exports only workspace plus prompt; fixCommit, reference and verify remain evaluator-side. A same-host unrestricted shell is not an adversarial secrecy boundary."
+  ],
+  "negativeControls": [
+    {
+      "name": "ignores-occupancy",
+      "reason": "Merges registry and preserves drafts but incorrectly marks leased profiles available.",
+      "expectedFailure": "catalog-win32-missing-and-stale"
+    }
+  ],
+  "validation": {
+    "baselinePassed": false,
+    "referencePassed": true,
+    "checkCount": 13,
+    "baselineBehaviorFailures": 9,
+    "candidateModelsRun": 0
+  },
+  "controlExpectedFailures": {
+    "ignores-occupancy": [
+      "catalog-win32-missing-and-stale",
+      "catalog-darwin-missing-and-stale",
+      "catalog-linux-missing-and-stale",
+      "catalog-fresh-authority-and-ownership"
+    ]
+  }
+}

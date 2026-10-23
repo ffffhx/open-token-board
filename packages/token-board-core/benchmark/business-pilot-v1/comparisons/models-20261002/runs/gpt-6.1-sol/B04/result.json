@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6.1-sol",
+  "label": "GPT-6.1 Sol",
+  "caseId": "B04",
+  "trial": 1,
+  "status": "failed",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 11,
+  "checksTotal": 13,
+  "checks": [
+    {
+      "id": "catalog-win32-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-darwin-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-linux-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-fresh-authority-and-ownership",
+      "passed": false,
+      "details": "port reuse is not proof that the new Profile is running\n\ntrue !== false\n"
+    },
+    {
+      "id": "catalog-explicit-directory-and-validation",
+      "passed": false,
+      "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+    },
+    {
+      "id": "catalog-malformed-registry-fallback",
+      "passed": true
+    },
+    {
+      "id": "ui-module-load",
+      "passed": true
+    },
+    {
+      "id": "rename-one-submit-existing-behavior",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-status-refresh",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-pending-save",
+      "passed": true
+    },
+    {
+      "id": "rename-failure-keeps-draft-and-retry",
+      "passed": true
+    },
+    {
+      "id": "rename-profile-boundary-and-noop-render",
+      "passed": true
+    },
+    {
+      "id": "report-present",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:26:29.934Z",
+    "taskStartedAt": "2026-10-02T15:26:30.154Z",
+    "taskCompletedAt": "2026-10-02T15:29:16.384Z",
+    "taskWallMs": 166230,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6.1-sol"
+    ],
+    "observedReasoningEfforts": [
+      "low"
+    ],
+    "tokenUsage": {
+      "input_tokens": 231693,
+      "cached_input_tokens": 190464,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 3962,
+      "reasoning_output_tokens": 329,
+      "total_tokens": 235655
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "2c3cf5cd8384a30e70fbeb4088abc27cb96061a79b0b526ab1660374f5111e3e",
+    "toolCallCount": 6,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "failed",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:40:51.151Z",
+    "notes": [
+      "当前low配置的原始结果保留，仅作诊断，不进入统一medium的模型比较。",
+      "源码仅传process.env，忽略题面指定的input.env.CPM_DATA_DIR；旧Profile运行条目与新Profile共用端口时未正确去重，误报running。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "2184b14b76692432b56bb4c081cdb3b543168c26fdd11c9e4ed4b76dfdbb9ea4"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "456efeccc1a175ff064f855e1c146113ffa18e64b8f9891729a334a88b9b4fad"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "0724bb485b3f59653b2dabd4ee775036f4b7921588ba9e502b9bc03b4a3be3fc"
+    }
+  ],
+  "rawGradeSha256": "e07043f81c6bb28997a1c0f75f19ac455dcca7d1913adf531f3cabba0ddf42d8"
+}

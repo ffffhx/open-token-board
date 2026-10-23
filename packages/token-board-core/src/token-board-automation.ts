@@ -172,6 +172,7 @@ export function sanitizeIngestEvents(
         normalizeTokenUsageEvent({
           ...normalized,
           id: stableId,
+          collectionDevices: undefined,
           upstreamEventId,
           userId: user.userId,
           displayName: user.displayName,

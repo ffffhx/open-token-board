@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-luna",
+  "label": "GPT-5.6 Luna",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:45:48.728Z",
+    "taskStartedAt": "2026-10-02T15:45:48.933Z",
+    "taskCompletedAt": "2026-10-02T15:48:03.234Z",
+    "taskWallMs": 134301,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 421257,
+      "cached_input_tokens": 354560,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 4691,
+      "reasoning_output_tokens": 989,
+      "total_tokens": 425948
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "a782a294322de5ca383f3796a1e99c10f96c419473d920ece88fb8b6dcbf2afa",
+    "toolCallCount": 14,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:54:22.626Z",
+    "notes": [
+      "Release calls current-source export and slug-specific sync before build; report records local HTTP evidence and limits; external grader also verifies a second source revision."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "434c110d604b53415beb90940fe42ebbfb4d76668c923b169e790ecd1b70454f"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "9d227c26080c6ab3276e85e8d706a616504a7907b0df105a1df4a36bcdfcce4e"
+    }
+  ],
+  "rawGradeSha256": "153f2342cdab446818ebc7663ad6029ef0f60054756fe9728b26b46052886f20"
+}

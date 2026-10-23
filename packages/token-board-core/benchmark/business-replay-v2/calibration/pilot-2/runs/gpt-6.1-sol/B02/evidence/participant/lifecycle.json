@@ -1,0 +1,9 @@
+{
+  "runDir": "C:\\Users\\aa182\\Documents\\Codex\\2026-08-22\\new-chat-2\\repositories\\open-token-board\\tests\\.tmp\\business-replay-v2\\B02\\runtime\\runs\\lifecycle-bgbOLo",
+  "results": [
+    "persistence failure rejects refresh, retains all 54 cache entries and previous valid file",
+    "persistence recovery succeeds and clears error",
+    "restart retains exact complete result"
+  ],
+  "passed": true
+}

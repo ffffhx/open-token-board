@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.5",
+  "label": "GPT-5.5",
+  "caseId": "B09",
+  "trial": 1,
+  "status": "failed",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 9,
+  "checksTotal": 10,
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true
+    },
+    {
+      "id": "document-structure",
+      "passed": true
+    },
+    {
+      "id": "saved-opening",
+      "passed": true
+    },
+    {
+      "id": "protected-content",
+      "passed": true
+    },
+    {
+      "id": "project-updated",
+      "passed": true
+    },
+    {
+      "id": "project-source-numbers",
+      "passed": true
+    },
+    {
+      "id": "unsupported-guarantees",
+      "passed": true
+    },
+    {
+      "id": "source-link",
+      "passed": false,
+      "details": "Project notes have a valid relative link."
+    },
+    {
+      "id": "report-evidence",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T16:03:51.008Z",
+    "taskStartedAt": "2026-10-02T16:03:51.219Z",
+    "taskCompletedAt": "2026-10-02T16:09:36.054Z",
+    "taskWallMs": 344835,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.5"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 1175874,
+      "cached_input_tokens": 1131008,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 13960,
+      "reasoning_output_tokens": 1910,
+      "total_tokens": 1189834
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "9f07983c05d5b7d4ed8a318c61ffada1bdb18d79a1ecda3b1421202fdfd6a98d",
+    "toolCallCount": 27,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "failed",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:15:00.550Z",
+    "notes": [
+      "Restored opening and protected bytes pass. Project rewrite adds an unsupported concrete UI feature: developers can see task status on the floating control bar; source only specifies pause, takeover and resume. Anonymous source-only review confirms the gap. Internship context elsewhere in the input is not treated alone as fabricated personal experience. Source-link format remains advisory."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "1e10c59fb07254fb93005a40c347540ae728f791bc7ac74db17e4b145c371664"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "998ab2102230d95bfa3300c372132ad32a5ed5d365a7952770afdd79ec3d65a8"
+    }
+  ],
+  "rawGradeSha256": "3e9f7146faea583b5c07ccc12cd925179b9958b512584eb4983857d3345da24f",
+  "sourceReview": {
+    "record": "semantic-blind-review.json",
+    "anonymousId": "C",
+    "model": "gpt-5.5",
+    "finding": "unsupported",
+    "coordinatorDecision": "unsupported-feature",
+    "notes": [
+      "‘让开发者可以看到任务状态’新增具体状态展示能力；来源只写悬浮控制条与暂停、接管、恢复操作，未说明状态展示。",
+      "‘它们更偏向独占式自动化’及‘开发者介入时 Agent 又可能继续发指令’是来源未说明的解释，应标明推测。",
+      "匿名复核另指出‘我在流舟实习期间’未见于指定来源；协调者注意到实习语境已出现在输入文档其他区段，不单以此判作虚构个人经历。失败依据为未经资料证实的具体功能。"
+    ]
+  }
+}

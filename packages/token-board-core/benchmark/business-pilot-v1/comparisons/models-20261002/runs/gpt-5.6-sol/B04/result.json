@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-sol",
+  "label": "GPT-5.6 Sol",
+  "caseId": "B04",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 12,
+  "checksTotal": 13,
+  "checks": [
+    {
+      "id": "catalog-win32-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-darwin-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-linux-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-fresh-authority-and-ownership",
+      "passed": true
+    },
+    {
+      "id": "catalog-explicit-directory-and-validation",
+      "passed": false,
+      "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+    },
+    {
+      "id": "catalog-malformed-registry-fallback",
+      "passed": true
+    },
+    {
+      "id": "ui-module-load",
+      "passed": true
+    },
+    {
+      "id": "rename-one-submit-existing-behavior",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-status-refresh",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-pending-save",
+      "passed": true
+    },
+    {
+      "id": "rename-failure-keeps-draft-and-retry",
+      "passed": true
+    },
+    {
+      "id": "rename-profile-boundary-and-noop-render",
+      "passed": true
+    },
+    {
+      "id": "report-present",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:55:59.131Z",
+    "taskStartedAt": "2026-10-02T15:55:59.355Z",
+    "taskCompletedAt": "2026-10-02T16:00:57.830Z",
+    "taskWallMs": 298475,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 609026,
+      "cached_input_tokens": 581760,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 10135,
+      "reasoning_output_tokens": 3355,
+      "total_tokens": 619161
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "53a19c943a356e3edb441e32cc7a5cb80b23eac2b73339bb488c449066b9a95c",
+    "toolCallCount": 15,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:02:09.098Z",
+    "notes": [
+      "Frozen check assumes input.env, absent from TASK contract. Normal process.env supplemental check passes without modifying submission. Other 12 checks, scope, source review and qualified report pass."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "42974940153be68778122c556383d714086efed3dc43c773fe32e634d7ccaa0b"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "a376ed309f0e1b74ed1ec5d02e57a441a641627baa4365916ff38d74e8554fd5"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "e70b71197bd3f203798736ede28115eea22b8a22fc0614e3f9206286b456ba5a"
+    }
+  ],
+  "rawGradeSha256": "d4ca9d09b10ea8fe1715e73117b18f06713caea3408c047a9efef4fbcc769f93",
+  "supplementalEnvironmentCheck": {
+    "passed": true,
+    "checks": [
+      {
+        "id": "explicit-directory-via-process-env",
+        "passed": true
+      }
+    ],
+    "sourceChanged": false,
+    "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+    "script": "check-b04-env.mjs",
+    "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+  },
+  "machineCheckAdjudication": {
+    "policy": "adjudication.json",
+    "reviewer": "coordinating-agent",
+    "correctedChecks": [
+      "catalog-explicit-directory-and-validation"
+    ],
+    "reason": [
+      "Frozen check assumes input.env, absent from TASK contract. Normal process.env supplemental check passes without modifying submission. Other 12 checks, scope, source review and qualified report pass."
+    ],
+    "rawMachineAccepted": false
+  }
+}

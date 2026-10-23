@@ -1,0 +1,3271 @@
+{
+  "schemaVersion": 2,
+  "purpose": "Difficulty and grader calibration; not a model ranking",
+  "status": "completed",
+  "updatedAt": "2026-10-03T06:17:22.851Z",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "harnessSha256": "34ebdd2fff738d186bec0e9b0337295ad3d5e37d8f68b44a69045ec5390443ff",
+  "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+  "protocol": {
+    "id": "business-replay-v2-pilot-2",
+    "purpose": "Additional-model exploratory trials on the same frozen historical cases; not a repeated-run ranking",
+    "userSelectedScope": "Continue testing other models; default three additional models unless user steers scope before dispatch",
+    "cases": [
+      "B02",
+      "B04",
+      "B09"
+    ],
+    "calibrationModels": [
+      "gpt-6.1-sol",
+      "gpt-6-sol",
+      "gpt-6-luna"
+    ],
+    "reasoningEffort": "medium",
+    "freshContextEveryModelCase": true,
+    "forkTurns": "none",
+    "trialsPerModelCase": 1,
+    "participantWallTimeLimitMinutes": 45,
+    "tokenLimit": null,
+    "recordUsage": true,
+    "feedbackToParticipants": false,
+    "repairsByCoordinator": false,
+    "referencesVisibleToParticipants": false,
+    "osSandbox": false,
+    "budgetEnforcement": "Coordinator monitors task_started and interrupts over-budget runs",
+    "inputPresentation": "Frozen task prompt repeated verbatim in each initial task message; identical explicit UTF-8 reading instruction for all participants",
+    "differenceFromPilot1": "Task and verifier bytes are unchanged. Inline task presentation and explicit UTF-8 reading guidance reduce the observed Windows decoding confound; these runs must not be presented as fully identical-condition repeats of pilot-1.",
+    "network": "Only local fixtures and loopback during trials; dependencies provisioned before timing",
+    "performanceMeasurements": "Each B02 participant and its independent grader run without another benchmark job competing for CPU; unchanged seven alternating baseline/candidate pairs",
+    "review": "First submission only; preserve raw machine results; source-grounded document review and execution evidence review by coordinating Agent, not human review",
+    "futureComparison": "Do not infer stable success rates or a winner from one run per case; repeated trials require their own preregistered protocol"
+  },
+  "runs": [
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6.1-sol",
+      "caseId": "B02",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:21:47.009Z",
+        "taskCompletedAt": "2026-10-03T05:46:54.056Z",
+        "wallMs": 1507047,
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 3213713,
+          "cached_input_tokens": 3120640,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 35707,
+          "reasoning_output_tokens": 10729,
+          "total_tokens": 3249420
+        },
+        "costUsd": null,
+        "transcriptSha256": "7200484ecab541e81b14581899562717ff2c87ba3b51a6ca972e9ad909e6f395",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 7,
+          "total": 7
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "all-statistics-identical",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "combinations": 54,
+            "passed": true
+          }
+        },
+        {
+          "id": "repeatable-refresh-improvement",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "baselineMs": [
+              7519.2166,
+              7157.904199999997,
+              7033.727500000001,
+              7243.485700000005,
+              7489.799699999989,
+              7095.787599999996,
+              7241.83170000001
+            ],
+            "candidateMs": [
+              1508.0612000000037,
+              1488.161500000002,
+              1411.2950000000055,
+              1362.3770000000004,
+              1473.3031999999948,
+              1367.665200000003,
+              1420.9121999999916
+            ],
+            "baselineMedianMs": 7241.83170000001,
+            "candidateMedianMs": 1420.9121999999916,
+            "pairedGainMedianMs": 5820.919500000018,
+            "pairedNoise3MAD": 453.53040000006877,
+            "pairedWins": 7,
+            "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+          }
+        },
+        {
+          "id": "reads-available-during-refresh",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "reads": 321,
+            "successfulAndConsistent": 321,
+            "baselineP95Ms": 62.07940000000235,
+            "candidateP95Ms": 17.596899999989546,
+            "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+          }
+        },
+        {
+          "id": "corrected-data-and-overlap",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "failure-preserves-valid-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "refreshRejected": true,
+            "errorRecorded": true,
+            "remainingEntries": 54,
+            "readStatus": 200
+          }
+        },
+        {
+          "id": "failure-recovery",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54,
+            "error": ""
+          }
+        },
+        {
+          "id": "restart-restores-full-results",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54
+          }
+        },
+        {
+          "id": "empty-dataset-compatible",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "replay-can-start-and-measure",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w\\measurements.json",
+            "eventCount": 3905,
+            "postgres": "16.14",
+            "rounds": 7,
+            "source": "full historical HTTP API and PostgreSQL storage"
+          }
+        },
+        {
+          "id": "measurement-report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "apps/token-board-api/src/server.ts",
+          "packages/token-board-core/src/token-board-storage.ts",
+          "DELIVERY.md",
+          "apps/token-board-api/src/leaderboard-snapshot-runner.ts",
+          "apps/token-board-api/src/leaderboard-snapshot-worker.ts",
+          "tests/replay/consistency.mjs",
+          "tests/replay/lifecycle.mjs",
+          "tests/replay/profile.mjs",
+          "tests/replay/reference/profile-storage.ts",
+          "tests/replay/reference/server.original.txt",
+          "tests/replay/reference/server.ts",
+          "tests/replay/reference/storage.original.txt",
+          "tests/replay/reference/storage.ts",
+          "tests/replay/verify.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "apps/*/node_modules/**",
+          "packages/*/node_modules/**",
+          "artifacts/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "checks": [
+          {
+            "id": "all-statistics-identical",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "combinations": 54,
+              "passed": true
+            }
+          },
+          {
+            "id": "repeatable-refresh-improvement",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "baselineMs": [
+                7519.2166,
+                7157.904199999997,
+                7033.727500000001,
+                7243.485700000005,
+                7489.799699999989,
+                7095.787599999996,
+                7241.83170000001
+              ],
+              "candidateMs": [
+                1508.0612000000037,
+                1488.161500000002,
+                1411.2950000000055,
+                1362.3770000000004,
+                1473.3031999999948,
+                1367.665200000003,
+                1420.9121999999916
+              ],
+              "baselineMedianMs": 7241.83170000001,
+              "candidateMedianMs": 1420.9121999999916,
+              "pairedGainMedianMs": 5820.919500000018,
+              "pairedNoise3MAD": 453.53040000006877,
+              "pairedWins": 7,
+              "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+            }
+          },
+          {
+            "id": "reads-available-during-refresh",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "reads": 321,
+              "successfulAndConsistent": 321,
+              "baselineP95Ms": 62.07940000000235,
+              "candidateP95Ms": 17.596899999989546,
+              "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+            }
+          },
+          {
+            "id": "corrected-data-and-overlap",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "failure-preserves-valid-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "refreshRejected": true,
+              "errorRecorded": true,
+              "remainingEntries": 54,
+              "readStatus": 200
+            }
+          },
+          {
+            "id": "failure-recovery",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54,
+              "error": ""
+            }
+          },
+          {
+            "id": "restart-restores-full-results",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54
+            }
+          },
+          {
+            "id": "empty-dataset-compatible",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "replay-can-start-and-measure",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w\\measurements.json",
+              "eventCount": 3905,
+              "postgres": "16.14",
+              "rounds": 7,
+              "source": "full historical HTTP API and PostgreSQL storage"
+            }
+          },
+          {
+            "id": "measurement-report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+            }
+          }
+        ],
+        "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w"
+      },
+      "submittedChanges": [
+        {
+          "path": "apps/token-board-api/src/server.ts",
+          "sha256": "c0f67f4ff4d5953d54a07df18bb41c4c2309d1c7d9179ac9b883ffdf37aaf489"
+        },
+        {
+          "path": "packages/token-board-core/src/token-board-storage.ts",
+          "sha256": "ac689c6d09b88ee367f1c6f3d8874fa0e4d830e224a71bc6525b2a5411f68819"
+        },
+        {
+          "path": "DELIVERY.md",
+          "sha256": "277d476d0c8bd20c575b5e6d79ac3d3b23c9a7667c297953542f3c97caefc5e5"
+        },
+        {
+          "path": "apps/token-board-api/src/leaderboard-snapshot-runner.ts",
+          "sha256": "4fccf60c4f3af996612d6d2737b44ee283088cf1d9aa8c85eca241e72be99d74"
+        },
+        {
+          "path": "apps/token-board-api/src/leaderboard-snapshot-worker.ts",
+          "sha256": "4411c08e0cb4ea531af4b46e2ebde8dc2c38af731dd76cdc4ae06aa300aec90f"
+        },
+        {
+          "path": "tests/replay/consistency.mjs",
+          "sha256": "f3044ffe4be7a57acfe41237efd09cb8dbbae4ff0eede3048c7fa99339bfb882"
+        },
+        {
+          "path": "tests/replay/lifecycle.mjs",
+          "sha256": "cd58a7190d625a4dc0c79b6c087ec432cac50e2319141fcaad72e763e9062787"
+        },
+        {
+          "path": "tests/replay/profile.mjs",
+          "sha256": "589752a785dc231b866c2c9f3607c379309367b3e03cc58de1f2745176a859bd"
+        },
+        {
+          "path": "tests/replay/reference/profile-storage.ts",
+          "sha256": "a85134fdf504fba155e41dc7eed5a3215f2890be5d50a4924a1b0ff0634a7bb6"
+        },
+        {
+          "path": "tests/replay/reference/server.original.txt",
+          "sha256": "9ff03838d2d3c243b24f67d5ea6d64be5cff0125b4b47144077f47efb1f5bdcc"
+        },
+        {
+          "path": "tests/replay/reference/server.ts",
+          "sha256": "3d3542d600cffd32f180bfb67b63bc0b8a5ecf5b2bdf0f0d9fb9bd0ad43c79fa"
+        },
+        {
+          "path": "tests/replay/reference/storage.original.txt",
+          "sha256": "39ed9695dccf5f24b3b28bb3d1681fd93a7aa7a77d2428f3b9d66c333633a8e6"
+        },
+        {
+          "path": "tests/replay/reference/storage.ts",
+          "sha256": "8ad1c2dd822f0609a8c09794ec638de1ffd64f1e4c82840f402961521ad5fd39"
+        },
+        {
+          "path": "tests/replay/verify.mjs",
+          "sha256": "be47d62b139cd1657b9d92eafac8c81686afc54aec603dded72cb1163866ec78"
+        }
+      ],
+      "finalResponseSha256": "b563a7358765f2cf4c7b5ad332ae0494237d08d2bfe1bdd28a31ac5443b18d0f",
+      "rawGradeSha256": "3e7718b482c9ec7779b77fe56735e3696f27bb023836ae2996bb5728f58e6202",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:53:27.741Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "独立验收全部通过，54 种组合、历史修正、故障恢复、重启及读取保全均满足。独立七轮刷新中位数 7241.8→1420.9ms，7/7 配对改善；321 次读取全部有效，P95 17.6ms（门槛 100ms）。交付数字与实际自测命令及日志吻合，基线参考副本哈希与冻结历史源码一致；类型检查、生命周期与并发一致性测试有通过记录，未覆盖项如实列明。提交后确认本地 API 为 200、54 个快照，随后协调者关闭该次隔离服务与数据库，避免影响下一轮。最终 DELIVERY 中文可读，生成阶段的乱码已由模型自行修正。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "supplementaryEvidence": [
+        {
+          "kind": "independent-grader-measurement",
+          "originalPath": "<private grader>/measurements.json",
+          "archivePath": "evidence/independent-measurements.json",
+          "encoding": "identity",
+          "originalBytes": 361997,
+          "sha256": "ff092ac381e08d8af8ee5dfe12b3322745cff8c2dea6847fd8ea3c7d60ae133a",
+          "archiveSha256": "ff092ac381e08d8af8ee5dfe12b3322745cff8c2dea6847fd8ea3c7d60ae133a"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/baseline-measurement.json",
+          "archivePath": "evidence/participant/baseline-measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50267528,
+          "sha256": "9225b9aebc89fef660ff79460ddf8c82d3ef18e7b2ce3a60af7bfe3d8c0428ee",
+          "archiveSha256": "7c6f327f363d238c229d334c489504d79bdcbc01787e7764884efb20a07f5414"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/candidate-measurement.json",
+          "archivePath": "evidence/participant/candidate-measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50123661,
+          "sha256": "b5973477a63c7b5483c9a408e5fda04a9c908d73ac29bf68ffb33b770905d955",
+          "archiveSha256": "6035845ca54a41a2fd239e373865335c7361bc143909f5b5f3038b28c58f3ebe"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/consistency.json",
+          "archivePath": "evidence/participant/consistency.json",
+          "encoding": "identity",
+          "originalBytes": 450,
+          "sha256": "5e31fe329f1b147d944c748b3ab88d7ae465ab69535ec76b389c2f6b633a1d87",
+          "archiveSha256": "5e31fe329f1b147d944c748b3ab88d7ae465ab69535ec76b389c2f6b633a1d87"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/lifecycle.json",
+          "archivePath": "evidence/participant/lifecycle.json",
+          "encoding": "identity",
+          "originalBytes": 413,
+          "sha256": "1d75b8b5f77c9ffc12a4e09fb4df44af9561e73036b8ce1c02ef2ed1e9804d3e",
+          "archiveSha256": "1d75b8b5f77c9ffc12a4e09fb4df44af9561e73036b8ce1c02ef2ed1e9804d3e"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/measurement.json",
+          "archivePath": "evidence/participant/measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50123661,
+          "sha256": "b5973477a63c7b5483c9a408e5fda04a9c908d73ac29bf68ffb33b770905d955",
+          "archiveSha256": "6035845ca54a41a2fd239e373865335c7361bc143909f5b5f3038b28c58f3ebe"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/profile.json",
+          "archivePath": "evidence/participant/profile.json",
+          "encoding": "identity",
+          "originalBytes": 2057,
+          "sha256": "e4bc9b0c2a73775e894640939f24ce4304233dd9308aa0d51be02e7a9750e7fa",
+          "archiveSha256": "e4bc9b0c2a73775e894640939f24ce4304233dd9308aa0d51be02e7a9750e7fa"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/verification.json",
+          "archivePath": "evidence/participant/verification.json",
+          "encoding": "identity",
+          "originalBytes": 390628,
+          "sha256": "55a824cdd5468c4968889bbd5f4185879f1a864d3dd0c58880390cee1ebefec9",
+          "archiveSha256": "55a824cdd5468c4968889bbd5f4185879f1a864d3dd0c58880390cee1ebefec9"
+        },
+        {
+          "kind": "coordinator-service-probe",
+          "originalPath": "<coordinator>/service-probe.json",
+          "archivePath": "evidence/service-probe.json",
+          "encoding": "identity",
+          "originalBytes": 1024311,
+          "sha256": "e6565d3ea36c786f1ef273451bc8edf6c52729d61c1a5911c965bb3d16e10007",
+          "archiveSha256": "e6565d3ea36c786f1ef273451bc8edf6c52729d61c1a5911c965bb3d16e10007"
+        }
+      ],
+      "result": "runs/gpt-6.1-sol/B02/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6.1-sol",
+      "caseId": "B04",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:00:47.307Z",
+        "taskCompletedAt": "2026-10-03T05:07:13.690Z",
+        "wallMs": 386383,
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 802006,
+          "cached_input_tokens": 682112,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 9951,
+          "reasoning_output_tokens": 2411,
+          "total_tokens": 811957
+        },
+        "costUsd": null,
+        "transcriptSha256": "cf85ca2c25ba48e85b96552a62a0cdb2d8a90c5624ab8b9fe64a836559e263b6",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 10,
+          "total": 10
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 5,
+          "total": 5
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "candidate-build",
+          "passed": true,
+          "category": "delivery",
+          "details": "Full renderer entry and main-process modules bundled from candidate source"
+        },
+        {
+          "id": "catalog-without-desktop",
+          "passed": true,
+          "category": "business",
+          "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+        },
+        {
+          "id": "catalog-stale-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-rename-and-identity",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-disable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-enable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-input-order",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-occupancy-permissions",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-path-containment",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-broken-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-live-lease-after-expiry",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-custom-data-root",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "rename-first-save-persists",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "savedName": "首次保存 · Research & Review",
+            "renameCalls": 1,
+            "storage": "real temporary profiles.json"
+          }
+        },
+        {
+          "id": "rename-empty-draft-validation",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-cancel-does-not-cross-profile",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-registry-preserves-neighbors",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "frozen-context-preserved",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "changedFiles": [
+              "src/main/agent-browser-lease.ts",
+              "src/renderer/main.ts",
+              "src/renderer/render/modals.ts",
+              "src/renderer/render/render-root.ts",
+              "src/renderer/types.ts"
+            ]
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/main.ts",
+          "src/renderer/render/modals.ts",
+          "src/renderer/render/render-root.ts",
+          "src/renderer/types.ts",
+          "tests/catalog-replay.mjs",
+          "tests/original-regressions.mjs",
+          "tests/rename-replay.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "dist/**",
+          "test-results/**",
+          ".replay-tmp/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "schemaVersion": 1,
+        "caseId": "B04",
+        "checks": [
+          {
+            "id": "candidate-build",
+            "passed": true,
+            "category": "delivery",
+            "details": "Full renderer entry and main-process modules bundled from candidate source"
+          },
+          {
+            "id": "catalog-without-desktop",
+            "passed": true,
+            "category": "business",
+            "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+          },
+          {
+            "id": "catalog-stale-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-rename-and-identity",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-disable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-enable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-input-order",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-occupancy-permissions",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-path-containment",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-broken-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-live-lease-after-expiry",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-custom-data-root",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "rename-first-save-persists",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "savedName": "首次保存 · Research & Review",
+              "renameCalls": 1,
+              "storage": "real temporary profiles.json"
+            }
+          },
+          {
+            "id": "rename-empty-draft-validation",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-cancel-does-not-cross-profile",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-registry-preserves-neighbors",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "frozen-context-preserved",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "changedFiles": [
+                "src/main/agent-browser-lease.ts",
+                "src/renderer/main.ts",
+                "src/renderer/render/modals.ts",
+                "src/renderer/render/render-root.ts",
+                "src/renderer/types.ts"
+              ]
+            }
+          }
+        ],
+        "passed": true,
+        "exitCode": 0
+      },
+      "submittedChanges": [
+        {
+          "path": "src/main/agent-browser-lease.ts",
+          "sha256": "324647f702902218af07f879e0986b62a9531e84ca6be86d63a469400cefffe6"
+        },
+        {
+          "path": "src/renderer/main.ts",
+          "sha256": "1cbf51e3a5bc8b628b6d3c8c9e0a6dd30437cb820638912ac2d03df750b096bb"
+        },
+        {
+          "path": "src/renderer/render/modals.ts",
+          "sha256": "1270c9dc58dec562f5ad4253ad32de749ce74797ed3a011255181cfc36472761"
+        },
+        {
+          "path": "src/renderer/render/render-root.ts",
+          "sha256": "5ebdd59d391345b4a84bd8525ccedd19cf6bbf0356cf72f01d6d9ceec297d827"
+        },
+        {
+          "path": "src/renderer/types.ts",
+          "sha256": "e12edc066ef49eec12a542e29dda211c1ee75214d19969a0991375cfc8364486"
+        },
+        {
+          "path": "tests/catalog-replay.mjs",
+          "sha256": "00b7f78b2935da9428faaf504c3a2f4cc0403655f49da57c369c4003451f1cca"
+        },
+        {
+          "path": "tests/original-regressions.mjs",
+          "sha256": "1cab043318d8a43f8b1931fb72a963e5e9ec089a2c84e0d5ac7f15280f3aef73"
+        },
+        {
+          "path": "tests/rename-replay.mjs",
+          "sha256": "7f70d09d5f4cc7dc4026af892446daff72d2a504972737d3c0abbf99e9bbb797"
+        }
+      ],
+      "finalResponseSha256": "88b54ee01838ab377a74dc304a188c0800a7c1e6116ff892a2d50fb6797070c0",
+      "rawGradeSha256": "a4ba50f8b12772a8630f8410e6b261aa484be8c00bc250bf843da86c0d198482",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:08:56.033Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "17项独立验收全部通过：首次改名、草稿保全、离线及过时状态目录、名称与权限更新、身份匹配、排序、路径与租约均符合冻结要求。会话日志证实浏览器改名测试、目录测试和21项回归测试实际通过；最终说明如实披露未执行完整TypeScript检查，未将其算作通过。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "result": "runs/gpt-6.1-sol/B04/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6.1-sol",
+      "caseId": "B09",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:07:57.355Z",
+        "taskCompletedAt": "2026-10-03T05:14:13.762Z",
+        "wallMs": 376407,
+        "observedModels": [
+          "gpt-6.1-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 672355,
+          "cached_input_tokens": 613888,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 11039,
+          "reasoning_output_tokens": 682,
+          "total_tokens": 683394
+        },
+        "costUsd": null,
+        "transcriptSha256": "dbff87a26e25d383c916c7ac0a06f3c29f372964b868c5519ca824a44f22f7a2",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 3,
+          "total": 3
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 4,
+          "total": 4
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 3,
+          "total": 3
+        }
+      },
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "unexpectedFiles": []
+          }
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "modifiedOrMissing": []
+          }
+        },
+        {
+          "id": "document-regions",
+          "passed": true,
+          "category": "preservation",
+          "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+        },
+        {
+          "id": "opening-version",
+          "passed": true,
+          "category": "business",
+          "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+        },
+        {
+          "id": "protected-content",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "changedRegions": [],
+            "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+          }
+        },
+        {
+          "id": "project-revised",
+          "passed": true,
+          "category": "business",
+          "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+        },
+        {
+          "id": "source-claims-review",
+          "passed": true,
+          "category": "business",
+          "required": false,
+          "details": {
+            "flaggedClaims": [],
+            "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+          }
+        },
+        {
+          "id": "report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+        },
+        {
+          "id": "opening-bytes",
+          "passed": true,
+          "category": "precision",
+          "details": "Exact sanitized LF content including intra-paragraph spacing."
+        },
+        {
+          "id": "protected-bytes",
+          "passed": true,
+          "category": "precision",
+          "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+        },
+        {
+          "id": "utf8-lf",
+          "passed": true,
+          "category": "precision",
+          "details": "UTF-8 without BOM, replacement characters or CRLF."
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": []
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "passed": true,
+        "businessPassed": true,
+        "preservationPassed": true,
+        "deliveryPassed": true,
+        "checks": [
+          {
+            "id": "file-scope",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "unexpectedFiles": []
+            }
+          },
+          {
+            "id": "readonly-materials",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "modifiedOrMissing": []
+            }
+          },
+          {
+            "id": "document-regions",
+            "passed": true,
+            "category": "preservation",
+            "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+          },
+          {
+            "id": "opening-version",
+            "passed": true,
+            "category": "business",
+            "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+          },
+          {
+            "id": "protected-content",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "changedRegions": [],
+              "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+            }
+          },
+          {
+            "id": "project-revised",
+            "passed": true,
+            "category": "business",
+            "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+          },
+          {
+            "id": "source-claims-review",
+            "passed": true,
+            "category": "business",
+            "required": false,
+            "details": {
+              "flaggedClaims": [],
+              "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+            }
+          },
+          {
+            "id": "report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+          },
+          {
+            "id": "opening-bytes",
+            "passed": true,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": true,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "precisionChecks": [
+          {
+            "id": "opening-bytes",
+            "passed": true,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": true,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "manualReviewRequired": true,
+        "reviewStatus": "pending-semantic-review",
+        "reviewPacket": {
+          "rubric": "fact-rubric.json",
+          "candidateSha256": "e8895ddbe833e1c20a4e254c64a12be65dc2dd53f53faad448a20a49299a10ae",
+          "projectBody": "\n### 一句话定位\n\n为商业化页面验证提供真实登录态下的浏览器控制面：统一分配 Chrome Profile、管理 Agent 通信，并让开发者可见、可暂停、可接管任务。\n\n### 30 秒版\n\n流舟商业化拦截与支付流程需要 Agent 在真实登录态下验证页面，支付环节又需要人工介入。我们评测了 6 款主流浏览器自动化工具，发现现有工具普遍难以处理开发者与 Agent 抢占同一个 Chrome 窗口和焦点的问题。我设计并落地了 ProfilePilot：Gateway 管理已登录 Profile 与租约，为 Agent Session 分配空闲 Profile；Agent 命令通过一次性 Ticket 接入受控 CDP 通信；页面悬浮控制条提供暂停、接管和恢复入口。参考资料记录的成果是日常可并行运行 3 个独立 Agent 浏览器 Session，支持多需求并行开发与自动化验证。\n\n### 90 秒展开版\n\n**业务背景与难点**：商业化验证不能只在未登录的页面上跑通操作，还需要使用真实登录态完成权益拦截和支付流程验证；其中支付环节需要人参与。我们对 6 款主流浏览器自动化工具做了多维度评测，发现现有工具普遍无法解决开发者与 Agent 争用同一个 Chrome 窗口和焦点的问题。因此需要把浏览器资源分配、Agent 接入和人工介入放在同一个控制流程中处理。\n\n**方案与协作链路**：\n\n1. **Profile 管理与分配**：Gateway 集中管理多个已登录的 Chrome Profile 资源及租约，动态为 Agent Session 分配空闲 Profile。参考图注展示了隔离 Profile 的端口分配、登录态同步和 Agent 占用查看；架构图注将系统分为本机优先的 Profile 数据管理面与可编程的 Agent 协同控制面。前者提供可用浏览器资源，后者组织 Agent 如何使用这些资源。\n2. **Agent 接入与受控通信**：Wrapper 解析 Agent 命令，向 Gateway 申领一次性 Ticket；Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后，通过专用管道转发给浏览器。流程图注还说明，Agent 发命令时不带 `--session`，由 Gateway 原子绑定 Profile 并签发 Ticket。这样，资源绑定与通信接入由 Gateway 统一衔接，而不是让 Agent 自行选择一个浏览器端口就开始操作。\n3. **可见与人工接管**：页面注入悬浮控制条，开发者可以看到任务状态，并暂停、接管或恢复 Agent 任务。Profile 分配解决多个任务使用哪些浏览器资源，受控通信组织命令进入浏览器的路径，控制条则提供人在验证过程中介入的入口；三者共同服务于真实登录态下的人机协作。这里描述的是参考资料给出的设计，具体接管状态机和权限吊销实现没有在资料中展开。\n\n**结果**：参考资料记录，ProfilePilot 支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。这里的“3 个”是日常使用能力的记录，不是最大并发容量或压力测试结论。\n\n### 最值得展开的技术点\n\n- Profile 资源与租约集中管理：将空闲资源分配给 Agent Session，处理多任务浏览器资源使用问题。\n- 接入与通信相衔接：命令解析、Profile 绑定、Ticket 申领、WebSocket 连接和 Gateway 校验组成受控的调用链路。\n- 人机协作可见：通过页面控制条提供暂停、接管、恢复入口，支持需要人工介入的支付验证。\n- 结果口径明确：日常并行 3 个独立 Session；资料没有提供耗时改善、成功率或极限并发测量。\n\n### 常见追问\n\n**为什么已有浏览器自动化工具，还要做 ProfilePilot？**\n\n业务需要 Agent 使用真实登录态完成商业化页面验证，又需要开发者在支付环节介入。对 6 款主流工具的评测发现，它们普遍难以解决人和 Agent 抢占同一 Chrome 窗口与焦点的问题。ProfilePilot 围绕这个场景补充资源调度、受控通信与接管入口；这不意味着所有自动化工具在所有场景下都不适用。\n\n**Profile 分配、Ticket 和悬浮控制条分别解决什么？**\n\nProfile 分配决定 Agent Session 使用哪份浏览器资源，Ticket 是 Agent 进入受控通信链路的一次性凭据，控制条让人看到任务并介入操作。Gateway 将资源管理与指令校验衔接起来，页面端提供人工暂停、接管和恢复的交互入口。\n\n**哪些技术细节还不能作为已核实事实来讲？**\n\n参考资料没有展开登录态同步的事务与回滚算法、控制代次、旧连接吊销、原生输入拦截和跨平台支持范围。可以说明资料记录了登录态同步及接管能力，但不能据此承诺数据无损、崩溃恢复、任意时刻旧指令失效或系统输入层完全互不抢占，也不能补写自己踩坑后纠偏的经历。\n\n资料依据：[实习答辩资料](references/defense-notes.md)第 3.3 节“通用 AI 工程化：ProfilePilot”。内部评测链接与原图仅作为资料线索，本次未访问或补造。\n\n---\n\n",
+          "report": "# 文档修复报告\n\n## 版本选择与证据链\n\n恢复目标是用户手动编辑并保存、随后被助手覆盖的开场，而不是 Git 初稿或助手第一次重写后的版本。恢复后的结构为：分隔线、整体面试开场白、45 秒精简版（一个段落）、开场后的项目选择（五项列表）、分隔线。不恢复使用说明或 90 秒版，保留用户文本原有的措辞、空格、段落和小节安排，不作语病修饰。\n\n下列时间均为 2026-09-03 的 UTC（Asia/Shanghai 为 UTC+8），来源为 [.history/tool-events.jsonl](.history/tool-events.jsonl)：\n\n| 事件与时间 | 文件身份与操作 | 证据作用 |\n| --- | --- | --- |\n| E0043/E0045，13:21:29.053/13:21:33.280；E0138/E0140，13:23:25.888/13:23:29.672 | T001/T002 Read，/workspace/handbook.md | 较早版本含使用说明、90 秒与 45 秒两版。早期读取不能替代后来保存的内容。 |\n| E0178，13:33:53.593 | 用户要求参照答辩资料重写实习项目 | 授权对象是项目，不是整体开场。 |\n| E0231/E0233，13:35:02.135/13:35:04.865 | T008 Read，同一文件，行 25–64 | 显示调整后的单段 45 秒正文和五项项目选择。 |\n| E0236/E0243，13:35:22.812/13:35:25.542 | T009 Read，同一文件，行 1–45 | 行 22–39 完整覆盖目标区域，行 40 已是实习总标题。可以确认使用说明和 90 秒版均不存在，也可确认分隔线与空行。此次恢复直接取自该区间。 |\n| E0251/E0258，13:36:04.897/13:36:07.535；E0281/E0288，13:37:22.024/13:37:24.743 | T011/T015 Read，同一文件，行 20–49/24–48 | 重复出现相同开场文字和结构，交叉印证 T009，不是跨版本按行号拼凑。 |\n| E0301/E0309，13:38:20.811/13:38:23.559 | T018 Edit，/workspace/handbook.md，结果 isError=false | old_string 中开场与上述读取逐字吻合；new_string 加入 90 秒版并重写 45 秒版。成功结果确认覆盖发生，旧参数辅助核对覆盖前内容。 |\n| E0370，13:42:30.083 | 用户要求不要改开场，只改项目并还原 | 明确修复范围。 |\n| E0374/E0376，13:42:39.095/13:42:42.729 | T022 git diff origin/main，isError=false，旧 blob 前缀 e6c0a73 | 区分仓库基线与工作文件；差异中的新开场已经是 T018 改写后的内容，不是用户手动保存版。 |\n| E0384/E0386，13:42:49.959/13:42:53.810 | T023 git show origin/main:handbook.md，isError=true、Exit code 255，保留输出文字 | 输出指向仓库初稿，不能替代用户保存版；不能将非零退出码称为成功。 |\n| E0399/E0401，13:43:23.920/13:43:26.718 | T025 Edit，同一文件，isError=false | 成功替换为初稿式结构，解释本次输入中使用说明和 90 秒版的来源。编辑成功不代表还原目标正确。 |\n| E0404/E0411，13:43:34.053/13:43:37.765 | T026 diff 检查，isError=true、Exit code 255 | 保留文字仅作辅助，不能称为成功验证。 |\n| E0427，13:46:50.295 | 用户说明最初版本曾自行改动并按 Ctrl+S 保存 | 将用户保存意图与覆盖前重复读取的具体版本关联，排除直接恢复初稿。 |\n\n[MATERIALS.md](MATERIALS.md) 给出的候选提交是 cb414f0586b0bc78090b2c59d7e47ea38ebaa95d，Git blob 是 e6c0a732d0b0b394f8483eab370d8c9202438f2f，与历史 diff 旧 blob 匹配。该关系只识别仓库文档基线；没有证明当时完整仓库 HEAD，更不能替代保存但未提交的内容。[仓库快照](.history/repository-document.md) 含使用说明和 90 秒版，与 T009/T011/T015 的目标区域不同。本次没有执行 Git 回退。\n\n导出的 handbook.md 对应历史 /workspace/handbook.md，参考资料对应 /workspace/references/defense-notes.md，映射依据 MATERIALS 与 Read/Edit 参数。文件身份由路径和 toolUseId 配对确认；行号仅代表对应时刻的读取，不能将不同时刻同一行号视为同一内容。\n\n## 实际修改范围与事实依据\n\n只修改 handbook.md 两处并新增 REPORT.md：\n\n1. 两段导语之后至实习总标题之前：逐字恢复 E0243 行 22–39。\n2. 项目 1 主标题之后至项目 2 主标题之前：参照 [答辩资料](references/defense-notes.md) 第 3.3 节整理背景、难点、方案、结果与追问。\n\nfront matter、两段导语、实习总标题、项目 1 主标题、项目 2 及后面全部现有文字和引用均保留。其他章节可能存在的数字或技术表述不在此次核实范围内。\n\n| 项目 1 内容 | 参考依据 | 表达边界 |\n| --- | --- | --- |\n| 商业化拦截和支付验证需要真实登录态，支付需人工介入 | 3.3 开头正文 | 不补写线上误操作事故、高危操作经历等。 |\n| 多维评测 6 款工具，普遍无法解决窗口、焦点争用 | 3.3 评测正文 | 不推断所有工具在所有场景均不可用；内部 Wiki 未访问，评测细节未复核。 |\n| Gateway 管理已登录 Profile 资源和租约，为 Session 动态分配空闲 Profile | 3.3 方案第一项 | 不补写严格排他规则、租约保留或释放时机。 |\n| Wrapper 解析命令、申领一次性 Ticket；Daemon 用 WebSocket 长连接；Gateway 校验后经专用管道转发 CDP | 3.3 方案第二项 | 不增写短时有效期、完整审计、代次计数或旧连接吊销保证。 |\n| 隔离 Profile 端口分配、登录态同步、占用查看；双核架构；不带 --session 发命令，由 Gateway 原子绑定和签发 Ticket | 3.3 保留图注 | 标明图注来源，未看原图；不扩展为事务同步、原子 rename、回滚或崩溃恢复的实现证明。 |\n| 悬浮控制条可暂停、接管、恢复 | 3.3 方案第三项和图注 | 解释与资源分配、通信之间的关系，不补写接管状态机或系统输入层保证。 |\n| 日常并行 3 个独立 Agent 浏览器 Session | 3.3 产出成果 | 日常能力记录，不是最大并发、压力测试、成功率或速度测量。 |\n\n旧手册中的 Chrome 136 限制、Local State 发现、事务同步、备份回滚、controlGeneration、Input Guard、Accessibility/Event Tap、平台支持范围和个人踩坑纠偏经历，均未自动作为已核实事实。项目 1 未挪用其他项目的账号切换耗时、10+ 人、518 文件、88 API、47 规则、25 权益项或营收增长数据。已阅读参考文档其他部分以定位相关事实，未将其他项目结果混入项目 1。\n\n## 实际验证结果\n\n- 通过：恢复区域逐字匹配 E0243 行 22–39；其中整体开场逐字匹配 E0301/T018 old_string 中实习总标题之前的内容。\n- 通过：用修改前内存文本作基线，比较两段导语结束前的前置内容、实习总标题至项目 1 主标题末尾、项目 2 主标题至文件末尾，三个区域均完全相等。\n- 通过：写手册前对全部现有工作区文件取 SHA-256，写入后复核，除允许修改的手册外哈希均不变。历史、参考资料、MATERIALS.md 和 TASK.txt 未修改。\n- 通过：重新按 UTF-8 读取手册，人工检查开场、项目 1 和项目 2 边界；没有 U+FFFD 替换字符，保持 LF 换行。标题层级、列表、分隔线和内联代码标记完整。\n- 通过：新增相对链接 references/defense-notes.md 的目标文件存在。旧项目 1 正文没有 Markdown 链接；区域外引用随相等文本保留。未访问外部链接，没有补造图像或修复脱敏链接。\n- 通过：核对项目 1 的业务数字为评测 6 款工具和日常并行 3 个 Session；其他数字仅是章节、序号、资料小节或口述时长标签。\n\n没有运行 Markdown 渲染器、博客构建或项目服务。这是离线文档交付，未启动任何临时服务或原项目服务；没有实测 ProfilePilot，也没有将资料记述称为运行测试通过。\n\n## 证据局限\n\n历史是节选，不是连续操作系统审计，没有原生编辑器 Ctrl+S 事件、保存时间戳或完整工作树快照。能确认的是：13:35:04 至 13:37:24 多次读取出现同版开场，13:38:20 覆盖编辑的旧文本再次吻合，用户随后要求自己保存后的版本。精确保存时间、期间有无未记录编辑和整仓库 HEAD 无法独立证明。本次选择与用户说明一致、得到重复内容证据支持的区域版本，不声称恢复完整文件的某个保存快照。\n\n参考资料是两次 Read 的离线文字拼接，原图和内部评测材料未提供。正文及图注支持所写方案和成果的描述，但不足以核实源码实现、协议边界、跨平台能力、稳定性或性能保证。项目 1 明确这些边界；未修改区域的既有表述不代表本次已审定其事实。\n",
+          "requiredDecisions": [
+            "source-grounding",
+            "required-fact-coverage",
+            "readable-project",
+            "report-chain"
+          ],
+          "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+        }
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "e8895ddbe833e1c20a4e254c64a12be65dc2dd53f53faad448a20a49299a10ae"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "09f060a9607b24ab28833797e1251ff82bf9b331ed9a6369ab7e7defea549169"
+        }
+      ],
+      "finalResponseSha256": "ec9e3d0312a243e5de07d6dba8b3b4033af60013bc97626d25e7e0e21ba52886",
+      "rawGradeSha256": "bb635e05e2e74b8aae0a1e48b7e5012c28b5e415de07ffe32cd878e6aa884e52",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:26:39.054Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": {
+          "file": "content-review.json",
+          "sha256": "897acabc171dda073450df43c64fbcbb4c606979d78161a012d5a064afe6aa99"
+        },
+        "notes": [
+          "开场完整恢复，含历史分隔线；所有受保护正文保持一致。匿名逐项来源复核通过，新增技术表述有文字或图注支持；实际验证命令、只读材料核对及最终说明相符。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "result": "runs/gpt-6.1-sol/B09/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-sol",
+      "caseId": "B02",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:52:08.226Z",
+        "taskCompletedAt": "2026-10-03T05:59:25.266Z",
+        "wallMs": 437040,
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 1855349,
+          "cached_input_tokens": 1798912,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 11684,
+          "reasoning_output_tokens": 3975,
+          "total_tokens": 1867033
+        },
+        "costUsd": null,
+        "transcriptSha256": "c8e8d57a0b3ebdd585142b063b5e06283b5a40f056fe4a58c0b378a61d5f9bb3",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 7,
+          "total": 7
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "all-statistics-identical",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "combinations": 54,
+            "passed": true
+          }
+        },
+        {
+          "id": "repeatable-refresh-improvement",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "baselineMs": [
+              6606.647799999999,
+              6522.855899999995,
+              6630.059300000001,
+              6537.856700000004,
+              6518.48139999999,
+              7656.842699999994,
+              7155.748099999997
+            ],
+            "candidateMs": [
+              3552.673499999997,
+              3486.568800000001,
+              4522.760700000006,
+              4187.399000000005,
+              4241.294500000004,
+              4402.722999999998,
+              4295.469400000002
+            ],
+            "baselineMedianMs": 6606.647799999999,
+            "candidateMedianMs": 4241.294500000004,
+            "pairedGainMedianMs": 2860.2786999999953,
+            "pairedNoise3MAD": 1181.523000000001,
+            "pairedWins": 7,
+            "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+          }
+        },
+        {
+          "id": "reads-available-during-refresh",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "reads": 429,
+            "successfulAndConsistent": 429,
+            "baselineP95Ms": 57.732399999993504,
+            "candidateP95Ms": 84.14619999999559,
+            "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+          }
+        },
+        {
+          "id": "corrected-data-and-overlap",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "failure-preserves-valid-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "refreshRejected": true,
+            "errorRecorded": true,
+            "remainingEntries": 54,
+            "readStatus": 200
+          }
+        },
+        {
+          "id": "failure-recovery",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54,
+            "error": ""
+          }
+        },
+        {
+          "id": "restart-restores-full-results",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54
+          }
+        },
+        {
+          "id": "empty-dataset-compatible",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "replay-can-start-and-measure",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-J4dONQ\\measurements.json",
+            "eventCount": 3905,
+            "postgres": "16.14",
+            "rounds": 7,
+            "source": "full historical HTTP API and PostgreSQL storage"
+          }
+        },
+        {
+          "id": "measurement-report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "apps/token-board-api/src/server.ts",
+          "packages/token-board-core/src/token-board-storage.ts",
+          "DELIVERY.md",
+          "tests/replay/verify.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "apps/*/node_modules/**",
+          "packages/*/node_modules/**",
+          "artifacts/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "checks": [
+          {
+            "id": "all-statistics-identical",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "combinations": 54,
+              "passed": true
+            }
+          },
+          {
+            "id": "repeatable-refresh-improvement",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "baselineMs": [
+                6606.647799999999,
+                6522.855899999995,
+                6630.059300000001,
+                6537.856700000004,
+                6518.48139999999,
+                7656.842699999994,
+                7155.748099999997
+              ],
+              "candidateMs": [
+                3552.673499999997,
+                3486.568800000001,
+                4522.760700000006,
+                4187.399000000005,
+                4241.294500000004,
+                4402.722999999998,
+                4295.469400000002
+              ],
+              "baselineMedianMs": 6606.647799999999,
+              "candidateMedianMs": 4241.294500000004,
+              "pairedGainMedianMs": 2860.2786999999953,
+              "pairedNoise3MAD": 1181.523000000001,
+              "pairedWins": 7,
+              "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+            }
+          },
+          {
+            "id": "reads-available-during-refresh",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "reads": 429,
+              "successfulAndConsistent": 429,
+              "baselineP95Ms": 57.732399999993504,
+              "candidateP95Ms": 84.14619999999559,
+              "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+            }
+          },
+          {
+            "id": "corrected-data-and-overlap",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "failure-preserves-valid-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "refreshRejected": true,
+              "errorRecorded": true,
+              "remainingEntries": 54,
+              "readStatus": 200
+            }
+          },
+          {
+            "id": "failure-recovery",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54,
+              "error": ""
+            }
+          },
+          {
+            "id": "restart-restores-full-results",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54
+            }
+          },
+          {
+            "id": "empty-dataset-compatible",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "replay-can-start-and-measure",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-J4dONQ\\measurements.json",
+              "eventCount": 3905,
+              "postgres": "16.14",
+              "rounds": 7,
+              "source": "full historical HTTP API and PostgreSQL storage"
+            }
+          },
+          {
+            "id": "measurement-report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+            }
+          }
+        ],
+        "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-J4dONQ"
+      },
+      "submittedChanges": [
+        {
+          "path": "apps/token-board-api/src/server.ts",
+          "sha256": "fbe81fa9f7c58f0593faf05311008a072185a416b37b23f4213a205650be3108"
+        },
+        {
+          "path": "packages/token-board-core/src/token-board-storage.ts",
+          "sha256": "936cf2294c567d6e17a86a3bef1ee2645dbe40df9bf122d41dbcf0d9505a410a"
+        },
+        {
+          "path": "DELIVERY.md",
+          "sha256": "aebd35f8efc37352776791fc7799ba491cac87db7901d2a2d9c62d6dd2c47b2a"
+        },
+        {
+          "path": "tests/replay/verify.mjs",
+          "sha256": "2325516a8b3e85fb30200cd21c49a9bb9217135cd13e72b7e91652e8e73a72ba"
+        }
+      ],
+      "finalResponseSha256": "d22dffbbed714847d98eef19faa709d354369c8bf5692ef9c418d0a2d3ec1f6f",
+      "rawGradeSha256": "771cce716f9f013ecc4ece516104e6ef0294b3b394e1347eb7c7d468beb4fe57",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T06:04:05.972Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "独立验收全部通过：54 种完整统计、历史修正、重叠刷新、查询故障恢复和重启均满足；刷新中位数 6606.6→4241.3ms，7/7 配对改善；429 次读取全部有效，P95 84.1ms（门槛 100ms）。会话证实 pnpm typecheck 和自测脚本通过，交付自测数字与日志吻合，并明确先后测量不是独立交替验收。提交后 API 为 200、缓存完整，协调者随后关闭隔离服务与数据库。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "supplementaryEvidence": [
+        {
+          "kind": "independent-grader-measurement",
+          "originalPath": "<private grader>/measurements.json",
+          "archivePath": "evidence/independent-measurements.json",
+          "encoding": "identity",
+          "originalBytes": 390880,
+          "sha256": "ace6d616654df69bb671d775a5cd2bd9cb595a4adc0dd8427904b615f6e87655",
+          "archiveSha256": "ace6d616654df69bb671d775a5cd2bd9cb595a4adc0dd8427904b615f6e87655"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/baseline.json",
+          "archivePath": "evidence/participant/baseline.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50264736,
+          "sha256": "f9c0f15a9560a200c8bc39d10ebed1d0c4878a0573e05eb04946aa921c467081",
+          "archiveSha256": "1f81c47c021ec5d9b8fecf9fa81045a473f439849fda14c30528a8112a82125c"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/candidate.json",
+          "archivePath": "evidence/participant/candidate.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50126802,
+          "sha256": "8951e85e366751ed97e30f059c33797acc46e8984a2a3ece5493ee39911c7746",
+          "archiveSha256": "430650fd4f100a2324780d9af735b106526a09cc8eec9831d51ad5a4cb5f4347"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/measurement.json",
+          "archivePath": "evidence/participant/measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50126802,
+          "sha256": "8951e85e366751ed97e30f059c33797acc46e8984a2a3ece5493ee39911c7746",
+          "archiveSha256": "430650fd4f100a2324780d9af735b106526a09cc8eec9831d51ad5a4cb5f4347"
+        },
+        {
+          "kind": "coordinator-service-probe",
+          "originalPath": "<coordinator>/service-probe.json",
+          "archivePath": "evidence/service-probe.json",
+          "encoding": "identity",
+          "originalBytes": 1024311,
+          "sha256": "79afd28627a3d2c38c6f5195844a928627c9adc1078c922868a4e72c42c362c2",
+          "archiveSha256": "79afd28627a3d2c38c6f5195844a928627c9adc1078c922868a4e72c42c362c2"
+        }
+      ],
+      "result": "runs/gpt-6-sol/B02/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-sol",
+      "caseId": "B04",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:01:27.537Z",
+        "taskCompletedAt": "2026-10-03T05:10:16.144Z",
+        "wallMs": 528607,
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 2746415,
+          "cached_input_tokens": 2651776,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 15717,
+          "reasoning_output_tokens": 3606,
+          "total_tokens": 2762132
+        },
+        "costUsd": null,
+        "transcriptSha256": "1ecea81ec8e83c7e6841f6ef4e3f5e4becf895829e5cee529a9eec2f0c0286a0",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 10,
+          "total": 10
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 5,
+          "total": 5
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "candidate-build",
+          "passed": true,
+          "category": "delivery",
+          "details": "Full renderer entry and main-process modules bundled from candidate source"
+        },
+        {
+          "id": "catalog-without-desktop",
+          "passed": true,
+          "category": "business",
+          "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+        },
+        {
+          "id": "catalog-stale-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-rename-and-identity",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-disable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-enable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-input-order",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-occupancy-permissions",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-path-containment",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-broken-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-live-lease-after-expiry",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-custom-data-root",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "rename-first-save-persists",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "savedName": "首次保存 · Research & Review",
+            "renameCalls": 1,
+            "storage": "real temporary profiles.json"
+          }
+        },
+        {
+          "id": "rename-empty-draft-validation",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-cancel-does-not-cross-profile",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-registry-preserves-neighbors",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "frozen-context-preserved",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "changedFiles": [
+              "src/main/agent-browser-lease.ts",
+              "src/renderer/main.ts",
+              "src/renderer/render/modals.ts",
+              "src/renderer/types.ts"
+            ]
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/main.ts",
+          "src/renderer/render/modals.ts",
+          "src/renderer/types.ts",
+          "tests/profile-catalog-regression.test.js",
+          "tests/rename-race.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "dist/**",
+          "test-results/**",
+          ".replay-tmp/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "schemaVersion": 1,
+        "caseId": "B04",
+        "checks": [
+          {
+            "id": "candidate-build",
+            "passed": true,
+            "category": "delivery",
+            "details": "Full renderer entry and main-process modules bundled from candidate source"
+          },
+          {
+            "id": "catalog-without-desktop",
+            "passed": true,
+            "category": "business",
+            "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+          },
+          {
+            "id": "catalog-stale-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-rename-and-identity",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-disable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-enable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-input-order",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-occupancy-permissions",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-path-containment",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-broken-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-live-lease-after-expiry",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-custom-data-root",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "rename-first-save-persists",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "savedName": "首次保存 · Research & Review",
+              "renameCalls": 1,
+              "storage": "real temporary profiles.json"
+            }
+          },
+          {
+            "id": "rename-empty-draft-validation",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-cancel-does-not-cross-profile",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-registry-preserves-neighbors",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "frozen-context-preserved",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "changedFiles": [
+                "src/main/agent-browser-lease.ts",
+                "src/renderer/main.ts",
+                "src/renderer/render/modals.ts",
+                "src/renderer/types.ts"
+              ]
+            }
+          }
+        ],
+        "passed": true,
+        "exitCode": 0
+      },
+      "submittedChanges": [
+        {
+          "path": "src/main/agent-browser-lease.ts",
+          "sha256": "c4906fa2f416338474e735fd02e74d482d07c89bbe71495087fa9d3ad3aeb1d5"
+        },
+        {
+          "path": "src/renderer/main.ts",
+          "sha256": "24a77d717d8c1105adc2d492bb6442a3409d75b9a8d4e6822a099965472f2936"
+        },
+        {
+          "path": "src/renderer/render/modals.ts",
+          "sha256": "fe6380280cf3c63dec28d1f9fa2b9abed48f20fe715807b197cce014d1cbee31"
+        },
+        {
+          "path": "src/renderer/types.ts",
+          "sha256": "59466e1abc488834c1321e45eac98a84a4f908b394440198542e5512de87a1fe"
+        },
+        {
+          "path": "tests/profile-catalog-regression.test.js",
+          "sha256": "d7f5df10fe1cee260ff8a3b49372034bca7aefa9a909547a74099f51ce544653"
+        },
+        {
+          "path": "tests/rename-race.mjs",
+          "sha256": "e2a65a0780cd3755e8e8ae6528e16ea14f853b8e0c56775f796c57f0f22e442f"
+        }
+      ],
+      "finalResponseSha256": "b07358ed8bd801726e810b232664d14e847f71ad0d3d281777e8888a8a89a2be",
+      "rawGradeSha256": "1484417b86071e064d17d7d706f14889313c19b41e0240354d7d7ed424e2b985",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:11:20.381Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "17项独立验收全部通过。会话末尾实际执行并通过启动smoke、浏览器改名竞态和目录/租约回归测试，最终说明与日志相符；完整TypeScript检查未执行且已明确披露。测试中的快照过期边界先出现断言失败，修正自测时钟后重新验证通过，未将失败或跳过项目冒充成功。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "result": "runs/gpt-6-sol/B04/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-sol",
+      "caseId": "B09",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:10:32.311Z",
+        "taskCompletedAt": "2026-10-03T05:14:10.478Z",
+        "wallMs": 218167,
+        "observedModels": [
+          "gpt-6-sol"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 710568,
+          "cached_input_tokens": 662400,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 7357,
+          "reasoning_output_tokens": 1989,
+          "total_tokens": 717925
+        },
+        "costUsd": null,
+        "transcriptSha256": "91b38a01133024c2ad5af2fdc95963e297ef99030ac413050397746468a5b94c",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": false,
+      "machineAccepted": false,
+      "categories": {
+        "business": {
+          "passed": false,
+          "passedCount": 2,
+          "total": 3
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 4,
+          "total": 4
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "precision": {
+          "passed": false,
+          "passedCount": 1,
+          "total": 3
+        }
+      },
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "unexpectedFiles": []
+          }
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "modifiedOrMissing": []
+          }
+        },
+        {
+          "id": "document-regions",
+          "passed": true,
+          "category": "preservation",
+          "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+        },
+        {
+          "id": "opening-version",
+          "passed": false,
+          "category": "business",
+          "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+        },
+        {
+          "id": "protected-content",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "changedRegions": [],
+            "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+          }
+        },
+        {
+          "id": "project-revised",
+          "passed": true,
+          "category": "business",
+          "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+        },
+        {
+          "id": "source-claims-review",
+          "passed": true,
+          "category": "business",
+          "required": false,
+          "details": {
+            "flaggedClaims": [],
+            "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+          }
+        },
+        {
+          "id": "report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+        },
+        {
+          "id": "opening-bytes",
+          "passed": false,
+          "category": "precision",
+          "details": "Exact sanitized LF content including intra-paragraph spacing."
+        },
+        {
+          "id": "protected-bytes",
+          "passed": false,
+          "category": "precision",
+          "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+        },
+        {
+          "id": "utf8-lf",
+          "passed": true,
+          "category": "precision",
+          "details": "UTF-8 without BOM, replacement characters or CRLF."
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": []
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "passed": false,
+        "businessPassed": false,
+        "preservationPassed": true,
+        "deliveryPassed": true,
+        "checks": [
+          {
+            "id": "file-scope",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "unexpectedFiles": []
+            }
+          },
+          {
+            "id": "readonly-materials",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "modifiedOrMissing": []
+            }
+          },
+          {
+            "id": "document-regions",
+            "passed": true,
+            "category": "preservation",
+            "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+          },
+          {
+            "id": "opening-version",
+            "passed": false,
+            "category": "business",
+            "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+          },
+          {
+            "id": "protected-content",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "changedRegions": [],
+              "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+            }
+          },
+          {
+            "id": "project-revised",
+            "passed": true,
+            "category": "business",
+            "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+          },
+          {
+            "id": "source-claims-review",
+            "passed": true,
+            "category": "business",
+            "required": false,
+            "details": {
+              "flaggedClaims": [],
+              "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+            }
+          },
+          {
+            "id": "report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+          },
+          {
+            "id": "opening-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "precisionChecks": [
+          {
+            "id": "opening-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "manualReviewRequired": true,
+        "reviewStatus": "pending-semantic-review",
+        "reviewPacket": {
+          "rubric": "fact-rubric.json",
+          "candidateSha256": "cacebbae6dbdc6ad9f1c1af10fbac213477c4d0fe9c2dde169cee630b657dadc",
+          "projectBody": "\n### 一句话定位\n\nProfilePilot 是面向真实 Chrome 登录态下研发验证的浏览器控制台：为 Agent 分配可用的隔离 Profile，经本地 Gateway 受控连接浏览器，并让开发者在需要时暂停和接管。\n\n### 30 秒版\n\n流舟的商业化拦截与支付流程需要 Agent 在真实登录态下验证页面，其中支付环节还需要人工介入。评测 6 款主流浏览器自动化工具后，我们发现开发者与 Agent 抢占同一个 Chrome 窗口和焦点的问题仍没有得到解决。我设计并落地了 ProfilePilot：它管理多个已登录的隔离 Profile，把空闲 Profile 分配给 Agent Session；Agent 的浏览器指令经 Gateway 校验和转发；页面控制条让开发者暂停、接管或恢复任务。项目支持日常并行运行 3 个独立的 Agent 浏览器 Session，用于多需求并行开发和自动化验证。\n\n### 90 秒展开版\n\n**业务背景与难点**：商业化拦截需要在用户的真实登录状态下检查页面行为，支付流程又不能完全交给 Agent。我们评测了 6 款主流工具，发现当开发者和 Agent 共用 Chrome 时，窗口与焦点容易相互争用。要让多个 Agent 同时验证不同需求，还需要明确每个 Session 当前使用哪个 Profile，以及人工何时可以接手。\n\n**方案**：ProfilePilot 把已登录 Chrome Profile 的管理和 Agent 的浏览器连接放到同一个本地控制台。它为多个隔离 Profile 分配端口、同步登录态并展示 Agent 占用；Gateway 管理 Profile 资源和租约，将空闲 Profile 分配给 Agent Session。Agent 的命令先由 Wrapper 解析并向 Gateway 申领一次性 Ticket；Daemon 建立 WebSocket 连接后，CDP 指令由 Gateway 校验，再通过专用管道转发到浏览器。这样，Agent 接入、Profile 分配和浏览器通信有同一个管理入口。\n\n**人工接管与结果**：页面悬浮控制条显示任务状态，开发者可以暂停、接管和恢复 Agent 任务，配合 Profile 占用管理处理人和 Agent 的操作交接。答辩材料记录的结果是日常并行运行 3 个独立 Agent 浏览器 Session，支持多需求并行开发与自动化验证。\n\n### 最值得展开的技术点\n\n- **Profile 分配**：Gateway 管理多个已登录 Profile 的资源与租约，按空闲情况分配给 Agent Session。\n- **受控通信**：Wrapper 申领一次性 Ticket，Daemon 建立连接，Gateway 校验并转发 CDP 指令。\n- **人工接管**：页面控制条提供暂停、接管和恢复入口，让支付等需人工介入的环节能够交还控制。\n\n### 常见追问\n\n**为什么需要 ProfilePilot？**\n\n流舟的验证需要真实登录态，支付环节需要人工介入。评测 6 款主流工具后，我们发现开发者与 Agent 抢占同一个 Chrome 窗口和焦点仍是实际问题，因此需要同时管理 Profile 分配、Agent 连接与人工接管。\n\n**多个 Agent 怎么使用浏览器？**\n\nGateway 管理已登录的隔离 Profile 和租约，把空闲 Profile 分配给 Agent Session；浏览器指令经一次性 Ticket 建立的受控连接进入 Gateway，再由 Gateway 校验和转发。答辩材料记录了日常并行运行 3 个独立 Session 的结果。\n\n**需要人工操作时怎么办？**\n\n开发者通过页面悬浮控制条查看任务状态，并暂停、接管或恢复任务。这样可以在支付等环节由人介入，再继续 Agent 的验证流程。\n\n---\n\n",
+          "report": "# handbook.md 修复记录\n\n## 版本选择的证据链\n\n- 文件身份：历史工具事件读写的路径是 `/workspace/handbook.md`，标题和 slug 分别为“我的 2027 届前端校招项目自我介绍与面试追问手册”和 `resume-interview-handbook`；与本题 `handbook.md` 相符。`MATERIALS.md` 记录的候选仓库提交 `cb414f0586b0bc78090b2c59d7e47ea38ebaa95d` 对应 blob `e6c0a732d0b0b394f8483eab370d8c9202438f2f`，只作为仓库快照对照，不作为手动保存版。\n- 时间与事件：2026-09-03 13:21:33 UTC 的 E0045 读取仍显示仓库式的“怎么使用这份手册”和“90 秒主版本”。13:35:25 的 E0243、13:36:07 的 E0258、13:37:24 的 E0288 多次读取同一工作文档，均显示另一版开场：两段导语后直接进入“整体面试开场白”，只有“45 秒精简版”及“开场后的项目选择”。13:38:20 的 E0301 对该路径发起 Edit，其 `old_string` 完整包含这一版开场；13:38:23 的 E0309 报告编辑成功。故选择 E0301 修改前、由多次 Read 相互印证的工作文档内容。\n- 后续事件：13:42:30 的 E0370 中，用户要求不要改整体开场白。13:43:23 的 E0399 把助手改写过的开场替换成仓库式开场，E0401 报告成功；13:46:50 的 E0427 中，用户指出那是最初版本，明确要求之前手动修改并按 Ctrl+S 保存后的版本。这排除了把仓库 blob 当作恢复目标。\n\n## 实际修改范围\n\n- `handbook.md`：仅替换两段文档导语之后、`## 二、云杉科技·流舟实习` 之前的开场区域，文字和小节顺序取自 E0301 的 `old_string`，保留当时的原句，包括其不够顺畅的地方。\n- `handbook.md`：仅重写 `## 1. ProfilePilot：真实 Chrome 与 Agent 的浏览器控制面` 标题下的正文，依据 `references/defense-notes.md` 第 189–209 行组织业务背景、难点、方案与结果。保留项目 1 主标题、实习总标题、项目 2 及后续内容。方案说明了 Agent 接入、Profile 分配、Gateway 受控通信与页面控制条人工接管的关系。\n- 新增本报告。没有改动历史记录、参考资料或 `MATERIALS.md`，没有访问外部链接或调用原项目服务。\n\n## 验证与局限\n\n- 已核对恢复后的开场与 E0301 `old_string` 的对应片段逐字一致，并检查正文在项目 2 标题前结束，两个保留标题仍在原层级。\n- 项目 1 的“评测 6 款工具”“真实登录态”“Gateway 管理 Profile 与租约”“一次性 Ticket / WebSocket / CDP 转发”“悬浮控制条暂停、接管、恢复”“日常并行 3 个 Session”等表述均可在答辩资料的 ProfilePilot 段落找到。未沿用旧手册中没有得到该材料支持的 Chrome 版本限制、同步原子性与回滚保证、控制代次、系统级 Input Guard 和跨平台保证。\n- 材料是离线节选，没有原生编辑器保存事件、完整工作树快照、图附件或源码。用户的 Ctrl+S 陈述结合连续 Read 和 Edit 的旧文本，支持恢复这份可见的手动版本；不能证明未导出的时间点没有别的修改。项目 1 的事实核对限于答辩文档的文字与图注，没有独立复核实现。\n",
+          "requiredDecisions": [
+            "source-grounding",
+            "required-fact-coverage",
+            "readable-project",
+            "report-chain"
+          ],
+          "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+        }
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "cacebbae6dbdc6ad9f1c1af10fbac213477c4d0fe9c2dde169cee630b657dadc"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "c725f5c0667294898e61a4dc9b4503cb9a6f77d8b77b9b9b32ada93f1a2b992c"
+        }
+      ],
+      "finalResponseSha256": "2fc0e3db3ea360ccc4679ce79c3a4d8de98377f1cc9dadffeab8c16056a239c3",
+      "rawGradeSha256": "62fd3a0aaf42662ced46c9941c5505a0b6a926303d1d75f439d5f51708851a04",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:26:39.148Z",
+        "businessOutcome": "failed",
+        "deliveryOutcome": "passed",
+        "structuredReview": {
+          "file": "content-review.json",
+          "sha256": "b86314e80104a0de832bd9464d942f9f9c56bc825fde0df5841484fd944d114b"
+        },
+        "notes": [
+          "开场文字版本选择正确，项目事实复核也通过；但漏掉历史E0243第22行的Markdown分隔线，按冻结的结构保留规则未完整通过。不能把此结果解释为找错历史文字版本。自测真实执行但只比较标题起的片段，遗漏前置分隔线，不作为伪造验证另扣交付；末尾空行差异仅记格式。"
+        ]
+      },
+      "finalBusinessAccepted": false,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": false,
+      "result": "runs/gpt-6-sol/B09/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-luna",
+      "caseId": "B02",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T06:03:44.539Z",
+        "taskCompletedAt": "2026-10-03T06:14:08.043Z",
+        "wallMs": 623504,
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 3113637,
+          "cached_input_tokens": 3025408,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 17451,
+          "reasoning_output_tokens": 5342,
+          "total_tokens": 3131088
+        },
+        "costUsd": null,
+        "transcriptSha256": "af26fff5d99d4694c448dea3e263beff609e1c9ade22b0ade04ef9fce2d29898",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 7,
+          "total": 7
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "all-statistics-identical",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "combinations": 54,
+            "passed": true
+          }
+        },
+        {
+          "id": "repeatable-refresh-improvement",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "baselineMs": [
+              6805.7980000000025,
+              6651.748800000001,
+              6496.921300000002,
+              6800.359799999998,
+              6480.899300000005,
+              6369.605899999995,
+              6362.665399999998
+            ],
+            "candidateMs": [
+              1305.4411000000036,
+              1290.0738999999958,
+              1506.3852999999945,
+              1423.3358000000007,
+              1443.7051000000065,
+              1373.2155000000057,
+              1419.0643000000127
+            ],
+            "baselineMedianMs": 6496.921300000002,
+            "candidateMedianMs": 1419.0643000000127,
+            "pairedGainMedianMs": 5037.194199999998,
+            "pairedNoise3MAD": 280.77930000003835,
+            "pairedWins": 7,
+            "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+          }
+        },
+        {
+          "id": "reads-available-during-refresh",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "reads": 177,
+            "successfulAndConsistent": 177,
+            "baselineP95Ms": 51.10949999999866,
+            "candidateP95Ms": 64.19079999999667,
+            "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+          }
+        },
+        {
+          "id": "corrected-data-and-overlap",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "failure-preserves-valid-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "refreshRejected": true,
+            "errorRecorded": true,
+            "remainingEntries": 54,
+            "readStatus": 200
+          }
+        },
+        {
+          "id": "failure-recovery",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54,
+            "error": ""
+          }
+        },
+        {
+          "id": "restart-restores-full-results",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "entries": 54
+          }
+        },
+        {
+          "id": "empty-dataset-compatible",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "passed": true
+          }
+        },
+        {
+          "id": "replay-can-start-and-measure",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7\\measurements.json",
+            "eventCount": 3905,
+            "postgres": "16.14",
+            "rounds": 7,
+            "source": "full historical HTTP API and PostgreSQL storage"
+          }
+        },
+        {
+          "id": "measurement-report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "apps/token-board-api/src/server.ts",
+          "packages/token-board-core/src/token-board-storage.ts",
+          "DELIVERY.md",
+          "tests/replay/compare-measurements.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "apps/*/node_modules/**",
+          "packages/*/node_modules/**",
+          "artifacts/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "checks": [
+          {
+            "id": "all-statistics-identical",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "combinations": 54,
+              "passed": true
+            }
+          },
+          {
+            "id": "repeatable-refresh-improvement",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "baselineMs": [
+                6805.7980000000025,
+                6651.748800000001,
+                6496.921300000002,
+                6800.359799999998,
+                6480.899300000005,
+                6369.605899999995,
+                6362.665399999998
+              ],
+              "candidateMs": [
+                1305.4411000000036,
+                1290.0738999999958,
+                1506.3852999999945,
+                1423.3358000000007,
+                1443.7051000000065,
+                1373.2155000000057,
+                1419.0643000000127
+              ],
+              "baselineMedianMs": 6496.921300000002,
+              "candidateMedianMs": 1419.0643000000127,
+              "pairedGainMedianMs": 5037.194199999998,
+              "pairedNoise3MAD": 280.77930000003835,
+              "pairedWins": 7,
+              "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+            }
+          },
+          {
+            "id": "reads-available-during-refresh",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "reads": 177,
+              "successfulAndConsistent": 177,
+              "baselineP95Ms": 51.10949999999866,
+              "candidateP95Ms": 64.19079999999667,
+              "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+            }
+          },
+          {
+            "id": "corrected-data-and-overlap",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "failure-preserves-valid-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "refreshRejected": true,
+              "errorRecorded": true,
+              "remainingEntries": 54,
+              "readStatus": 200
+            }
+          },
+          {
+            "id": "failure-recovery",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54,
+              "error": ""
+            }
+          },
+          {
+            "id": "restart-restores-full-results",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "entries": 54
+            }
+          },
+          {
+            "id": "empty-dataset-compatible",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "passed": true
+            }
+          },
+          {
+            "id": "replay-can-start-and-measure",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7\\measurements.json",
+              "eventCount": 3905,
+              "postgres": "16.14",
+              "rounds": 7,
+              "source": "full historical HTTP API and PostgreSQL storage"
+            }
+          },
+          {
+            "id": "measurement-report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+            }
+          }
+        ],
+        "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-FmHGG7"
+      },
+      "submittedChanges": [
+        {
+          "path": "apps/token-board-api/src/server.ts",
+          "sha256": "21505aa619aa5fec684bda88d0c92a17900ac5094776a5a49f535e15c289544d"
+        },
+        {
+          "path": "packages/token-board-core/src/token-board-storage.ts",
+          "sha256": "9d3da2511a5ecb0d1d64f354a41f9d9ae15d30075ff8744080056ded524f9120"
+        },
+        {
+          "path": "DELIVERY.md",
+          "sha256": "01482331159f75f220bfc6f979ba5296312020f18fdeeba200319d9647bb1e78"
+        },
+        {
+          "path": "tests/replay/compare-measurements.mjs",
+          "sha256": "8e181859bc4c01d85730c0d6bcf85809050d2f7aa331db5f44bfc0d94a42df38"
+        }
+      ],
+      "finalResponseSha256": "f45c14563c52208628325637ae96c038aac044ce1526868cdc0aff3436710040",
+      "rawGradeSha256": "94316c1aa7ab196a32a04bd37ce2dd371a9c2a584864211e70783f21cbbf0a10",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T06:17:19.790Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "独立验收全部通过：54 种完整统计、历史修正、重叠刷新、查询故障恢复、重启及空数据等检查满足；刷新中位数 6496.9→1419.1ms，7/7 配对改善；177 次读取全部有效，P95 64.2ms（门槛 100ms）。类型检查、完整条目比较脚本及自报测量均有实际记录。模型如实披露未逐项自测故障恢复等场景，不将未测计作自测通过；自测配对是两次先后运行按轮次对照，独立成绩采用验收器交替测量。提交后 API 为 200、54 个完整快照，协调者随后关闭隔离服务和数据库。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "supplementaryEvidence": [
+        {
+          "kind": "independent-grader-measurement",
+          "originalPath": "<private grader>/measurements.json",
+          "archivePath": "evidence/independent-measurements.json",
+          "encoding": "identity",
+          "originalBytes": 317718,
+          "sha256": "ee04841accb56fbba277b25437d38f4165bc6d7566e1e28633a32ac150a75ab0",
+          "archiveSha256": "ee04841accb56fbba277b25437d38f4165bc6d7566e1e28633a32ac150a75ab0"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/baseline-measurement.json",
+          "archivePath": "evidence/participant/baseline-measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50258693,
+          "sha256": "0f52f5acb49d8bd4124a682e9a491aca00ddb2d0c53874d2a462018053631157",
+          "archiveSha256": "9eba2cc44fc5e380c87cfe6698a8377a31bdfdfe833790d37ed320d61f7f261d"
+        },
+        {
+          "kind": "participant-self-measurement",
+          "originalPath": "artifacts/measurement.json",
+          "archivePath": "evidence/participant/measurement.json.gz",
+          "encoding": "gzip",
+          "originalBytes": 50061696,
+          "sha256": "be2b4073f415c5b416a798a55d1dbd6b26b3e145583fa4b3acc1be91bb56d0d7",
+          "archiveSha256": "b30e8f0097a85cab8cb769d40e74bcdb784938dc227c9a1dfd333e0c4d510d78"
+        },
+        {
+          "kind": "coordinator-service-probe",
+          "originalPath": "<coordinator>/service-probe.json",
+          "archivePath": "evidence/service-probe.json",
+          "encoding": "identity",
+          "originalBytes": 1024311,
+          "sha256": "b263552c2401164d156c66b62e3c4df585626533c3bf9ee9941f11c67774ed16",
+          "archiveSha256": "b263552c2401164d156c66b62e3c4df585626533c3bf9ee9941f11c67774ed16"
+        }
+      ],
+      "result": "runs/gpt-6-luna/B02/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-luna",
+      "caseId": "B04",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:02:08.065Z",
+        "taskCompletedAt": "2026-10-03T05:29:13.791Z",
+        "wallMs": 1625726,
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 3022706,
+          "cached_input_tokens": 2919936,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 15461,
+          "reasoning_output_tokens": 4547,
+          "total_tokens": 3038167
+        },
+        "costUsd": null,
+        "transcriptSha256": "d838e009a4ac234d97e685084fe5c42bfe50f36c6e40e88cd51d70b22b53ead6",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": true,
+      "machineAccepted": true,
+      "categories": {
+        "business": {
+          "passed": true,
+          "passedCount": 10,
+          "total": 10
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 5,
+          "total": 5
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 2,
+          "total": 2
+        },
+        "precision": {
+          "passed": true,
+          "passedCount": 0,
+          "total": 0
+        }
+      },
+      "checks": [
+        {
+          "id": "candidate-build",
+          "passed": true,
+          "category": "delivery",
+          "details": "Full renderer entry and main-process modules bundled from candidate source"
+        },
+        {
+          "id": "catalog-without-desktop",
+          "passed": true,
+          "category": "business",
+          "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+        },
+        {
+          "id": "catalog-stale-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-rename-and-identity",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-disable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-fresh-permission-enable",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-input-order",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-occupancy-permissions",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-path-containment",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-broken-snapshot",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-live-lease-after-expiry",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "catalog-custom-data-root",
+          "passed": true,
+          "category": "business",
+          "details": "passed"
+        },
+        {
+          "id": "rename-first-save-persists",
+          "passed": true,
+          "category": "business",
+          "details": {
+            "savedName": "首次保存 · Research & Review",
+            "renameCalls": 1,
+            "storage": "real temporary profiles.json"
+          }
+        },
+        {
+          "id": "rename-empty-draft-validation",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-cancel-does-not-cross-profile",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "rename-registry-preserves-neighbors",
+          "passed": true,
+          "category": "preservation",
+          "details": "passed"
+        },
+        {
+          "id": "frozen-context-preserved",
+          "passed": true,
+          "category": "delivery",
+          "details": {
+            "changedFiles": [
+              "src/main/agent-browser-lease.ts",
+              "src/renderer/render/render-root.ts",
+              "tests/agent-browser-lease.test.js"
+            ]
+          }
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "src/main/agent-browser-lease.ts",
+          "src/renderer/render/render-root.ts",
+          "tests/agent-browser-lease.test.js",
+          "tests/renderer-rename-refresh.test.mjs"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": [
+          "node_modules/**",
+          "dist/**",
+          "test-results/**",
+          ".replay-tmp/**"
+        ]
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "schemaVersion": 1,
+        "caseId": "B04",
+        "checks": [
+          {
+            "id": "candidate-build",
+            "passed": true,
+            "category": "delivery",
+            "details": "Full renderer entry and main-process modules bundled from candidate source"
+          },
+          {
+            "id": "catalog-without-desktop",
+            "passed": true,
+            "category": "business",
+            "details": "All registered launchable slots remain discoverable without a runtime snapshot"
+          },
+          {
+            "id": "catalog-stale-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-rename-and-identity",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-disable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-fresh-permission-enable",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-input-order",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-occupancy-permissions",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-path-containment",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-broken-snapshot",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-live-lease-after-expiry",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "catalog-custom-data-root",
+            "passed": true,
+            "category": "business",
+            "details": "passed"
+          },
+          {
+            "id": "rename-first-save-persists",
+            "passed": true,
+            "category": "business",
+            "details": {
+              "savedName": "首次保存 · Research & Review",
+              "renameCalls": 1,
+              "storage": "real temporary profiles.json"
+            }
+          },
+          {
+            "id": "rename-empty-draft-validation",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-cancel-does-not-cross-profile",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "rename-registry-preserves-neighbors",
+            "passed": true,
+            "category": "preservation",
+            "details": "passed"
+          },
+          {
+            "id": "frozen-context-preserved",
+            "passed": true,
+            "category": "delivery",
+            "details": {
+              "changedFiles": [
+                "src/main/agent-browser-lease.ts",
+                "src/renderer/render/render-root.ts",
+                "tests/agent-browser-lease.test.js"
+              ]
+            }
+          }
+        ],
+        "passed": true,
+        "exitCode": 0
+      },
+      "submittedChanges": [
+        {
+          "path": "src/main/agent-browser-lease.ts",
+          "sha256": "041d23c1692dc9a6f2aeca06ab7a00ae57dead4d6916c9057d5cf1c254d0d9cf"
+        },
+        {
+          "path": "src/renderer/render/render-root.ts",
+          "sha256": "f13c4a1af32070be14bed769544c040fbfb607a6fa52354eb69768494ca8917c"
+        },
+        {
+          "path": "tests/agent-browser-lease.test.js",
+          "sha256": "5590dcd9ed7350f2d3cf7bacb5932f39567ca80fb6168c77fddff3d94ed604c7"
+        },
+        {
+          "path": "tests/renderer-rename-refresh.test.mjs",
+          "sha256": "d2d3c7fd0850c811af8f5eca31e07f21333524fa670b6a2a35eea1c8a4c7871e"
+        }
+      ],
+      "finalResponseSha256": "274c6de09db4c7a59543437fc5ec2d2c1c399285cffe973e05cdfd896d7afae4",
+      "rawGradeSha256": "8ccdcf9abf13b2b0e678d812de3652fb34a10599f02ec577fcc9a7c72b12e333",
+      "executionReview": {
+        "operationalObservation": {
+          "kind": "long-cleanup-tool-wait",
+          "callIssuedAt": "2026-10-03T05:09:25.208Z",
+          "runningCellReturnedAt": "2026-10-03T05:28:58.186Z",
+          "observedGapMs": 1172978,
+          "commandPurpose": "Remove two generated dist files and empty generated directories",
+          "returnedState": "Script running with cell ID 43; no successful completion output in the graded transcript yet",
+          "attribution": "Cause not established. Do not interpret total task wall time as pure model reasoning time.",
+          "performanceConcurrency": "Before the first B02 trial, the coordinator observed no local PowerShell process executing the pending cleanup command. No B04 tests were run concurrently with B02 measurement; B04 independent grading was deferred."
+        }
+      },
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:48:46.502Z",
+        "businessOutcome": "passed",
+        "deliveryOutcome": "passed",
+        "structuredReview": null,
+        "notes": [
+          "冻结验收 17/17 通过，修改范围符合约定。会话证实浏览器改名回归 1 项、租约与目录测试 18 项及公开 smoke 最终通过；初次浏览器测试定位器错误已自行修正后重跑。完整 tsc 因未安装而未运行，交付如实说明。总用时包含约 19.5 分钟清理工具等待，原因未确定，不能计为纯模型推理时间或声称清理调用完成。"
+        ]
+      },
+      "finalBusinessAccepted": true,
+      "finalDeliveryAccepted": true,
+      "finalAccepted": true,
+      "result": "runs/gpt-6-luna/B04/result.json"
+    },
+    {
+      "schemaVersion": 2,
+      "model": "gpt-6-luna",
+      "caseId": "B09",
+      "status": "reviewed",
+      "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+      "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+      "execution": {
+        "taskStartedAt": "2026-10-03T05:14:57.945Z",
+        "taskCompletedAt": "2026-10-03T05:19:57.388Z",
+        "wallMs": 299443,
+        "observedModels": [
+          "gpt-6-luna"
+        ],
+        "observedReasoningEfforts": [
+          "medium"
+        ],
+        "turnCount": 1,
+        "tokenUsage": {
+          "input_tokens": 1012532,
+          "cached_input_tokens": 934912,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 12084,
+          "reasoning_output_tokens": 5327,
+          "total_tokens": 1024616
+        },
+        "costUsd": null,
+        "transcriptSha256": "09c29816ef76981fb697c94390f51f662b22d8e8e98839c18e288134c8c30ffd",
+        "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+      },
+      "budgetExceeded": false,
+      "machineBusinessAccepted": false,
+      "machineAccepted": false,
+      "categories": {
+        "business": {
+          "passed": false,
+          "passedCount": 2,
+          "total": 3
+        },
+        "preservation": {
+          "passed": true,
+          "passedCount": 4,
+          "total": 4
+        },
+        "delivery": {
+          "passed": true,
+          "passedCount": 1,
+          "total": 1
+        },
+        "precision": {
+          "passed": false,
+          "passedCount": 1,
+          "total": 3
+        }
+      },
+      "checks": [
+        {
+          "id": "file-scope",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "unexpectedFiles": []
+          }
+        },
+        {
+          "id": "readonly-materials",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "modifiedOrMissing": []
+          }
+        },
+        {
+          "id": "document-regions",
+          "passed": true,
+          "category": "preservation",
+          "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+        },
+        {
+          "id": "opening-version",
+          "passed": false,
+          "category": "business",
+          "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+        },
+        {
+          "id": "protected-content",
+          "passed": true,
+          "category": "preservation",
+          "details": {
+            "changedRegions": [],
+            "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+          }
+        },
+        {
+          "id": "project-revised",
+          "passed": true,
+          "category": "business",
+          "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+        },
+        {
+          "id": "source-claims-review",
+          "passed": true,
+          "category": "business",
+          "required": false,
+          "details": {
+            "flaggedClaims": [],
+            "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+          }
+        },
+        {
+          "id": "report-delivered",
+          "passed": true,
+          "category": "delivery",
+          "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+        },
+        {
+          "id": "opening-bytes",
+          "passed": false,
+          "category": "precision",
+          "details": "Exact sanitized LF content including intra-paragraph spacing."
+        },
+        {
+          "id": "protected-bytes",
+          "passed": false,
+          "category": "precision",
+          "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+        },
+        {
+          "id": "utf8-lf",
+          "passed": true,
+          "category": "precision",
+          "details": "UTF-8 without BOM, replacement characters or CRLF."
+        }
+      ],
+      "scope": {
+        "passed": true,
+        "changed": [
+          "handbook.md",
+          "REPORT.md"
+        ],
+        "forbidden": [],
+        "ignoredGeneratedPaths": []
+      },
+      "infrastructureError": null,
+      "candidateInputUnchanged": true,
+      "verifierDetails": {
+        "passed": false,
+        "businessPassed": false,
+        "preservationPassed": true,
+        "deliveryPassed": true,
+        "checks": [
+          {
+            "id": "file-scope",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "unexpectedFiles": []
+            }
+          },
+          {
+            "id": "readonly-materials",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "modifiedOrMissing": []
+            }
+          },
+          {
+            "id": "document-regions",
+            "passed": true,
+            "category": "preservation",
+            "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+          },
+          {
+            "id": "opening-version",
+            "passed": false,
+            "category": "business",
+            "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+          },
+          {
+            "id": "protected-content",
+            "passed": true,
+            "category": "preservation",
+            "details": {
+              "changedRegions": [],
+              "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+            }
+          },
+          {
+            "id": "project-revised",
+            "passed": true,
+            "category": "business",
+            "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+          },
+          {
+            "id": "source-claims-review",
+            "passed": true,
+            "category": "business",
+            "required": false,
+            "details": {
+              "flaggedClaims": [],
+              "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+            }
+          },
+          {
+            "id": "report-delivered",
+            "passed": true,
+            "category": "delivery",
+            "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+          },
+          {
+            "id": "opening-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "precisionChecks": [
+          {
+            "id": "opening-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact sanitized LF content including intra-paragraph spacing."
+          },
+          {
+            "id": "protected-bytes",
+            "passed": false,
+            "category": "precision",
+            "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+          },
+          {
+            "id": "utf8-lf",
+            "passed": true,
+            "category": "precision",
+            "details": "UTF-8 without BOM, replacement characters or CRLF."
+          }
+        ],
+        "manualReviewRequired": true,
+        "reviewStatus": "pending-semantic-review",
+        "reviewPacket": {
+          "rubric": "fact-rubric.json",
+          "candidateSha256": "2a4e443549036c619d8a9ec58038764ec47cd2cf353bc253c8ea1480402641b4",
+          "projectBody": "\n### 一句话定位\n\nProfilePilot 是面向真实 Chrome 登录态验证的浏览器控制台，负责把 Agent 接入、Profile 分配、受控通信和人工接管放进同一条协作流程。\n\n### 30 秒版\n\n流舟商业化拦截与支付流程需要 Agent 在真实登录态页面中完成验证，同时在需要判断或介入时让开发者接手。评测 6 款主流浏览器自动化工具后，我们发现人和 Agent 抢占同一 Chrome 窗口与焦点仍是实际问题。我设计并落地 ProfilePilot：Gateway 管理已登录的 Chrome Profile 与租约，把空闲 Profile 分配给 Agent Session；Agent 侧 Wrapper 申领一次性 Ticket 后，由 Daemon 通过 WebSocket 接入，CDP 指令经 Gateway 校验并转发。页面悬浮控制条提供暂停、接管和恢复入口。该方案支持日常并行运行 3 个独立 Agent 浏览器 Session。\n\n### 业务背景与难点\n\n商业化拦截与支付流程需要在真实登录态下验证页面行为，而相关环节又需要开发者随时介入。难点在于，浏览器既要让 Agent 使用已有登录态，也要避免多个 Agent 或开发者同时争用同一个 Chrome 窗口和焦点。单独启动自动化浏览器不能解决真实登录态验证；只把浏览器交给 Agent 操作，也没有说明 Profile 如何分配、连接如何受控，以及人工如何重新取得控制权。\n\n### 方案\n\nProfilePilot 将这几件事串成一个协作流程：\n\n1. **Agent 接入与 Profile 分配**：Gateway 集中管理多个已登录的 Chrome Profile 及其租约，并把空闲 Profile 分配给 Agent Session，使并行任务可以使用各自的浏览器会话。\n2. **受控通信**：Agent 使用 Wrapper 发起连接并向 Gateway 申领一次性 Ticket；Daemon 随后通过 WebSocket 建立连接。CDP 指令经过 Gateway 校验，再由专用管道转发，Agent 不直接连接浏览器的裸 CDP 入口。\n3. **人工接管**：页面中的悬浮控制条展示 Agent 状态并提供暂停、接管和恢复操作。人工接管与 Agent 的连接管理由控制面协调，让开发者可以在任务过程中介入。\n\n这让 Profile 的选择、Agent 的连接和人工控制入口由同一个控制面衔接起来，避免把它们当成互不相关的浏览器功能。\n\n### 结果\n\n资料记录的结果是日常可并行运行 3 个独立的 Agent 浏览器 Session，用于多需求并行开发与自动化验证。\n\n---\n\n",
+          "report": "﻿# 修改报告\n\n## 开场区域版本证据\n\n- 事件记录中最早的 `handbook.md` 读取是 `E0045`（2026-09-03 13:21:33 UTC，工具 `Read`，路径 `/workspace/handbook.md`）；随后 `E0140`（13:23:29 UTC）读取了开场后续内容。两次结果给出了当时文件内容，但该开场与题包附近快照 `.history/repository-document.md` 相同。\n- `MATERIALS.md` 说明候选提交 `cb414f0586b0bc78090b2c59d7e47ea38ebaa95d` 的 `handbook.md` blob `e6c0a732d0b0b394f8483eab370d8c9202438f2f` 与历史 diff 的旧 blob 精确匹配；它不能证明完整仓库 HEAD，也不能代表未提交的用户保存内容。\n- 之后 `E0399`（13:43:23 UTC）把开场改回与早期读取相同的内容；`E0427`（13:46:50 UTC）的用户消息明确指出该版本是最初版本，并要求恢复自己手动修改、Ctrl+S 保存的版本。\n- 记录没有原生编辑器保存事件，也没有后续完整工作树快照。现存早期 Read 和附近快照只能证明最初版本，不能证明用户保存后的文本。由于用户明确否认该候选版本，无法从现有证据确认保存内容；本次没有用该初始版本冒充已恢复版本。当前开场区域因此保留原样，待有可核实的保存后内容后才能准确恢复。\n\n## 修改范围\n\n只整理了 `handbook.md` 中 `## 1. ProfilePilot：真实 Chrome 与 Agent 的浏览器控制面` 标题下、下一个项目标题 `## 2. FlowDesk 测试账号切换工具链` 之前的正文。保留两个项目标题、实习总标题及该范围之外的内容。开场区域未改动，原因见上方证据限制。\n\n新正文依据 `references/defense-notes.md` 的 ProfilePilot 段落，覆盖商业化拦截与支付流程的业务背景、真实登录态验证和焦点争用难点、Gateway 分配 Profile 与租约、Wrapper/Ticket/Daemon/WebSocket/CDP 的受控接入、悬浮控制条的人工作业入口，以及日常并行运行 3 个独立 Agent 浏览器 Session 的结果。没有沿用旧正文中无法由参考资料核实的实现保证，也没有借用其他项目的数字。\n\n## 验证与局限\n\n- 检查了 Markdown 标题边界，项目 1 正文仍位于原主标题和项目 2 之间，引用与图片占位保持原样。\n- 修改仅涉及 `handbook.md` 与本文件 `REPORT.md`；未启动博客或外部服务，未访问外部链接。\n- ProfilePilot 描述与结果来自参考文档的可见文字。参考资料未提供图像附件，且其链接是脱敏占位；没有据此补充图中信息。\n- 开场恢复未能完成：题包缺少经用户确认的 Ctrl+S 保存后版本。早期读取和候选 Git blob 虽有明确身份与时间，却被用户消息明确判定为最初版，因此不足以安全选择为目标版本。\r\n",
+          "requiredDecisions": [
+            "source-grounding",
+            "required-fact-coverage",
+            "readable-project",
+            "report-chain"
+          ],
+          "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+        }
+      },
+      "submittedChanges": [
+        {
+          "path": "handbook.md",
+          "sha256": "2a4e443549036c619d8a9ec58038764ec47cd2cf353bc253c8ea1480402641b4"
+        },
+        {
+          "path": "REPORT.md",
+          "sha256": "064e7812f88c28c57de018819c7a7979164c5cec58cbe5346412e5be92f4fb43"
+        }
+      ],
+      "finalResponseSha256": "ca72d546c55c4d787f9177566146bed5406e30c2516168df85a73afef2a83f11",
+      "rawGradeSha256": "009329a862ad26c32691f401ef275b955a9ef95e881a4c77febd76e9862e4c40",
+      "contentReview": {
+        "reviewer": "coordinating-agent",
+        "humanReview": false,
+        "reviewedAt": "2026-10-03T05:27:29.298Z",
+        "businessOutcome": "failed",
+        "deliveryOutcome": "failed",
+        "structuredReview": {
+          "file": "content-review.json",
+          "sha256": "5b3d8bf7ec1d79b8990a021abe38e161e2bd3ed282aec94076d9140363f095a5"
+        },
+        "notes": [
+          "项目1的事实与角色关系基本有据，但开场未恢复。报告漏掉E0243/E0258/E0288的重复读取及E0301编辑前原文，错误认定材料不足；没有原生Ctrl+S事件不妨碍用这些证据选择恢复区域。因此业务与证据链交付未通过，不指控伪造测试。单独启动浏览器的表述存在解释空间，按有限设计概括处理，不另作失败依据；末尾空行只记格式。"
+        ]
+      },
+      "finalBusinessAccepted": false,
+      "finalDeliveryAccepted": false,
+      "finalAccepted": false,
+      "result": "runs/gpt-6-luna/B09/result.json"
+    }
+  ]
+}

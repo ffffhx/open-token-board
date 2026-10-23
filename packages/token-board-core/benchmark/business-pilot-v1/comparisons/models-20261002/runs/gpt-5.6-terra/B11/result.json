@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-terra",
+  "label": "GPT-5.6 Terra",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:53:57.281Z",
+    "taskStartedAt": "2026-10-02T15:53:57.524Z",
+    "taskCompletedAt": "2026-10-02T15:55:15.313Z",
+    "taskWallMs": 77789,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-terra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 212776,
+      "cached_input_tokens": 197632,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 3134,
+      "reasoning_output_tokens": 572,
+      "total_tokens": 215910
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "a4cc7cbc3f3bbb06db768d9805b86ce09d9fef20ebd117426f0e7931fc313614",
+    "toolCallCount": 7,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:56:45.824Z",
+    "notes": [
+      "Release exports current Markdown and syncs only target slug before static build. HTTP proof, access control, repeated release and archive preservation pass; external verifier also checks fresh subsequent content."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "c38999c8a06648926bd14700759a952f02bde94c8d11c32b199c11e4d95a2bc2"
+    }
+  ],
+  "rawGradeSha256": "5484b5fdf650aef61035dc958816b6ece71229babb6b1f224145744772395820"
+}

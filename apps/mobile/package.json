@@ -5,7 +5,7 @@
   "description": "Token 榜 Android 壳应用：WebView 加载线上排行榜，内容随网站自动更新",
   "scripts": {
     "sync": "cap sync android",
-    "build:apk": "cd android && ./gradlew assembleRelease"
+    "build:apk": "node scripts/build-apk.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^6.2.1",

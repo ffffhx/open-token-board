@@ -1,0 +1,107 @@
+{
+  "schemaVersion": 1,
+  "id": "models-20261002",
+  "createdAt": "2026-10-02T15:20:04.418Z",
+  "status": "completed",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "harnessSha256": "c6d1b13f388222211673eda1cd4b9cf0180a35785edfd0b8f91068a98bd13f17",
+  "models": [
+    {
+      "model": "gpt-6.1-sol",
+      "label": "GPT-6.1 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-6-astra",
+      "label": "GPT-6 Astra",
+      "listedInSpawnTool": true,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-6-sol",
+      "label": "GPT-6 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-6-luna",
+      "label": "GPT-6 Luna",
+      "listedInSpawnTool": true,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-5.6-sol",
+      "label": "GPT-5.6 Sol",
+      "listedInSpawnTool": true,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-5.6-terra",
+      "label": "GPT-5.6 Terra",
+      "listedInSpawnTool": false,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-5.6-luna",
+      "label": "GPT-5.6 Luna",
+      "listedInSpawnTool": false,
+      "status": "completed"
+    },
+    {
+      "model": "gpt-5.5",
+      "label": "GPT-5.5",
+      "listedInSpawnTool": false,
+      "status": "completed"
+    }
+  ],
+  "cases": [
+    "B04",
+    "B09",
+    "B11"
+  ],
+  "trialsPerModelCase": 1,
+  "policy": {
+    "freshContextEveryModelCase": true,
+    "forkTurns": "none",
+    "modelOverride": "exact requested model ID",
+    "reasoningEffort": "medium",
+    "toolEnvironment": "same collaboration tool environment",
+    "inputOnlyExport": true,
+    "osSandbox": false,
+    "maxActiveParticipants": 3,
+    "feedbackToParticipants": false,
+    "answerRepairByCoordinator": false,
+    "failedSubmissionPreserved": true,
+    "timeLimitSeconds": null,
+    "participantPromptTemplate": "你是独立参评 Agent。唯一任务输入目录是 <workspace>。每次 shell 调用必须显式将 workdir 设置为此目录。先阅读 TASK.txt，仅根据该目录材料完成任务与 REPORT.md。严格遵守可修改范围，TASK.txt 只读。不读取父仓库、其他目录、其他 Agent、历史会话、参考答案或外部验收器；不使用外网，仅允许自己启动的本地测试服务；不派发子 Agent。不依赖主会话上下文，不索取答案。报告实际验证及未覆盖边界，停止自己启动的服务后交付。自测可通过标准输入执行，避免创建无关文件。"
+  },
+  "grading": {
+    "machine": "frozen external verifier plus immutable-input/scope checks",
+    "semanticReview": "coordinating agent reviews source support, requested scope and report limitations",
+    "humanReview": false,
+    "caseWeighting": "report each case separately; accepted task count is descriptive only",
+    "adjudication": "adjudication.json; frozen raw scores retained; same B04/B09 supplemental rules apply to every model",
+    "secondaryReview": "All eight B09 project rewrites independently reviewed under anonymous A-H labels in a fresh context; final coordinating-agent decisions in semantic-blind-review.json"
+  },
+  "metrics": {
+    "primary": "all required task checks plus scope and content review",
+    "wallTime": "Session task_started to task_complete; includes model and tool execution, excludes queue delay",
+    "tokens": "null unless exact per-run usage is available",
+    "cost": "null unless actual billing data is available"
+  },
+  "limitations": [
+    "Single valid trial per model/case, insufficient for stable ranking.",
+    "Host tools are not OS-isolated; fresh context and exported inputs do not establish adversarial secrecy.",
+    "Requested model ID and actual turn_context model/effort are recorded; provider internal backend identity is not independently verified.",
+    "Unavailable models are recorded as not run; no substitute models are used.",
+    "No API or alternate-client runs are mixed into native subagent comparisons."
+  ],
+  "modelAvailability": "All eight screenshot model IDs accepted by the subagent call; observed turn_context model names are recorded per run",
+  "reasoningDecision": {
+    "source": "User explicitly selected uniform medium",
+    "recordedAt": "2026-10-02T15:40:53.518Z",
+    "rule": "Preserve existing medium runs; archive non-medium runs and rerun in a fresh context; explicitly request medium for all subsequent spawns"
+  },
+  "completedAt": "2026-10-02T16:16:04.737Z"
+}

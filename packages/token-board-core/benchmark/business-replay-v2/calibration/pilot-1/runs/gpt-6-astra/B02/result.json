@@ -1,0 +1,414 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6-astra",
+  "caseId": "B02",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "execution": {
+    "taskStartedAt": "2026-10-03T03:48:34.420Z",
+    "taskCompletedAt": "2026-10-03T04:02:46.543Z",
+    "wallMs": 852123,
+    "observedModels": [
+      "gpt-6-astra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 1801187,
+      "cached_input_tokens": 1741440,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 14513,
+      "reasoning_output_tokens": 3403,
+      "total_tokens": 1815700
+    },
+    "costUsd": null,
+    "transcriptSha256": "011aa9cc45fb9f9894a2350811216e9015979335c6efd5c3b84bb12b7bb65c21",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 7,
+      "total": 7
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 1,
+      "total": 1
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "all-statistics-identical",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "combinations": 54,
+        "passed": true
+      }
+    },
+    {
+      "id": "repeatable-refresh-improvement",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "baselineMs": [
+          7900.108699999997,
+          8013.681900000003,
+          8375.738300000005,
+          7768.032599999991,
+          7819.582399999999,
+          8211.951400000005,
+          7683.865099999995
+        ],
+        "candidateMs": [
+          1580.0999999999985,
+          1521.1077000000005,
+          1739.0040999999983,
+          1642.241399999999,
+          1680.1532000000007,
+          1619.4091999999946,
+          1720.5295999999944
+        ],
+        "baselineMedianMs": 7900.108699999997,
+        "candidateMedianMs": 1642.241399999999,
+        "pairedGainMedianMs": 6320.0086999999985,
+        "pairedNoise3MAD": 582.6525000000183,
+        "pairedWins": 7,
+        "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+      }
+    },
+    {
+      "id": "reads-available-during-refresh",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "reads": 175,
+        "successfulAndConsistent": 175,
+        "baselineP95Ms": 66.97230000000127,
+        "candidateP95Ms": 95.82469999999739,
+        "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+      }
+    },
+    {
+      "id": "corrected-data-and-overlap",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-preserves-valid-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "refreshRejected": true,
+        "errorRecorded": true,
+        "remainingEntries": 54,
+        "readStatus": 200
+      }
+    },
+    {
+      "id": "failure-recovery",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54,
+        "error": ""
+      }
+    },
+    {
+      "id": "restart-restores-full-results",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54
+      }
+    },
+    {
+      "id": "empty-dataset-compatible",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "replay-can-start-and-measure",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-Wtr5nz\\measurements.json",
+        "eventCount": 3905,
+        "postgres": "16.14",
+        "rounds": 7,
+        "source": "full historical HTTP API and PostgreSQL storage"
+      }
+    },
+    {
+      "id": "measurement-report-delivered",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "apps/token-board-api/src/server.ts",
+      "packages/token-board-core/src/token-board-storage.ts",
+      "DELIVERY.md",
+      "tests/replay/baseline-measurement.json",
+      "tests/replay/baseline-storage.ts",
+      "tests/replay/measurement-summary.json",
+      "tests/replay/measurement-summary.mjs",
+      "tests/replay/verification.json",
+      "tests/replay/verify.mjs"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "apps/*/node_modules/**",
+      "packages/*/node_modules/**",
+      "artifacts/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "checks": [
+      {
+        "id": "all-statistics-identical",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "combinations": 54,
+          "passed": true
+        }
+      },
+      {
+        "id": "repeatable-refresh-improvement",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "baselineMs": [
+            7900.108699999997,
+            8013.681900000003,
+            8375.738300000005,
+            7768.032599999991,
+            7819.582399999999,
+            8211.951400000005,
+            7683.865099999995
+          ],
+          "candidateMs": [
+            1580.0999999999985,
+            1521.1077000000005,
+            1739.0040999999983,
+            1642.241399999999,
+            1680.1532000000007,
+            1619.4091999999946,
+            1720.5295999999944
+          ],
+          "baselineMedianMs": 7900.108699999997,
+          "candidateMedianMs": 1642.241399999999,
+          "pairedGainMedianMs": 6320.0086999999985,
+          "pairedNoise3MAD": 582.6525000000183,
+          "pairedWins": 7,
+          "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+        }
+      },
+      {
+        "id": "reads-available-during-refresh",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "reads": 175,
+          "successfulAndConsistent": 175,
+          "baselineP95Ms": 66.97230000000127,
+          "candidateP95Ms": 95.82469999999739,
+          "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+        }
+      },
+      {
+        "id": "corrected-data-and-overlap",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "failure-preserves-valid-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "refreshRejected": true,
+          "errorRecorded": true,
+          "remainingEntries": 54,
+          "readStatus": 200
+        }
+      },
+      {
+        "id": "failure-recovery",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54,
+          "error": ""
+        }
+      },
+      {
+        "id": "restart-restores-full-results",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54
+        }
+      },
+      {
+        "id": "empty-dataset-compatible",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "replay-can-start-and-measure",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-Wtr5nz\\measurements.json",
+          "eventCount": 3905,
+          "postgres": "16.14",
+          "rounds": 7,
+          "source": "full historical HTTP API and PostgreSQL storage"
+        }
+      },
+      {
+        "id": "measurement-report-delivered",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+        }
+      }
+    ],
+    "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-Wtr5nz"
+  },
+  "submittedChanges": [
+    {
+      "path": "apps/token-board-api/src/server.ts",
+      "sha256": "3614b4794a49eeddc28cdb706cbc02eec78f0952ccedd2f3fcf1bc344455b368"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-storage.ts",
+      "sha256": "0a85953326f8259f7adfd1cde06d026876fd861047e06e9c9adf35714dffc285"
+    },
+    {
+      "path": "DELIVERY.md",
+      "sha256": "a173b2ce99ea8b3e2d51f91af6de82a6a1477208187b0e49798c704880f0d6b5"
+    },
+    {
+      "path": "tests/replay/baseline-measurement.json",
+      "sha256": "4bcf3210ba7414564395e0b2d65e23f75910aa7085f25ddf849c030a567ee02d",
+      "archivePath": "tests/replay/baseline-measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50261366,
+      "archiveSha256": "a49a5fe5fd60d7ed0d0755939ecda1caa2877610f09cf60758b0e1d4c2a360d3"
+    },
+    {
+      "path": "tests/replay/baseline-storage.ts",
+      "sha256": "ee844a58dba5dac624161e1620e1d713dfee99564a1a03b7ceb82d3a8bdf33e3"
+    },
+    {
+      "path": "tests/replay/measurement-summary.json",
+      "sha256": "0ede750a5aef34e840cbef34311a18e06669f98d9d4c1dfbc43f061ee0d65117"
+    },
+    {
+      "path": "tests/replay/measurement-summary.mjs",
+      "sha256": "66aa0460b0f28370d485686c9288a26dd80d71c9ca52e32eb15b4aa9474f2f3d"
+    },
+    {
+      "path": "tests/replay/verification.json",
+      "sha256": "6e4e30b42e521cff91130f3720162b0d7ed3c1fe081c39d161e0cdda94f9c062"
+    },
+    {
+      "path": "tests/replay/verify.mjs",
+      "sha256": "02cd14ae22172bd3977adf5edfb86e4f96a4a55505b63bdb9675625d192a00d9"
+    }
+  ],
+  "finalResponseSha256": "8334b16893ff7ddc6f0ca344dd13562d7615f03a816082fce03ed670ab6ade28",
+  "rawGradeSha256": "828ec818cd8ed2a0a37d5fdbd7df7627642e7aff0847d61eea952a3a982be11f",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T04:12:28.957Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "独立7轮全部更快，54组合、历史修正、失败保全与恢复、重启和空数据均过；公开自测和报告数值一致，服务访问已实测。独立读取P95为95.8ms，靠近100ms门槛，不能据单次通过推断长期稳定。"
+    ]
+  },
+  "executionReview": {
+    "selfTestEvidence": "Delivery numbers agree with archived verification.json and measurement-summary.json; transcript records successful commands and earlier failed attempts as disclosed.",
+    "deliveryProbe": {
+      "model": "gpt-6-astra",
+      "checkedAt": "2026-10-03T04:04:53.4734686Z",
+      "url": "http://127.0.0.1:51319",
+      "healthOk": true,
+      "backend": "postgres",
+      "events": 3905,
+      "snapshotEntries": 54,
+      "lastError": null,
+      "httpStatus": 200,
+      "source": "snapshot",
+      "summaryPresent": true
+    },
+    "serviceDisposition": "The coordinating agent verified the delivered HTTP service, then stopped only its disposable PostgreSQL cluster and serve processes before the next timed trial. Port and database PID were confirmed absent. Main project remains running.",
+    "scopeEvidence": "Candidate source and new self-tests stayed within the declared export; no parent answer or external grader reads observed.",
+    "performanceMargin": "Independent read P95 95.8247 ms is close to the preregistered 100 ms floor. One passing run does not establish long-term latency stability."
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true,
+  "supplementaryEvidence": [
+    {
+      "kind": "independent-grader-measurement",
+      "originalPath": "<private grader>/measurements.json",
+      "archivePath": "evidence/independent-measurements.json",
+      "encoding": "identity",
+      "originalBytes": 330270,
+      "sha256": "02894b53845c19e0c356ce69d92b235b86e16e374a7e99de156e584d3bd443c0",
+      "archiveSha256": "02894b53845c19e0c356ce69d92b235b86e16e374a7e99de156e584d3bd443c0"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/measurement.json",
+      "archivePath": "evidence/participant/measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50061970,
+      "sha256": "02de079e9d9fabec1f5c04da963270cfb40c3275b529c9c004b0b54bebca6e4b",
+      "archiveSha256": "4e838598196e91b51d8d138e053a36925246750548ba091254659499827013b5"
+    }
+  ]
+}

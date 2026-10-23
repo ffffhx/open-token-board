@@ -1,0 +1,51 @@
+{
+  "id": "B04",
+  "version": 2,
+  "title": "Profile 管理的一次保存与离线目录一致性",
+  "kind": "historical-source-replay",
+  "referenceMode": "overlay",
+  "controlMode": "overlay",
+  "allowedChanges": ["src/**", "tests/**"],
+  "generatedPaths": ["node_modules/**", "dist/**", "test-results/**", ".replay-tmp/**"],
+  "runtime": {
+    "nodeMinimum": "22.13.0",
+    "verifyTimeoutMs": 120000,
+    "prepareScript": "prepare.mjs",
+    "selfTest": "node replay/smoke.mjs",
+    "dependencies": {"esbuild": "0.27.7", "@playwright/test": "1.56.1"},
+    "chromiumBuild": "1194",
+    "bootstrap": "Install case/package.json exact dependencies if absent; pnpm exec playwright install chromium. Set PLAYWRIGHT_BROWSERS_PATH consistently. prepare.mjs copies cached packages into the export and records the browser cache in immutable ENVIRONMENT.json.",
+    "networkDuringVerification": false
+  },
+  "provenance": {
+    "repository": "profilepilot",
+    "baseCommit": "0c5a1bf3c45478f90ba85cf7de3df6bc475edd99",
+    "fixCommit": "384af4955639e3ee4728fb25a4e66410c4a0779e",
+    "sourceFileHashes": "source-manifest.json",
+    "sourceEvidence": {"date": "2026-09-22", "userSymptom": "名称需要修改两遍才会生效", "recordedSourceLine": 43},
+    "historyBoundary": "Target files were clean at session start; surrounding history included unrelated concurrent changes. The observed historical user symptom is recorded; the original full desktop session was not rerun.",
+    "transforms": [
+      "Freeze the complete historical src tree, public text/vector assets, original package metadata and selected original tests with their loader helper.",
+      "Replace an unrelated hardcoded personal fallback path with /home/example/.codex/AGENTS.md; replace internal illustrative test domains/tag with example values. Original and exported SHA256 values are both recorded.",
+      "Add REPLAY.md and a neutral replay/smoke.mjs runtime check; original application source behavior is otherwise unchanged.",
+      "Reference is an overlay: complete fixed lease module from the historical fix commit; the rename draft patch applied to the original full renderer module, omitting unrelated workspace-switcher edits from the same commit."
+    ]
+  },
+  "evaluationBoundary": {
+    "real": ["Complete historical renderer entry and its imported render/state/busy/form modules", "Chromium DOM, input, click, native form validation and FormData", "Actual ProfileManager.renameProfile name validation, queued registry reload and atomic disk persistence", "Complete historical catalog/lease module with real registry, runtime snapshot and lease files", "Live test-process PID used for lease ownership"],
+    "substituted": ["Electron preload/IPC transport is a browser-exposed in-process bridge", "AppState device observations are deterministic temporary-profile fixtures", "Electron shell/window APIs and OS process launch are unavailable"],
+    "notCovered": ["Native Chrome profile rename", "Actual Electron packaging/window behavior", "Launching a browser through Gateway", "Real Chrome user data or login state", "Visual screenshot parity", "Full unrelated application regression suite"],
+    "isolation": "Copy candidate to temporary directory; temporary data directories and fresh nonpersistent Chromium context; no existing Profile or Chrome executable override. Both input.env and normal process.env CPM_DATA_DIR/APPDATA/XDG_CONFIG_HOME point to the same temporary fixture, including custom-root cases. Either environment lookup style is valid. This is not an OS sandbox for malicious candidate code.",
+    "reportIsBusinessEvidence": false,
+    "infrastructureExitCode": 2
+  },
+  "expectedBaselineFailures": ["catalog-without-desktop", "catalog-stale-snapshot", "catalog-fresh-rename-and-identity", "catalog-fresh-permission-disable", "catalog-fresh-permission-enable", "catalog-input-order", "catalog-occupancy-permissions", "catalog-broken-snapshot", "catalog-custom-data-root", "rename-first-save-persists"],
+  "positiveControls": {"process-environment": "Equivalent fix resolving registry locations from normal process.env rather than the optional injected input.env; all checks must pass."},
+  "controlExpectedFailures": {
+    "ui-only": ["catalog-without-desktop", "catalog-fresh-rename-and-identity"],
+    "catalog-only": ["rename-first-save-persists"],
+    "availability-bypass": ["catalog-occupancy-permissions"],
+    "runtime-permission-priority": ["catalog-fresh-permission-disable", "catalog-fresh-permission-enable"],
+    "display-only-save": ["rename-first-save-persists"]
+  }
+}

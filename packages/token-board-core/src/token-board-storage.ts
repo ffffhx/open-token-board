@@ -4,6 +4,7 @@ import path from "node:path";
 import { Pool, type PoolClient, type PoolConfig } from "pg";
 
 import { mergeTokenEvents } from "./token-board-automation";
+import { evaluateTokenGoalsFromDailyUsage, normalizeStoredTokenGoals, shanghaiDayKey as goalDayKey } from "./token-goals";
 import {
   buildEmptyTokenAchievementSummary,
   buildTokenAchievementSummariesByUser,
@@ -14,6 +15,7 @@ import {
 } from "./token-efficiency";
 import {
   buildTokenLeaderboardTrends,
+  buildTokenAccountUsageProfile,
   buildTokenProjectLeaderboard,
   buildTokenTeamLeaderboard,
   buildTokenUsageDistribution,
@@ -25,6 +27,7 @@ import {
   type TokenBoardUserConfig,
   type TokenDailyUsagePoint,
   type TokenLeaderboardSummary,
+  type TokenLeaderboardWindow,
   type TokenLeaderboardUser,
   type TokenUsageEvent,
 } from "./token-leaderboard";
@@ -72,6 +75,7 @@ export type TokenUsageLeaderboardOptions = {
   range: TokenBoardRange;
   metric: TokenBoardMetric;
   now?: Date;
+  window?: TokenLeaderboardWindow;
 };
 
 export type TokenUsageLeaderboardResult = {
@@ -79,15 +83,31 @@ export type TokenUsageLeaderboardResult = {
   summary: TokenLeaderboardSummary;
 };
 
+export type PublicProfileAggregate = {
+  userId: string;
+  displayName: string;
+  team: string;
+  joinedAt: string;
+  lastReportedAt: string;
+  totals: { tokens: number; inputTokens: number; cacheCreationInputTokens: number; cachedInputTokens: number; outputTokens: number; reasoningOutputTokens: number; costUsd: number; sessions: number; messages: number; records: number; activeDays: number };
+  daily: Array<{ date: string; tokens: number }>;
+  models: Array<{ name: string; tokens: number; costUsd: number; sessions: number; share: number }>;
+  tools: PublicProfileAggregate["models"];
+};
+
 export type TokenUsageStore = {
   kind: TokenUsageStoreKind;
   label: string;
   listEvents: () => Promise<TokenUsageEvent[]>;
   listEventsForUser: (userId: string) => Promise<TokenUsageEvent[]>;
+  listUserProfileEvents: () => Promise<TokenUsageEvent[]>;
+  getPublicProfileAggregate?: (userId: string, displayNames: string[] | undefined, now: Date, days: number, limit: number) => Promise<PublicProfileAggregate | null>;
   getLeaderboardSummary?: (options: TokenUsageLeaderboardOptions) => Promise<TokenUsageLeaderboardResult>;
   countEvents: () => Promise<number>;
-  insertEvents: (events: TokenUsageEvent[]) => Promise<TokenUsageStoreInsertResult>;
-  replaceEventsForUser: (userId: string, events: TokenUsageEvent[]) => Promise<TokenUsageStoreReplaceResult>;
+  insertEvents: (events: TokenUsageEvent[], deviceId?: string) => Promise<TokenUsageStoreInsertResult>;
+  getDeviceRevision: (userId: string, deviceId: string) => Promise<number>;
+  replaceEventsForDevice: (userId: string, deviceId: string, events: TokenUsageEvent[], expectedRevision: number) => Promise<TokenUsageStoreReplaceResult>;
+  replaceEventsForUser: (userId: string, events: TokenUsageEvent[], expectedRevision?: number) => Promise<TokenUsageStoreReplaceResult>;
   deleteEventsForUser: (userId: string) => Promise<TokenUsageStoreDeleteResult>;
   getHealth?: () => Promise<TokenUsageStoreHealth>;
   getUserConfig: (userId: string) => Promise<TokenBoardUserConfig | null>;
@@ -119,6 +139,28 @@ const INSERT_BATCH_SIZE = 400;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 const FILE_BACKUP_RETENTION = 3;
+
+export class DeviceRevisionConflict extends Error {
+  constructor() { super("Device data changed during replacement; restart replace to include the latest uploads"); }
+}
+
+function deviceKey(userId: string, deviceId: string) { return JSON.stringify([userId, deviceId]); }
+
+function attachDevices(events: TokenUsageEvent[], existing: TokenUsageEvent[], deviceId?: string) {
+  const byId = new Map(existing.map((event) => [event.id, event]));
+  return events.map((event) => {
+    const prior = byId.get(event.id);
+    const devices = prior
+      ? (prior.collectionDevices?.length ? [...new Set([...prior.collectionDevices, ...(deviceId ? [deviceId] : [])])].sort() : undefined)
+      : (deviceId ? [deviceId] : event.collectionDevices);
+    return { ...event, collectionDevices: devices };
+  });
+}
+
+async function readDeviceRevisions(filePath: string): Promise<Record<string, number>> {
+  try { return JSON.parse(await fs.readFile(filePath, "utf8")).deviceRevisions || {}; }
+  catch (error) { if (isNodeError(error) && error.code === "ENOENT") return {}; throw error; }
+}
 
 export async function createTokenUsageStore(options: TokenUsageStoreOptions): Promise<TokenUsageStore> {
   const databaseUrl = options.databaseUrl?.trim();
@@ -196,12 +238,43 @@ async function createFileTokenUsageStore({
     kind: "file",
     label: dataFile,
     listEvents: () => readTokenUsageEventsFromFile(dataFile).then((result) => result.entries),
+    listUserProfileEvents: async () => {
+      const events = (await readTokenUsageEventsFromFile(dataFile)).entries;
+      const profiles = new Map<string, TokenUsageEvent>();
+      for (const event of events) {
+        const key = JSON.stringify([event.userId, event.displayName]);
+        if (!profiles.has(key) || event.timestamp > profiles.get(key)!.timestamp) profiles.set(key, event);
+      }
+      return [...profiles.values()];
+    },
     listEventsForUser: (userId) =>
       readTokenUsageEventsFromFile(dataFile).then((result) => result.entries.filter((event) => event.userId === userId)),
     countEvents: async () => (await readTokenUsageEventsFromFile(dataFile)).entries.length,
-    insertEvents: (events) =>
+    getDeviceRevision: async (userId, deviceId) => (await readDeviceRevisions(dataFile))[deviceKey(userId, deviceId)] || 0,
+    replaceEventsForDevice: (userId, deviceId, events, expectedRevision) => enqueueStorageOperation(async () => {
+      if (events.some((event) => event.userId !== userId)) throw new Error("Replacement user mismatch");
+      const revisions = await readDeviceRevisions(dataFile);
+      const key = deviceKey(userId, deviceId);
+      if ((revisions[key] || 0) !== expectedRevision) throw new DeviceRevisionConflict();
+      const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
+      const replacement = attachDevices(events, existing, deviceId);
+      const incomingIds = new Set(events.map((event) => event.id));
+      const kept = existing.flatMap((event) => {
+        if (event.userId !== userId || !event.collectionDevices?.includes(deviceId) || incomingIds.has(event.id)) return [event];
+        const devices = event.collectionDevices.filter((id) => id !== deviceId);
+        return devices.length ? [{ ...event, collectionDevices: devices }] : [];
+      });
+      const merged = mergeTokenEvents(kept, replacement, retentionEvents);
+      revisions[key] = expectedRevision + 1;
+      const accountKey = deviceKey(userId, "__account__");
+      revisions[accountKey] = (revisions[accountKey] || 0) + 1;
+      await writeTokenUsageEventsToFile(dataFile, merged, fileState, { deviceRevisions: revisions });
+      return { accepted: new Set(events.map((event) => event.id)).size, duplicates: events.length - new Set(events.map((event) => event.id)).size, deleted: existing.length - kept.length, records: merged.length };
+    }),
+    insertEvents: (events, deviceId) =>
       enqueueStorageOperation(async () => {
         const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
+        events = attachDevices(events, existing, deviceId);
         const existingById = new Map(existing.map((event) => [event.id, event]));
         const incomingNew = events.filter((event) => !existingById.has(event.id));
         // A re-ingested event can carry a session title we only discovered later;
@@ -213,8 +286,13 @@ async function createFileTokenUsageStore({
         });
         const merged = mergeTokenEvents(existing, events, retentionEvents);
 
-        if (incomingNew.length || hasMetadataUpdate) {
-          await writeTokenUsageEventsToFile(dataFile, merged, fileState);
+        if (incomingNew.length || hasMetadataUpdate || (deviceId && events.length)) {
+          const revisions = await readDeviceRevisions(dataFile);
+          for (const userId of new Set(events.map((event) => event.userId))) {
+            if (deviceId) { const key = deviceKey(userId, deviceId); revisions[key] = (revisions[key] || 0) + 1; }
+            const key = deviceKey(userId, "__account__"); revisions[key] = (revisions[key] || 0) + 1;
+          }
+          await writeTokenUsageEventsToFile(dataFile, merged, fileState, { deviceRevisions: revisions });
         }
 
         return {
@@ -223,15 +301,21 @@ async function createFileTokenUsageStore({
           records: merged.length,
         };
       }),
-    replaceEventsForUser: (userId, events) =>
+    replaceEventsForUser: (userId, events, expectedRevision) =>
       enqueueStorageOperation(async () => {
+        if (events.some((event) => event.userId !== userId)) throw new Error("Replacement user mismatch");
+        const revisions = await readDeviceRevisions(dataFile);
+        const accountKey = deviceKey(userId, "__account__");
+        if (expectedRevision !== undefined && (revisions[accountKey] || 0) !== expectedRevision) throw new DeviceRevisionConflict();
+        revisions[accountKey] = (revisions[accountKey] || 0) + 1;
+        for (const key of Object.keys(revisions)) if (JSON.parse(key)[0] === userId && key !== accountKey) revisions[key] += 1;
         const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
         const kept = existing.filter((event) => event.userId !== userId);
         const deleted = existing.length - kept.length;
         const replacement = mergeTokenEvents([], events, 0);
         const merged = mergeTokenEvents(kept, replacement, retentionEvents);
 
-        await writeTokenUsageEventsToFile(dataFile, merged, fileState);
+        await writeTokenUsageEventsToFile(dataFile, merged, fileState, { deviceRevisions: revisions });
 
         return {
           accepted: replacement.length,
@@ -243,11 +327,13 @@ async function createFileTokenUsageStore({
     deleteEventsForUser: (userId) =>
       enqueueStorageOperation(async () => {
         const existing = (await readTokenUsageEventsFromFile(dataFile)).entries;
+        const revisions = await readDeviceRevisions(dataFile);
+        for (const key of Object.keys(revisions)) if (JSON.parse(key)[0] === userId) revisions[key] += 1;
         const kept = existing.filter((event) => event.userId !== userId);
         const deleted = existing.length - kept.length;
 
         if (deleted) {
-          await writeTokenUsageEventsToFile(dataFile, kept, fileState);
+          await writeTokenUsageEventsToFile(dataFile, kept, fileState, { deviceRevisions: revisions });
         }
 
         return {
@@ -295,6 +381,9 @@ function createPostgresTokenUsageStore({
   const safeSchema = sqlIdentifier(schema);
   const table = `${safeSchema}.${sqlIdentifier(POSTGRES_TABLE)}`;
   const userConfigsTable = `${safeSchema}.${sqlIdentifier(POSTGRES_USER_CONFIGS_TABLE)}`;
+  const devicesTable = `${safeSchema}.usage_devices`;
+  const lockUser = (client: PoolClient, userId: string) => client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [`usage:${userId}`]);
+  const bumpDevice = (client: PoolClient, userId: string, deviceId: string) => client.query(`INSERT INTO ${devicesTable} (user_id, device_id, revision) VALUES ($1, $2, 1) ON CONFLICT (user_id, device_id) DO UPDATE SET revision = ${devicesTable}.revision + 1`, [userId, deviceId]);
   const backupStatus: TokenUsageStoreBackupStatus = {
     enabled: false,
     retention: 0,
@@ -343,6 +432,8 @@ function createPostgresTokenUsageStore({
           created_at TIMESTAMPTZ NOT NULL DEFAULT now()
         )
       `);
+      await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS collection_devices TEXT[] NOT NULL DEFAULT '{}'`);
+      await pool.query(`CREATE TABLE IF NOT EXISTS ${devicesTable} (user_id TEXT NOT NULL, device_id TEXT NOT NULL, revision BIGINT NOT NULL DEFAULT 0, PRIMARY KEY (user_id, device_id))`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS session_title TEXT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS upstream_event_id TEXT`);
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS cache_creation_input_tokens BIGINT NOT NULL DEFAULT 0`);
@@ -352,6 +443,7 @@ function createPostgresTokenUsageStore({
       await pool.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS lines_written BIGINT`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_reported_at_idx ON ${table} (reported_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_user_reported_at_idx ON ${table} (user_id, reported_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_user_profile_idx ON ${table} (user_id, display_name, reported_at DESC, created_at DESC)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_model_idx ON ${table} (model)`);
       await pool.query(`CREATE INDEX IF NOT EXISTS usage_events_tool_idx ON ${table} (tool)`);
       await pool.query(`
@@ -386,12 +478,42 @@ function createPostgresTokenUsageStore({
 
       return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
     },
+    listUserProfileEvents: async () => {
+      const result = await pool.query<TokenUsageEventRow>(`SELECT DISTINCT ON (user_id, display_name) * FROM ${table} ORDER BY user_id, display_name, reported_at DESC, created_at DESC`);
+      return result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
+    },
+    getPublicProfileAggregate: (userId, displayNames, now, days, limit) => readPublicProfileAggregate(pool, table, userId, displayNames, now, days, limit),
     getLeaderboardSummary: (options) => readPostgresLeaderboardSummary(pool, table, options),
     countEvents: async () => {
       const result = await pool.query<{ count: string }>(`SELECT count(*) AS count FROM ${table}`);
       return Number(result.rows[0]?.count || 0);
     },
-    insertEvents: async (events: TokenUsageEvent[]) => {
+    getDeviceRevision: async (userId: string, deviceId: string) => {
+      const result = await pool.query<{ revision: string }>(`SELECT revision FROM ${devicesTable} WHERE user_id = $1 AND device_id = $2`, [userId, deviceId]);
+      return Number(result.rows[0]?.revision || 0);
+    },
+    replaceEventsForDevice: async (userId: string, deviceId: string, events: TokenUsageEvent[], expectedRevision: number) => {
+      if (events.some((event) => event.userId !== userId)) throw new Error("Replacement user mismatch");
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await lockUser(client, userId);
+        const revision = await client.query<{ revision: string }>(`SELECT revision FROM ${devicesTable} WHERE user_id = $1 AND device_id = $2`, [userId, deviceId]);
+        if (Number(revision.rows[0]?.revision || 0) !== expectedRevision) throw new DeviceRevisionConflict();
+        // Only remove provenance for events absent from this device's new manifest.
+        // Unscoped historical rows and rows still owned by another device survive.
+        const ids = events.map((event) => event.id);
+        const deleted = await client.query(`DELETE FROM ${table} WHERE user_id = $1 AND collection_devices = ARRAY[$2]::text[] AND NOT (id = ANY($3::text[]))`, [userId, deviceId, ids]);
+        await client.query(`UPDATE ${table} SET collection_devices = array_remove(collection_devices, $2) WHERE user_id = $1 AND $2 = ANY(collection_devices) AND NOT (id = ANY($3::text[]))`, [userId, deviceId, ids]);
+        await insertPostgresEvents(client, table, mergeTokenEvents([], events, 0).map((event) => ({ ...event, collectionDevices: [deviceId] })));
+        await bumpDevice(client, userId, deviceId);
+        await bumpDevice(client, userId, "__account__");
+        await client.query("COMMIT");
+        return { accepted: new Set(ids).size, duplicates: events.length - new Set(ids).size, deleted: deleted.rowCount || 0, records: await countPostgresRows(pool, table) };
+      } catch (error) { await client.query("ROLLBACK"); throw error; }
+      finally { client.release(); }
+    },
+    insertEvents: async (events: TokenUsageEvent[], deviceId?: string) => {
       if (!events.length) {
         return {
           accepted: 0,
@@ -401,29 +523,43 @@ function createPostgresTokenUsageStore({
       }
 
       let accepted = 0;
-
+      const client = await pool.connect();
+      try {
+      await client.query("BEGIN");
+      const userIds = [...new Set(events.map((event) => event.userId))].sort();
+      for (const userId of userIds) await lockUser(client, userId);
       for (let index = 0; index < events.length; index += INSERT_BATCH_SIZE) {
-        const batch = events.slice(index, index + INSERT_BATCH_SIZE).map(normalizeTokenUsageEvent);
+        const batch = events.slice(index, index + INSERT_BATCH_SIZE).map((event) => normalizeTokenUsageEvent({ ...event, ...(deviceId ? { collectionDevices: [deviceId] } : {}) }));
         const { text, values } = buildInsertQuery(table, batch);
         // RETURNING (xmax = 0) marks freshly-inserted rows; an ON CONFLICT title
         // update has xmax != 0, so it is not miscounted as a new acceptance.
-        const result = await pool.query<{ inserted: boolean }>(text, values);
+        const result = await client.query<{ inserted: boolean }>(text, values);
         accepted += result.rows.filter((row) => row.inserted).length;
       }
-
+      if (deviceId) for (const userId of userIds) await bumpDevice(client, userId, deviceId);
+      for (const userId of userIds) await bumpDevice(client, userId, "__account__");
+      await client.query("COMMIT");
+      } catch (error) { await client.query("ROLLBACK"); throw error; }
+      finally { client.release(); }
       return {
         accepted,
         duplicates: events.length - accepted,
         records: await countPostgresRows(pool, table),
       };
     },
-    replaceEventsForUser: async (userId: string, events: TokenUsageEvent[]) => {
+    replaceEventsForUser: async (userId: string, events: TokenUsageEvent[], expectedRevision?: number) => {
+      if (events.some((event) => event.userId !== userId)) throw new Error("Replacement user mismatch");
       const client = await pool.connect();
       try {
         await client.query("BEGIN");
+        await lockUser(client, userId);
+        const revision = await client.query<{ revision: string }>(`SELECT revision FROM ${devicesTable} WHERE user_id = $1 AND device_id = '__account__'`, [userId]);
+        if (expectedRevision !== undefined && Number(revision.rows[0]?.revision || 0) !== expectedRevision) throw new DeviceRevisionConflict();
         const deletedResult = await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
         const replacement = mergeTokenEvents([], events, 0);
         await insertPostgresEvents(client, table, replacement);
+        await client.query(`UPDATE ${devicesTable} SET revision = revision + 1 WHERE user_id = $1 AND device_id <> '__account__'`, [userId]);
+        await bumpDevice(client, userId, "__account__");
         await client.query("COMMIT");
 
         return {
@@ -440,12 +576,16 @@ function createPostgresTokenUsageStore({
       }
     },
     deleteEventsForUser: async (userId: string) => {
-      const result = await pool.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
-
-      return {
-        deleted: result.rowCount || 0,
-        records: await countPostgresRows(pool, table),
-      };
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await lockUser(client, userId);
+        const result = await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId]);
+        await client.query(`UPDATE ${devicesTable} SET revision = revision + 1 WHERE user_id = $1`, [userId]);
+        await client.query("COMMIT");
+        return { deleted: result.rowCount || 0, records: await countPostgresRows(pool, table) };
+      } catch (error) { await client.query("ROLLBACK"); throw error; }
+      finally { client.release(); }
     },
     getHealth: async () => {
       const [countResult, writeResult] = await Promise.all([
@@ -596,13 +736,156 @@ type PostgresPreviousRankRow = {
   lines_written: string | number | null;
 };
 
+type AchievementSummaries = ReturnType<typeof buildTokenAchievementSummariesByUser>;
+type AchievementCache = Map<string, Promise<AchievementSummaries>>;
+
+export type TokenLeaderboardBatchOptions = {
+  databaseUrl: string;
+  postgresSchema?: string;
+  postgresSsl?: PoolConfig["ssl"];
+  ranges: TokenBoardRange[];
+  metrics: TokenBoardMetric[];
+  now: Date;
+  window?: TokenLeaderboardWindow;
+};
+
+export type TokenAccountProfileReadOptions = Pick<TokenLeaderboardBatchOptions, "databaseUrl" | "postgresSchema" | "postgresSsl" | "now"> & {
+  userId: string;
+  range: TokenBoardRange;
+  summary: TokenLeaderboardSummary;
+};
+
+/** Read-only worker entry point: transfer only the selected account window whenever ranking already supplies lifetime achievements. */
+export async function readPostgresAccountProfile(options: TokenAccountProfileReadOptions) {
+  const pool = new Pool({ connectionString: options.databaseUrl, ssl: options.postgresSsl, max: 1,
+    application_name: "token-board-account", options: "-c default_transaction_read_only=on",
+    statement_timeout: 30_000, connectionTimeoutMillis: 10_000 });
+  const schema = sqlIdentifier(options.postgresSchema || "token_board");
+  const table = `${schema}.${sqlIdentifier(POSTGRES_TABLE)}`;
+  const ranked = options.summary.users.some((user) => user.userId === options.userId);
+  const { start, end } = resolveTokenLeaderboardWindow(options.range, options.now);
+  try {
+    const rows = await pool.query<TokenUsageEventRow>(
+      `SELECT * FROM ${table} WHERE user_id = $1 ${ranked ? "AND reported_at >= $2 AND reported_at <= $3" : ""} ORDER BY reported_at DESC, created_at DESC`,
+      ranked ? [options.userId, start, end] : [options.userId]);
+    const events = rows.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []);
+    const profile = buildTokenAccountUsageProfile(events, { userId: options.userId, range: options.range, now: options.now, leaderboardSummary: options.summary });
+    const configResult = await pool.query<{ config: TokenBoardUserConfig }>(`SELECT config FROM ${schema}.${sqlIdentifier(POSTGRES_USER_CONFIGS_TABLE)} WHERE user_id = $1`, [options.userId]);
+    profile.config = configResult.rows[0]?.config ?? null;
+    const goals = normalizeStoredTokenGoals(profile.config?.goals);
+    if (goals.length) {
+      const daily = await pool.query<{ date: string; tokens: string; cost: string }>(`
+        SELECT to_char(reported_at AT TIME ZONE 'Asia/Shanghai', 'YYYY-MM-DD') AS date,
+          sum(input_tokens + output_tokens) AS tokens, coalesce(sum(cost_usd), 0) AS cost
+        FROM ${table} WHERE user_id = $1 AND reported_at <= $2 AND input_tokens + output_tokens > 0 GROUP BY date`, [options.userId, options.now]);
+      const buckets = new Map(daily.rows.map((row) => [row.date, { date: row.date, tokens: Number(row.tokens), costUsd: Number(row.cost) }]));
+      // Legacy rows without a stored cost still use the normal model-price fallback.
+      const missingCosts = await pool.query<TokenUsageEventRow>(`SELECT * FROM ${table} WHERE user_id = $1 AND reported_at <= $2 AND cost_usd IS NULL`, [options.userId, options.now]);
+      for (const row of missingCosts.rows) {
+        const event = rowToTokenUsageEvent(row);
+        if (event) { const bucket = buckets.get(goalDayKey(event.timestamp)); if (bucket) bucket.costUsd += event.costUsd ?? 0; }
+      }
+      profile.goals = evaluateTokenGoalsFromDailyUsage(goals, [...buckets.values()], options.now);
+    }
+    return profile;
+  } finally { await pool.end(); }
+}
+
+/** One refresh owns this cache; writes can never leave a later refresh using old data. */
+export async function readPostgresLeaderboardBatch(options: TokenLeaderboardBatchOptions) {
+  const pool = new Pool({
+    connectionString: options.databaseUrl,
+    ssl: options.postgresSsl,
+    max: 1,
+    application_name: "token-board-snapshots",
+    options: "-c default_transaction_read_only=on",
+    statement_timeout: 60_000,
+    connectionTimeoutMillis: 10_000,
+  });
+  const table = `${sqlIdentifier(options.postgresSchema || "token_board")}.${sqlIdentifier(POSTGRES_TABLE)}`;
+  const achievements: AchievementCache = new Map();
+  const entries: Array<TokenUsageLeaderboardResult & { range: TokenBoardRange; metric: TokenBoardMetric }> = [];
+  try {
+    for (const range of options.ranges) {
+      if (!options.metrics.length) break;
+      const selectMetric = await preparePostgresLeaderboardSummary(
+        pool, table, { range, metric: options.metrics[0], now: options.now, window: options.window }, achievements
+      );
+      for (const metric of options.metrics) {
+        entries.push({ range, metric, ...selectMetric(metric) });
+      }
+    }
+    return entries;
+  } finally {
+    await pool.end();
+  }
+}
+
+async function readPublicProfileAggregate(pool: Pool, table: string, userId: string, displayNames: string[] | undefined, now: Date, days: number, limit: number): Promise<PublicProfileAggregate | null> {
+  const start = new Date(Math.floor((now.getTime() + SHANGHAI_OFFSET_MS) / DAY_MS) * DAY_MS - SHANGHAI_OFFSET_MS - (days - 1) * DAY_MS);
+  const result = await pool.query<{ profile: PublicProfileAggregate }>(`
+    WITH matched AS MATERIALIZED (
+      SELECT id, display_name, team, reported_at, created_at, total_tokens, input_tokens,
+        cache_creation_input_tokens, cached_input_tokens, output_tokens, reasoning_output_tokens,
+        cost_usd, messages, session_id, model, tool, source
+      FROM ${table} WHERE user_id = $1 AND ($2::text[] IS NULL OR display_name = ANY($2))
+    ), totals AS (
+      SELECT jsonb_build_object(
+        'tokens', coalesce(sum(total_tokens),0), 'inputTokens', coalesce(sum(input_tokens),0),
+        'cacheCreationInputTokens', coalesce(sum(cache_creation_input_tokens),0), 'cachedInputTokens', coalesce(sum(cached_input_tokens),0),
+        'outputTokens', coalesce(sum(output_tokens),0), 'reasoningOutputTokens', coalesce(sum(reasoning_output_tokens),0),
+        'costUsd', coalesce(sum(cost_usd),0), 'messages', coalesce(sum(messages),0), 'records', count(*),
+        'sessions', count(DISTINCT coalesce(nullif(session_id,''),id)),
+        'activeDays', count(DISTINCT (reported_at AT TIME ZONE 'Asia/Shanghai')::date)
+      ) AS value, min(reported_at) AS joined, max(reported_at) AS latest FROM matched
+    ), named AS (
+      SELECT dimension, name, sum(total_tokens)::double precision AS tokens,
+        coalesce(sum(cost_usd),0)::double precision AS cost,
+        count(DISTINCT coalesce(nullif(session_id,''),id)) AS sessions
+      FROM matched CROSS JOIN LATERAL (VALUES ('model', model), ('tool', coalesce(nullif(tool,''),source))) names(dimension,name)
+      GROUP BY dimension,name
+    ), daily AS (
+      SELECT to_char(reported_at AT TIME ZONE 'Asia/Shanghai','YYYY-MM-DD') AS date,
+        sum(total_tokens)::double precision AS tokens FROM matched WHERE reported_at >= $3 AND reported_at <= $4 GROUP BY date
+    )
+    SELECT jsonb_build_object(
+      'userId', $1::text, 'displayName', last_event.display_name,
+      'team', coalesce(nullif(last_event.team,''), nullif(first_event.team,''), 'Friends'),
+      'joinedAt', totals.joined, 'lastReportedAt', totals.latest, 'totals', totals.value,
+      'daily', coalesce((SELECT jsonb_agg(jsonb_build_object('date',date,'tokens',tokens) ORDER BY date) FROM daily),'[]'),
+      'models', coalesce((SELECT jsonb_agg(jsonb_build_object('name',name,'tokens',tokens,'costUsd',cost,'sessions',sessions,'share',CASE WHEN (totals.value->>'tokens')::double precision > 0 THEN tokens/(totals.value->>'tokens')::double precision ELSE 0 END)) FROM named WHERE dimension='model'),'[]'),
+      'tools', coalesce((SELECT jsonb_agg(jsonb_build_object('name',name,'tokens',tokens,'costUsd',cost,'sessions',sessions,'share',CASE WHEN (totals.value->>'tokens')::double precision > 0 THEN tokens/(totals.value->>'tokens')::double precision ELSE 0 END)) FROM named WHERE dimension='tool'),'[]')
+    ) AS profile FROM totals
+    CROSS JOIN LATERAL (SELECT display_name,team FROM matched ORDER BY reported_at DESC,created_at DESC LIMIT 1) last_event
+    CROSS JOIN LATERAL (SELECT team FROM matched ORDER BY reported_at ASC,created_at DESC LIMIT 1) first_event
+  `, [userId, displayNames ?? null, start, now]);
+  const profile = result.rows[0]?.profile;
+  if (!profile) return null;
+  profile.joinedAt = toIsoString(profile.joinedAt);
+  profile.lastReportedAt = toIsoString(profile.lastReportedAt);
+  const sort = (entries: PublicProfileAggregate["models"]) => entries.sort((a,b) => b.tokens-a.tokens || a.name.localeCompare(b.name)).slice(0,limit);
+  profile.models = sort(profile.models);
+  profile.tools = sort(profile.tools);
+  return profile;
+}
+
 async function readPostgresLeaderboardSummary(
   pool: Pool,
   table: string,
-  { range, metric, now = new Date() }: TokenUsageLeaderboardOptions
+  options: TokenUsageLeaderboardOptions
 ): Promise<TokenUsageLeaderboardResult> {
+  const selectMetric = await preparePostgresLeaderboardSummary(pool, table, options);
+  return selectMetric(options.metric);
+}
+
+async function preparePostgresLeaderboardSummary(
+  pool: Pool,
+  table: string,
+  { range, metric, now = new Date(), window }: TokenUsageLeaderboardOptions,
+  achievementCache: AchievementCache = new Map()
+): Promise<(metric: TokenBoardMetric) => TokenUsageLeaderboardResult> {
   const end = Number.isFinite(now.getTime()) ? now : new Date();
-  const rangeWindow = resolveTokenLeaderboardWindow(range, end);
+  const rangeWindow = window ?? resolveTokenLeaderboardWindow(range, end);
   const { start, previousStart, previousEnd } = rangeWindow;
   const rangeParams = [start, rangeWindow.end];
   const userResult = await pool.query<PostgresLeaderboardUserRow>(
@@ -792,7 +1075,7 @@ async function readPostgresLeaderboardSummary(
     `,
     [previousStart, previousEnd]
   );
-  const emptyDailySeries = buildEmptyDailySeries(start, end);
+  const emptyDailySeries = buildEmptyDailySeries(start, rangeWindow.end);
   const dailyByUserValues = new Map<string, Map<string, number>>();
 
   for (const row of dailyByUserResult.rows) {
@@ -806,10 +1089,20 @@ async function readPostgresLeaderboardSummary(
   }
 
   const userIds = userResult.rows.map((row) => row.user_id).filter(Boolean);
-  const achievementEvents = await readPostgresEventsForUsers(pool, table, userIds);
+  // A user's badges also depend on this cohort's weekly efficiency median.
+  // Reuse only identical user sets, rather than incorrectly sharing per-user badges.
+  const achievementKey = JSON.stringify([...new Set(userIds)].sort());
+  let achievementPromise = achievementCache.get(achievementKey);
+  if (!achievementPromise) {
+    achievementPromise = (window
+      ? pool.query<TokenUsageEventRow>(`SELECT * FROM ${table} ORDER BY reported_at DESC, created_at DESC`).then((result) => result.rows.flatMap((row) => rowToTokenUsageEvent(row) ?? []))
+      : readPostgresEventsForUsers(pool, table, userIds))
+      .then((events) => buildTokenAchievementSummariesByUser(events, { now: end }));
+    achievementCache.set(achievementKey, achievementPromise);
+  }
+  const achievementsByUser = await achievementPromise;
   const currentEvents = await readPostgresEventsInRange(pool, table, start, rangeWindow.end);
   const efficiencySummary = buildTokenEfficiencySummary(currentEvents);
-  const achievementsByUser = buildTokenAchievementSummariesByUser(achievementEvents, { now: end });
   const previousRankByUser = rankPostgresPreviousUsers(previousRankResult.rows, metric);
   const users = applyLeaderboardRankDelta(rankLeaderboardUsers(
     userResult.rows.map((row) => {
@@ -887,7 +1180,7 @@ async function readPostgresLeaderboardSummary(
   const projects = buildTokenProjectLeaderboard(currentEvents);
   const distribution = buildTokenUsageDistribution(currentEvents);
 
-  return {
+  const result: TokenUsageLeaderboardResult = {
     records: usersWithShare.reduce((sum, user) => sum + user.records, 0),
     summary: {
       range: rangeWindow.range,
@@ -911,6 +1204,24 @@ async function readPostgresLeaderboardSummary(
       efficiency: efficiencySummary.team,
       users: usersWithShare,
     },
+  };
+
+  return (nextMetric) => {
+    if (nextMetric === metric) return result;
+    const previousRanks = rankPostgresPreviousUsers(previousRankResult.rows, nextMetric);
+    const rankedUsers = applyLeaderboardRankDelta(rankLeaderboardUsers(
+      usersWithShare.map((user) => ({ ...user, previousRank: previousRanks.get(user.userId) ?? null })),
+      nextMetric
+    ));
+    return {
+      records: result.records,
+      summary: {
+        ...result.summary,
+        // Preserve the existing reduction order, including floating-point costs.
+        totalCostUsd: rankedUsers.reduce((sum, user) => sum + user.costUsd, 0),
+        users: rankedUsers,
+      },
+    };
   };
 }
 
@@ -1143,7 +1454,7 @@ async function recoverTokenUsageFileIfNeeded(filePath: string, state: FileStoreS
 
     const backup = await findLatestValidTokenUsageBackup(state);
     if (backup) {
-      await writeTokenUsageEventsToFile(filePath, backup.entries, state, { backupBeforeWrite: false });
+      await writeTokenUsageEventsToFile(filePath, backup.entries, state, { backupBeforeWrite: false, deviceRevisions: await readDeviceRevisions(backup.filePath) });
       state.lastRecoveryAt = new Date().toISOString();
       state.lastRecoverySource = "backup";
       state.lastRecoveryError = message;
@@ -1151,7 +1462,7 @@ async function recoverTokenUsageFileIfNeeded(filePath: string, state: FileStoreS
       return;
     }
 
-    await writeTokenUsageEventsToFile(filePath, [], state, { backupBeforeWrite: false });
+    await writeTokenUsageEventsToFile(filePath, [], state, { backupBeforeWrite: false, deviceRevisions: {} });
     state.lastRecoveryAt = new Date().toISOString();
     state.lastRecoverySource = "empty";
     state.lastRecoveryError = message;
@@ -1319,14 +1630,15 @@ async function writeTokenUsageEventsToFile(
   filePath: string,
   events: TokenUsageEvent[],
   state?: FileStoreState,
-  options: { backupBeforeWrite?: boolean } = {}
+  options: { backupBeforeWrite?: boolean; deviceRevisions?: Record<string, number> } = {}
 ) {
   if (state && options.backupBeforeWrite !== false) {
     await backupTokenUsageFileBeforeWrite(filePath, state);
   }
 
   const writtenAt = new Date().toISOString();
-  await writeJsonFileAtomic(filePath, { schemaVersion: 1, updatedAt: writtenAt, entries: events });
+  const deviceRevisions = options.deviceRevisions ?? await readDeviceRevisions(filePath);
+  await writeJsonFileAtomic(filePath, { schemaVersion: 1, updatedAt: writtenAt, entries: events, deviceRevisions });
 
   if (state) {
     state.lastWriteAt = writtenAt;
@@ -1392,6 +1704,7 @@ function conflictUpdates(table: string): Array<[column: string, value: string]> 
   ];
 
   return [
+    ["collection_devices", `CASE WHEN cardinality(${current("collection_devices")}) = 0 THEN '{}'::text[] ELSE ARRAY(SELECT DISTINCT device FROM unnest(${current("collection_devices")} || ${incoming("collection_devices")}) AS device ORDER BY device) END`],
     keepIfBlank("upstream_event_id"),
     plain("display_name"),
     plain("team"),
@@ -1418,6 +1731,7 @@ function conflictUpdates(table: string): Array<[column: string, value: string]> 
 
 function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
   const columns = [
+    "collection_devices",
     "id",
     "upstream_event_id",
     "user_id",
@@ -1443,10 +1757,11 @@ function buildInsertQuery(table: string, events: TokenUsageEvent[]) {
     "tool_call_count",
     "lines_written",
   ];
-  const values: Array<string | number | null> = [];
+  const values: Array<string | string[] | number | null> = [];
   const rows = events.map((event, eventIndex) => {
     const base = eventIndex * columns.length;
     values.push(
+      event.collectionDevices || [],
       event.id,
       event.upstreamEventId || null,
       event.userId,
@@ -1527,6 +1842,7 @@ function rowToTokenUsageEvent(row: TokenUsageEventRow): TokenUsageEvent | undefi
 
   return normalizeTokenUsageEvent({
     id: row.id,
+    collectionDevices: row.collection_devices,
     upstreamEventId: row.upstream_event_id || undefined,
     userId: row.user_id,
     displayName: row.display_name,
@@ -1599,6 +1915,7 @@ function optionalRowNumber(value: string | number | null | undefined) {
 
 type TokenUsageEventRow = {
   id: string;
+  collection_devices?: string[];
   upstream_event_id: string | null;
   user_id: string;
   display_name: string;

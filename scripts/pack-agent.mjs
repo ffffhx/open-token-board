@@ -1,8 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const rootDir = path.resolve(new URL("..", import.meta.url).pathname);
+const rootDir = fileURLToPath(new URL("..", import.meta.url));
 const packageDir = path.join(rootDir, "tools", "token-board-agent-npx");
 const publicDir = path.join(rootDir, "apps", "web", "public");
 const outputFile = path.join(publicDir, "token-board-agent.tgz");

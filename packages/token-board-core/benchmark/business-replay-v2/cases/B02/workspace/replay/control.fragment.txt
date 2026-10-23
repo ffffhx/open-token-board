@@ -1,0 +1,17 @@
+
+// Replay-only control transport. It calls the original service functions and does not alter computation.
+if (process.env.B02_REPLAY_CONTROL === "1") {
+  process.on("message", async (message: { id: number; operation: string }) => {
+    const started = performance.now();
+    const cpu = process.cpuUsage();
+    try {
+      if (message.operation === "refresh") await refreshLeaderboardSnapshots("replay");
+      const result = message.operation === "state"
+        ? { entries: [...leaderboardSnapshotCache.values()], lastError: leaderboardSnapshotLastError, refreshing: Boolean(leaderboardSnapshotRefreshPromise) }
+        : { durationMs: performance.now() - started, apiCpu: process.cpuUsage(cpu), apiResourceUsage: process.resourceUsage() };
+      process.send?.({ id: message.id, result });
+    } catch (error) {
+      process.send?.({ id: message.id, error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+}

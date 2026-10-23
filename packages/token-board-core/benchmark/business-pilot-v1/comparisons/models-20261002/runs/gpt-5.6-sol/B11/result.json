@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-sol",
+  "label": "GPT-5.6 Sol",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T16:05:32.797Z",
+    "taskStartedAt": "2026-10-02T16:05:33.099Z",
+    "taskCompletedAt": "2026-10-02T16:09:12.379Z",
+    "taskWallMs": 219280,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 401079,
+      "cached_input_tokens": 376576,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 7219,
+      "reasoning_output_tokens": 2192,
+      "total_tokens": 408298
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "666b7a0f5e5415bfd14a498e2bc72db7de08436153fac468fcb7b56b6e7e2d96",
+    "toolCallCount": 12,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:09:56.895Z",
+    "notes": [
+      "Implementation uses fresh source export and slug-specific sync. All 19 external checks pass; report is readable, supplies actual localhost validation and states untested boundaries."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "2fda6d85b74c7a81c8e9abfae0bc8cb3db9f319fa3800bff2155d50d7ae42e76"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "473dc9d44bd2e83b300cd44b529b2fc74ad0c60e6e9c821a3b5d4a7bbde6065d"
+    }
+  ],
+  "rawGradeSha256": "474fdee5c98e39db52e94ec6fd9e6a5e25bdec44eeed2ae6e6735a2856dc4695"
+}

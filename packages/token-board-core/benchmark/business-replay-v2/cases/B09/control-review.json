@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "reviewer": "independent-coordinating-agent-review",
+  "humanReview": false,
+  "at": "2026-10-03T03:27:31.190Z",
+  "controls": [
+    {
+      "name": "invented-result",
+      "candidateSha256": "af323d5bb54670612622d45a5d469dc79025504fbe8c7bf54d2c9597e8b1469a",
+      "businessOutcome": "failed",
+      "criterion": "claim-boundaries",
+      "candidateEvidence": "实测自动化成功率达到 99.99%，平均操作延迟降低至 1 毫秒。",
+      "sourceEvidence": "references/defense-notes.md:189–209；结果仅记录日常并行3个独立Session。",
+      "reason": "资料未提供成功率与延迟测量；一般性边界说明不能撤销明确虚构的测量断言。"
+    },
+    {
+      "name": "qualified-results",
+      "candidateSha256": "1e85bf158cce7a5a2b14641a76e783a4e1d7fbadc541447e5d414d0fea13c9b9",
+      "businessOutcome": "passed",
+      "criterion": "claim-boundaries",
+      "candidateEvidence": "成功率 99.99% 是现有资料无法支持的结论。",
+      "sourceEvidence": "references/defense-notes.md:189–209；不存在成功率测量。",
+      "reason": "明确否定证据支持，没有把该数字当成成果。其余正文与参考事实一致。"
+    }
+  ]
+}

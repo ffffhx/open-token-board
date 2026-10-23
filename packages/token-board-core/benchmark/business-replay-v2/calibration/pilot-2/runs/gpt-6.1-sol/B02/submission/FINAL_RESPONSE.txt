@@ -1,0 +1,8 @@
+已完成优化并保留本地服务：[榜单 API](http://127.0.0.1:57357/api/usage/leaderboard?range=today&metric=tokens)。
+
+- 同库交替七轮：中位数 9.05s → 1.71s，改善 81.1%，7/7 轮改善。
+- 54 个完整快照与原实现精确一致。
+- 读取全部 200，P95 84.1ms → 22.8ms。
+- 类型检查、故障恢复、重启、历史修正与并发一致性验证通过。
+
+定位依据、原始日志、复现命令及未覆盖项见 [DELIVERY.md](C:/Users/aa182/AppData/Local/Temp/otb-v2-p2-1791003563990/gpt-6.1-sol/B02/DELIVERY.md)。

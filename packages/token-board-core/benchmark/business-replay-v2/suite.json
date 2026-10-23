@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 2,
+  "id": "business-replay-v2",
+  "purpose": "Calibrate historical work difficulty and grader validity before a new model comparison",
+  "cases": ["B02", "B04", "B09"],
+  "relationshipToPriorSuite": "business-pilot-v1 remains a frozen basic workflow check; its pass rates and timings do not establish model fit for complex daily work",
+  "protocol": {
+    "userSelectedScope": "Small independent calibration trials first; no eight-model three-repeat comparison in this phase",
+    "calibrationModels": ["gpt-6-astra", "gpt-5.6-luna"],
+    "reasoningEffort": "medium",
+    "freshContextEveryModelCase": true,
+    "forkTurns": "none",
+    "trialsPerModelCase": 1,
+    "participantWallTimeLimitMinutes": 45,
+    "budgetEnforcement": "Coordinating agent monitors task_started and interrupts over-budget runs; not an OS-enforced resource sandbox",
+    "tokenLimit": null,
+    "recordUsage": true,
+    "feedbackToParticipants": false,
+    "repairsByCoordinator": false,
+    "referencesVisibleToParticipants": false,
+    "osSandbox": false,
+    "network": "Participant tasks use local fixtures and loopback only; pinned runtime dependencies may be provisioned before trials",
+    "performanceMeasurements": "Run measurement phases without competing benchmark jobs; alternate baseline and candidate on identical generated data",
+    "futureComparison": "Only after task calibration, preregister repeated runs and fixed environment; retain every trial and avoid rankings from this calibration"
+  },
+  "evaluation": {
+    "business": "Requested externally observable behavior, including source-grounded document recovery",
+    "preservation": "No unauthorized input edits, account or content loss, semantic changes outside requested document scope, or business regressions",
+    "delivery": "Readable, evidence-grounded submission and reproducible validation; reported separately from business behavior",
+    "precision": "Formatting-only differences, such as a final blank line, shown separately without replacing business judgment",
+    "contentReview": "Human-language facts and test claims require source review beyond machine checks; coordinating-agent review is not human review",
+    "calibration": "Historical baseline must fail specific business checks; reference must pass; negative controls must fail their intended checks; correct alternatives and grader uncertainty are recorded"
+  },
+  "limitations": [
+    "Historical source and actual tool events may be replayable without a full original production environment; each task explicitly lists substitutions and unknowns.",
+    "A richer input tree alone does not prove a harder or more discriminating task; independent trials determine observed difficulty.",
+    "A task is not adjusted to force a target model failure rate.",
+    "Any task or grader change after freezing creates a new revision; old model submissions and results remain archived."
+  ]
+}

@@ -1,0 +1,19 @@
+这个本地副本来自真实 Profile 管理问题的历史代码片段。用户报告名称需要修改两遍、空闲但未启动的 Profile 没列出来。
+
+已核实的可复现边界是：名称编辑期间发生 busy/status 重绘时输入会被覆盖；运行快照缺失或超过 30 秒时已登记的未启动 Profile 会消失。历史“保存成功后弹窗仍在”的截图现象没有被稳定复现，本题不要求推断这个现象的唯一根因。
+
+请修复这两个问题。只允许修改 src/render-root.mjs、src/profile-catalog.mjs 和 REPORT.md；配套 adapter、demo 和运行接口是固定评测环境。所有代码无第三方依赖，用 Node 22 及以上运行；node demo.mjs --once 展示最小复现，node demo.mjs 提供隔离的 localhost 页面。
+
+验收要求：
+1. 同一个 Profile 编辑期间，状态更新及保存 busy 重绘不得丢失尚未提交的名称；保存失败仍能保留并再次提交；一次保存应提交正确名称，成功后弹窗关闭，模拟重启仍保留名称。
+2. 切换到另一个 Profile、取消后重新打开时不能把旧表单的草稿带过去；HTML 字符不能破坏名称。无内容变化时保留既有避免重复重绘的行为。
+3. 注册表是已配置 Profile 的来源，快照缺失/过期仍列出有合法端口的条目，并标示 running=false。新鲜快照对同一 Profile 的运行信息应保留，名称及连接限制以注册表为准。
+4. 始终核对有效占用租约；其他 session 占用、禁止 Agent 连接的条目不能作为可用候选，同 session 已持有条目可复用。保留 excludedPort、按端口排序、注册表读取错误处理。
+5. 支持 Windows/macOS/Linux 注册表路径和显式 env.CPM_DATA_DIR；忽略缺必要字段、端口非法、目录越界的条目。
+6. 所有 Profile、文件、端口和进程均来自 fixture；不要访问实际 Chrome Profile、用户凭据、外部网络或当前产品仓库。
+
+注册表格式补充：profiles.json 顶层为 { profiles: [...] }。本题使用的历史 StoredProfile 字段为 id、name、dirName（必需字符串），fixedCdpPort?: number | null、lastCdpPort?: number | null，以及可选 agentAccessDisabled、clonedFromProfileId、projectTag、lastLaunchedAt。合法端口是 1 到 65535 的整数；优先使用合法 fixedCdpPort，没有时回退到合法 lastCdpPort，两者都无效才跳过。dirName 相对于注册表所在目录的 profiles/ 子目录，不能越界；登记条目的公开 profileId 为 isolated:<id>。该格式说明来自历史类型定义，供理解输入使用，不要求访问原仓库。
+
+新增评测条件：固定状态序列、虚拟时钟、内存文件系统、进程存活 adapter、保存失败和模拟重启是本题的可重复验收条件，不是完整历史生产环境。后端保存及 UI 无关面板是配套 adapter。目录禁止越界是同一历史修复中已有条件。完整 Electron/IPC、真实磁盘持久化、浏览器启动和截图中的弹窗残留不在本题覆盖范围内。
+
+完成后在 REPORT.md 说明原因、改动、运行过的验证及未覆盖部分。不要把模拟重启写成真实桌面应用重启。

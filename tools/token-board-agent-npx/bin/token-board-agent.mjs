@@ -64,6 +64,8 @@ const MAX_INVALID_USAGE_WARNINGS = 5;
 const CLAUDE_CODE_OUTPUT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 const CODEX_STRUCTURED_PATCH_TOOLS = new Set(["apply_patch", "patch"]);
 const INSTALL_DIR = path.join(os.homedir(), ".token-board-agent");
+const CLAUDE_RATE_LIMIT_SNAPSHOT_FILE =
+  process.env.TOKEN_BOARD_CC_SNAPSHOT || path.join(INSTALL_DIR, "claude-rate-limits.json");
 const INSTALLED_AGENT_FILE = path.join(INSTALL_DIR, "token-board-agent.mjs");
 const INSTALLED_AGENT_SPEED_FILE = path.join(INSTALL_DIR, "agent-speed.mjs");
 const INSTALLED_ASC_DIR = path.join(INSTALL_DIR, "node_modules", "agent-session-core");
@@ -198,7 +200,7 @@ const DEFAULT_SOURCE_TARGETS = [
 let invalidUsageWarningCount = 0;
 
 main().catch((error) => {
-  if (process.argv[2] === "statusline") {
+  if (process.argv[2] === "statusline" || process.argv[2] === "capture-statusline") {
     process.exitCode = 0;
     return;
   }
@@ -209,7 +211,11 @@ main().catch((error) => {
 
 async function main() {
   const command = process.argv[2] || "sync";
-  const quietCommand = command === "mcp" || command === "statusline" || (command === "speed" && process.argv.includes("--json"));
+  const quietCommand =
+    command === "mcp" ||
+    command === "statusline" ||
+    command === "capture-statusline" ||
+    (command === "speed" && process.argv.includes("--json"));
   if (command === "watch") {
     logInfo(`[token-board-agent] running ${command}`);
   } else if (!quietCommand) {
@@ -231,8 +237,26 @@ async function main() {
     return;
   }
 
+  if (command === "capture-statusline") {
+    await captureClaudeCodeRateLimitsFromStdin();
+    await printStatusline();
+    return;
+  }
+
   if (command === "login") {
     await login();
+    return;
+  }
+
+  if (command === "logout") {
+    const config = await readAgentConfig();
+    if (config.agentToken) {
+      await requestJsonWithRetry(`${API_URL}/api/auth/agent/session`, { method: "DELETE", headers: { Authorization: `Bearer ${config.agentToken}` } }, "Logout");
+      const saved = await readJson(CONFIG_FILE);
+      delete saved.agentToken;
+      await writeJson(CONFIG_FILE, saved);
+    }
+    console.log("Agent session revoked. Run login to upload again.");
     return;
   }
 
@@ -2192,7 +2216,7 @@ async function postIngest(config, events, userConfig) {
       Authorization: `Bearer ${config.agentToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(createIngestPayload(events, userConfig)),
+    body: JSON.stringify({ ...createIngestPayload(events, userConfig), deviceId: config.deviceId }),
   }, "Upload");
 }
 
@@ -2223,7 +2247,9 @@ async function postReplacePhase(config, phase, replaceId, events, options = {}) 
     },
     body: JSON.stringify({
       ...createIngestPayload(events, options.userConfig),
+      deviceId: config.deviceId,
       replace: {
+        scope: "device",
         phase,
         replaceId,
         ...(options.expectedEvents !== undefined ? { expectedEvents: options.expectedEvents } : {}),
@@ -2657,6 +2683,7 @@ async function readAgentConfig() {
 
   return {
     ...config,
+    deviceId: await readCollectionDeviceId(),
     userId: cleanLabel(config.userId, 80) || username,
     displayName: cleanLabel(config.displayName, 80) || cleanLabel(config.githubLogin, 80) || username,
     team: cleanLabel(config.team, 80) || "GitHub",
@@ -2664,6 +2691,19 @@ async function readAgentConfig() {
     includeSessionTitle:
       process.env.TOKEN_BOARD_INCLUDE_SESSION_TITLE === "false" ? false : config.includeSessionTitle !== false,
   };
+}
+
+async function readCollectionDeviceId() {
+  const file = process.env.TOKEN_BOARD_DEVICE_ID_FILE || `${CONFIG_FILE}.device-id`;
+  let value = process.env.TOKEN_BOARD_DEVICE_ID;
+  if (!value) {
+    await fs.mkdir(path.dirname(file), { recursive: true });
+    try { await fs.writeFile(file, randomUUID(), { flag: "wx", mode: 0o600 }); }
+    catch (error) { if (error.code !== "EEXIST") throw error; }
+    value = (await fs.readFile(file, "utf8")).trim();
+  }
+  if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) throw new Error("Invalid collection device ID");
+  return value.toLowerCase();
 }
 
 function readStringArray(value) {
@@ -2736,13 +2776,12 @@ async function collectUserConfig() {
 }
 
 /**
- * 读取 Claude Code 状态栏捕获的订阅额度快照(由 claude-statusline-capture.sh 落盘),
+ * 读取 Claude Code 状态栏捕获的订阅额度快照(由捕获脚本或 capture-statusline 落盘),
  * 构造成与 Codex 额度报告兼容的结构,以便服务端/前端复用同一套类型与组件。
  * Claude Code 本地不存额度,仅在状态栏 JSON 的 rate_limits 中出现(精确值)。
  */
 async function collectClaudeCodeRateLimits() {
-  const snapPath =
-    process.env.TOKEN_BOARD_CC_SNAPSHOT || homePath(".token-board-agent", "claude-rate-limits.json");
+  const snapPath = CLAUDE_RATE_LIMIT_SNAPSHOT_FILE;
   const snap = await readJson(snapPath);
   if (!snap || !snap.available || !snap.rateLimits) {
     return null;
@@ -2798,6 +2837,35 @@ async function collectClaudeCodeRateLimits() {
     notes: ["数据来自 Claude Code 状态栏上报的订阅额度(精确值,非估算)。"],
     sourcePaths: [snapPath],
   };
+}
+
+async function captureClaudeCodeRateLimitsFromStdin() {
+  let raw = "";
+  for await (const chunk of process.stdin) {
+    raw += String(chunk);
+    if (Buffer.byteLength(raw, "utf8") > 2 * 1024 * 1024) {
+      return;
+    }
+  }
+
+  const payload = safeJson(raw);
+  const rateLimits = payload?.rate_limits;
+  const available = Boolean(
+    rateLimits &&
+      typeof rateLimits === "object" &&
+      (rateLimits.five_hour || rateLimits.seven_day)
+  );
+  if (!available) {
+    return;
+  }
+
+  await writeJson(CLAUDE_RATE_LIMIT_SNAPSHOT_FILE, {
+    capturedAt: new Date().toISOString(),
+    source: "claude-code-statusline",
+    claudeVersion: payload.version || payload.cli_version || null,
+    available: true,
+    rateLimits,
+  });
 }
 
 async function analyzeLocalCodexRateLimits(codexHome) {
@@ -3895,10 +3963,12 @@ function printHelp() {
   ${NPX_COMMAND} install
   ${NPX_COMMAND} status
   ${NPX_COMMAND} statusline
+  ${NPX_COMMAND} capture-statusline
   ${NPX_COMMAND} mcp
   ${NPX_COMMAND} uninstall
   ${NPX_COMMAND} watch
   ${NPX_COMMAND} login
+  ${NPX_COMMAND} logout
   ${NPX_COMMAND} collect
   ${NPX_COMMAND} speed
   ${NPX_COMMAND} upload

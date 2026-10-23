@@ -1,0 +1,11 @@
+{
+  "name": "local-private-content-pilot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node services/preview.mjs",
+    "build": "node scripts/build.mjs",
+    "export:private": "node scripts/export-private.mjs",
+    "release": "node scripts/release.mjs"
+  }
+}

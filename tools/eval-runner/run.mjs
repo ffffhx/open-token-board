@@ -227,8 +227,8 @@ async function gradeTask(taskDir, meta, workdir, lastMessage) {
   let solutionText = diffRes.out;
   for (const f of changed) {
     if (untracked.out.split("\n").map((s) => s.trim()).includes(f)) {
-      const content = await sh("cat", [f], workdir);
-      solutionText += `\n--- NEW FILE ${f} ---\n${content.out}`;
+      const content = readFileSync(join(workdir, f), "utf8");
+      solutionText += `\n--- NEW FILE ${f} ---\n${content}`;
     }
   }
   solutionText = solutionText.slice(0, 12000);

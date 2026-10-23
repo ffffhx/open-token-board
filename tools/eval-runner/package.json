@@ -10,5 +10,8 @@
   "scripts": {
     "validate": "node validate.mjs",
     "run": "node run.mjs"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.6"
   }
 }

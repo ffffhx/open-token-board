@@ -143,6 +143,16 @@ export function evaluateTokenGoals(
   return goals.map((goal) => evaluateTokenGoalFromStats(goal, stats, safeDate(now), false));
 }
 
+/** Database aggregation uses the same Shanghai daily buckets as event evaluation. */
+export function evaluateTokenGoalsFromDailyUsage(
+  goals: TokenGoal[],
+  daily: Array<{ date: string; tokens: number; costUsd: number }>,
+  now: Date,
+): TokenGoalEvaluation[] {
+  const stats: UsageStats = { days: new Map(daily.map((day) => [day.date, { tokens: day.tokens, costUsd: day.costUsd }])) };
+  return goals.map((goal) => evaluateTokenGoalFromStats(goal, stats, safeDate(now), false));
+}
+
 export function evaluateTokenGoal(
   goal: TokenGoal,
   events: TokenUsageEvent[],

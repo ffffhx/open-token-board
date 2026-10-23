@@ -1,0 +1,480 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6.1-sol",
+  "caseId": "B02",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "protocolSha256": "0c6f725219d372795ce4a0971b57cca283e52cdb0ce5258b7afc0147c721e6e2",
+  "execution": {
+    "taskStartedAt": "2026-10-03T05:21:47.009Z",
+    "taskCompletedAt": "2026-10-03T05:46:54.056Z",
+    "wallMs": 1507047,
+    "observedModels": [
+      "gpt-6.1-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 3213713,
+      "cached_input_tokens": 3120640,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 35707,
+      "reasoning_output_tokens": 10729,
+      "total_tokens": 3249420
+    },
+    "costUsd": null,
+    "transcriptSha256": "7200484ecab541e81b14581899562717ff2c87ba3b51a6ca972e9ad909e6f395",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 7,
+      "total": 7
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 1,
+      "total": 1
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 2,
+      "total": 2
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 0,
+      "total": 0
+    }
+  },
+  "checks": [
+    {
+      "id": "all-statistics-identical",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "combinations": 54,
+        "passed": true
+      }
+    },
+    {
+      "id": "repeatable-refresh-improvement",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "baselineMs": [
+          7519.2166,
+          7157.904199999997,
+          7033.727500000001,
+          7243.485700000005,
+          7489.799699999989,
+          7095.787599999996,
+          7241.83170000001
+        ],
+        "candidateMs": [
+          1508.0612000000037,
+          1488.161500000002,
+          1411.2950000000055,
+          1362.3770000000004,
+          1473.3031999999948,
+          1367.665200000003,
+          1420.9121999999916
+        ],
+        "baselineMedianMs": 7241.83170000001,
+        "candidateMedianMs": 1420.9121999999916,
+        "pairedGainMedianMs": 5820.919500000018,
+        "pairedNoise3MAD": 453.53040000006877,
+        "pairedWins": 7,
+        "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+      }
+    },
+    {
+      "id": "reads-available-during-refresh",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "reads": 321,
+        "successfulAndConsistent": 321,
+        "baselineP95Ms": 62.07940000000235,
+        "candidateP95Ms": 17.596899999989546,
+        "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+      }
+    },
+    {
+      "id": "corrected-data-and-overlap",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "failure-preserves-valid-snapshot",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "refreshRejected": true,
+        "errorRecorded": true,
+        "remainingEntries": 54,
+        "readStatus": 200
+      }
+    },
+    {
+      "id": "failure-recovery",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54,
+        "error": ""
+      }
+    },
+    {
+      "id": "restart-restores-full-results",
+      "passed": true,
+      "category": "business",
+      "details": {
+        "entries": 54
+      }
+    },
+    {
+      "id": "empty-dataset-compatible",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "passed": true
+      }
+    },
+    {
+      "id": "replay-can-start-and-measure",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w\\measurements.json",
+        "eventCount": 3905,
+        "postgres": "16.14",
+        "rounds": 7,
+        "source": "full historical HTTP API and PostgreSQL storage"
+      }
+    },
+    {
+      "id": "measurement-report-delivered",
+      "passed": true,
+      "category": "delivery",
+      "details": {
+        "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+      }
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "apps/token-board-api/src/server.ts",
+      "packages/token-board-core/src/token-board-storage.ts",
+      "DELIVERY.md",
+      "apps/token-board-api/src/leaderboard-snapshot-runner.ts",
+      "apps/token-board-api/src/leaderboard-snapshot-worker.ts",
+      "tests/replay/consistency.mjs",
+      "tests/replay/lifecycle.mjs",
+      "tests/replay/profile.mjs",
+      "tests/replay/reference/profile-storage.ts",
+      "tests/replay/reference/server.original.txt",
+      "tests/replay/reference/server.ts",
+      "tests/replay/reference/storage.original.txt",
+      "tests/replay/reference/storage.ts",
+      "tests/replay/verify.mjs"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": [
+      "node_modules/**",
+      "apps/*/node_modules/**",
+      "packages/*/node_modules/**",
+      "artifacts/**"
+    ]
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "checks": [
+      {
+        "id": "all-statistics-identical",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "combinations": 54,
+          "passed": true
+        }
+      },
+      {
+        "id": "repeatable-refresh-improvement",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "baselineMs": [
+            7519.2166,
+            7157.904199999997,
+            7033.727500000001,
+            7243.485700000005,
+            7489.799699999989,
+            7095.787599999996,
+            7241.83170000001
+          ],
+          "candidateMs": [
+            1508.0612000000037,
+            1488.161500000002,
+            1411.2950000000055,
+            1362.3770000000004,
+            1473.3031999999948,
+            1367.665200000003,
+            1420.9121999999916
+          ],
+          "baselineMedianMs": 7241.83170000001,
+          "candidateMedianMs": 1420.9121999999916,
+          "pairedGainMedianMs": 5820.919500000018,
+          "pairedNoise3MAD": 453.53040000006877,
+          "pairedWins": 7,
+          "rule": "7 alternating pairs after warmup; at least 15% median improvement, 6 paired wins, and median paired gain > 3*MAD of paired differences"
+        }
+      },
+      {
+        "id": "reads-available-during-refresh",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "reads": 321,
+          "successfulAndConsistent": 321,
+          "baselineP95Ms": 62.07940000000235,
+          "candidateP95Ms": 17.596899999989546,
+          "latencyAllowance": "max(100ms, baseline P95 * 1.3); exact cached summary and HTTP 200 for each sampled read"
+        }
+      },
+      {
+        "id": "corrected-data-and-overlap",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "failure-preserves-valid-snapshot",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "refreshRejected": true,
+          "errorRecorded": true,
+          "remainingEntries": 54,
+          "readStatus": 200
+        }
+      },
+      {
+        "id": "failure-recovery",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54,
+          "error": ""
+        }
+      },
+      {
+        "id": "restart-restores-full-results",
+        "passed": true,
+        "category": "business",
+        "details": {
+          "entries": 54
+        }
+      },
+      {
+        "id": "empty-dataset-compatible",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "passed": true
+        }
+      },
+      {
+        "id": "replay-can-start-and-measure",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "measurementFile": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w\\measurements.json",
+          "eventCount": 3905,
+          "postgres": "16.14",
+          "rounds": 7,
+          "source": "full historical HTTP API and PostgreSQL storage"
+        }
+      },
+      {
+        "id": "measurement-report-delivered",
+        "passed": true,
+        "category": "delivery",
+        "details": {
+          "required": "Nonempty DELIVERY.md; diagnosis, commands, raw measurements, correctness and startup address are reviewed separately"
+        }
+      }
+    ],
+    "artifacts": "<repository>\\tests\\.tmp\\business-replay-v2\\B02\\verify-ZSPw6w"
+  },
+  "submittedChanges": [
+    {
+      "path": "apps/token-board-api/src/server.ts",
+      "sha256": "c0f67f4ff4d5953d54a07df18bb41c4c2309d1c7d9179ac9b883ffdf37aaf489"
+    },
+    {
+      "path": "packages/token-board-core/src/token-board-storage.ts",
+      "sha256": "ac689c6d09b88ee367f1c6f3d8874fa0e4d830e224a71bc6525b2a5411f68819"
+    },
+    {
+      "path": "DELIVERY.md",
+      "sha256": "277d476d0c8bd20c575b5e6d79ac3d3b23c9a7667c297953542f3c97caefc5e5"
+    },
+    {
+      "path": "apps/token-board-api/src/leaderboard-snapshot-runner.ts",
+      "sha256": "4fccf60c4f3af996612d6d2737b44ee283088cf1d9aa8c85eca241e72be99d74"
+    },
+    {
+      "path": "apps/token-board-api/src/leaderboard-snapshot-worker.ts",
+      "sha256": "4411c08e0cb4ea531af4b46e2ebde8dc2c38af731dd76cdc4ae06aa300aec90f"
+    },
+    {
+      "path": "tests/replay/consistency.mjs",
+      "sha256": "f3044ffe4be7a57acfe41237efd09cb8dbbae4ff0eede3048c7fa99339bfb882"
+    },
+    {
+      "path": "tests/replay/lifecycle.mjs",
+      "sha256": "cd58a7190d625a4dc0c79b6c087ec432cac50e2319141fcaad72e763e9062787"
+    },
+    {
+      "path": "tests/replay/profile.mjs",
+      "sha256": "589752a785dc231b866c2c9f3607c379309367b3e03cc58de1f2745176a859bd"
+    },
+    {
+      "path": "tests/replay/reference/profile-storage.ts",
+      "sha256": "a85134fdf504fba155e41dc7eed5a3215f2890be5d50a4924a1b0ff0634a7bb6"
+    },
+    {
+      "path": "tests/replay/reference/server.original.txt",
+      "sha256": "9ff03838d2d3c243b24f67d5ea6d64be5cff0125b4b47144077f47efb1f5bdcc"
+    },
+    {
+      "path": "tests/replay/reference/server.ts",
+      "sha256": "3d3542d600cffd32f180bfb67b63bc0b8a5ecf5b2bdf0f0d9fb9bd0ad43c79fa"
+    },
+    {
+      "path": "tests/replay/reference/storage.original.txt",
+      "sha256": "39ed9695dccf5f24b3b28bb3d1681fd93a7aa7a77d2428f3b9d66c333633a8e6"
+    },
+    {
+      "path": "tests/replay/reference/storage.ts",
+      "sha256": "8ad1c2dd822f0609a8c09794ec638de1ffd64f1e4c82840f402961521ad5fd39"
+    },
+    {
+      "path": "tests/replay/verify.mjs",
+      "sha256": "be47d62b139cd1657b9d92eafac8c81686afc54aec603dded72cb1163866ec78"
+    }
+  ],
+  "finalResponseSha256": "b563a7358765f2cf4c7b5ad332ae0494237d08d2bfe1bdd28a31ac5443b18d0f",
+  "rawGradeSha256": "3e7718b482c9ec7779b77fe56735e3696f27bb023836ae2996bb5728f58e6202",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T05:53:27.741Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": null,
+    "notes": [
+      "独立验收全部通过，54 种组合、历史修正、故障恢复、重启及读取保全均满足。独立七轮刷新中位数 7241.8→1420.9ms，7/7 配对改善；321 次读取全部有效，P95 17.6ms（门槛 100ms）。交付数字与实际自测命令及日志吻合，基线参考副本哈希与冻结历史源码一致；类型检查、生命周期与并发一致性测试有通过记录，未覆盖项如实列明。提交后确认本地 API 为 200、54 个快照，随后协调者关闭该次隔离服务与数据库，避免影响下一轮。最终 DELIVERY 中文可读，生成阶段的乱码已由模型自行修正。"
+    ]
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true,
+  "supplementaryEvidence": [
+    {
+      "kind": "independent-grader-measurement",
+      "originalPath": "<private grader>/measurements.json",
+      "archivePath": "evidence/independent-measurements.json",
+      "encoding": "identity",
+      "originalBytes": 361997,
+      "sha256": "ff092ac381e08d8af8ee5dfe12b3322745cff8c2dea6847fd8ea3c7d60ae133a",
+      "archiveSha256": "ff092ac381e08d8af8ee5dfe12b3322745cff8c2dea6847fd8ea3c7d60ae133a"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/baseline-measurement.json",
+      "archivePath": "evidence/participant/baseline-measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50267528,
+      "sha256": "9225b9aebc89fef660ff79460ddf8c82d3ef18e7b2ce3a60af7bfe3d8c0428ee",
+      "archiveSha256": "7c6f327f363d238c229d334c489504d79bdcbc01787e7764884efb20a07f5414"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/candidate-measurement.json",
+      "archivePath": "evidence/participant/candidate-measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50123661,
+      "sha256": "b5973477a63c7b5483c9a408e5fda04a9c908d73ac29bf68ffb33b770905d955",
+      "archiveSha256": "6035845ca54a41a2fd239e373865335c7361bc143909f5b5f3038b28c58f3ebe"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/consistency.json",
+      "archivePath": "evidence/participant/consistency.json",
+      "encoding": "identity",
+      "originalBytes": 450,
+      "sha256": "5e31fe329f1b147d944c748b3ab88d7ae465ab69535ec76b389c2f6b633a1d87",
+      "archiveSha256": "5e31fe329f1b147d944c748b3ab88d7ae465ab69535ec76b389c2f6b633a1d87"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/lifecycle.json",
+      "archivePath": "evidence/participant/lifecycle.json",
+      "encoding": "identity",
+      "originalBytes": 413,
+      "sha256": "1d75b8b5f77c9ffc12a4e09fb4df44af9561e73036b8ce1c02ef2ed1e9804d3e",
+      "archiveSha256": "1d75b8b5f77c9ffc12a4e09fb4df44af9561e73036b8ce1c02ef2ed1e9804d3e"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/measurement.json",
+      "archivePath": "evidence/participant/measurement.json.gz",
+      "encoding": "gzip",
+      "originalBytes": 50123661,
+      "sha256": "b5973477a63c7b5483c9a408e5fda04a9c908d73ac29bf68ffb33b770905d955",
+      "archiveSha256": "6035845ca54a41a2fd239e373865335c7361bc143909f5b5f3038b28c58f3ebe"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/profile.json",
+      "archivePath": "evidence/participant/profile.json",
+      "encoding": "identity",
+      "originalBytes": 2057,
+      "sha256": "e4bc9b0c2a73775e894640939f24ce4304233dd9308aa0d51be02e7a9750e7fa",
+      "archiveSha256": "e4bc9b0c2a73775e894640939f24ce4304233dd9308aa0d51be02e7a9750e7fa"
+    },
+    {
+      "kind": "participant-self-measurement",
+      "originalPath": "artifacts/verification.json",
+      "archivePath": "evidence/participant/verification.json",
+      "encoding": "identity",
+      "originalBytes": 390628,
+      "sha256": "55a824cdd5468c4968889bbd5f4185879f1a864d3dd0c58880390cee1ebefec9",
+      "archiveSha256": "55a824cdd5468c4968889bbd5f4185879f1a864d3dd0c58880390cee1ebefec9"
+    },
+    {
+      "kind": "coordinator-service-probe",
+      "originalPath": "<coordinator>/service-probe.json",
+      "archivePath": "evidence/service-probe.json",
+      "encoding": "identity",
+      "originalBytes": 1024311,
+      "sha256": "e6565d3ea36c786f1ef273451bc8edf6c52729d61c1a5911c965bb3d16e10007",
+      "archiveSha256": "e6565d3ea36c786f1ef273451bc8edf6c52729d61c1a5911c965bb3d16e10007"
+    }
+  ]
+}

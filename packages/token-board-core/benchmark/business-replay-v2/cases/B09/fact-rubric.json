@@ -1,0 +1,89 @@
+{
+  "version": 2,
+  "visibility": "grader_only",
+  "scope": "只评价项目 1 的新正文与 REPORT.md；保留的其他章节不是本次事实重写对象。",
+  "reviewMethod": "逐项引用候选原句，匹配来源事实与主体、条件、时态、数量和因果；允许合理转述和不同结构。判断为 supported / unsupported / missing / qualified-inference；引用缺失或未判断的项目不算通过。正文流畅度与报告准确性须正式复核，不能由关键词数量或文件存在替代。",
+  "source": {
+    "file": "workspace/references/defense-notes.md",
+    "section": "3.3 通用 AI 工程化：ProfilePilot",
+    "lines": [189, 209],
+    "rawReadEvents": ["E0196", "E0198"],
+    "readTimestamp": "2026-09-03T13:34:16.893Z"
+  },
+  "criteria": [
+    {
+      "id": "business-context",
+      "category": "business",
+      "requiredMeaning": "商业化拦截与支付验证需要 Agent 在真实登录态下操作，支付环节仍需要人工参与。",
+      "sourceLines": [191],
+      "accept": "允许省略产品名或将支付概括为需要人工判断的业务环节，但须说明为何需要真实登录态和人机协作。"
+    },
+    {
+      "id": "collaboration-problem",
+      "category": "business",
+      "requiredMeaning": "已评测工具未解决开发者与 Agent 争用 Chrome 窗口和焦点的问题。",
+      "sourceLines": [193],
+      "optionalNumber": {"value": 6, "unit": "被评测的主流浏览器自动化工具"},
+      "reject": "将该评测扩大为全行业永远没有工具能解决，或者编造工具评分与成功率。"
+    },
+    {
+      "id": "resource-allocation",
+      "category": "business",
+      "requiredMeaning": "设计落地 ProfilePilot；Gateway 管理已登录的 Profile 资源及租约，给 Agent Session 动态分配空闲资源。",
+      "sourceLines": [199, 201],
+      "accept": "Profile 可称浏览器配置或独立浏览器身份；角色与资源的关系需清楚。"
+    },
+    {
+      "id": "controlled-communication",
+      "category": "business",
+      "requiredMeaning": "Agent 接入先申请受控授权，通信链路将浏览器指令交由 Gateway 校验后转发；不能把客户端描述为绕过 Gateway 直接取得无限制控制。",
+      "sourceLines": [202],
+      "accept": "允许省略 Wrapper、Daemon、WebSocket、CDP 等实现专名及管道细节，按授权、校验与转发的角色关系判定。若主动写出细节，应与来源的一次性 Ticket、长连接和专用管道关系一致。"
+    },
+    {
+      "id": "visible-handoff",
+      "category": "business",
+      "requiredMeaning": "页面悬浮控制条支持开发者暂停、接管、恢复 Agent 任务。",
+      "sourceLines": [203],
+      "accept": "允许控制条/悬浮条、恢复/继续等同义说法；不强制另建小标题。"
+    },
+    {
+      "id": "observed-result",
+      "category": "business",
+      "requiredMeaning": "当时日常可并行运行 3 个独立 Agent 浏览器 Session，服务多需求并行开发与自动化验证。",
+      "sourceLines": [209],
+      "requiredNumber": {"value": 3, "unit": "日常独立并行 Agent 浏览器 Session"},
+      "reject": "把日常观察扩大成最大并发上限、无条件可扩展承诺、所有平台支持或量化性能提升。"
+    },
+    {
+      "id": "claim-boundaries",
+      "category": "business",
+      "requiredMeaning": "新增正文中的每个事实须由资料支持，推论需明确标成推论，不能伪装成经历或测量。",
+      "rejectExamples": ["成功率 99.99%", "所有平台绝对无冲突", "崩溃瞬时回滚保证", "未经来源支持的个人独立完成范围", "将其他项目的 10 秒切号、518 文件重构或收入增长写为 ProfilePilot 成果"],
+      "unsupportedByProvidedSource": ["事务同步的 diff/staging/rename 算法", "controlGeneration 的精确吊销语义", "Input Guard 的系统 API 与跨平台支持", "登录态复制与浏览器崩溃恢复的实现保证"],
+      "accept": "可明确说资料未展示这些实现，也可省略；不因出现技术词就判失败，要看断言是否被当成已完成事实。章节编号、来源行号、引用第 3.3 节与列表序号不属于结果数字。"
+    },
+    {
+      "id": "readable-project",
+      "category": "delivery",
+      "requiredMeaning": "能连贯读出背景、难点、方案与结果，角色明确，没有仅堆砌关键词或复制整份答辩。",
+      "accept": "不限篇幅，不要求参考答案用词；无需新增 Markdown 链接，文字来源说明也有效。"
+    },
+    {
+      "id": "report-chain",
+      "category": "delivery",
+      "requiredMeaning": "报告引用同一文档的 Read 与 Edit 时间线来解释版本选择，区分仓库旧稿、工具当时读到的内容及助手写入内容；实际差异与核验说法一致。",
+      "evidence": ["E0243", "E0288", "E0301", "E0386", "E0399", "E0427"],
+      "accept": "无需引用所有事件；等价的交叉证据链有效。恢复目标可由较早读取与首次 Edit 旧文本证明，不要求特定事件号正则。",
+      "reject": "声称见到原生 Ctrl+S 事件、知道历史完整 HEAD、恢复原始物理字节，或宣称运行了未实际执行的测试。"
+    }
+  ],
+  "reviewOutput": {
+    "criteria": [{"id": "criterion-id", "status": "pending", "candidateEvidence": [], "sourceEvidence": [], "reason": ""}],
+    "unsupportedClaims": [],
+    "businessPassed": null,
+    "deliveryPassed": null,
+    "reviewer": "",
+    "candidateSha256": ""
+  }
+}

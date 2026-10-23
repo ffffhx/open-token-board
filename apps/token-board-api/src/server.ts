@@ -2,6 +2,10 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { createHash, randomBytes } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { runLeaderboardSnapshotJob } from "./leaderboard-snapshot-job";
+import { AnalyticsBusyError, readLiveLeaderboardJob } from "./live-leaderboard-job";
+import { readAccountProfileJob } from "./account-profile-job";
+import { authSessionId, createAuthSessionStore, type AuthSessionStore } from "./auth-session-store";
 
 import sanitizeHtml from "sanitize-html";
 
@@ -71,6 +75,7 @@ import {
 } from "@open-token-board/core/codex-rate-limits";
 import {
   createTokenUsageStore,
+  DeviceRevisionConflict,
   importTokenUsageEventsFromJsonFile,
   type TokenUsageStore,
   type TokenUsageStoreHealth,
@@ -187,7 +192,11 @@ const WEEKLY_REPORT_ENABLED = booleanEnv(
 const QUOTA_ALERT_THRESHOLD_PERCENT = percentageEnv(process.env.TOKEN_BOARD_QUOTA_ALERT_THRESHOLD, 25);
 const QUOTA_ALERT_STALE_MS = 24 * 60 * 60 * 1000;
 let tokenUsageStore: TokenUsageStore | undefined;
+let authSessions: AuthSessionStore;
 type UsageReplaceStage = {
+  deviceId?: string;
+  expectedRevision: number;
+  result?: Record<string, unknown>;
   createdAt: number;
   expectedEvents: number;
   digest: string;
@@ -212,6 +221,9 @@ let leaderboardSnapshotRefreshTimer: NodeJS.Timeout | undefined;
 let leaderboardSnapshotWriteTimer: NodeJS.Timeout | undefined;
 let leaderboardSnapshotLastRefreshAt = "";
 let leaderboardSnapshotLastError = "";
+let leaderboardSnapshotRefreshStartedAt = "";
+let leaderboardSnapshotLastCompletedAt = "";
+let leaderboardSnapshotLastDurationMs: number | null = null;
 let dailyReportTimer: NodeJS.Timeout | undefined;
 let weeklyReportTimer: NodeJS.Timeout | undefined;
 let dailyReportLastSentDayKey = "";
@@ -221,6 +233,12 @@ let latestReportSnapshot: ReportStateSnapshot | null = null;
 async function main() {
   authSecret(); // fail fast if the auth secret is missing/placeholder
   tokenUsageStore = await openTokenUsageStore();
+  authSessions = await createAuthSessionStore({
+    dataFile: process.env.TOKEN_BOARD_AUTH_STATE_FILE || path.join(path.dirname(DATA_FILE), "auth-state.json"),
+    databaseUrl: (process.env.TOKEN_BOARD_DATABASE_URL || process.env.DATABASE_URL || "").trim() || undefined,
+    postgresSchema: process.env.TOKEN_BOARD_POSTGRES_SCHEMA || "token_board",
+    postgresSsl: process.env.TOKEN_BOARD_POSTGRES_SSL === "true",
+  });
   snapshotShareStore = await openSnapshotShareStore();
   agentSpeedHistoryStore = await openAgentSpeedHistoryStore();
   await loadLeaderboardSnapshotsFromFile();
@@ -236,6 +254,7 @@ async function main() {
 
   const server = createServer((request, response) => {
     void routeRequest(request, response).catch((error) => {
+      if (error instanceof AnalyticsBusyError) { response.setHeader("Retry-After", "5"); sendJson(request, response, 503, { error: error.message }); return; }
       // Log the real error server-side; return a generic message so internal detail
       // (SQL fragments, connection strings, env names, upstream text) is not leaked.
       console.error("Unhandled request error:", error);
@@ -315,6 +334,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
         lastError: leaderboardSnapshotLastError || null,
         refreshMs: LEADERBOARD_SNAPSHOT_REFRESH_MS,
         refreshing: Boolean(leaderboardSnapshotRefreshPromise),
+        refreshStartedAt: leaderboardSnapshotRefreshStartedAt || null,
+        lastCompletedAt: leaderboardSnapshotLastCompletedAt || null,
+        lastDurationMs: leaderboardSnapshotLastDurationMs,
+        ageMs: leaderboardSnapshotLastRefreshAt ? Math.max(0, Date.now() - Date.parse(leaderboardSnapshotLastRefreshAt)) : null,
+        stale: !leaderboardSnapshotLastRefreshAt || Date.now() - Date.parse(leaderboardSnapshotLastRefreshAt) > 2 * LEADERBOARD_SNAPSHOT_REFRESH_MS,
       },
       githubAuth: Boolean(process.env.GITHUB_CLIENT_ID),
       generatedAt: new Date().toISOString(),
@@ -360,7 +384,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   if (request.method === "GET" && url.pathname === "/api/usage/rate-limits") {
     const daysParam = Number(url.searchParams.get("days"));
     const lookbackDays = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(90, daysParam) : undefined;
-    const identity = readWebIdentity(request);
+    const identity = await readWebIdentity(request);
     const userConfig = identity ? await usageStore().getUserConfig(identity.userId) : null;
 
     if (userConfig?.rateLimits) {
@@ -388,7 +412,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/usage/claude-rate-limits") {
-    const identity = readWebIdentity(request);
+    const identity = await readWebIdentity(request);
     const userConfig = identity ? await usageStore().getUserConfig(identity.userId) : null;
 
     if (userConfig?.claudeCodeRateLimits) {
@@ -473,7 +497,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/me") {
-    const identity = readWebIdentity(request);
+    const identity = await readWebIdentity(request);
     sendJson(request, response, 200, {
       authenticated: Boolean(identity),
       user: identity,
@@ -482,7 +506,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/benchmark/access") {
-    const identity = readWebIdentity(request);
+    const identity = await readWebIdentity(request);
     sendJson(request, response, 200, {
       authenticated: Boolean(identity),
       allowed: Boolean(identity && isGithubIdentityAllowed(identity, benchmarkAllowedGithubLogins())),
@@ -504,6 +528,8 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/auth/logout") {
+    const identity = await readWebIdentity(request);
+    if (identity) await authSessions.revoke(identity.userId, authSessionId(webToken(request)));
     response.setHeader("Set-Cookie", clearSessionCookie(request));
     const requestedReturnTo = url.searchParams.get("returnTo");
     redirect(response, sanitizeReturnTo(requestedReturnTo, allowedReturnOrigins(request, requestedReturnTo), "/"));
@@ -515,6 +541,11 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
 
+  if (url.pathname === "/api/auth/sessions" || /^\/api\/auth\/sessions\/[a-f0-9]{64}$/.test(url.pathname)) {
+    await handleAuthSessions(request, response, url);
+    return;
+  }
+
   if (request.method === "GET" && url.pathname === "/api/auth/github/callback") {
     await handleGithubCallback(request, response, url);
     return;
@@ -522,6 +553,15 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
 
   if (request.method === "POST" && url.pathname === "/api/auth/device/start") {
     await handleDeviceStart(request, response);
+    return;
+  }
+
+  if (request.method === "DELETE" && url.pathname === "/api/auth/agent/session") {
+    const token = readBearerToken(request);
+    const identity = verifyAgentSessionToken(token, authSecret());
+    if (!identity || !await authSessions.authorize(identity.userId, token, "agent")) { sendJson(request, response, 401, { error: "Agent login required" }); return; }
+    await authSessions.revoke(identity.userId, authSessionId(token));
+    sendJson(request, response, 200, { revoked: true });
     return;
   }
 
@@ -574,7 +614,7 @@ async function routeRequest(request: IncomingMessage, response: ServerResponse) 
   }
 
   if (request.method === "GET" && url.pathname === "/api/usage/me") {
-    const identity = readWebIdentity(request);
+    const identity = await readWebIdentity(request);
 
     if (!identity) {
       sendJson(request, response, 401, { error: "GitHub login required" });
@@ -704,7 +744,7 @@ type TeamUserProfile = {
 };
 
 async function handleTeamRateLimits(request: IncomingMessage, response: ServerResponse) {
-  const identity = readWebIdentity(request);
+  const identity = await readWebIdentity(request);
 
   if (!identity) {
     sendJson(request, response, 401, { error: "GitHub login required" });
@@ -716,7 +756,7 @@ async function handleTeamRateLimits(request: IncomingMessage, response: ServerRe
   const [configs, uploadUsers, events] = await Promise.all([
     store.listUserConfigs(),
     loadUploadUsers(),
-    store.listEvents(),
+    store.listUserProfileEvents(),
   ]);
   const profiles = buildTeamUserProfiles(uploadUsers, events);
   const users = configs.flatMap(({ userId, config }) => {
@@ -993,20 +1033,22 @@ async function buildUsageMePayload(
   }
 ) {
   const store = usageStore();
-  // Load only this user's events for the per-user breakdown, and derive the
-  // cross-user ranking from the aggregated leaderboard, so neither path scans the
-  // whole event table on every request.
+  const { summary } = await readUsageLeaderboard({ range, metric: "tokens", now, preferSnapshot });
+  if (store.kind === "postgres") {
+    const profile = await readAccountProfileJob({
+      databaseUrl: (process.env.TOKEN_BOARD_DATABASE_URL || process.env.DATABASE_URL || "").trim(),
+      postgresSchema: process.env.TOKEN_BOARD_POSTGRES_SCHEMA || "token_board",
+      postgresSsl: process.env.TOKEN_BOARD_DATABASE_SSL === "true" ? { rejectUnauthorized: process.env.TOKEN_BOARD_DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" } : undefined,
+      userId: identity.userId, range, now: now.toISOString(), summary,
+    });
+    return { schemaVersion: 1, source: "server", records: profile.records, totalRecords: await store.countEvents(),
+      generatedAt: new Date().toISOString(), user: identity, profile };
+  }
   const userEvents = await store.listEventsForUser(identity.userId);
   const profile = buildTokenAccountUsageProfile(userEvents, {
     userId: identity.userId,
     range,
     now,
-  });
-  const { summary } = await readUsageLeaderboard({
-    range,
-    metric: "tokens",
-    now,
-    preferSnapshot,
   });
   const rankedUser = summary.users.find((entry) => entry.userId === identity.userId) ?? null;
   const totalUsers = summary.users.length;
@@ -1050,7 +1092,7 @@ async function buildUsageMePayload(
 }
 
 async function handleUsageGoals(request: IncomingMessage, response: ServerResponse, url: URL) {
-  const identity = readWebIdentity(request);
+  const identity = await readWebIdentity(request);
 
   if (!identity) {
     sendJson(request, response, 401, { error: "GitHub login required" });
@@ -1361,18 +1403,17 @@ async function handlePublicUsageUser(request: IncomingMessage, response: ServerR
 
   const now = parseNow(url.searchParams.get("now"));
   const store = usageStore();
-  const [events, uploadUsers] = await Promise.all([store.listEvents(), loadUploadUsers()]);
-  const match = findPublicProfileUserEvents(events, uploadUsers, login);
+  const data = await readPublicProfileData(login, now);
 
-  if (!match) {
+  if (!data) {
     sendJson(request, response, 404, { error: "User not found" });
     return;
   }
 
-  const summary = buildPublicProfileSummary(match.events);
-  const rankings = PUBLIC_PROFILE_RANGES.map((range) => {
-    const rangeSummary = buildTokenLeaderboard(events, { range, metric: "tokens", now });
-    const rankedUser = rangeSummary.users.find((user) => user.userId === match.userId) ?? null;
+  const { summary, userId } = data;
+  const rankings = await Promise.all(PUBLIC_PROFILE_RANGES.map(async (range) => {
+    const { summary: rangeSummary } = await readUsageLeaderboard({ range, metric: "tokens", now, preferSnapshot: !url.searchParams.has("now") });
+    const rankedUser = rangeSummary.users.find((user) => user.userId === userId) ?? null;
 
     return {
       range,
@@ -1381,29 +1422,29 @@ async function handlePublicUsageUser(request: IncomingMessage, response: ServerR
       tokens: rankedUser?.tokens ?? 0,
       share: rankedUser?.share ?? 0,
     };
-  });
+  }));
 
   sendJson(request, response, 200, {
     schemaVersion: 1,
     source: "server",
-    records: match.events.length,
-    totalRecords: events.length,
+    records: summary.totals.records,
+    totalRecords: await store.countEvents(),
     generatedAt: new Date().toISOString(),
     user: {
-      userId: match.userId,
-      login: match.login,
-      githubLogin: match.login,
+      userId,
+      login,
+      githubLogin: login,
       displayName: summary.displayName,
       team: summary.team,
-      avatarUrl: `https://github.com/${match.login}.png`,
+      avatarUrl: `https://github.com/${login}.png`,
     },
     profile: {
       joinedAt: summary.joinedAt,
       lastReportedAt: summary.lastReportedAt,
       totals: summary.totals,
-      daily365: buildShanghaiDailySeries(match.events, now, PUBLIC_PROFILE_DAILY_DAYS),
-      models: buildPublicNamedUsage(match.events, "model", PUBLIC_PROFILE_TOP_LIMIT),
-      tools: buildPublicNamedUsage(match.events, "tool", PUBLIC_PROFILE_TOP_LIMIT),
+      daily365: data.daily,
+      models: data.models,
+      tools: data.tools,
       rankings,
     },
   });
@@ -2019,6 +2060,36 @@ function wrappedStreakLength(startDate: string, endDate: string) {
   return Math.floor((wrappedDayToTime(endDate) - wrappedDayToTime(startDate)) / WRAPPED_DAY_MS) + 1;
 }
 
+async function readPublicProfileData(login: string, now: Date) {
+  const store = usageStore();
+  if (!store.getPublicProfileAggregate) {
+    const match = await readPublicProfileMatch(login);
+    return match ? { userId: match.userId, summary: buildPublicProfileSummary(match.events), daily: buildShanghaiDailySeries(match.events, now, PUBLIC_PROFILE_DAILY_DAYS), models: buildPublicNamedUsage(match.events, "model", PUBLIC_PROFILE_TOP_LIMIT), tools: buildPublicNamedUsage(match.events, "tool", PUBLIC_PROFILE_TOP_LIMIT) } : null;
+  }
+  const [profiles, uploadUsers] = await Promise.all([store.listUserProfileEvents(), loadUploadUsers()]);
+  const configured = new Set(uploadUsers.filter((user) => publicProfileTextMatches(user.userId, login) || publicProfileTextMatches(user.displayName, login)).map((user) => user.userId));
+  const candidates = new Map<string, string[] | undefined>();
+  for (const profile of profiles) {
+    if (configured.has(profile.userId) || publicProfileTextMatches(profile.userId, login)) candidates.set(profile.userId, undefined);
+    else if (publicProfileTextMatches(profile.displayName, login)) candidates.set(profile.userId, [...(candidates.get(profile.userId) || []), profile.displayName]);
+  }
+  const aggregates = (await Promise.all([...candidates].map(([userId, names]) => store.getPublicProfileAggregate!(userId, names, now, PUBLIC_PROFILE_DAILY_DAYS, PUBLIC_PROFILE_TOP_LIMIT)))).filter((value) => value !== null);
+  const score = (profile: (typeof aggregates)[number]) => (publicProfileTextMatches(profile.userId, login) ? 1000 : 0) + (configured.has(profile.userId) ? 500 : 0) + (publicProfileTextMatches(profile.displayName, login) ? 100 : 0);
+  const selected = aggregates.sort((a,b) => score(b)-score(a) || Date.parse(b.lastReportedAt)-Date.parse(a.lastReportedAt) || b.totals.tokens-a.totals.tokens)[0];
+  if (!selected) return null;
+  const days = new Map(selected.daily.map((point) => [point.date, point.tokens]));
+  return { userId: selected.userId, summary: selected, daily: buildShanghaiDailySeries([], now, PUBLIC_PROFILE_DAILY_DAYS).map((point) => ({ ...point, tokens: days.get(point.date) || 0 })), models: selected.models, tools: selected.tools };
+}
+
+async function readPublicProfileMatch(login: string) {
+  const store = usageStore();
+  const [profiles, uploadUsers] = await Promise.all([store.listUserProfileEvents(), loadUploadUsers()]);
+  const configured = new Set(uploadUsers.filter((user) => publicProfileTextMatches(user.userId, login) || publicProfileTextMatches(user.displayName, login)).map((user) => user.userId));
+  const ids = [...new Set(profiles.filter((event) => configured.has(event.userId) || publicProfileTextMatches(event.userId, login) || publicProfileTextMatches(event.displayName, login)).map((event) => event.userId))];
+  const events = (await Promise.all(ids.map((userId) => store.listEventsForUser(userId)))).flat();
+  return findPublicProfileUserEvents(events, uploadUsers, login);
+}
+
 function findPublicProfileUserEvents(
   events: TokenUsageEvent[],
   uploadUsers: TokenBoardUploadUser[],
@@ -2263,7 +2334,7 @@ function latestPublicProfileEvent(events: TokenUsageEvent[]) {
 }
 
 async function handleSelectionExplain(request: IncomingMessage, response: ServerResponse) {
-  const identity = readWebIdentity(request);
+  const identity = await readWebIdentity(request);
 
   if (!identity) {
     sendJson(request, response, 401, {
@@ -2321,7 +2392,7 @@ async function handleSelectionExplain(request: IncomingMessage, response: Server
 }
 
 async function handleArticleChat(request: IncomingMessage, response: ServerResponse) {
-  const identity = readWebIdentity(request);
+  const identity = await readWebIdentity(request);
 
   if (!identity) {
     sendJson(request, response, 401, {
@@ -2390,6 +2461,11 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
     return;
   }
   const userConfig = extractUserConfigFromIngestBody(body);
+  const deviceId = readCollectionDeviceId(body);
+  if ((body as { deviceId?: unknown }).deviceId !== undefined && !deviceId) {
+    sendJson(request, response, 400, { error: "deviceId must be a UUID" });
+    return;
+  }
   const rawEvents = Array.isArray((body as { events?: unknown }).events)
     ? ((body as { events: Parameters<typeof sanitizeIngestEvents>[0] }).events)
     : [];
@@ -2435,7 +2511,7 @@ async function handleIngest(request: IncomingMessage, response: ServerResponse) 
   if (userConfig) {
     await store.upsertUserConfig(identity.userId, await mergeUserConfigForIngest(store, identity.userId, userConfig));
   }
-  const result = await store.insertEvents(sanitized.entries);
+  const result = await store.insertEvents(sanitized.entries, deviceId);
   if (result.accepted > 0) {
     queueLeaderboardSnapshotRefresh();
   }
@@ -2548,13 +2624,23 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   const command = replace as Record<string, unknown>;
+  const deviceId = readCollectionDeviceId(body);
+  const accountScope = command.scope === "account" && command.confirmAccount === identity.userId;
+  if (!deviceId && !accountScope) {
+    sendJson(request, response, 409, { error: "Device-scoped replacement requires deviceId. Upgrade the agent. Account replacement requires scope=account and confirmAccount=<your userId>." });
+    return;
+  }
+  if (command.scope && command.scope !== "device" && !accountScope) {
+    sendJson(request, response, 400, { error: "Invalid replacement scope or account confirmation" });
+    return;
+  }
   const phase = normalizeOptionalText(typeof command.phase === "string" ? command.phase : undefined);
   const replaceId = normalizeOptionalText(typeof command.replaceId === "string" ? command.replaceId : undefined);
   if (!replaceId || !/^[a-zA-Z0-9-]{8,80}$/.test(replaceId)) {
     sendJson(request, response, 400, { error: "replace.replaceId is invalid" });
     return;
   }
-  const stageKey = `${identity.userId}:${replaceId}`;
+  const stageKey = `${identity.userId}:${accountScope ? "account" : deviceId}:${replaceId}`;
   const store = usageStore();
 
   if (phase === "abort") {
@@ -2564,6 +2650,10 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   if (phase === "start") {
+    if (usageReplaceStages.has(stageKey)) {
+      sendJson(request, response, 409, { error: "Replacement ID already exists; use a new replaceId" });
+      return;
+    }
     const expectedEvents = Number(command.expectedEvents);
     const digest = normalizeOptionalText(typeof command.digest === "string" ? command.digest : undefined);
     if (!Number.isSafeInteger(expectedEvents) || expectedEvents <= 0) {
@@ -2580,6 +2670,8 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
     }
 
     usageReplaceStages.set(stageKey, {
+      deviceId: accountScope ? undefined : deviceId,
+      expectedRevision: await store.getDeviceRevision(identity.userId, accountScope ? "__account__" : deviceId!),
       createdAt: Date.now(),
       expectedEvents,
       digest,
@@ -2597,6 +2689,7 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
   }
 
   if (phase === "commit") {
+    if (stage.result) { sendJson(request, response, 200, stage.result); return; }
     const requestDigest = normalizeOptionalText(typeof command.digest === "string" ? command.digest : undefined);
     const stagedEvents = [...stage.events.values()];
     const actualDigest = tokenEventManifestDigest(stagedEvents);
@@ -2615,18 +2708,25 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
       return;
     }
 
-    const result = await store.replaceEventsForUser(identity.userId, stagedEvents);
+    let result;
+    try {
+      result = stage.deviceId
+        ? await store.replaceEventsForDevice(identity.userId, stage.deviceId, stagedEvents, stage.expectedRevision)
+        : await store.replaceEventsForUser(identity.userId, stagedEvents, stage.expectedRevision);
+    } catch (error) {
+      if (error instanceof DeviceRevisionConflict) { sendJson(request, response, 409, { error: error.message }); return; }
+      throw error;
+    }
     if (stage.userConfig) {
       await store.upsertUserConfig(
         identity.userId,
         await mergeUserConfigForIngest(store, identity.userId, stage.userConfig)
       );
     }
-    usageReplaceStages.delete(stageKey);
     if (result.deleted > 0 || result.accepted > 0) {
       queueLeaderboardSnapshotRefresh();
     }
-    sendJson(request, response, 200, {
+    stage.result = {
       ok: true,
       replaced: true,
       ...result,
@@ -2636,10 +2736,13 @@ async function handleReplace(request: IncomingMessage, response: ServerResponse)
         displayName: identity.displayName,
         team: identity.team || "GitHub",
       },
-    });
+    };
+    stage.events.clear();
+    sendJson(request, response, 200, stage.result);
     return;
   }
 
+  if (stage.result) { sendJson(request, response, 409, { error: "Replacement already committed" }); return; }
   if (phase !== "append") {
     sendJson(request, response, 400, { error: "replace.phase must be start, append, commit, or abort" });
     return;
@@ -2713,6 +2816,11 @@ function cleanupExpiredUsageReplaceStages(now = Date.now()) {
       usageReplaceStages.delete(key);
     }
   }
+}
+
+function readCollectionDeviceId(body: object): string | undefined {
+  const value = (body as { deviceId?: unknown }).deviceId;
+  return typeof value === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value) ? value.toLowerCase() : undefined;
 }
 
 function tokenEventManifestDigest(events: TokenUsageEvent[]) {
@@ -3177,6 +3285,7 @@ async function handleGithubStart(request: IncomingMessage, response: ServerRespo
     "/token-leaderboard/"
   );
   const state = createOAuthState(returnTo, authSecret(), OAUTH_STATE_TTL_SECONDS);
+  response.setHeader("Set-Cookie", oauthStateCookie(state, request, OAUTH_STATE_TTL_SECONDS));
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: `${publicBaseUrl(request)}/api/auth/github/callback`,
@@ -3201,7 +3310,7 @@ function publicPathPrefix(request: IncomingMessage) {
 }
 
 async function handlePrivateBlog(request: IncomingMessage, response: ServerResponse, slug: string) {
-  const identity = readWebIdentity(request);
+  const identity = await readWebIdentity(request);
 
   // Not logged in → bounce through GitHub OAuth, returning to this same page.
   // returnTo must be a same-site RELATIVE path (sanitizeReturnTo rejects
@@ -3243,9 +3352,11 @@ async function handlePrivateBlog(request: IncomingMessage, response: ServerRespo
 
 async function handleGithubCallback(request: IncomingMessage, response: ServerResponse, url: URL) {
   const code = url.searchParams.get("code");
-  const state = verifyOAuthState(url.searchParams.get("state") || "", authSecret());
+  const rawState = url.searchParams.get("state") || "";
+  const state = verifyOAuthState(rawState, authSecret());
+  const browserState = parseCookieHeader(request.headers.cookie).get("token_board_oauth");
 
-  if (!code || !state?.returnTo) {
+  if (!code || !state?.returnTo || browserState !== rawState || !(await authSessions.consumeOAuthState(rawState, state.exp * 1000))) {
     sendJson(request, response, 400, { error: "Invalid OAuth callback" });
     return;
   }
@@ -3253,15 +3364,14 @@ async function handleGithubCallback(request: IncomingMessage, response: ServerRe
   const accessToken = await exchangeGithubCode(code, `${publicBaseUrl(request)}/api/auth/github/callback`);
   const identity = await githubIdentityFromAccessToken(accessToken);
 
-  if (!isGithubIdentityAllowed(identity, allowedGithubLogins())) {
+  if (!isGithubIdentityAllowed(identity, allowedGithubLogins()) || await authSessions.isDisabled(identity.userId)) {
     sendJson(request, response, 403, { error: "This GitHub account is not allowed" });
     return;
   }
 
-  response.setHeader(
-    "Set-Cookie",
-    sessionCookie(createWebSessionToken(identity, authSecret(), WEB_SESSION_TTL_SECONDS), request, WEB_SESSION_TTL_SECONDS)
-  );
+  const token = createWebSessionToken(identity, authSecret(), WEB_SESSION_TTL_SECONDS);
+  await authSessions.register(identity.userId, token, "web", request.headers["user-agent"] || "Browser");
+  response.setHeader("Set-Cookie", [sessionCookie(token, request, WEB_SESSION_TTL_SECONDS), oauthStateCookie("", request, 0)]);
   redirect(response, state.returnTo);
 }
 
@@ -3317,14 +3427,16 @@ async function handleDevicePoll(request: IncomingMessage, response: ServerRespon
 
   const identity = await githubIdentityFromAccessToken(String(githubResponse.access_token || ""));
 
-  if (!isGithubIdentityAllowed(identity, allowedGithubLogins())) {
+  if (!isGithubIdentityAllowed(identity, allowedGithubLogins()) || await authSessions.isDisabled(identity.userId)) {
     sendJson(request, response, 403, { error: "This GitHub account is not allowed" });
     return;
   }
 
+  const token = createAgentSessionToken(identity, authSecret(), AGENT_SESSION_TTL_SECONDS);
+  await authSessions.register(identity.userId, token, "agent", request.headers["user-agent"] || "Token Board Agent");
   sendJson(request, response, 200, {
     status: "authorized",
-    token: createAgentSessionToken(identity, authSecret(), AGENT_SESSION_TTL_SECONDS),
+    token,
     user: identity,
     expiresIn: AGENT_SESSION_TTL_SECONDS,
   });
@@ -3335,12 +3447,13 @@ async function authenticateIngestRequest(request: IncomingMessage): Promise<Toke
   const agentIdentity = verifyAgentSessionToken(token, authSecret());
 
   if (agentIdentity) {
-    return agentIdentity;
+    return isGithubIdentityAllowed(agentIdentity, allowedGithubLogins()) && await authSessions.authorize(agentIdentity.userId, token, "agent") ? agentIdentity : undefined;
   }
 
   const legacyUser = findUserByUploadToken(await loadUploadUsers(), token);
 
   if (legacyUser) {
+    if (await authSessions.isDisabled(legacyUser.userId)) return undefined;
     return {
       userId: legacyUser.userId,
       displayName: legacyUser.displayName,
@@ -3351,13 +3464,41 @@ async function authenticateIngestRequest(request: IncomingMessage): Promise<Toke
   return undefined;
 }
 
-function readWebIdentity(request: IncomingMessage) {
-  const token = parseCookieHeader(request.headers.cookie).get(SESSION_COOKIE_NAME) || "";
-  return verifyWebSessionToken(token, authSecret());
+function webToken(request: IncomingMessage) {
+  return parseCookieHeader(request.headers.cookie).get(SESSION_COOKIE_NAME) || "";
+}
+
+async function readWebIdentity(request: IncomingMessage) {
+  const token = webToken(request);
+  const identity = verifyWebSessionToken(token, authSecret());
+  return identity && isGithubIdentityAllowed(identity, allowedGithubLogins()) && await authSessions.authorize(identity.userId, token, "web") ? identity : undefined;
 }
 
 async function readUsageRequestIdentity(request: IncomingMessage) {
-  return readWebIdentity(request) ?? (await authenticateIngestRequest(request));
+  return (await readWebIdentity(request)) ?? (await authenticateIngestRequest(request));
+}
+
+async function handleAuthSessions(request: IncomingMessage, response: ServerResponse, url: URL) {
+  const identity = await readWebIdentity(request);
+  if (!identity) { sendJson(request, response, 401, { error: "Login required" }); return; }
+  if (request.method === "GET" && url.pathname === "/api/auth/sessions") {
+    const currentId = authSessionId(webToken(request));
+    sendJson(request, response, 200, { sessions: (await authSessions.list(identity.userId)).map((session) => ({ ...session, current: session.id === currentId })) });
+    return;
+  }
+  if (request.method !== "DELETE") { sendJson(request, response, 405, { error: "Method not allowed" }); return; }
+  if (!request.headers["content-type"]?.startsWith("application/json") || (request.headers.origin && !isOriginAllowed(request.headers.origin, [...allowedReturnOrigins(request), new URL(publicBaseUrl(request)).origin]))) {
+    sendJson(request, response, 403, { error: "Session changes require a trusted origin and application/json" }); return;
+  }
+  const id = url.pathname.split("/")[4];
+  if (id) {
+    const revoked = await authSessions.revoke(identity.userId, id);
+    sendJson(request, response, revoked ? 200 : 404, { revoked });
+  } else {
+    await authSessions.revokeAll(identity.userId);
+    response.setHeader("Set-Cookie", clearSessionCookie(request));
+    sendJson(request, response, 200, { revoked: true });
+  }
 }
 
 async function loadUploadUsers(): Promise<TokenBoardUploadUser[]> {
@@ -3652,7 +3793,7 @@ function parseStatsRange(searchParams: URLSearchParams):
 
     return {
       range: "7D",
-      preferSnapshot: false,
+      preferSnapshot: !searchParams.has("now"),
       window: custom,
     };
   }
@@ -4021,11 +4162,11 @@ async function readUsageLeaderboard({
     }
   }
 
-  const live = await readLiveUsageLeaderboard({ range, metric, now, window });
+  const live = await readLiveUsageLeaderboard({ range, metric, now, window, preferCache: preferSnapshot });
 
   return {
     ...live,
-    generatedAt: new Date().toISOString(),
+    generatedAt: live.generatedAt,
     source: "live",
   };
 }
@@ -4035,22 +4176,33 @@ async function readLiveUsageLeaderboard({
   metric,
   now,
   window,
+  preferCache = false,
 }: {
   range: TokenBoardRange;
   metric: TokenBoardMetric;
   now: Date;
   window?: TokenLeaderboardWindow;
+  preferCache?: boolean;
 }) {
   const store = usageStore();
 
-  if (store.getLeaderboardSummary && !window) {
-    return store.getLeaderboardSummary({ range, metric, now });
+  if (store.kind === "postgres") {
+    const results = await readLiveLeaderboardJob({
+      databaseUrl: (process.env.TOKEN_BOARD_DATABASE_URL || process.env.DATABASE_URL || "").trim(),
+      postgresSchema: process.env.TOKEN_BOARD_POSTGRES_SCHEMA || "token_board",
+      postgresSsl: process.env.TOKEN_BOARD_POSTGRES_SSL === "true",
+      ranges: [range], metrics: LEADERBOARD_SNAPSHOT_METRICS, now: now.toISOString(),
+      window: window ? { range: "custom", start: window.start.toISOString(), end: window.end.toISOString(), previousStart: window.previousStart.toISOString(), previousEnd: window.previousEnd.toISOString() } : undefined,
+    }, preferCache);
+    const result = results.entries.find((entry) => entry.metric === metric)!;
+    return { records: result.records, summary: result.summary, generatedAt: results.generatedAt };
   }
 
   const events = await store.listEvents();
 
   return {
     records: events.length,
+    generatedAt: now.toISOString(),
     summary: buildTokenLeaderboard(events, { range, metric, now, window }),
   };
 }
@@ -4568,31 +4720,38 @@ async function refreshLeaderboardSnapshots(reason: string) {
 }
 
 async function refreshLeaderboardSnapshotsNow(reason: string) {
+  const startedAt = performance.now();
   const refreshedAt = new Date().toISOString();
+  leaderboardSnapshotRefreshStartedAt = refreshedAt;
   const nextCache = new Map<string, LeaderboardSnapshotEntry>();
   const store = usageStore();
-  const snapshotEvents = store.kind === "file" ? await store.listEvents() : null;
-
-  for (const range of LEADERBOARD_SNAPSHOT_RANGES) {
-    for (const metric of LEADERBOARD_SNAPSHOT_METRICS) {
-      const { records, summary } = snapshotEvents
-        ? {
-            records: snapshotEvents.length,
-            summary: buildTokenLeaderboard(snapshotEvents, { range, metric, now: new Date(refreshedAt) }),
-          }
-        : await readLiveUsageLeaderboard({
-            range,
-            metric,
-            now: new Date(refreshedAt),
-          });
-      nextCache.set(leaderboardSnapshotKey(range, metric), {
-        generatedAt: refreshedAt,
-        key: leaderboardSnapshotKey(range, metric),
-        metric,
-        range,
-        records,
-        summary,
-      });
+  if (store.kind === "postgres") {
+    const entries = await runLeaderboardSnapshotJob({
+      databaseUrl: (process.env.TOKEN_BOARD_DATABASE_URL || process.env.DATABASE_URL || "").trim(),
+      postgresSchema: normalizeOptionalText(process.env.TOKEN_BOARD_POSTGRES_SCHEMA) || "token_board",
+      postgresSsl: process.env.TOKEN_BOARD_DATABASE_SSL === "true" ? { rejectUnauthorized: process.env.TOKEN_BOARD_DATABASE_SSL_REJECT_UNAUTHORIZED !== "false" } : undefined,
+      ranges: LEADERBOARD_SNAPSHOT_RANGES,
+      metrics: LEADERBOARD_SNAPSHOT_METRICS,
+      now: refreshedAt,
+    });
+    for (const entry of entries) {
+      const key = leaderboardSnapshotKey(entry.range, entry.metric);
+      nextCache.set(key, { ...entry, key, generatedAt: refreshedAt });
+    }
+  } else {
+    const snapshotEvents = await store.listEvents();
+    for (const range of LEADERBOARD_SNAPSHOT_RANGES) {
+      for (const metric of LEADERBOARD_SNAPSHOT_METRICS) {
+        const summary = buildTokenLeaderboard(snapshotEvents, { range, metric, now: new Date(refreshedAt) });
+        nextCache.set(leaderboardSnapshotKey(range, metric), {
+          generatedAt: refreshedAt,
+          key: leaderboardSnapshotKey(range, metric),
+          metric,
+          range,
+          records: snapshotEvents.length,
+          summary,
+        });
+      }
     }
   }
 
@@ -4600,8 +4759,10 @@ async function refreshLeaderboardSnapshotsNow(reason: string) {
   leaderboardSnapshotLastRefreshAt = refreshedAt;
   leaderboardSnapshotLastError = "";
   await writeLeaderboardSnapshotsToFile();
+  leaderboardSnapshotLastCompletedAt = new Date().toISOString();
+  leaderboardSnapshotLastDurationMs = Math.round(performance.now() - startedAt);
   console.log(
-    `leaderboard snapshots refreshed (${reason}); entries=${leaderboardSnapshotCache.size}; generatedAt=${refreshedAt}`
+    `leaderboard snapshots refreshed (${reason}); entries=${leaderboardSnapshotCache.size}; generatedAt=${refreshedAt}; durationMs=${leaderboardSnapshotLastDurationMs}`
   );
 }
 
@@ -4759,6 +4920,10 @@ function sessionCookie(token: string, request: IncomingMessage, maxAgeSeconds: n
 
 function clearSessionCookie(request: IncomingMessage) {
   return sessionCookie("", request, 0);
+}
+
+function oauthStateCookie(state: string, request: IncomingMessage, maxAge: number) {
+  return sessionCookie(state, request, maxAge).replace(`${SESSION_COOKIE_NAME}=`, "token_board_oauth=").replace(/SameSite=[^;]+/, "SameSite=Lax");
 }
 
 function redirect(response: ServerResponse, location: string) {

@@ -1,9 +1,10 @@
 import type { TokenAccountUsageProfile, TokenLeaderboardSummary } from "@open-token-board/core";
 
 export type RemoteStatsResponse =
-  | (TokenLeaderboardSummary & { records?: number })
+  | (TokenLeaderboardSummary & { records?: number; generatedAt?: string })
   | {
       records?: number;
+      generatedAt?: string;
       summary?: TokenLeaderboardSummary;
     };
 

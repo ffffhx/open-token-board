@@ -1,12 +1,10 @@
 // Shared helpers for the real eval runner.
-import { spawn } from "node:child_process";
 import { mkdtempSync, cpSync, rmSync, existsSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import spawn from "cross-spawn";
 
-export const CLAUDE_CMD =
-  process.env.EVAL_CLAUDE_CMD ||
-  "/Users/bytedance/Documents/Codex/2026-06-10/aws-aws-cc-ip-aws/outputs/claude-clash.sh";
+export const CLAUDE_CMD = process.env.EVAL_CLAUDE_CMD || "claude";
 // Flagship + highest-reasoning defaults.
 export const CODEX_MODEL = process.env.EVAL_CODEX_MODEL || "gpt-5.5";
 export const CODEX_EFFORT = process.env.EVAL_CODEX_EFFORT || "xhigh";

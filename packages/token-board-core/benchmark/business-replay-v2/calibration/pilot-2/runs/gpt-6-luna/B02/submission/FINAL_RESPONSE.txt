@@ -1,0 +1,7 @@
+已完成实现与交付材料。刷新现在每个范围只执行一次 PostgreSQL 汇总，再为六种指标分别生成排行；新缓存完整生成并写盘后才替换旧缓存。
+
+基线与候选的 54 个快照条目哈希一致。候选中位数为 1339.342 ms，相比基线 6560.941 ms 改善 79.59%；7/7 轮配对改善。刷新期间 172 次读取均返回 HTTP 200，P95 为 64.441 ms。`pnpm typecheck` 和 `node tests/replay/compare-measurements.mjs` 均通过。
+
+[DELIVERY.md](C:/Users/aa182/AppData/Local/Temp/otb-v2-p2-1791003563990/gpt-6-luna/B02/DELIVERY.md) 记录逐轮数据、测量条件和限制；原始数据保存在 `artifacts/baseline-measurement.json` 与 `artifacts/measurement.json`。完整故障恢复、重叠刷新和重启场景未在本次重放中逐项验证，文档已说明。
+
+服务正在运行：<http://127.0.0.1:59061>。

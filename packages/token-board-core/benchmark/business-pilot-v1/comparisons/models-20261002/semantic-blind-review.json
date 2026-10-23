@@ -1,0 +1,16 @@
+{
+  "scope": "All eight B09 project-1 rewrites; reviewer received only source.md, TASK.txt and anonymous A-H submissions, with no model identities or scores",
+  "reviewer": "fresh-context secondary agent; final verdict remains coordinating-agent review; not human review",
+  "changesToSubmissions": false,
+  "changesToFrozenVerifier": false,
+  "runs": [
+    {"anonymousId":"A","model":"gpt-6-luna","finding":"supported","coordinatorDecision":"supported","notes":["背景、工具评测、Gateway/Ticket/CDP、接管能力和两个 Session 均获来源支持。"]},
+    {"anonymousId":"B","model":"gpt-5.6-sol","finding":"ambiguous","coordinatorDecision":"accepted-with-advisory","notes":["‘一次性 Ticket 用于申领连接’比来源中‘Wrapper 申领 Ticket、Daemon 建立长连接’更具体。视为可理解的链路推论，提示措辞边界，不单独判为明确编造。"]},
+    {"anonymousId":"C","model":"gpt-5.5","finding":"unsupported","coordinatorDecision":"unsupported-feature","notes":["‘让开发者可以看到任务状态’新增具体状态展示能力；来源只写悬浮控制条与暂停、接管、恢复操作，未说明状态展示。","‘它们更偏向独占式自动化’及‘开发者介入时 Agent 又可能继续发指令’是来源未说明的解释，应标明推测。","匿名复核另指出‘我在流舟实习期间’未见于指定来源；协调者注意到实习语境已出现在输入文档其他区段，不单以此判作虚构个人经历。失败依据为未经资料证实的具体功能。"]},
+    {"anonymousId":"D","model":"gpt-6-astra","finding":"supported","coordinatorDecision":"supported","notes":["技术链路、能力及数字有来源；引用章节 3.3 是结构编号，不是新增指标。"]},
+    {"anonymousId":"E","model":"gpt-5.6-luna","finding":"unsupported","coordinatorDecision":"overstated-evaluation-result","notes":["‘我们评测的 5 款主流工具都无法解决’把来源的‘现有工具普遍无法解决’扩成全部五款均失败。该评测结论强于资料。","另有独立的受保护区末尾一个换行丢失，业务文字未改。"]},
+    {"anonymousId":"F","model":"gpt-6.1-sol","finding":"supported","coordinatorDecision":"supported","notes":["背景、技术链路、控制条和两个 Session 有来源；控制面、统一调度入口属于合理概括。"]},
+    {"anonymousId":"G","model":"gpt-5.6-terra","finding":"unsupported","coordinatorDecision":"overstated-evaluation-result","notes":["‘发现它们都无法处理’把来源的‘普遍’扩大为‘全部’。","‘CDP 通信需要与 Agent Session 的身份和 Profile 租约关联’推定更具体的关联机制，来源的 Ticket/校验/租约描述尚不能证实该机制。","另有独立的受保护区末尾一个换行丢失，业务文字未改。"]},
+    {"anonymousId":"H","model":"gpt-6-sol","finding":"supported","coordinatorDecision":"supported","notes":["事实与数字有来源，明确没有底层接管状态转换或输入拦截实现材料。"]}
+  ]
+}

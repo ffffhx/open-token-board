@@ -1,0 +1,188 @@
+{
+  "criteria": [
+    {
+      "id": "business-context",
+      "status": "supported",
+      "candidateEvidence": [
+        "在流舟商业化拦截与支付流程的验证中，Agent 需要使用真实登录态，支付环节又需要人工介入。",
+        "Agent 要在真实登录态下完成页面验证，开发者也要能在支付环节接过操作。因此，仅能自动点击页面还不够，还需要安排好浏览器资源与操作控制权。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+      ],
+      "reason": "准确保留验证场景、真实登录态需求与支付人工介入。后一句是对已给定三项需求之间关系的直接概括，没有引入新的支付机制或个人经历。"
+    },
+    {
+      "id": "collaboration-problem",
+      "status": "supported",
+      "candidateEvidence": [
+        "我们评测了 6 款主流浏览器自动化工具，发现它们普遍难以解决开发者与 Agent 抢占同一个 Chrome 窗口和焦点的问题。",
+        "这个结论对应当时的评测范围，不能扩大成所有浏览器工具都不具备相关能力。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:193：我们对市面上 6 款主流浏览器自动化工具进行了多维度评测……发现现有工具普遍无法解决「开发者与 Agent 抢占同一个 Chrome 窗口与焦点」的问题。"
+      ],
+      "reason": "主体、数量和问题均匹配；明确限于当时评测范围，没有捏造具名竞品功能或评分。"
+    },
+    {
+      "id": "resource-allocation",
+      "status": "supported",
+      "candidateEvidence": [
+        "我设计并落地的 ProfilePilot 同时涉及本机 Profile 数据管理和可编程 Agent 协同控制。",
+        "Gateway 集中管理多个已登录 Chrome Profile 的资源与租约，动态把空闲 Profile 分配给 Agent Session。",
+        "资料中的调用流程说明，Agent 不带 `--session` 发命令，由 Gateway 原子绑定 Profile 并签发 Ticket，将资源选择收口到控制面。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:199：针对这一痛点，我设计并落地了 ProfilePilot 控制台。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:205（图注）：ProfilePilot 双核架构：左翼可编程 Agent 协同控制面与右翼本机优先 Profile 数据管理面。",
+        "defense-notes.md:207（图注）：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket。"
+      ],
+      "reason": "设计落地、Gateway 管理租约、空闲 Profile 与 Agent Session 的分配关系直接受来源支持；不带 --session 和原子绑定确见于图注，不因为原图缺失否认图注已有的文字事实。"
+    },
+    {
+      "id": "controlled-communication",
+      "status": "supported",
+      "candidateEvidence": [
+        "Agent 发出命令后，由 Wrapper 解析命令并向 Gateway 申领一次性 Ticket。",
+        "Daemon 通过 WebSocket 建立长连接，CDP 指令经过 Gateway 安全校验后，再通过专用管道转发给浏览器。",
+        "Ticket 与经过 Gateway 的通信链路则让命令接入和转发受到控制。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:207（图注）：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket。"
+      ],
+      "reason": "逐环节对应申请一次性授权、长连接、Gateway 校验、专用管道转发；“受到控制”是这些步骤的概括，没有升级为无限制控制或额外吊销保证。"
+    },
+    {
+      "id": "visible-handoff",
+      "status": "supported",
+      "candidateEvidence": [
+        "页面注入悬浮控制条，让开发者看到任务状态，并能暂停、接管或恢复 Agent 任务。",
+        "人工有明确的介入入口，支付流程也能衔接人工操作，减少人与 Agent 对同一窗口的争用。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:197（图注）：真实页面上的 Agent 控制条：任务进行中可暂停、继续，人和 Agent 不抢同一个窗口。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。"
+      ],
+      "reason": "暂停、接管、恢复均直接支持。“看到任务状态”可由可见控制条与任务进行中图注合理概括；“减少争用”比来源的互不干扰更保守，没有新增系统层拦截保证。"
+    },
+    {
+      "id": "observed-result",
+      "status": "supported",
+      "candidateEvidence": [
+        "项目支持日常并行运行 **3 个独立的 Agent 浏览器 Session**，用于多需求并行开发与自动化验证。",
+        "这是答辩材料记录的日常使用结果，不是最大并发容量或压力测试结论。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:209：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+      ],
+      "reason": "数量、独立性、日常使用及用途完整；明确不扩大成容量上限或性能实验。没有挪用其他项目数字。"
+    },
+    {
+      "id": "claim-boundaries",
+      "status": "supported",
+      "candidateEvidence": [
+        "ProfilePilot 是面向真实登录态验证的浏览器控制台，把 Chrome Profile 分配、Agent 通信与人工接管放在同一条协作链路中。",
+        "Profile 管理侧提供多个隔离 Profile 的端口分配、登录态同步和 Agent 占用查看。",
+        "Profile 分配决定任务使用哪个浏览器资源。",
+        "先为 Agent 安排浏览器资源，再通过受控链路执行页面操作，需要人工介入时通过控制条接管，之后可以恢复任务。",
+        "资料没有给出 ProfilePilot 的耗时降幅、故障率或覆盖人数。",
+        "没有展开登录态同步的事务步骤、接管时旧连接的具体失效机制或原生输入拦截实现。",
+        "事实依据：[实习答辩材料](references/defense-notes.md)第 3.3 节及该节图注；原图附件未提供。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:195（图注）：ProfilePilot：给多个隔离 Profile 分配端口、同步登录态，并查看 Agent 占用。",
+        "defense-notes.md:199：针对这一痛点，我设计并落地了 ProfilePilot 控制台。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。",
+        "defense-notes.md:205（图注）：ProfilePilot 双核架构：左翼可编程 Agent 协同控制面与右翼本机优先 Profile 数据管理面。",
+        "defense-notes.md:207（图注）：Agent 不带 --session 发命令，由 Gateway 原子绑定 Profile 并签发一次性 Ticket。",
+        "defense-notes.md:209：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。",
+        "defense-notes.md:189–209 完整项目小节没有 diff/staging/rename、controlGeneration、Input Guard、耗时降幅、故障率或覆盖人数的实现或测量。"
+      ],
+      "reason": "逐项复核新增断言：①控制台定位是三个明确能力的综合概括；②隔离 Profile、端口、登录态同步、占用查看均在 195 图注；③本机数据管理与可编程控制两侧在 205 图注；④原子绑定及不带 --session 在 207 图注；⑤个人设计落地在 199，未加入独立完成范围；⑥租约、Ticket、长连接和转发分别在 201–202，未引入生命周期或失效细则；⑦任务状态与接管在 197、203；⑧资源选择—受控操作—人工接管—恢复是已给功能关系的解释，不是新增测量；⑨对缺失实现与测量的声明与所给小节一致。常见追问重复以上事实及限制，无额外竞品能力断言。未发现 unsupported；没有必需事实 missing。"
+    },
+    {
+      "id": "readable-project",
+      "status": "supported",
+      "candidateEvidence": [
+        "### 业务背景与难点",
+        "### 方案：从 Agent 接入到人工接管",
+        "1. **接入与资源分配**",
+        "2. **受控通信**",
+        "3. **可见与可接管**",
+        "### 结果与表达口径",
+        "这三部分共同服务于一次验证任务：先为 Agent 安排浏览器资源，再通过受控链路执行页面操作，需要人工介入时通过控制条接管，之后可以恢复任务。"
+      ],
+      "sourceEvidence": [
+        "defense-notes.md:191：在商业化拦截与支付流程中，大量场景必须由 Agent 在真实登录态下操作页面完成验证，而支付环节又需要人工介入。",
+        "defense-notes.md:201：Gateway 统一管理：集中管理多个已登录的 Chrome Profile 资源与租约，动态分配空闲 Profile 给 Agent Session。",
+        "defense-notes.md:202：Wrapper 解析命令并向 Gateway 申领一次性 Ticket，Daemon 通过 WebSocket 建立长连接，CDP 指令经 Gateway 安全校验后通过专用管道转发。",
+        "defense-notes.md:203：在页面注入悬浮控制条，开发者可随时暂停、接管或恢复 Agent 任务，两者互不干扰。",
+        "defense-notes.md:209：支持日常并行运行 3 个独立的 Agent 浏览器 Session，实现多需求并行开发与自动化验证。"
+      ],
+      "reason": "可连贯读出背景、窗口焦点难点、角色分工、调用关系及结果；术语均有明确职责。虽重复短版与追问，但不是关键词堆砌或复制整份答辩，篇幅不作为扣分依据。"
+    },
+    {
+      "id": "report-chain",
+      "status": "supported",
+      "candidateEvidence": [
+        "本次恢复对象是历史路径 `/workspace/handbook.md` 的已保存工作内容，当前交付文件为本目录 `handbook.md`。",
+        "恢复直接来源：取结果第 21–39 行，去除 Read 行号，逐字保留文本和空行。",
+        "证明后续助手替换前所见内容与上述读取一致。只采用其中开场证据，没有将整段 Edit 反向套用到后续项目。",
+        "这些是仓库基线证据，不是用户保存版本；非零退出码不能作为命令成功或完整读取的承诺。",
+        "这是错误还原步骤；当前输入的使用说明、90 秒版等不应据此保留在恢复区域。",
+        "历史事件是节选，没有原生编辑器保存事件或连续工作树快照，因而不能确定 Ctrl+S 的准确发生时刻或证明记录之外没有其他版本。"
+      ],
+      "sourceEvidence": [
+        "E0231 / E0233，2026-09-03T13:35:02.135Z / 13:35:04.865Z：T008 Read /workspace/handbook.md，offset=25；返回第 26 行“### 45 秒精简版”、第 30 行“### 开场后的项目选择”、第 40 行“## 二、云杉科技·流舟实习”。",
+        "E0236 / E0243，2026-09-03T13:35:22.812Z / 13:35:25.542Z：T009 Read /workspace/handbook.md，offset=1, limit=45；第 20 行为第二段导语，第 21–39 行为待恢复区域，第 24 行整体开场标题，第 26 行 45 秒版，第 30 行项目选择，第 40 行实习总标题。开场原句含“StreamHub和”“以及Agent”“当时把 一个”。",
+        "E0251 / E0258，13:36:04.897Z / 13:36:07.535Z，与 E0281 / E0288，13:37:22.024Z / 13:37:24.743Z，均为同一 /workspace/handbook.md 的 Read；第 24–39 行与 E0243 相同。",
+        "E0301 / E0309，13:38:20.811Z / 13:38:23.559Z：T018 Edit，file_path=/workspace/handbook.md，replace_all=false；old_string 开头为“## 一、整体面试开场白\\n\\n### 45 秒精简版”，保有同一手写段落与项目选择；new_string 增加“### 90 秒主版本”；结果为 updated successfully。",
+        "E0370，13:42:30.083Z：用户说“整体面试开场白别改！ 就改项目就行，整体面试开场白给我还原一下”。",
+        "E0374 / E0376，13:42:39.095Z / 13:42:42.729Z：git diff origin/main -- handbook.md，返回“index e6c0a73..f0d9850 100644”。E0384 / E0386，13:42:49.959Z / 13:42:53.810Z：git show origin/main:handbook.md，结果带 Exit code 255；可见仓库开场包含“## 怎么使用这份手册”和“### 90 秒主版本”。",
+        "E0399 / E0401，13:43:23.920Z / 13:43:26.718Z：T025 Edit 同一 /workspace/handbook.md；new_string 加回“## 怎么使用这份手册”和仓库式 90 秒、45 秒、项目选择，结果为 updated successfully。该次 Edit 本身止于实习总标题。",
+        "E0404 / E0411，13:43:34.053Z / 13:43:37.765Z：T026 git diff origin/main -- handbook.md | Select-Object -First 40；结果带 Exit code 255。",
+        "E0427，13:46:50.295Z：用户说“这是最初的那一版；最初的版本我自己手动更改，然后按Ctrl +  S保存了，我要我自己按Ctrl + S保存后的那个版本”。",
+        "MATERIALS.md：候选提交 cb414f0586b0bc78090b2c59d7e47ea38ebaa95d 对应 blob e6c0a732d0b0b394f8483eab370d8c9202438f2f；记录没有证明当时完整仓库 HEAD，不能替代已保存但未提交的内容；历史是节选，没有原生编辑器保存事件或完整工作树快照；原图未提供。"
+      ],
+      "reason": "材料中的时间、工具调用与返回配对、/workspace/handbook.md 身份、旧读取、Edit old_string、仓库基线及错误还原之间的区分一致；目标由多次读取和首次 Edit 的旧文本交叉支持。准确识别 E0386/E0411 非零退出码，没有宣称原生 Ctrl+S 证据、完整 HEAD 或原始物理字节。报告对项目正文来源及删去无证实现的描述与所见正文一致。该项在本次授权的材料证据链与文本内部一致性范围内通过；脚本是否实际执行、哈希计算和范围外字节断言由协调者另查，未在此冒充已经核验。"
+    }
+  ],
+  "unsupportedClaims": [],
+  "businessPassed": true,
+  "deliveryPassed": true,
+  "reviewer": "independent-anonymous-content-review; rubric-v2; no model identity or score access; text evidence only",
+  "candidateSha256": "1076b47474a47142dec931646d7ff268019737cee070a1dbd5238b08952937a7",
+  "uncertainties": [
+    {
+      "topic": "实际执行和全文件差异的外部核验",
+      "decision": "本审查不作确认或否认；deliveryPassed 仅表示所授权的正文、材料证据链和文本内部一致性通过。",
+      "reason": "匿名 packet 只给项目正文与报告；报告所述 Python 执行、首次编码失败、完整文件比较、链接扫描和 SHA-256/Git blob 计算须由协调者对执行记录及实际文件另查。不能从历史节选没有这些后续事件推出其未执行。"
+    },
+    {
+      "topic": "控制条显示任务状态",
+      "decision": "supported",
+      "reason": "来源 197 图注明确描述任务进行中的控制条，203 又称可见可接管；候选未加入具体可视字段或更新机制，属于可接受概括。"
+    }
+  ],
+  "independentReviewSha256": "68d97ddc6f369b556c50cb3d79dbcacdbda9df27654c9846a7196e6240b37228",
+  "coordinatorVerification": {
+    "humanReview": false,
+    "transcriptChecks": [
+      "Actual Python assertion output confirms exact restored opening, protected content, links and read-only inputs.",
+      "Initial encoding failure occurred before write and was honestly reported; explicit UTF-8 rerun passed."
+    ],
+    "scope": "Machine scope and protected substantive content checks pass; original submission retained."
+  },
+  "adjudication": {
+    "decision": "Accept as a complete source-grounded rewrite.",
+    "captionBoundary": "Task-state visibility is accepted as a high-level paraphrase of the visible control bar and ongoing/pause/continue caption (lines 197/203), not as a claim of additional status fields or telemetry."
+  }
+}

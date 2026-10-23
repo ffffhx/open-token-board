@@ -1,0 +1,17 @@
+已完成 B02 任务并保留服务运行。
+
+修改：
+
+- 优化完整快照刷新：PostgreSQL 事件只读取一次，内存生成全部 54 个范围/指标结果。
+- 保持完整统计字段、排序、趋势、荣誉、效率、上海时区日序列和失败时旧缓存。
+- 新增 [DELIVERY.md](C:/Users/aa182/AppData/Local/Temp/otb-v2-1790998806715/gpt-5.6-luna/B02/DELIVERY.md)。
+- 保留基线与最终原始测量：`artifacts/measurement-baseline.json`、`artifacts/measurement.json`。
+
+验证：
+
+- `pnpm typecheck` 通过。
+- 刷新中位数：7751.409 ms → 4681.756 ms，改善 39.6%。
+- 54 项结果与基线逐项一致。
+- 候选读取 P95：95.637 ms。
+- 服务地址：http://127.0.0.1:55993
+- 已验证 `/api/usage/health` 和 leaderboard 接口返回有效结果。

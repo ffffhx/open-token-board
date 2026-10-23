@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-6-sol",
+  "label": "GPT-6 Sol",
+  "caseId": "B11",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": true,
+  "checksPassed": 19,
+  "checksTotal": 19,
+  "checks": [
+    {
+      "id": "protected-inputs",
+      "passed": true
+    },
+    {
+      "id": "report",
+      "passed": true
+    },
+    {
+      "id": "fixture-reproduces-stale-content",
+      "passed": true
+    },
+    {
+      "id": "static-http",
+      "passed": true
+    },
+    {
+      "id": "current-release-command",
+      "passed": true
+    },
+    {
+      "id": "current-json",
+      "passed": true
+    },
+    {
+      "id": "current-html",
+      "passed": true
+    },
+    {
+      "id": "current-access-control",
+      "passed": true
+    },
+    {
+      "id": "current-other-posts",
+      "passed": true
+    },
+    {
+      "id": "current-static-privacy",
+      "passed": true
+    },
+    {
+      "id": "repeat-release-command",
+      "passed": true
+    },
+    {
+      "id": "repeat-is-idempotent",
+      "passed": true
+    },
+    {
+      "id": "source-preserved",
+      "passed": true
+    },
+    {
+      "id": "new-edit-release-command",
+      "passed": true
+    },
+    {
+      "id": "new-edit-json",
+      "passed": true
+    },
+    {
+      "id": "new-edit-html",
+      "passed": true
+    },
+    {
+      "id": "new-edit-access-control",
+      "passed": true
+    },
+    {
+      "id": "new-edit-other-posts",
+      "passed": true
+    },
+    {
+      "id": "new-edit-static-privacy",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T15:29:59.359Z",
+    "taskStartedAt": "2026-10-02T15:29:59.538Z",
+    "taskCompletedAt": "2026-10-02T15:37:45.621Z",
+    "taskWallMs": 466083,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-6-sol"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 480452,
+      "cached_input_tokens": 435456,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 5893,
+      "reasoning_output_tokens": 1686,
+      "total_tokens": 486345
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "f5953b0640a05fb41c3b09baa953e27bbb82f84f074fc91e5ea2ec1332abeed4",
+    "toolCallCount": 16,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T15:42:45.576Z",
+    "notes": [
+      "已阅读实现与报告；目标Markdown导出、逐文章同步和静态发布组成可重复命令，19项机器检查与文件范围通过。",
+      "报告描述本地HTTP验证及隔离副本第二次发布，不夸大成生产部署；外部验收独立确认正文、权限和其他内容保留。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "fb7ad17a7c91133ca69766b7eb86ca627309c8c7e83752194dbb8f1932f28e30"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "b23e6b5a026fb0af69d3395f5f2cdb0564e48ab4caaef5ee33d7fdd457701348"
+    }
+  ],
+  "rawGradeSha256": "049ee6c1bd4f561fceba03fe687b402221ff97c982cb296ce9ddcf131796eb89"
+}

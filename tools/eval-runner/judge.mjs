@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync, mkdtempSync, rmSync, mkdirSync } from "nod
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
+import spawn from "cross-spawn";
 import { CLAUDE_CMD, CODEX_MODEL, CLAUDE_MODEL } from "./lib.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

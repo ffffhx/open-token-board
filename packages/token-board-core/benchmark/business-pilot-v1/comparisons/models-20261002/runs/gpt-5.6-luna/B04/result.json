@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5.6-luna",
+  "label": "GPT-5.6 Luna",
+  "caseId": "B04",
+  "trial": 1,
+  "status": "accepted",
+  "suiteHash": "66d0c8a85e8cbfa05b15514e2e6aadf6ca5f13d5692f5c19dc7a71a40dd2943d",
+  "machineAccepted": false,
+  "checksPassed": 12,
+  "checksTotal": 13,
+  "checks": [
+    {
+      "id": "catalog-win32-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-darwin-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-linux-missing-and-stale",
+      "passed": true
+    },
+    {
+      "id": "catalog-fresh-authority-and-ownership",
+      "passed": true
+    },
+    {
+      "id": "catalog-explicit-directory-and-validation",
+      "passed": false,
+      "details": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ []\n- [\n-   [\n-     25001,\n-     'Last port fallback'\n-   ]\n- ]\n"
+    },
+    {
+      "id": "catalog-malformed-registry-fallback",
+      "passed": true
+    },
+    {
+      "id": "ui-module-load",
+      "passed": true
+    },
+    {
+      "id": "rename-one-submit-existing-behavior",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-status-refresh",
+      "passed": true
+    },
+    {
+      "id": "rename-draft-survives-pending-save",
+      "passed": true
+    },
+    {
+      "id": "rename-failure-keeps-draft-and-retry",
+      "passed": true
+    },
+    {
+      "id": "rename-profile-boundary-and-noop-render",
+      "passed": true
+    },
+    {
+      "id": "report-present",
+      "passed": true
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "REPORT.md",
+      "src/profile-catalog.mjs",
+      "src/render-root.mjs"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "execution": {
+    "sessionCreatedAt": "2026-10-02T16:01:15.277Z",
+    "taskStartedAt": "2026-10-02T16:01:15.479Z",
+    "taskCompletedAt": "2026-10-02T16:05:06.425Z",
+    "taskWallMs": 230946,
+    "recordedModelProvider": "openai",
+    "observedModels": [
+      "gpt-5.6-luna"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "tokenUsage": {
+      "input_tokens": 767068,
+      "cached_input_tokens": 728832,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 8222,
+      "reasoning_output_tokens": 2189,
+      "total_tokens": 775290
+    },
+    "tokenUsageSource": "Codex session cumulative token_count; not billed cost or context occupancy",
+    "costUsd": null,
+    "transcriptSha256": "d1a0ba38ec60533ed3657875ddcf20c374ab8940074f3183a489a886bc0b41fa",
+    "toolCallCount": 20,
+    "turnCount": 1
+  },
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "status": "accepted",
+    "humanReview": false,
+    "reviewedAt": "2026-10-02T16:06:31.394Z",
+    "notes": [
+      "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "REPORT.md",
+      "sha256": "d375f9a86a23fb853ae6b42a1f286789919413ebd7ae1badab4e729c30acc362"
+    },
+    {
+      "path": "src/profile-catalog.mjs",
+      "sha256": "297c722ff0968bc9aa31dc3f7d2a8dcb6d8795d34b59885c3ebdd7e6c5f2915f"
+    },
+    {
+      "path": "src/render-root.mjs",
+      "sha256": "d42c9a37b2405e00b37551e50d03c166fb4bd8de21cea94269d0946990c4a968"
+    }
+  ],
+  "rawGradeSha256": "60be3ca421d357abe3e3364bc090ca61786c57fc7f53443e9dbf9abd6d711de0",
+  "supplementalEnvironmentCheck": {
+    "passed": true,
+    "checks": [
+      {
+        "id": "explicit-directory-via-process-env",
+        "passed": true
+      }
+    ],
+    "sourceChanged": false,
+    "adapterChange": "Inject only CPM_DATA_DIR into mock process.env; participant code unchanged",
+    "script": "check-b04-env.mjs",
+    "scriptSha256": "eb6bc76879399ef8d753b35c95d03ff59de151b7ae92b59f31548d76d1c2d6b8"
+  },
+  "machineCheckAdjudication": {
+    "policy": "adjudication.json",
+    "reviewer": "coordinating-agent",
+    "correctedChecks": [
+      "catalog-explicit-directory-and-validation"
+    ],
+    "reason": [
+      "Unchanged source passes identical explicit-directory validation through process.env. Private input.env convention was not specified by TASK. Remaining 12 frozen checks, scope and readable qualified report pass."
+    ],
+    "rawMachineAccepted": false
+  }
+}

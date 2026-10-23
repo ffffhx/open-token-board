@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 2,
+  "model": "gpt-6-astra",
+  "caseId": "B09",
+  "status": "reviewed",
+  "suiteHash": "f6d666d3434d99919602657d79be81e7efe3b9a53ed856d1d003cd3a8b2de43e",
+  "execution": {
+    "taskStartedAt": "2026-10-03T03:42:10.854Z",
+    "taskCompletedAt": "2026-10-03T03:47:54.439Z",
+    "wallMs": 343585,
+    "observedModels": [
+      "gpt-6-astra"
+    ],
+    "observedReasoningEfforts": [
+      "medium"
+    ],
+    "turnCount": 1,
+    "tokenUsage": {
+      "input_tokens": 368369,
+      "cached_input_tokens": 320640,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 7871,
+      "reasoning_output_tokens": 399,
+      "total_tokens": 376240
+    },
+    "costUsd": null,
+    "transcriptSha256": "30f666a775f3ea42c4ae659be946ae5fcd5c508045d0dd8dd34fd7f145b99dde",
+    "tokenMeaning": "Cumulative API usage including repeated and cached input; not billed cost or context size"
+  },
+  "budgetExceeded": false,
+  "machineBusinessAccepted": true,
+  "machineAccepted": true,
+  "categories": {
+    "business": {
+      "passed": true,
+      "passedCount": 3,
+      "total": 3
+    },
+    "preservation": {
+      "passed": true,
+      "passedCount": 4,
+      "total": 4
+    },
+    "delivery": {
+      "passed": true,
+      "passedCount": 1,
+      "total": 1
+    },
+    "precision": {
+      "passed": true,
+      "passedCount": 3,
+      "total": 3
+    }
+  },
+  "checks": [
+    {
+      "id": "file-scope",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "unexpectedFiles": []
+      }
+    },
+    {
+      "id": "readonly-materials",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "modifiedOrMissing": []
+      }
+    },
+    {
+      "id": "document-regions",
+      "passed": true,
+      "category": "preservation",
+      "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+    },
+    {
+      "id": "opening-version",
+      "passed": true,
+      "category": "business",
+      "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+    },
+    {
+      "id": "protected-content",
+      "passed": true,
+      "category": "preservation",
+      "details": {
+        "changedRegions": [],
+        "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+      }
+    },
+    {
+      "id": "project-revised",
+      "passed": true,
+      "category": "business",
+      "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+    },
+    {
+      "id": "source-claims-review",
+      "passed": true,
+      "category": "business",
+      "required": false,
+      "details": {
+        "flaggedClaims": [],
+        "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+      }
+    },
+    {
+      "id": "report-delivered",
+      "passed": true,
+      "category": "delivery",
+      "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+    },
+    {
+      "id": "opening-bytes",
+      "passed": true,
+      "category": "precision",
+      "details": "Exact sanitized LF content including intra-paragraph spacing."
+    },
+    {
+      "id": "protected-bytes",
+      "passed": true,
+      "category": "precision",
+      "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+    },
+    {
+      "id": "utf8-lf",
+      "passed": true,
+      "category": "precision",
+      "details": "UTF-8 without BOM, replacement characters or CRLF."
+    }
+  ],
+  "scope": {
+    "passed": true,
+    "changed": [
+      "handbook.md",
+      "REPORT.md"
+    ],
+    "forbidden": [],
+    "ignoredGeneratedPaths": []
+  },
+  "infrastructureError": null,
+  "candidateInputUnchanged": true,
+  "verifierDetails": {
+    "passed": true,
+    "businessPassed": true,
+    "preservationPassed": true,
+    "deliveryPassed": true,
+    "checks": [
+      {
+        "id": "file-scope",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "unexpectedFiles": []
+        }
+      },
+      {
+        "id": "readonly-materials",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "modifiedOrMissing": []
+        }
+      },
+      {
+        "id": "document-regions",
+        "passed": true,
+        "category": "preservation",
+        "details": "Two editable regions and their surrounding protected headings must remain identifiable and unique."
+      },
+      {
+        "id": "opening-version",
+        "passed": true,
+        "category": "business",
+        "details": "Opening text and section arrangement must match the historical content; whitespace precision is reported separately."
+      },
+      {
+        "id": "protected-content",
+        "passed": true,
+        "category": "preservation",
+        "details": {
+          "changedRegions": [],
+          "explanation": "Checks actual text and Markdown structure outside both editable regions; a trailing blank line cannot be the only failure."
+        }
+      },
+      {
+        "id": "project-revised",
+        "passed": true,
+        "category": "business",
+        "details": "Project 1 must be edited and nonempty. There is no minimum length; completeness, source support and readability require the structured rubric review."
+      },
+      {
+        "id": "source-claims-review",
+        "passed": true,
+        "category": "business",
+        "required": false,
+        "details": {
+          "flaggedClaims": [],
+          "explanation": "Advisory only: numeric claims, quoted examples and negations require contextual review. This heuristic cannot establish an unsupported assertion or block business acceptance."
+        }
+      },
+      {
+        "id": "report-delivered",
+        "passed": true,
+        "category": "delivery",
+        "details": "A nonempty REPORT.md is delivered; its evidence, accuracy and readability are not established by this check and require formal review."
+      },
+      {
+        "id": "opening-bytes",
+        "passed": true,
+        "category": "precision",
+        "details": "Exact sanitized LF content including intra-paragraph spacing."
+      },
+      {
+        "id": "protected-bytes",
+        "passed": true,
+        "category": "precision",
+        "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+      },
+      {
+        "id": "utf8-lf",
+        "passed": true,
+        "category": "precision",
+        "details": "UTF-8 without BOM, replacement characters or CRLF."
+      }
+    ],
+    "precisionChecks": [
+      {
+        "id": "opening-bytes",
+        "passed": true,
+        "category": "precision",
+        "details": "Exact sanitized LF content including intra-paragraph spacing."
+      },
+      {
+        "id": "protected-bytes",
+        "passed": true,
+        "category": "precision",
+        "details": "Exact protected-region bytes after LF normalization; differences are separate from substantive preservation."
+      },
+      {
+        "id": "utf8-lf",
+        "passed": true,
+        "category": "precision",
+        "details": "UTF-8 without BOM, replacement characters or CRLF."
+      }
+    ],
+    "manualReviewRequired": true,
+    "reviewStatus": "pending-semantic-review",
+    "reviewPacket": {
+      "rubric": "fact-rubric.json",
+      "candidateSha256": "1076b47474a47142dec931646d7ff268019737cee070a1dbd5238b08952937a7",
+      "projectBody": "\n### 一句话定位\n\nProfilePilot 是面向真实登录态验证的浏览器控制台，把 Chrome Profile 分配、Agent 通信与人工接管放在同一条协作链路中。\n\n### 30 秒版\n\n在流舟商业化拦截与支付流程的验证中，Agent 需要使用真实登录态，支付环节又需要人工介入。我们评测了 6 款主流浏览器自动化工具，发现它们普遍难以解决开发者与 Agent 抢占同一个 Chrome 窗口和焦点的问题。我设计并落地了 ProfilePilot：由 Gateway 给 Agent Session 分配空闲的已登录 Profile，统一校验和转发浏览器指令，再通过页面控制条让开发者暂停、接管或恢复任务。项目支持日常并行运行 3 个独立的 Agent 浏览器 Session，用于多需求并行开发与自动化验证。\n\n### 业务背景与难点\n\n商业化验证需要贯通页面操作与支付流程：Agent 要在真实登录态下完成页面验证，开发者也要能在支付环节接过操作。因此，仅能自动点击页面还不够，还需要安排好浏览器资源与操作控制权。\n\n难点在于多个参与者共享浏览器时的协调。多个 Agent 需要各自可用的 Profile，开发者与 Agent 又可能争用同一个窗口和焦点。对 6 款主流工具的评测发现，这一问题普遍没有得到解决；这个结论对应当时的评测范围，不能扩大成所有浏览器工具都不具备相关能力。\n\n### 方案：从 Agent 接入到人工接管\n\n我设计并落地的 ProfilePilot 同时涉及本机 Profile 数据管理和可编程 Agent 协同控制。Profile 管理侧提供多个隔离 Profile 的端口分配、登录态同步和 Agent 占用查看；控制侧把资源分配、指令通信和人工操作入口连接起来。\n\n1. **接入与资源分配**：Agent 发出命令后，由 Wrapper 解析命令并向 Gateway 申领一次性 Ticket。Gateway 集中管理多个已登录 Chrome Profile 的资源与租约，动态把空闲 Profile 分配给 Agent Session。资料中的调用流程说明，Agent 不带 `--session` 发命令，由 Gateway 原子绑定 Profile 并签发 Ticket，将资源选择收口到控制面。\n2. **受控通信**：Daemon 通过 WebSocket 建立长连接，CDP 指令经过 Gateway 安全校验后，再通过专用管道转发给浏览器。Profile 分配决定任务使用哪个浏览器资源，Ticket 与经过 Gateway 的通信链路则让命令接入和转发受到控制。\n3. **可见与可接管**：页面注入悬浮控制条，让开发者看到任务状态，并能暂停、接管或恢复 Agent 任务。这样在 Agent 使用已分配 Profile 执行验证的过程中，人工有明确的介入入口，支付流程也能衔接人工操作，减少人与 Agent 对同一窗口的争用。\n\n这三部分共同服务于一次验证任务：先为 Agent 安排浏览器资源，再通过受控链路执行页面操作，需要人工介入时通过控制条接管，之后可以恢复任务。\n\n### 结果与表达口径\n\n项目支持日常并行运行 **3 个独立的 Agent 浏览器 Session**，用于多需求并行开发与自动化验证。这是答辩材料记录的日常使用结果，不是最大并发容量或压力测试结论。资料没有给出 ProfilePilot 的耗时降幅、故障率或覆盖人数，不将其他项目的切号耗时、团队人数或商业化收入增幅归到这里。\n\n### 常见追问\n\n**为什么需要在浏览器自动化工具之上增加控制台？**\n\n业务既需要 Agent 使用真实登录态完成验证，也需要人在支付环节介入。评测中暴露出的窗口与焦点争用，使 Profile 分配和人机接管成为必须一起处理的问题。ProfilePilot 将资源租约、通信校验和可见的人工入口串起来，支撑多个独立任务并行推进。\n\n**Profile 分配与受控通信分别解决什么问题？**\n\n前者由 Gateway 管理资源与租约，将空闲 Profile 绑定到 Agent Session；后者通过 Wrapper 申领一次性 Ticket、Daemon 建立 WebSocket 连接，再由 Gateway 校验和转发 CDP 指令。二者分别处理任务用哪个浏览器资源，以及指令如何进入浏览器，人工控制条则提供任务执行中的接管入口。\n\n**哪些实现细节还不能作为面试中的确定事实？**\n\n现有答辩材料支持上述调用链路、接管能力和日常 3 个独立 Session 的使用结果，但没有展开登录态同步的事务步骤、接管时旧连接的具体失效机制或原生输入拦截实现。追问这些细节时需要进一步核对源码或设计资料，不能仅凭旧手册中的描述作保证。\n\n事实依据：[实习答辩材料](references/defense-notes.md)第 3.3 节及该节图注；原图附件未提供。\n\n---\n\n",
+      "report": "# 文档修复报告\n\n## 版本选择与证据链\n\n本次恢复对象是历史路径 `/workspace/handbook.md` 的已保存工作内容，当前交付文件为本目录 `handbook.md`。没有用仓库快照覆盖全文。以下时间均为 UTC，事件见只读的 `.history/tool-events.jsonl`；Read 的行号是当时文件行号。\n\n| 事件与时间 | 文件身份与证据 | 判断 |\n| --- | --- | --- |\n| E0043 / E0045，2026-09-03 13:21:29.053 / 13:21:33.280；E0138 / E0140，13:23:25.888 / 13:23:29.672 | T001、T002 读取 `/workspace/handbook.md` 的早期内容 | 早期版本不能替代后来的手动保存内容。 |\n| E0236 / E0243，13:35:22.812 / 13:35:25.542 | T009 读取同一路径第 1–45 行，包含 front matter、两段导语、完整开场及实习与项目 1 标题 | 恢复直接来源：取结果第 21–39 行，去除 Read 行号，逐字保留文本和空行。该版只有“45 秒精简版”和“开场后的项目选择”，没有使用说明或 90 秒主版本。 |\n| E0251 / E0258，13:36:04.897 / 13:36:07.535；E0281 / E0288，13:37:22.024 / 13:37:24.743 | T011、T015 再读同一路径的开场，内容相同 | 交叉核对恢复区域，不因不同时间的行号相同而假定版本相同。 |\n| E0301 / E0309，13:38:20.811 / 13:38:23.559 | T018 Edit，`file_path=/workspace/handbook.md`，`replace_all=false`；`old_string` 包含相同开场，结果报告更新成功 | 证明后续助手替换前所见内容与上述读取一致。只采用其中开场证据，没有将整段 Edit 反向套用到后续项目。 |\n| E0370，13:42:30.083 | 用户要求只改项目、还原整体开场 | 明确还原范围。 |\n| E0374 / E0376，13:42:39.095 / 13:42:42.729；E0384 / E0386，13:42:49.959 / 13:42:53.810 | T022 对 `handbook.md` 作 `git diff origin/main`，旧 blob 为 `e6c0a73`；T023 读取 `origin/main:handbook.md`，但返回 Exit code 255 | 这些是仓库基线证据，不是用户保存版本；非零退出码不能作为命令成功或完整读取的承诺。 |\n| E0399 / E0401，13:43:23.920 / 13:43:26.718 | T025 Edit 将仓库式开场写回同一文件，并报告成功 | 这是错误还原步骤；当前输入的使用说明、90 秒版等不应据此保留在恢复区域。 |\n| E0404 / E0411，13:43:34.053 / 13:43:37.765 | T026 再取 diff，Exit code 255 | 仅参考可见 diff 文字，不能将其当完整成功验证。 |\n| E0427，13:46:50.295 | 用户明确说明自己手动修改并按 Ctrl+S 保存，要求保存后的版本 | 与替换前多次 Read 和 Edit 的旧文本共同支持本次版本选择。 |\n\n`MATERIALS.md` 给出的候选提交是 `cb414f0586b0bc78090b2c59d7e47ea38ebaa95d`，对应旧 Git blob `e6c0a732d0b0b394f8483eab370d8c9202438f2f`。这是材料提供的原始身份映射，不证明当时完整仓库 HEAD，也不能取代未提交的保存内容。另对离线 `.history/repository-document.md` 按 Git blob 算法计算得到 `89d751cc15682f4e2642943e67e234e56e4edfa2`；未将脱敏、统一换行后的导出字节误认为原 Git blob，也未据此宣称验证了原提交。\n\n## 实际修改范围\n\n- `handbook.md`：两段导语之后、实习总标题之前的开场区域，恢复为 E0243 第 21–39 行。保留原有措辞与空格，例如“StreamHub和”“以及Agent”“当时把 一个”，没有润色手动版本。\n- `handbook.md`：仅重写项目 1 主标题下的正文。按业务背景、难点、Agent 接入与 Profile 分配、受控通信、人工接管、结果和追问组织。\n- `REPORT.md`：新增本报告。\n\n项目 1 事实来自 `references/defense-notes.md` 第 3.3 节及该节图注：6 款工具的评测范围、真实登录态与支付人工介入的场景、Gateway 资源与租约、空闲 Profile 分配、Wrapper/Ticket、Daemon/WebSocket、Gateway 校验及专用管道、悬浮控制条，以及日常并行 3 个独立 Session。关于不带 `--session`、原子绑定、端口分配与登录态同步的表述依据可见图注，不声称看过原图。\n\n未延续旧项目 1 中无参考支持的 Chrome 版本限制、事务同步步骤与崩溃恢复保证、`controlGeneration` 的即时失效保证、原生 Input Guard 实现、跨平台支持范围、误触线上数据等说法；也未编造个人踩坑经历或测量。不将账号切换工具的 10 秒、10+ 人、其他业务收入等数据挪入 ProfilePilot。其余章节按任务原样保留，不表示本次对其中所有陈述作了事实核实。\n\n## 实际执行的验证\n\n使用本机 Python 执行边界替换和断言，替换前将所有输入文件字节保存在内存作为比较基准，写入后回读验证：\n\n1. 恢复区逐字等于 E0243 第 21–39 行；第 24–39 行与 E0258、E0288 一致；开场正文与 E0301 的 `old_string` 中对应片段一致。\n2. front matter、两段导语、实习总标题、项目 1 主标题和其间空行均与本次输入一致；项目 1 后的分隔线以及项目 2 至文件结尾全部一致。因此没有整份回退或覆盖无关本地差异。\n3. 范围外 Markdown 链接列表一致，新增的本地参考链接目标存在，两个受保护标题各出现一次，文件仍为 UTF-8 / LF。\n4. 所有已提供的其他文件与写入前字节一致，包括历史、参考资料、TASK.txt 和 MATERIALS.md。\n\n上述断言全部通过。最初一次脚本因 PowerShell 管道字符编码导致字符串匹配失败，在任何写入之前退出；显式设置 UTF-8 管道后重新执行并通过。没有将失败尝试计为通过。\n\n| SHA-256 对象 | 值 |\n| --- | --- |\n| 修改前 handbook.md | `8948e82cd59691e961dc65de5c6a74c16698aee94feb4a8f774d8283ce124b0a` |\n| 修改后 handbook.md | `1076b47474a47142dec931646d7ff268019737cee070a1dbd5238b08952937a7` |\n| 恢复的开场区域（E0243 第 21–39 行，LF） | `4dfedf82e282228f62c9242e0b1145396fc49be7b5945e80342b4dc556c6a2ce` |\n\n## 证据局限\n\n历史事件是节选，没有原生编辑器保存事件或连续工作树快照，因而不能确定 Ctrl+S 的准确发生时刻或证明记录之外没有其他版本。本次选择是由用户保存说明、多次实际 Read 及成功 Edit 的替换前文本共同支撑的最直接可见版本。\n\n参考原图、内部 Wiki、源码和运行测量均未提供。没有访问脱敏外链、真实账号或任何生产服务，也没有运行原项目或隐藏验收。完成的是 Markdown 文本、结构边界与本地引用检查，未作网页渲染或外链可达性测试。按 TASK 的文档交付要求没有启动服务，也没有遗留临时自测进程。\n",
+      "requiredDecisions": [
+        "source-grounding",
+        "required-fact-coverage",
+        "readable-project",
+        "report-chain"
+      ],
+      "instruction": "Apply fact-rubric.json criterion by criterion with candidate/source quotations. Machine pass is not full acceptance."
+    }
+  },
+  "submittedChanges": [
+    {
+      "path": "handbook.md",
+      "sha256": "1076b47474a47142dec931646d7ff268019737cee070a1dbd5238b08952937a7"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "7a768acea691a79aa4fc284d19fc1c4105ceb25240d0114e7a1c8ee9912f6404"
+    }
+  ],
+  "finalResponseSha256": "8b05edfbd23a150c7462b0d22150e7124fe9e2f771f9cfc784c42fe2a8370483",
+  "rawGradeSha256": "4803d74f2e83922110090016a5e7a45080492f6314ca9dd4675f71ee138cd1a3",
+  "contentReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": false,
+    "reviewedAt": "2026-10-03T04:01:11.636Z",
+    "businessOutcome": "passed",
+    "deliveryOutcome": "passed",
+    "structuredReview": {
+      "file": "content-review.json",
+      "sha256": "ea8df19d3d72d7a78f12fab853f33b815ffc0b9537827dad87af89118d3e4cba"
+    },
+    "notes": [
+      "保存版本恢复、受保护内容与全部来源事实复核通过。匿名复核9项通过，执行轨迹确认报告所述断言确实通过；初次编码失败有诚实披露。"
+    ]
+  },
+  "finalBusinessAccepted": true,
+  "finalDeliveryAccepted": true,
+  "finalAccepted": true
+}

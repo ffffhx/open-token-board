@@ -10,6 +10,7 @@ import { chromium, type Browser } from "@playwright/test";
 import type { TokenUsageEvent } from "../packages/token-board-core/src/token-leaderboard";
 import { repoRoot } from "../tests/support/harness";
 import { startStaticServer, type StaticServer } from "../tests/support/static-server";
+import { spawnPnpm } from "./spawn-pnpm";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const TEST_AUTH_SECRET = "open-token-board-audit-stress-secret";
@@ -164,7 +165,7 @@ async function startStressApi({ allowedOrigins }: { allowedOrigins: string[] }):
 
   await fs.writeFile(dataFile, `${JSON.stringify({ schemaVersion: 1, updatedAt: new Date().toISOString(), entries: events }, null, 2)}\n`);
 
-  const child = spawn("pnpm", ["token:server"], {
+  const child = spawn(process.execPath, ["--import", "tsx", path.join(repoRoot, "apps", "token-board-api", "src", "server.ts")], {
     cwd: repoRoot,
     detached: process.platform !== "win32",
     env: {
@@ -266,7 +267,7 @@ function generateStressDataset() {
 }
 
 async function buildWeb(apiUrl: string) {
-  const child = spawn("pnpm", ["--filter", "@open-token-board/web", "build"], {
+  const child = spawnPnpm(["--filter", "@open-token-board/web", "build"], {
     cwd: repoRoot,
     env: {
       ...process.env,

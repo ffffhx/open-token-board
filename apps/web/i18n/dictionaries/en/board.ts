@@ -13,6 +13,10 @@ export const board = {
   status: {
     backendRows: (count) => `Backend data: ${count} records`,
     loadingRealUsers: "Loading live user data",
+    updatedMinutesAgo: (minutes) => minutes < 1 ? "Data updated just now" : `Data updated ${minutes} minutes ago`,
+    updateTimeUnknown: "Data update time unavailable",
+    dataStale: "Data is older than expected; waiting for an update",
+    refreshFailedCached: "Refresh failed; showing the last successfully loaded data",
     apiMissing: "Token Board API is not configured, so auto-reported data cannot be loaded.",
     apiRequired: "Connect a Token Board backend before loading the leaderboard.",
     invalidBackendShape: "Backend response shape is invalid",

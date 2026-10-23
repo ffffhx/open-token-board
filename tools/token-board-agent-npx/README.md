@@ -97,6 +97,17 @@ npx --yes token-board-agent statusline
 }
 ```
 
+Windows 上使用安装目录里的同一个 Node 脚本，例如：
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"C:/Users/you/.token-board-agent/token-board-agent.mjs\" statusline"
+  }
+}
+```
+
 如果本地没有保存登录态，或服务不可达，命令会静默退出。
 
 ## Claude Code 订阅额度（statusLine 捕获）
@@ -128,6 +139,19 @@ Claude Code 不把订阅额度持久化到本地日志。精确的 5 小时 / �
 
 重新运行 `install` 会重新生成捕获脚本，并尽量保留你原来的 statusLine 命令作为 passthrough。也可以用 `TOKEN_BOARD_INNER_STATUSLINE=/path/to/statusline` 显式指定内层命令。
 
+Windows 不需要 Bash 捕获脚本，直接把已安装 agent 的 `capture-statusline` 命令配置为 statusLine：
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node \"C:/Users/you/.token-board-agent/token-board-agent.mjs\" capture-statusline"
+  }
+}
+```
+
+该命令会从 stdin 保存同一份额度快照，并继续输出 Token Board 的短状态。
+
 ## 默认采集源
 
 agent 会扫描最近一段时间内存在的本地日志目录：
@@ -155,6 +179,14 @@ TOKEN_BOARD_USAGE_PATHS=/path/to/logs npx --yes token-board-agent upload
 TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false TOKEN_BOARD_USAGE_PATHS=/path/to/logs npx --yes token-board-agent upload
 ```
 
+Windows PowerShell 使用 `$env:` 设置环境变量：
+
+```powershell
+$env:TOKEN_BOARD_USAGE_PATHS = "C:\\path\\to\\logs"
+$env:TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES = "false"
+npx --yes token-board-agent upload
+```
+
 ## 上报内容
 
 默认上传的事件用于排行榜和个人分析，包含：
@@ -174,6 +206,13 @@ TOKEN_BOARD_INCLUDE_DEFAULT_SOURCES=false TOKEN_BOARD_USAGE_PATHS=/path/to/logs 
 
 ```bash
 TOKEN_BOARD_INCLUDE_SESSION_TITLE=false npx --yes token-board-agent upload
+```
+
+Windows PowerShell：
+
+```powershell
+$env:TOKEN_BOARD_INCLUDE_SESSION_TITLE = "false"
+npx --yes token-board-agent upload
 ```
 
 服务端 ingest 还会再次脱敏，可由部署方配置：

@@ -1,0 +1,7 @@
+已完成 B04 修复：
+
+- 在 `src/main/profile-manager.ts` 增加登记表 mutation 版本号。
+- `getState()` 若扫描期间登记表发生写入，会自动重新读取，避免改名后返回旧快照。
+- 独立 Profile 改名后立即同步固定 CDP 端口对应的 Agent lease 名称，保证 Agent catalog 与管理界面一致。
+- 验证：`node replay/smoke.mjs` 通过，输出 `ordinaryRenamePersisted: true`。
+- `npm run check` 未能执行成功，环境缺少 `electron`/`node` 类型定义且 TypeScript 配置的 `ignoreDeprecations` 不被当前版本支持；直接 Node 测试也因缺少 `dist/` 构建产物无法运行。

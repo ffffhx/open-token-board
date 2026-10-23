@@ -1,0 +1,28 @@
+<svg width="720" height="180" viewBox="0 0 720 180" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ProfilePilot">
+  <defs>
+    <radialGradient id="ppl-bg" cx="50%" cy="34%" r="82%">
+      <stop offset="0%" stop-color="#17262f"/>
+      <stop offset="100%" stop-color="#0a1014"/>
+    </radialGradient>
+    <linearGradient id="ppl-plane" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#82f5c9"/>
+      <stop offset="100%" stop-color="#2bbd86"/>
+    </linearGradient>
+    <filter id="ppl-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <g transform="translate(18, 18)">
+    <rect x="0" y="0" width="144" height="144" rx="35" fill="url(#ppl-bg)" stroke="#38e1a0" stroke-opacity="0.32" stroke-width="1"/>
+    <path d="M40 124 A 50 50 0 0 1 40 60" fill="none" stroke="#38e1a0" stroke-opacity="0.16" stroke-width="2" stroke-linecap="round"/>
+    <g filter="url(#ppl-glow)">
+      <path d="M72 32 L106 116 L72 97 L38 116 Z" fill="url(#ppl-plane)"/>
+      <path d="M72 32 L72 97 L38 116 Z" fill="#27a877" fill-opacity="0.55"/>
+    </g>
+  </g>
+  <text x="196" y="112" font-family="'Chakra Petch', 'PingFang SC', -apple-system, 'Segoe UI', sans-serif" font-size="74" font-weight="700" letter-spacing="0.5" fill="#e6eef2">Profile<tspan fill="#38e1a0">Pilot</tspan></text>
+</svg>

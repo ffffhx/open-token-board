@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "uniform-semantic-review-v2",
+  "createdAt": "2026-10-02T15:38:02.279Z",
+  "appliesTo": "Every B04 and B09 run in this comparison, including already graded submissions",
+  "trigger": "A legitimate citation of source section 3.3 was counted as an invented business metric; source-link also requires a Markdown citation format not explicitly stated in TASK.txt.",
+  "changesToParticipantInputs": false,
+  "changesToFrozenVerifier": false,
+  "changesToSubmissions": false,
+  "rawMachineResultsPreserved": true,
+  "rules": [
+    {
+      "check": "project-source-numbers",
+      "rule": "Reviewer distinguishes numeric factual claims from a source chapter label or structural numbering. Unsupported numeric facts still fail. A source section number correctly cited is not a fabricated metric."
+    },
+    {
+      "check": "source-link",
+      "rule": "Existing links must remain valid and factual claims must be supported. Absence of a newly created Markdown citation is advisory because TASK.txt did not explicitly require that format. A broken or invalid link still fails."
+    },
+    {
+      "check": "catalog-explicit-directory-and-validation",
+      "rule": "TASK.txt requires env.CPM_DATA_DIR but never specifies input.env. Accept a normal process.env implementation only when check-b04-env.mjs passes the same valid fallback, traversal, invalid-port and missing-directory cases through mock process.env. Preserve raw machine score."
+    }
+  ],
+  "unchangedHardRequirements": [
+    "Exact saved opening",
+    "All protected document bytes",
+    "Readonly inputs",
+    "Authorized file scope",
+    "Source-supported project facts",
+    "No unsupported guarantees",
+    "Correct recovery evidence and honest report"
+  ],
+  "reviewer": "coordinating-agent; not a human review",
+  "method": "No participant receives grader feedback. Same review rules applied after all submissions. Original machine score and adjudication are both shown.",
+  "supplementalValidation": {
+    "script": "check-b04-env.mjs",
+    "baselinePassed": false,
+    "referencePassed": true,
+    "participantSourceChanged": false
+  }
+}

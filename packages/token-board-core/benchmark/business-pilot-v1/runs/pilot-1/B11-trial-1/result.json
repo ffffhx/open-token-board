@@ -1,0 +1,260 @@
+{
+  "schemaVersion": 1,
+  "caseId": "B11",
+  "trial": 1,
+  "decision": "accepted",
+  "suiteHash": "b2a1fb495ec96a3ecd42775da5494314caca122de4f37bf1cdc3a61d05cbe261",
+  "preparedAt": "2026-10-02T14:40:12.184Z",
+  "gradedAt": "2026-10-02T15:02:25.049Z",
+  "participant": {
+    "harness": "collaboration-subagent",
+    "freshConversation": true,
+    "model": "inherited-session-configuration",
+    "providerModelIdentity": null,
+    "reasoningEffort": null,
+    "tokens": null,
+    "costUsd": null,
+    "generationDurationMs": null
+  },
+  "isolation": "Input export and fresh conversation; no OS-level sandbox or adversarial access audit",
+  "machineAccepted": true,
+  "machineChecks": {
+    "passed": 19,
+    "total": 19,
+    "checks": [
+      {
+        "id": "protected-inputs",
+        "passed": true
+      },
+      {
+        "id": "report",
+        "passed": true
+      },
+      {
+        "id": "fixture-reproduces-stale-content",
+        "passed": true
+      },
+      {
+        "id": "static-http",
+        "passed": true
+      },
+      {
+        "id": "current-release-command",
+        "passed": true
+      },
+      {
+        "id": "current-json",
+        "passed": true
+      },
+      {
+        "id": "current-html",
+        "passed": true
+      },
+      {
+        "id": "current-access-control",
+        "passed": true
+      },
+      {
+        "id": "current-other-posts",
+        "passed": true
+      },
+      {
+        "id": "current-static-privacy",
+        "passed": true
+      },
+      {
+        "id": "repeat-release-command",
+        "passed": true
+      },
+      {
+        "id": "repeat-is-idempotent",
+        "passed": true
+      },
+      {
+        "id": "source-preserved",
+        "passed": true
+      },
+      {
+        "id": "new-edit-release-command",
+        "passed": true
+      },
+      {
+        "id": "new-edit-json",
+        "passed": true
+      },
+      {
+        "id": "new-edit-html",
+        "passed": true
+      },
+      {
+        "id": "new-edit-access-control",
+        "passed": true
+      },
+      {
+        "id": "new-edit-other-posts",
+        "passed": true
+      },
+      {
+        "id": "new-edit-static-privacy",
+        "passed": true
+      }
+    ]
+  },
+  "scope": {
+    "passed": true,
+    "changed": [
+      "runtime/exported-private/release-notes.html",
+      "runtime/exported-private/release-notes.json",
+      "runtime/published-content/release-notes.html",
+      "runtime/published-content/release-notes.json",
+      "scripts/release.mjs",
+      "REPORT.md",
+      "runtime/release-verification-mDKrU7/runtime/build/client.mjs",
+      "runtime/release-verification-mDKrU7/runtime/build/index.html",
+      "runtime/release-verification-mDKrU7/runtime/exported-private/release-notes.html",
+      "runtime/release-verification-mDKrU7/runtime/exported-private/release-notes.json",
+      "runtime/release-verification-mDKrU7/runtime/published-content/archived-memo.html",
+      "runtime/release-verification-mDKrU7/runtime/published-content/archived-memo.json",
+      "runtime/release-verification-mDKrU7/runtime/published-content/release-notes.html",
+      "runtime/release-verification-mDKrU7/runtime/published-content/release-notes.json",
+      "runtime/release-verification-mDKrU7/runtime/published-content/team-handbook.html",
+      "runtime/release-verification-mDKrU7/runtime/published-content/team-handbook.json",
+      "runtime/release-verification-mDKrU7/runtime/published-static/client.mjs",
+      "runtime/release-verification-mDKrU7/runtime/published-static/index.html",
+      "runtime/release-verification-mDKrU7/site/client.mjs",
+      "runtime/release-verification-mDKrU7/site/index.html",
+      "runtime/release-verification-mDKrU7/source/release-notes.md"
+    ],
+    "forbidden": []
+  },
+  "infrastructureError": null,
+  "gradingDurationMs": 388,
+  "semanticReview": {
+    "reviewer": "coordinating-agent",
+    "humanReview": "not-performed",
+    "notes": [
+      "已阅读 scripts/release.mjs 与 REPORT.md：发布命令补入当前 Markdown 导出及目标正文同步，且在同步完成后才报告成功，未以手改产物代替修复。",
+      "19 项外部验收通过，独立重置产物后仍可发布原稿与注入的新正文；作者可读，未登录与普通读者被拒绝，其他正文及仅存在于卷中的记录保留。",
+      "报告明确限定本地 HTTP 验证，没有宣称做过浏览器 GUI、真实远端部署、并发或故障原子性测试；报告中的额外自测未逐条独立重放。",
+      "用户询问进度时发生工具中断；原计划清理的隔离测试副本改为保留在允许的 runtime/ 中，报告已完成。没有发现自动审批拒绝理由，不能把中断说成审批拒绝。"
+    ]
+  },
+  "submittedChanges": [
+    {
+      "path": "runtime/exported-private/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/exported-private/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "runtime/published-content/release-notes.html",
+      "sha256": "76da77589e6b83a11529c8259ea503db1b90fe1706cda5689a62d5405a1ca468"
+    },
+    {
+      "path": "runtime/published-content/release-notes.json",
+      "sha256": "1b698200ee324fd5aba7bcfb11260e686799e91f32c075ca4be742cb4b0d3076"
+    },
+    {
+      "path": "scripts/release.mjs",
+      "sha256": "69012dabbfe372a679c0562d2bdfb4f6e4351419466996d6c4eb5757b80e6cbc"
+    },
+    {
+      "path": "REPORT.md",
+      "sha256": "032682bb2aacbebdba8a0c18a177658a586a6679ff4729a2f905d18684aa671f"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/build/client.mjs",
+      "sha256": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/build/index.html",
+      "sha256": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/exported-private/release-notes.html",
+      "sha256": "d9e7b3e8a7358e49f65efbe5b45bbb4cfd51f3c621180fe4b61977f06353a9bb"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/exported-private/release-notes.json",
+      "sha256": "ade185d1ef0eebbc65f11a12d66f47d4198331bf86da17cb0001cd91583a7058"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/archived-memo.html",
+      "sha256": "9fb818db0bae9c064fcccd67de5e5a357611880abcb314c6ce03554eaabd0176"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/archived-memo.json",
+      "sha256": "51bf1f12d1b2f43994d80566b73003bda9851640a8898fc0c22bf8b3be73c389"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/release-notes.html",
+      "sha256": "d9e7b3e8a7358e49f65efbe5b45bbb4cfd51f3c621180fe4b61977f06353a9bb"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/release-notes.json",
+      "sha256": "ade185d1ef0eebbc65f11a12d66f47d4198331bf86da17cb0001cd91583a7058"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/team-handbook.html",
+      "sha256": "1f05d012516dfd05c85c21735e3a0f821ac53617bdf8fafa2a13aab598f90539"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-content/team-handbook.json",
+      "sha256": "1dc9c3dd4ed5f5a31cdfd6583753002fdd58b120b8dfbecceacdd275029ae0f9"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-static/client.mjs",
+      "sha256": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/runtime/published-static/index.html",
+      "sha256": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/site/client.mjs",
+      "sha256": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/site/index.html",
+      "sha256": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b"
+    },
+    {
+      "path": "runtime/release-verification-mDKrU7/source/release-notes.md",
+      "sha256": "2ed7d9bd51e1909abced32f41e7c61222b926fbda5932dfdca5d963d47feb3d2"
+    }
+  ],
+  "rawReportSha256": "204eccc97b97a634bfdea35ae3b0396dfd4427c0fe68c1dcbccc053e4b11a8b4",
+  "exportedFiles": {
+    "README.md": "8ecb3a8aee24ea9bec683375d3b19c491ed0599ef9e5d16fd818c4806a6a87d7",
+    "TASK.txt": "1b801b4d25f0af8a7ec2a5b001d91d82e1916df576b3bbcc9baf8d4b731c5ff9",
+    "lib/paths.mjs": "7725187524b314e45543046eb6fe646e0e5fc3fe4120615b9f2672258209d671",
+    "lib/posts.mjs": "f50d6f6c3da9dcf479c4fb6f2a536021e19867c185f76b5a09dbcc060dd5b133",
+    "logs/last-release.log": "d83a716ff3602b460cbc373158bee4e2957a627bc5063aa9f496cec97f300396",
+    "package.json": "d58881aff8e0ce6162d23162fb848268111354f92c9347b86ad6c900836f63e7",
+    "runtime/build/client.mjs": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73",
+    "runtime/build/index.html": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b",
+    "runtime/exported-private/release-notes.html": "8bfffe99ce1b00bdfcb706c080692861d9e80842bbe821c4f9568acfe315e2d9",
+    "runtime/exported-private/release-notes.json": "491826c3abcb60d0870154b5648f5d13994cd129e39baab801c8acdf7f0d65a7",
+    "runtime/exported-private/team-handbook.html": "1f05d012516dfd05c85c21735e3a0f821ac53617bdf8fafa2a13aab598f90539",
+    "runtime/exported-private/team-handbook.json": "1dc9c3dd4ed5f5a31cdfd6583753002fdd58b120b8dfbecceacdd275029ae0f9",
+    "runtime/published-content/archived-memo.html": "9fb818db0bae9c064fcccd67de5e5a357611880abcb314c6ce03554eaabd0176",
+    "runtime/published-content/archived-memo.json": "51bf1f12d1b2f43994d80566b73003bda9851640a8898fc0c22bf8b3be73c389",
+    "runtime/published-content/release-notes.html": "8bfffe99ce1b00bdfcb706c080692861d9e80842bbe821c4f9568acfe315e2d9",
+    "runtime/published-content/release-notes.json": "491826c3abcb60d0870154b5648f5d13994cd129e39baab801c8acdf7f0d65a7",
+    "runtime/published-content/team-handbook.html": "1f05d012516dfd05c85c21735e3a0f821ac53617bdf8fafa2a13aab598f90539",
+    "runtime/published-content/team-handbook.json": "1dc9c3dd4ed5f5a31cdfd6583753002fdd58b120b8dfbecceacdd275029ae0f9",
+    "runtime/published-static/client.mjs": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73",
+    "runtime/published-static/index.html": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b",
+    "scripts/build.mjs": "09ffdbfe90e15393912b9b3d88ab88df98c28c3e18fe886fe76e08b4fe3199de",
+    "scripts/export-private.mjs": "7119f6241ddf5857f11e87b286cb71bb70e8567251a25c9380c87ac157dd2b8b",
+    "scripts/release.mjs": "31ec191ecfab7ccb74eeb97adf530c77f85805ad615bc94a17dca36a45165c20",
+    "scripts/sync-content.mjs": "3890db2f1d218e88089d29ff86b866f9af512c6e4dd8163634457f319ff1efce",
+    "services/preview.mjs": "8cb5ec39174388357d3d6a771928f04e416db7ca5e2288b502cc0a176e8b2d8f",
+    "site/client.mjs": "75697a0d269670b043a21184ce66ab7c4b005e2e45c03d2ae028e7bd0e302b73",
+    "site/index.html": "8606d3438f2a9cc63857036c3599ac88c06c3e659a0c1f2cba7fa1b39ea3690b",
+    "source/release-notes.md": "7e4d14735b5fe11047480fd7691873679eedca3c5e37f23917113c6bec60aa2c",
+    "source/team-handbook.md": "36e2d77b5ff7343fa888cab6cd36fd26e7b8f604302b45f12190495d0f6ca687"
+  }
+}
